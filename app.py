@@ -35,6 +35,7 @@ telegram_channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
 mongo_uri = os.getenv("MONGO_URI")
 db_name = "stock_predictions"
 
+discord_webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
 
 # 是否使用 Transformer
 use_transformer = os.getenv("USE_TRANSFORMER", "false").lower() == "true"
@@ -623,13 +624,50 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices):
 # 主函數
 def main():
     try:
+        calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         period = "3mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500", "NASDAQ", "費城半導體", "道瓊"]
-#        selected_indices = ["費城半導體", "道瓊"]
-#        selected_indices = ["道瓊"]
 
         print("計算潛力股...")
-        get_top_and_bottom_10_potential_stocks(period, selected_indices)
+        analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices)
+
+        # 準備 Email
+        print("準備 Email...")
+        email_body = f"運算日期和時間: {calculation_time}\n\n"
+        for index_name, stocks in analysis_results.items():
+            email_body += f"\n指數: {index_name}\n"
+            for key, predictions in stocks.items():
+                email_body += f"\n{key}:\n"
+                for stock in predictions:
+                    email_body += f"股票: {stock[0]}, 潛力: {stock[1]:.2%}, 現價: {stock[2]:.2f}, 預測價: {stock[3]:.2f}\n"
+
+        email_subject = f"每日潛力股分析DAVID888 - 運算時間: {calculation_time}"
+        send_email(email_subject, email_body, to_emails)
+
+        # 準備 Telegram
+        print("準備 Telegram...")
+        telegram_message = f"<b>每日潛力股分析</b>\n運算日期和時間: <b>{calculation_time}</b>\n\n"
+        for index_name, stocks in analysis_results.items():
+            telegram_message += f"<b>指數: {index_name}</b>\n"
+            for key, predictions in stocks.items():
+                telegram_message += f"<b>{key}:</b>\n"
+                for stock in predictions:
+                    telegram_message += f"股票: {stock[0]}, 潛力: {stock[1]:.2%}, 現價: {stock[2]:.2f}, 預測價: {stock[3]:.2f}\n"
+        send_to_telegram(telegram_message)
+
+        # 準備 Discord
+        print("準備 Discord...")
+        discord_webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+        discord_message = f"**每日潛力股分析**\n運算日期和時間: **{calculation_time}**\n\n"
+        for index_name, stocks in analysis_results.items():
+            discord_message += f"**指數: {index_name}**\n"
+            for key, predictions in stocks.items():
+                discord_message += f"**{key}:**\n"
+                for stock in predictions:
+                    discord_message += f"股票: {stock[0]}, 潛力: {stock[1]:.2%}, 現價: {stock[2]:.2f}, 預測價: {stock[3]:.2f}\n"
+        send_to_discord(discord_webhook_url, discord_message)
+
     except Exception as e:
         print(f"錯誤: {str(e)}")
         send_to_telegram(f"⚠️ 錯誤: {str(e)}")
