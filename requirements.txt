@@ -1,0 +1,11 @@
+yfinance
+numpy
+pandas
+scikit-learn
+tensorflow
+gradio
+keras
+prophet
+pymongo
+python-dotenv
+tensorflow
