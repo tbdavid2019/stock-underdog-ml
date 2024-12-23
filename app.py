@@ -94,41 +94,26 @@ def get_tw0051_stocks():
 # Function to fetch S&P 500 component stocks
 def get_sp500_stocks():
     return [
-        "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "META", "TSLA", "BRK.B", "NVDA", "UNH", 
-        "JNJ", "V", "WMT", "JPM", "MA", "PG", "DIS", "HD", "PYPL", "ADBE",
-        "NFLX", "CMCSA", "PEP", "KO", "MRK", "INTC", "T", "CRM", "CSCO", "PFE", 
-        "XOM", "COST", "NKE", "CVX", "WFC", "MCD", "AMGN", "MDT", "IBM", "DHR",
-        "LLY", "HON", "BA", "MMM", "NEE", "ACN", "UPS", "TMO", "AVGO", "PM",
-        "CSX", "BKNG", "LIN", "ORCL", "QCOM", "TXN", "RTX", "LOW", "MDLZ", "TMUS",
-        "ISRG", "GE", "AXP", "CAT", "INTU", "ADP", "SPGI", "AMT", "CL", "REGN",
-        "GS", "VRTX", "LMT", "NOW", "PLD", "CCI", "AON", "KDP", "CHTR", "MSCI",
-        "SNPS", "ICE", "APD", "FISV", "ELV", "HCA", "CTAS", "EQIX", "WELL", "TGT",
-        "BK", "STZ", "GILD", "SCHW", "COP", "SBUX", "ADSK", "ATVI", "ZTS", "MRNA",
-        "BLK", "PGR", "ORLY", "LRCX", "ECL", "ADI", "IDXX", "ITW", "NOC", "ETN",
-        "F", "D", "HLT", "PXD", "CARR", "ALB", "WMB", "PSA", "MPC", "TRV",
-        "KEYS", "ODFL", "FTV", "CLX", "LYB", "HIG", "KMX", "PRU", "AVB", "ARE",
-        "KIM", "EXR", "LHX", "AMP", "ROK", "VRTX", "CHRW", "SBAC", "WST", "TT",
-        "HSIC", "FE", "ULTA", "DOV", "CDNS", "FAST", "STLD", "EFX", "CE", "GL",
-        "TSCO", "MTD", "CBOE", "JBHT", "EIX", "XYL", "VLO", "POOL", "TDY", "BR",
-        "RSG", "PH", "AEE", "CMS", "XYL", "VTR", "EPAM", "ALGN", "CPT", "HSY",
-        "STE", "KMI", "AAP", "ES", "TTWO", "LVS", "WRB", "WY", "WDC", "ROL",
-        "CINF", "MKC", "EMR", "ED", "DPZ", "MSI", "HBAN", "WBA", "MOS", "NEM",
-        "IEX", "SEE", "GPN", "DLR", "NTAP", "TRMB", "ETR", "NDAQ", "RCL", "AEP",
-        "HOLX", "LW", "GWW", "NVR", "RF", "PFG", "HPE", "BBY", "MHK", "HPQ",
-        "OKE", "APA", "ALLE", "L", "BF.B", "TSN", "HST", "TPR", "TPG", "KHC",
-        "DHI", "IRM", "FMC", "CXO", "AAP", "MKTX", "HII", "MTCH", "CRL", "CPB",
-        "MRO", "RJF", "JNPR", "NTRS", "LNT", "TXT", "FFIV", "PBCT", "WU", "HAS",
-        "NWSA", "NWS", "FOXA", "FOX", "K", "NUE", "DISCK", "DISCA", "DISCB", "SYY",
-        "STT", "AKAM", "FRT", "PKI", "DTE", "PPL", "EVRG", "DVA", "BAX", "PNC",
-        "BEN", "OMC", "VAR", "AOS", "ZBRA", "ATO", "SJM", "PBCT", "JKHY", "RMD",
-        "CEG", "GPC", "BLL", "CMG", "CF", "MAS", "GME", "HUM", "HRL", "DG",
-        "CPRI", "HRB", "EL", "KSS", "SYK", "FL", "CNC", "M", "MGA", "APA"
+        "AAPL", "MSFT", "NVDA", "AMZN", "META", "TSLA", "GOOGL", "BRK.B", "AVGO", "GOOG",
+        "UNH", "JNJ", "V", "WMT", "PG", "JPM", "MA", "LLY", "XOM", "BAC",
+        "MRK", "PFE", "ABBV", "KO", "PEP", "TMO", "COST", "CSCO", "MCD", "DHR",
+        "NKE", "DIS", "VZ", "ADBE", "CMCSA", "NFLX", "INTC", "WFC", "TXN", "LIN",
+        "HON", "UNP", "ACN", "QCOM", "NEE", "ABT", "PM", "MDT", "BMY", "SPGI",
+        "LOW", "MS", "RTX", "IBM", "CVX", "ORCL", "INTU", "AMD", "GS",
+        "BLK", "ISRG", "GE", "AMT", "CAT", "DE", "LMT", "PLD",
+        "SYK","MDLZ","AXP","T","EL","GILD","NOW","ADI","ZTS","PYPL",
+        "MO","BKNG","SCHW","MMC","ADP","C","TJX","DUK","SO","BDX",
+        "APD","PNC","USB","CI","EQIX","TGT","CB","ICE","HUM","ITW",
+        "ETN","WM","ECL","FIS","NSC","REGN","FDX","D","NOC","GM",
+        "SHW","PSA","GD","HCA","EMR","MCO","KLAC","EW","AON",
+        "TRV","SPG","MU","FISV","BSX","AEP",
+        "MRNA","LRCX","KMB","SLB"
     ]
 
 # Function to fetch NASDAQ component stocks
 def get_nasdaq_stocks():
     return [
-        "AAPL", "NVDA", "MSFT", "AMZN", "GOOG", "GOOGL", "META", "TSLA", "AVGO", "COST", 
+        "AAPL", "NVDA", "MSFT", "AMZN", "GOOG", "META", "TSLA", "AVGO", "COST", 
         "NFLX", "TMUS", "ASML", "CSCO", "ADBE", "AMD", "PEP", "LIN", "AZN", "ISRG", 
         "INTU", "QCOM", "TXN", "BKNG", "CMCSA", "AMGN", "HON", "ARM", "AMAT", "PDD", 
         "PANW", "ADP", "VRTX", "GILD", "SBUX", "MU", "ADI", "MELI", "MRVL", "LRCX", 
@@ -550,7 +535,15 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices):
                 prophet_model = train_prophet_model(lstm_data)  # Prophet 使用 LSTM 的數據（3 個月）
                 forecast = predict_with_prophet(prophet_model, lstm_data)
                 prophet_current_price = lstm_data['Close'].values[-1].item()
-                prophet_predicted_price = forecast['yhat'].iloc[-1].item()
+
+                # 安全提取 Prophet 的預測價格
+                prophet_predicted_price = forecast['yhat'].iloc[-1]
+                if isinstance(prophet_predicted_price, (pd.Series, np.ndarray)):
+                    prophet_predicted_price = float(prophet_predicted_price.item())
+                else:
+                    prophet_predicted_price = float(prophet_predicted_price)
+
+#                prophet_predicted_price = forecast['yhat'].iloc[-1].item()
                 prophet_potential = (prophet_predicted_price - prophet_current_price) / prophet_current_price
                 prophet_predictions.append((ticker, prophet_potential, prophet_current_price, prophet_predicted_price))
             except Exception as e:
@@ -628,7 +621,7 @@ def main():
 
         period = "3mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500", "NASDAQ", "費城半導體", "道瓊"]
-
+#        selected_indices = ["SP500", "NASDAQ", "費城半導體", "道瓊"]
         print("計算潛力股...")
         analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices)
 
