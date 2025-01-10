@@ -72,45 +72,79 @@ def save_to_mongodb(index_name, stock_predictions):
         client.close()
 
 # Stock index mappings
+# def get_tw0050_stocks():
+#     return [
+#         "2330.TW", "2317.TW", "2454.TW", "2308.TW", "2881.TW", "2382.TW", "2303.TW", "2882.TW", "2891.TW", "3711.TW",
+#         "2412.TW", "2886.TW", "2884.TW", "1216.TW", "2357.TW", "2885.TW", "2892.TW", "3034.TW", "2890.TW", "2327.TW",
+#         "5880.TW", "2345.TW", "3231.TW", "2002.TW", "2880.TW", "3008.TW", "2883.TW", "1303.TW", "4938.TW", "2207.TW",
+#         "2887.TW", "2379.TW", "1101.TW", "2603.TW", "2301.TW", "1301.TW", "5871.TW", "3037.TW", "3045.TW", "2912.TW",
+#         "3017.TW", "6446.TW", "4904.TW", "3661.TW", "6669.TW", "1326.TW", "5876.TW", "2395.TW", "1590.TW", "6505.TW"
+#     ]
+
 def get_tw0050_stocks():
-    return [
-        "2330.TW", "2317.TW", "2454.TW", "2308.TW", "2881.TW", "2382.TW", "2303.TW", "2882.TW", "2891.TW", "3711.TW",
-        "2412.TW", "2886.TW", "2884.TW", "1216.TW", "2357.TW", "2885.TW", "2892.TW", "3034.TW", "2890.TW", "2327.TW",
-        "5880.TW", "2345.TW", "3231.TW", "2002.TW", "2880.TW", "3008.TW", "2883.TW", "1303.TW", "4938.TW", "2207.TW",
-        "2887.TW", "2379.TW", "1101.TW", "2603.TW", "2301.TW", "1301.TW", "5871.TW", "3037.TW", "3045.TW", "2912.TW",
-        "3017.TW", "6446.TW", "4904.TW", "3661.TW", "6669.TW", "1326.TW", "5876.TW", "2395.TW", "1590.TW", "6505.TW"
-    ]
+    response = requests.get('http://13.125.121.198:8090/stocks/0050')
+    data = response.json()
+    
+    # 取得股票代碼並加上 .TW
+    stocks = [f"{code}.TW" for code in data['stocks'].keys()]
+    
+    # 如果需要排序的話可以加上 sort()
+    #stocks.sort()
+    
+    return stocks
+
+# def get_tw0051_stocks():
+#     return [
+#         "2371.TW", "3533.TW", "2618.TW", "3443.TW", "2347.TW", "3044.TW", "2834.TW", "2385.TW", "1605.TW", "2105.TW",
+#         "6239.TW", "6176.TW", "9904.TW", "1519.TW", "9910.TW", "1513.TW", "1229.TW", "9945.TW", "2313.TW", "1477.TW",
+#         "3665.TW", "2354.TW", "4958.TW", "8464.TW", "9921.TW", "2812.TW", "2059.TW", "1504.TW", "2542.TW", "6770.TW",
+#         "5269.TW", "2344.TW", "3023.TW", "1503.TW", "2049.TW", "2610.TW", "2633.TW", "3036.TW", "2368.TW", "3035.TW",
+#         "2027.TW", "9914.TW", "2408.TW", "2809.TW", "1319.TW", "2352.TW", "2337.TW", "2006.TW", "2206.TW", "4763.TW",
+#         "3005.TW", "1907.TW", "2915.TW", "1722.TW", "6285.TW", "6472.TW", "6531.TW", "3406.TW", "9958.TW", "9941.TW",
+#         "1795.TW", "2201.TW", "9917.TW", "2492.TW", "6890.TW", "2845.TW", "8454.TW", "8046.TW", "6789.TW", "2388.TW",
+#         "6526.TW", "1802.TW", "5522.TW", "6592.TW", "2204.TW", "2540.TW", "2539.TW", "3532.TW"
+#     ]
 
 def get_tw0051_stocks():
-    return [
-        "2371.TW", "3533.TW", "2618.TW", "3443.TW", "2347.TW", "3044.TW", "2834.TW", "2385.TW", "1605.TW", "2105.TW",
-        "6239.TW", "6176.TW", "9904.TW", "1519.TW", "9910.TW", "1513.TW", "1229.TW", "9945.TW", "2313.TW", "1477.TW",
-        "3665.TW", "2354.TW", "4958.TW", "8464.TW", "9921.TW", "2812.TW", "2059.TW", "1504.TW", "2542.TW", "6770.TW",
-        "5269.TW", "2344.TW", "3023.TW", "1503.TW", "2049.TW", "2610.TW", "2633.TW", "3036.TW", "2368.TW", "3035.TW",
-        "2027.TW", "9914.TW", "2408.TW", "2809.TW", "1319.TW", "2352.TW", "2337.TW", "2006.TW", "2206.TW", "4763.TW",
-        "3005.TW", "1907.TW", "2915.TW", "1722.TW", "6285.TW", "6472.TW", "6531.TW", "3406.TW", "9958.TW", "9941.TW",
-        "1795.TW", "2201.TW", "9917.TW", "2492.TW", "6890.TW", "2845.TW", "8454.TW", "8046.TW", "6789.TW", "2388.TW",
-        "6526.TW", "1802.TW", "5522.TW", "6592.TW", "2204.TW", "2540.TW", "2539.TW", "3532.TW"
-    ]
+    response = requests.get('http://13.125.121.198:8090/stocks/0100')
+    data = response.json()
+    
+    # 取得股票代碼並加上 .TW
+    stocks = [f"{code}.TW" for code in data['stocks'].keys()]
+    
+    # 如果需要排序的話可以加上 sort()
+    # stocks.sort()
+    
+    return stocks
 
 # Function to fetch S&P 500 component stocks
-def get_sp500_stocks():
-    return [
-        "AAPL", "MSFT", "NVDA", "AMZN", "META", "TSLA", "GOOGL", "BRK.B", "AVGO", "GOOG",
-        "UNH", "JNJ", "V", "WMT", "PG", "JPM", "MA", "LLY", "XOM", "BAC",
-        "MRK", "PFE", "ABBV", "KO", "PEP", "TMO", "COST", "CSCO", "MCD", "DHR",
-        "NKE", "DIS", "VZ", "ADBE", "CMCSA", "NFLX", "INTC", "WFC", "TXN", "LIN",
-        "HON", "UNP", "ACN", "QCOM", "NEE", "ABT", "PM", "MDT", "BMY", "SPGI",
-        "LOW", "MS", "RTX", "IBM", "CVX", "ORCL", "INTU", "AMD", "GS",
-        "BLK", "ISRG", "GE", "AMT", "CAT", "DE", "LMT", "PLD",
-        "SYK","MDLZ","AXP","T","EL","GILD","NOW","ADI","ZTS","PYPL",
-        "MO","BKNG","SCHW","MMC","ADP","C","TJX","DUK","SO","BDX",
-        "APD","PNC","USB","CI","EQIX","TGT","CB","ICE","HUM","ITW",
-        "ETN","WM","ECL","FIS","NSC","REGN","FDX","D","NOC","GM",
-        "SHW","PSA","GD","HCA","EMR","MCO","KLAC","EW","AON",
-        "TRV","SPG","MU","FISV","BSX","AEP",
-        "MRNA","LRCX","KMB","SLB"
-    ]
+# def get_sp500_stocks():
+#     return [
+#         "AAPL", "MSFT", "NVDA", "AMZN", "META", "TSLA", "GOOGL", "BRK.B", "AVGO", "GOOG",
+#         "UNH", "JNJ", "V", "WMT", "PG", "JPM", "MA", "LLY", "XOM", "BAC",
+#         "MRK", "PFE", "ABBV", "KO", "PEP", "TMO", "COST", "CSCO", "MCD", "DHR",
+#         "NKE", "DIS", "VZ", "ADBE", "CMCSA", "NFLX", "INTC", "WFC", "TXN", "LIN",
+#         "HON", "UNP", "ACN", "QCOM", "NEE", "ABT", "PM", "MDT", "BMY", "SPGI",
+#         "LOW", "MS", "RTX", "IBM", "CVX", "ORCL", "INTU", "AMD", "GS",
+#         "BLK", "ISRG", "GE", "AMT", "CAT", "DE", "LMT", "PLD",
+#         "SYK","MDLZ","AXP","T","EL","GILD","NOW","ADI","ZTS","PYPL",
+#         "MO","BKNG","SCHW","MMC","ADP","C","TJX","DUK","SO","BDX",
+#         "APD","PNC","USB","CI","EQIX","TGT","CB","ICE","HUM","ITW",
+#         "ETN","WM","ECL","FIS","NSC","REGN","FDX","D","NOC","GM",
+#         "SHW","PSA","GD","HCA","EMR","MCO","KLAC","EW","AON",
+#         "TRV","SPG","MU","FISV","BSX","AEP",
+#         "MRNA","LRCX","KMB","SLB"
+#     ]
+
+def get_sp500_stocks(limit=100):
+    response = requests.get('http://13.125.121.198:8090/stocks/sp500')
+    data = response.json()
+    
+    # 取得股票代碼列表並限制數量
+    stocks = list(data['stocks'].keys())[:limit]
+    
+    return stocks
+    
 
 # Function to fetch NASDAQ component stocks
 def get_nasdaq_stocks():
