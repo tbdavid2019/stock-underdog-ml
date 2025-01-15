@@ -16,16 +16,9 @@ from dotenv import load_dotenv
 from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization, Add
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
-import mysql.connector
-from mysql.connector import Error
-
 
 # 加載 .env 文件
 load_dotenv()
-
-
-# MySQL 配置
-use_mysql = os.getenv("USE_MYSQL", "false").lower() == "true"
 
 # Email 設置
 smtp_server = os.getenv("SMTP_SERVER")
@@ -51,122 +44,6 @@ transformer_period = os.getenv("TRANSFORMER_PERIOD", "1y")  # 默認 1 年數據
 # 是否使用 Prophet
 use_prophet = os.getenv("USE_PROPHET", "false").lower() == "true"
 
-
-class MySQLManager:
-    def __init__(self):
-        self.enabled = use_mysql
-        if not self.enabled:
-            print("MySQL 功能未啟用")
-            return
-        
-        try:
-            print("嘗試連接 MySQL...")  # 添加此行
-            print(f"Host: {os.getenv('MYSQL_HOST')}")  # 添加此行
-            print(f"Database: {os.getenv('MYSQL_DATABASE')}")  # 添加此行
-            self.connection = mysql.connector.connect(
-                host=os.getenv("MYSQL_HOST"),
-                user=os.getenv("MYSQL_USER"),
-                password=os.getenv("MYSQL_PASSWORD"),
-                database=os.getenv("MYSQL_DATABASE"),
-                port=int(os.getenv("MYSQL_PORT", "3306"))
-            )
-            print("MySQL 連接成功")
-            self.create_prediction_table()
-        except Error as e:
-            print(f"MySQL 連接錯誤: {e}")
-            self.connection = None
-            self.enabled = False
-
-    def create_prediction_table(self):
-        if not self.enabled or not self.connection:
-            return
-        
-        try:
-            cursor = self.connection.cursor()
-            
-            # 首先檢查表是否存在
-            check_table_query = """
-            SELECT COUNT(*)
-            FROM information_schema.tables
-            WHERE table_schema = %s
-            AND table_name = 'stock_predictions'
-            """
-            cursor.execute(check_table_query, (os.getenv('MYSQL_DATABASE'),))
-            table_exists = cursor.fetchone()[0] > 0
-
-            if table_exists:
-                print("stock_predictions 表已存在，跳過創建")
-            else:
-                # 創建表
-                create_table_query = """
-                CREATE TABLE IF NOT EXISTS stock_predictions (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    calculation_date DATE,
-                    calculation_time TIME,
-                    index_name VARCHAR(50),
-                    stock_symbol VARCHAR(20),
-                    current_price DECIMAL(10,2),
-                    predicted_price DECIMAL(10,2),
-                    potential DECIMAL(10,4),
-                    prediction_method VARCHAR(20),
-                    period_param VARCHAR(10),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-                cursor.execute(create_table_query)
-                self.connection.commit()
-                print("成功創建 stock_predictions 表")
-
-        except Error as e:
-            print(f"檢查/創建表格時發生錯誤: {e}")
-        finally:
-            cursor.close()
-
-
-
-
-    def save_predictions(self, index_name, predictions, method, period):
-        if not self.enabled or not self.connection:
-            return
-        
-        try:
-            cursor = self.connection.cursor()
-            current_date = datetime.datetime.now().date()
-            current_time = datetime.datetime.now().time()
-            
-            insert_query = """
-            INSERT INTO stock_predictions 
-            (calculation_date, calculation_time, index_name, stock_symbol, 
-             current_price, predicted_price, potential, prediction_method, period_param)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            for ticker, potential, current_price, predicted_price in predictions:
-                data = (
-                    current_date,
-                    current_time,
-                    index_name,
-                    ticker,
-                    float(current_price),
-                    float(predicted_price),
-                    float(potential),
-                    method,
-                    period
-                )
-                cursor.execute(insert_query, data)
-            
-            self.connection.commit()
-            print(f"成功保存 {len(predictions)} 條 {method} 預測結果到 MySQL")
-        
-        except Error as e:
-            print(f"保存到 MySQL 時發生錯誤: {e}")
-        finally:
-            cursor.close()
-
-    def close(self):
-        if self.connection and self.connection.is_connected():
-            self.connection.close()
-            print("MySQL 連接已關閉")
 
 def save_to_mongodb(index_name, stock_predictions):
     """
@@ -506,7 +383,7 @@ def send_results(index_name, stock_predictions):
 
 
 # # 股票分析函數
-def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager=None):
+def get_top_and_bottom_10_potential_stocks(period, selected_indices):
     results = {}
     index_stock_map = {
         "台灣50": get_tw0050_stocks(),
@@ -520,7 +397,6 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
     for index_name, stock_list in index_stock_map.items():
         if index_name not in selected_indices:
             continue
-
 
         print(f"處理指數: {index_name}")
         lstm_predictions = []
@@ -567,15 +443,6 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 except Exception as e:
                     print(f"Prophet 預測失敗: {ticker}, 錯誤: {str(e)}")
 
-        if mysql_manager and mysql_manager.enabled:
-            if lstm_predictions:
-                mysql_manager.save_predictions(index_name, lstm_predictions, "LSTM", period)
-            if use_prophet and prophet_predictions:
-                mysql_manager.save_predictions(index_name, prophet_predictions, "Prophet", period)
-            if use_transformer and transformer_predictions:
-                mysql_manager.save_predictions(index_name, transformer_predictions, "Transformer", period)
-
-
         stock_predictions = {
             "🥇 前十名 LSTM 🧠": sorted(lstm_predictions, key=lambda x: x[1], reverse=True)[:10],
             "📉 後十名 LSTM 🧠": sorted(lstm_predictions, key=lambda x: x[1])[:10],
@@ -603,16 +470,13 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
 # 主函數
 def main():
     try:
-        # 初始化 MySQL 管理器
-        mysql_manager = MySQLManager() if use_mysql else None
-
         calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         period = "3mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500"]
 
         print("計算潛力股...")
-        analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager)
+        analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices)
 
         # 分開處理每個指數的結果
         for index_name, stock_predictions in analysis_results.items():
@@ -622,11 +486,6 @@ def main():
     except Exception as e:
         print(f"錯誤: {str(e)}")
         send_to_telegram(f"⚠️ 錯誤: {str(e)}")
-
-    finally:
-        # 關閉 MySQL 連接
-        if mysql_manager:
-            mysql_manager.close()        
         
 if __name__ == "__main__":
     main()
