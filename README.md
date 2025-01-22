@@ -1,6 +1,6 @@
 # tbdavid2019/stock-underdog-ml
 ## 股市潛力股計算 (LSTM, Prophet, Transformer) 機器學習版本
-這是一個用於計算股市潛力股的工具，結合了多種機器學習模型，包括 LSTM、Prophet 和 Transformer。該工具能根據不同時間範圍的歷史數據，預測股票價格，並計算股票的潛力。透過此應用，投資者可以快速篩選出具有潛力的股票，做出更明智的投資決策。
+這是一個用於計算股市潛力股的工具，結合了多種機器學習模型，包括 LSTM、Prophet 和 Transformer CHRONOS。該工具能根據不同時間範圍的歷史數據，預測股票價格，並計算股票的潛力。透過此應用，投資者可以快速篩選出具有潛力的股票，做出更明智的投資決策。
 
 ### 功能特點
 - **多模型支持**：LSTM（長短期記憶網絡）、Prophet（時間序列分析）、Transformer（高效預測）。
@@ -67,7 +67,7 @@
 
 # tbdavid2019/stock-underdog-ml
 ## Stock Potential Predictor (LSTM, Prophet, Transformer) Machine Learning Version
-This is a stock potential predictor tool combining multiple machine learning models, including LSTM, Prophet, and Transformer. The tool analyzes historical stock data to forecast prices and calculate potential. With this application, investors can identify promising stocks and make smarter investment decisions.
+This is a stock potential predictor tool combining multiple machine learning models, including LSTM, Prophet, and Transformer CHRONOS. The tool analyzes historical stock data to forecast prices and calculate potential. With this application, investors can identify promising stocks and make smarter investment decisions.
 
 ### Features
 - **Multi-Model Support**: LSTM (Long Short-Term Memory), Prophet (Time Series Analysis), Transformer (Efficient Forecasting).
