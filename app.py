@@ -53,8 +53,8 @@ transformer_period = os.getenv("TRANSFORMER_PERIOD", "1y")  # 默認 1 年數據
 use_prophet = os.getenv("USE_PROPHET", "false").lower() == "true"
 
 # 是否使用 chronos
-use_chronos = os.getenv("USE_CHRONOS", "false").lower() == "true"
-chronos_period = os.getenv("CHRONOS_PERIOD", "3mo")
+use_chronos = os.getenv("USE_CHRONOS", "true").lower() == "true"
+chronos_period = os.getenv("CHRONOS_PERIOD", "6mo")
 
 
 class MySQLManager:
@@ -560,7 +560,8 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                     lstm_model = train_lstm_model(X_train, y_train)
                     lstm_predicted_prices = predict_stock(lstm_model, lstm_data, lstm_scaler)
                     lstm_current_price = lstm_data['Close'].values[-1].item()
-                    lstm_predicted_price = float(lstm_predicted_prices[-1])
+                    #lstm_predicted_price = float(lstm_predicted_prices[-1])
+                    lstm_predicted_price = float(max(lstm_predicted_prices))  # 使用 max() 取預測區間中的最大值
                     lstm_potential = (lstm_predicted_price - lstm_current_price) / lstm_current_price
                     lstm_predictions.append((ticker, lstm_potential, lstm_current_price, lstm_predicted_price))
                 except Exception as e:
@@ -575,7 +576,8 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                         transformer_model = train_transformer_model(X_train, y_train, input_shape)
                         transformer_predicted_prices = predict_transformer(transformer_model, transformer_data, transformer_scaler)
                         transformer_current_price = transformer_data['Close'].values[-1].item()
-                        transformer_predicted_price = float(transformer_predicted_prices[-1])
+                        #transformer_predicted_price = float(transformer_predicted_prices[-1])
+                        transformer_predicted_price = float(max(transformer_predicted_prices))
                         transformer_potential = (transformer_predicted_price - transformer_current_price) / transformer_current_price
                         transformer_predictions.append((ticker, transformer_potential, transformer_current_price, transformer_predicted_price))
                     except Exception as e:
@@ -586,7 +588,8 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                     prophet_model = train_prophet_model(lstm_data)
                     forecast = predict_with_prophet(prophet_model, lstm_data)
                     prophet_current_price = lstm_data['Close'].values[-1].item()
-                    prophet_predicted_price = float(forecast['yhat'].iloc[-1])
+                    #prophet_predicted_price = float(forecast['yhat'].iloc[-1])
+                    prophet_predicted_price = float(forecast['yhat'].max()) 
                     prophet_potential = (prophet_predicted_price - prophet_current_price) / prophet_current_price
                     prophet_predictions.append((ticker, prophet_potential, prophet_current_price, prophet_predicted_price))
                 except Exception as e:
