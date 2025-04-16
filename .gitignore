@@ -2,3 +2,5 @@
 myenv/
 app2.py
 run2.sh
+AutogluonModels/
+catboost_info/

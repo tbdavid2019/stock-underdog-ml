@@ -18,7 +18,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Model
 import mysql.connector
 from mysql.connector import Error
-from autogluon.timeseries import TimeSeriesPredictor, TimeSeriesDataFrame
 
 
 # 加載 .env 文件
@@ -51,10 +50,6 @@ transformer_period = os.getenv("TRANSFORMER_PERIOD", "1y")  # 默認 1 年數據
 
 # 是否使用 Prophet
 use_prophet = os.getenv("USE_PROPHET", "false").lower() == "true"
-
-# 是否使用 chronos
-use_chronos = os.getenv("USE_CHRONOS", "true").lower() == "true"
-chronos_period = os.getenv("CHRONOS_PERIOD", "6mo")
 
 
 class MySQLManager:
@@ -281,24 +276,6 @@ def get_stock_data(ticker, period):
         return pd.DataFrame()
 
 
-def prepare_chronos_data(data):
-    df = data.reset_index()
-    formatted_df = pd.DataFrame({
-        'item_id': ['stock'] * len(df),
-        'timestamp': pd.to_datetime(df['Date']),
-        'target': df['Close'].astype('float32').values.ravel()
-    })
-    formatted_df = formatted_df.sort_values('timestamp')
-    try:
-        ts_df = TimeSeriesDataFrame.from_data_frame(
-            formatted_df,
-            id_column='item_id',
-            timestamp_column='timestamp'
-        )
-        return ts_df
-    except Exception as e:
-        print(f"Error creating TimeSeriesDataFrame: {str(e)}")
-        raise
 
 def prepare_data(data, time_step=60):
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -544,13 +521,11 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
         if index_name not in selected_indices:
             continue
 
+
         print(f"處理指數: {index_name}")
         lstm_predictions = []
         prophet_predictions = []
         transformer_predictions = []
-        chronos_predictions = []
-
-
 
         for ticker in stock_list:
             lstm_data = get_stock_data(ticker, period)
@@ -560,8 +535,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                     lstm_model = train_lstm_model(X_train, y_train)
                     lstm_predicted_prices = predict_stock(lstm_model, lstm_data, lstm_scaler)
                     lstm_current_price = lstm_data['Close'].values[-1].item()
-                    #lstm_predicted_price = float(lstm_predicted_prices[-1])
-                    lstm_predicted_price = float(max(lstm_predicted_prices))  # 使用 max() 取預測區間中的最大值
+                    lstm_predicted_price = float(lstm_predicted_prices[-1])
                     lstm_potential = (lstm_predicted_price - lstm_current_price) / lstm_current_price
                     lstm_predictions.append((ticker, lstm_potential, lstm_current_price, lstm_predicted_price))
                 except Exception as e:
@@ -576,8 +550,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                         transformer_model = train_transformer_model(X_train, y_train, input_shape)
                         transformer_predicted_prices = predict_transformer(transformer_model, transformer_data, transformer_scaler)
                         transformer_current_price = transformer_data['Close'].values[-1].item()
-                        #transformer_predicted_price = float(transformer_predicted_prices[-1])
-                        transformer_predicted_price = float(max(transformer_predicted_prices))
+                        transformer_predicted_price = float(transformer_predicted_prices[-1])
                         transformer_potential = (transformer_predicted_price - transformer_current_price) / transformer_current_price
                         transformer_predictions.append((ticker, transformer_potential, transformer_current_price, transformer_predicted_price))
                     except Exception as e:
@@ -588,39 +561,11 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                     prophet_model = train_prophet_model(lstm_data)
                     forecast = predict_with_prophet(prophet_model, lstm_data)
                     prophet_current_price = lstm_data['Close'].values[-1].item()
-                    #prophet_predicted_price = float(forecast['yhat'].iloc[-1])
-                    prophet_predicted_price = float(forecast['yhat'].max()) 
+                    prophet_predicted_price = float(forecast['yhat'].iloc[-1])
                     prophet_potential = (prophet_predicted_price - prophet_current_price) / prophet_current_price
                     prophet_predictions.append((ticker, prophet_potential, prophet_current_price, prophet_predicted_price))
                 except Exception as e:
                     print(f"Prophet 預測失敗: {ticker}, 錯誤: {str(e)}")
-
-    # Chronos-Bolt 預測
-            if use_chronos:
-                chronos_data = get_stock_data(ticker, period=chronos_period)
-                if len(chronos_data) >= 60:
-                    try:
-                        ts_data = prepare_chronos_data(chronos_data)
-                        predictor = TimeSeriesPredictor(
-                            prediction_length=10,
-                            freq="D",
-                            target="target"
-                        )
-                        
-                        predictor.fit(
-                            ts_data,
-                            hyperparameters={
-                                "Chronos": {"model_path": "autogluon/chronos-bolt-base"}
-                            }
-                        )
-                        
-                        predictions = predictor.predict(ts_data)
-                        chronos_current_price = float(chronos_data['Close'].iloc[-1])
-                        chronos_predicted_price = float(predictions.values.max())
-                        chronos_potential = (chronos_predicted_price - chronos_current_price) / chronos_current_price
-                        chronos_predictions.append((ticker, chronos_potential, chronos_current_price, chronos_predicted_price))
-                    except Exception as e:
-                        print(f"Chronos-Bolt 預測失敗: {ticker}, 錯誤: {str(e)}")                    
 
         if mysql_manager and mysql_manager.enabled:
             if lstm_predictions:
@@ -629,8 +574,6 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 mysql_manager.save_predictions(index_name, prophet_predictions, "Prophet", period)
             if use_transformer and transformer_predictions:
                 mysql_manager.save_predictions(index_name, transformer_predictions, "Transformer", period)
-            if use_chronos and chronos_predictions:
-                mysql_manager.save_predictions(index_name, chronos_predictions, "Chronos-Bolt", period)                
 
 
         stock_predictions = {
@@ -650,12 +593,6 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 "⛔ 後十名 Transformer 🔄": sorted(transformer_predictions, key=lambda x: x[1])[:10],
             })
 
-        if use_chronos and chronos_predictions:
-            stock_predictions.update({
-                "🚀 前十名 Chronos-Bolt ⚡": sorted(chronos_predictions, key=lambda x: x[1], reverse=True)[:10],
-                "⛔ 後十名 Chronos-Bolt ⚡": sorted(chronos_predictions, key=lambda x: x[1])[:10],
-            })
-
         if stock_predictions:
             results[index_name] = stock_predictions
 
@@ -671,7 +608,7 @@ def main():
 
         calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        period = "6mo"
+        period = "3mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500"]
 
         print("計算潛力股...")

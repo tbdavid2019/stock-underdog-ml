@@ -1,0 +1,89 @@
+import argparse
+import yfinance as yf
+import numpy as np
+import pandas as pd
+from lightgbm import LGBMRegressor
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import os
+from sklearn.multioutput import MultiOutputRegressor
+
+
+def fetch_data(ticker, period="3mo"):
+    df = yf.download(ticker, period=period)[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
+    return df
+
+def prepare_training_data(df, window_size=10, forecast_days=5):
+    X, Y = [], []
+    for i in range(len(df) - window_size - forecast_days):
+        X.append(df.iloc[i:i+window_size].values.flatten())
+        Y.append(df['Close'].iloc[i+window_size : i+window_size+forecast_days].values)
+    return np.array(X), np.array(Y).reshape(len(Y), -1)
+
+class DoubleEnsembleLightGBM:
+    def __init__(self, num_models=6, **lgb_params):
+        self.num_models = num_models
+        self.models = []
+        self.lgb_params = lgb_params
+
+    def fit(self, X, Y):
+        for i in range(self.num_models):
+            print(f"訓練子模型 {i+1}/{self.num_models} ...")
+            sample_idx = np.random.choice(len(X), size=int(len(X) * 0.8), replace=False)
+            model = MultiOutputRegressor(LGBMRegressor(**self.lgb_params))
+            model.fit(X[sample_idx], Y[sample_idx])
+            self.models.append(model)
+
+
+    def predict(self, X):
+        preds = np.stack([model.predict(X) for model in self.models])
+        return np.mean(preds, axis=0)
+
+def main(ticker, forecast_days):
+    print(f"下載 {ticker} 股票資料...")
+    df = fetch_data(ticker)
+
+    print("建立訓練資料...")
+    X, Y = prepare_training_data(df, window_size=10, forecast_days=forecast_days)
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    print("訓練 DoubleEnsemble 模型（LightGBM 子模型集成）...")
+    model = DoubleEnsembleLightGBM(
+        num_models=6,
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=6,
+        verbose=-1
+    )
+    model.fit(X_scaled, Y)
+
+    print(f"使用最新資料預測未來 {forecast_days} 天...")
+    latest_input = df.iloc[-10:].values.flatten().reshape(1, -1)
+    latest_input_scaled = scaler.transform(latest_input)
+    forecast = model.predict(latest_input_scaled)[0]
+
+    # 繪圖
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, forecast_days + 1), forecast, label='DoubleEnsemble (LightGBM)', color='purple')
+    plt.title(f"{ticker} Forecast for Next {forecast_days} Days (DoubleEnsemble)")
+    plt.xlabel("Days Ahead")
+    plt.ylabel("Predicted Close Price")
+    plt.legend()
+    plt.grid(True)
+
+    if "DISPLAY" in os.environ:
+        plt.show()
+    else:
+        filename = f"doubleensemble_{ticker.lower()}_forecast.png"
+        plt.savefig(filename)
+        print(f"圖已儲存為 {filename}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Forecast future stock price using DoubleEnsemble (LightGBM)")
+    parser.add_argument('--ticker', type=str, default='TSLA', help='股票代碼，例如 TSLA, AAPL')
+    parser.add_argument('--days', type=int, default=5, help='預測未來幾天的收盤價')
+    args = parser.parse_args()
+
+    main(args.ticker, args.days)
