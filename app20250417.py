@@ -19,12 +19,7 @@ from tensorflow.keras.models import Model
 import mysql.connector
 from mysql.connector import Error
 from autogluon.timeseries import TimeSeriesPredictor, TimeSeriesDataFrame
-# --- Cross‑section 模型用 ---
-import torch
-from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
-import inspect, importlib, warnings
-import pandas_ta as ta         # 算技術指標
+
 
 # 加載 .env 文件
 load_dotenv()
@@ -461,109 +456,6 @@ def predict_transformer(model, data, scaler, time_step=60):
     predicted_close_prices = scaler.inverse_transform(full_predictions)[:, close_index]
     return predicted_close_prices
 
-
-# =========  Cross‑section utilities  =========
-CROSS_MODELS = [
-    ('qlib.contrib.model.pytorch_tabnet', ['TabNet', 'TabnetModel'])
-    # ('qlib.contrib.model.pytorch_sfm',    ['SFM', 'SFMModel']),
-    # ('qlib.contrib.model.pytorch_add',    ['ADDModel'])
-]
-
-def add_indicators(df):
-    """給單支股票 DataFrame 加 MA5 / MA10 / RSI14"""
-    df.ta.strategy(ta.Strategy(
-        name="ma_rsi",
-        ta=[ {"kind":"sma","length":5},
-             {"kind":"sma","length":10},
-             {"kind":"rsi","length":14} ]))
-    df.rename(columns={'SMA_5':'ma5','SMA_10':'ma10','RSI_14':'rsi14'}, inplace=True)
-    return df
-
-def download_many(tickers, period):
-    """一次抓多股票日線，回傳扁平 DF"""
-    data = yf.download(" ".join(tickers), period=period,
-                       group_by='ticker', auto_adjust=True, threads=True)
-    frames=[]
-    if isinstance(data.columns, pd.MultiIndex):
-        for tic in tickers:
-            sub = data[tic].copy()
-            sub.columns = ['Open','High','Low','Close','Adj Close','Volume'][:len(sub.columns)]
-            sub = add_indicators(sub); sub['Ticker']=tic; frames.append(sub)
-    else:  # 只抓到 1 檔
-        data = add_indicators(data); data['Ticker']=tickers[0]; frames.append(data)
-
-    df = pd.concat(frames).reset_index().rename(columns={'index':'Date'})
-
-    # ➜ 保證六大欄都在，若缺就補 0
-    base_cols = ['Open','High','Low','Close','Adj Close','Volume']
-    for c in base_cols:
-        if c not in df.columns:
-            df[c] = 0.0    # 填 0（或用 np.nan）
-
-    cols = ['Date','Ticker','Open','High','Low','Close','Volume','ma5','ma10','rsi14']
-    return df[cols].dropna().sort_values(['Date','Ticker'])
-
-
-
-def build_cross_xy(df):
-    """
-    產生 tabular 特徵與標籤
-    標籤 = 下一日價格差百分比 = (Close(t+1) − Close(t)) / Close(t)
-    """
-    df = df.copy()
-    # 建立百分比標籤
-    df['pct_ret1'] = (
-        df.groupby('Ticker')['Close'].shift(-1) - df['Close']
-    ) / df['Close']
-
-    df = df.dropna()                 # 移除最後一天無標籤資料
-    feats = ['Open','High','Low','Close','Volume','ma5','ma10','rsi14']
-
-    X = torch.tensor(df[feats].values, dtype=torch.float32)
-    y = torch.tensor(df['pct_ret1'].values, dtype=torch.float32)
-    meta = df[['Date','Ticker']].reset_index(drop=True)
-    return X, y, meta
-
-def import_model(mod_path, cls_list):
-    try:
-        m = importlib.import_module(mod_path)
-        for c in cls_list:
-            if hasattr(m, c): return getattr(m, c)
-    except ImportError: pass
-    return None
-
-# -------------------------------------------
-# 正確的 TabNet hand‑loop  (with priors tensor)
-# -------------------------------------------
-from qlib.contrib.model.pytorch_tabnet import TabNet
-
-def train_tabnet(X, y, epochs=150, device="cpu"):
-    inp = X.shape[1]
-    net = TabNet(inp_dim=inp, out_dim=1).to(device)
-
-    loader = DataLoader(TensorDataset(X.to(device), y.to(device)),
-                        batch_size=512, shuffle=True)
-    opt, loss_fn = torch.optim.Adam(net.parameters(), lr=1e-3), nn.MSELoss()
-
-    net.train()
-    for _ in range(epochs):
-        for xb, yb in loader:
-            pri = torch.ones(xb.size(0), inp, device=device)  # 全 1 遮罩
-            opt.zero_grad()
-            raw = net(xb, priors=pri)            # ← 可能 tuple
-            out = raw[0] if isinstance(raw, tuple) else raw
-            loss_fn(out.squeeze(), yb).backward()
-            opt.step()
-
-    net.eval()
-    with torch.no_grad():
-        pri_all = torch.ones(X.size(0), inp, device=device)
-        raw_all = net(X.to(device), priors=pri_all)
-        preds = (raw_all[0] if isinstance(raw_all, tuple) else raw_all
-                ).squeeze().cpu().numpy()
-    return preds
-# =========  Cross‑section utilities  =========
-
 # 發送電子郵件
 def send_email(subject, body, to_emails):
     msg = MIMEMultipart()
@@ -635,194 +527,140 @@ def send_results(index_name, stock_predictions):
     send_to_discord(discord_message)  # 不再傳入 webhook_url
 
 
-# -------------------------------------------------------
-# 股票分析函數：序列模型 + TabNet 橫斷面
-# -------------------------------------------------------
+
+# # 股票分析函數
 def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager=None):
-    """
-    依所選指數，回傳各模型潛力排行榜（前 / 後 10）
-    結構範例：
-    {
-        "台灣50": {
-            "🥇 前十名 LSTM 🧠":    [ (ticker, pot, curr, pred), ... ],
-            "📉 後十名 LSTM 🧠":    [ ... ],
-            ...
-            "🚀 前十名 TabNet":     [ ... ],
-            "⛔ 後十名 TabNet":     [ ... ]
-        }, ...
-    }
-    """
     results = {}
-
-    # --- 指數 → 股票清單 ---------------------------------
     index_stock_map = {
-        "台灣50":      get_tw0050_stocks(),
+        "台灣50": get_tw0050_stocks(),
         "台灣中型100": get_tw0051_stocks(),
-        "SP500":       get_sp500_stocks(),
-        "NASDAQ":      get_nasdaq_stocks(),
-        "費城半導體":   get_sox_stocks(),
-        "道瓊":        get_dji_stocks(),
+        "SP500": get_sp500_stocks(),
+        "NASDAQ": get_nasdaq_stocks(),
+        "費城半導體": get_sox_stocks(),
+        "道瓊": get_dji_stocks()
     }
-
-    # --- 全域設定 ---------------------------------------
-    use_cross    = os.getenv("USE_CROSS", "false").lower() == "true"
-    cross_period = os.getenv("CROSS_PERIOD", "6mo")
-    cross_epochs = int(os.getenv("CROSS_EPOCHS", "150"))
-    device       = "cuda" if torch.cuda.is_available() else "cpu"
 
     for index_name, stock_list in index_stock_map.items():
         if index_name not in selected_indices:
             continue
-        print(f"\n=== 處理指數: {index_name} ===")
 
-        # -------- 序列模型容器 --------
-        lstm_preds, prophet_preds = [], []
-        transformer_preds, chronos_preds = [], []
+        print(f"處理指數: {index_name}")
+        lstm_predictions = []
+        prophet_predictions = []
+        transformer_predictions = []
+        chronos_predictions = []
 
-        # ======== 逐股票做序列預測 ========
-        for tic in stock_list:
-            data = get_stock_data(tic, period)
-            if len(data) < 60:
-                continue
 
-            # ----- LSTM -----
-            try:
-                X, y, scaler = prepare_data(data)
-                lstm_model = train_lstm_model(X, y)
-                lstm_series = predict_stock(lstm_model, data, scaler)
-                cur  = data['Close'].iloc[-1]
-                pred = float(lstm_series.max())
-                pot  = (pred - cur) / cur
-                lstm_preds.append((tic, pot, cur, pred))
-            except Exception as e:
-                print(f"LSTM 失敗 {tic}: {e}")
 
-            # ----- Transformer -----
-            if use_transformer:
+        for ticker in stock_list:
+            lstm_data = get_stock_data(ticker, period)
+            if len(lstm_data) >= 60:
                 try:
-                    tf_data = get_stock_data(tic, transformer_period)
-                    X_tf, y_tf, tf_scaler = prepare_data(tf_data)
-                    tf_shape = (X_tf.shape[1], X_tf.shape[2])
-                    tf_model = train_transformer_model(X_tf, y_tf, tf_shape)
-                    tf_series = predict_transformer(tf_model, tf_data, tf_scaler)
-                    cur  = tf_data['Close'].iloc[-1]
-                    pred = float(tf_series.max())
-                    pot  = (pred - cur) / cur
-                    transformer_preds.append((tic, pot, cur, pred))
+                    X_train, y_train, lstm_scaler = prepare_data(lstm_data)
+                    lstm_model = train_lstm_model(X_train, y_train)
+                    lstm_predicted_prices = predict_stock(lstm_model, lstm_data, lstm_scaler)
+                    lstm_current_price = lstm_data['Close'].values[-1].item()
+                    #lstm_predicted_price = float(lstm_predicted_prices[-1])
+                    lstm_predicted_price = float(max(lstm_predicted_prices))  # 使用 max() 取預測區間中的最大值
+                    lstm_potential = (lstm_predicted_price - lstm_current_price) / lstm_current_price
+                    lstm_predictions.append((ticker, lstm_potential, lstm_current_price, lstm_predicted_price))
                 except Exception as e:
-                    print(f"Transformer 失敗 {tic}: {e}")
+                    print(f"LSTM 預測失敗: {ticker}, 錯誤: {str(e)}")
 
-            # ----- Prophet -----
+            if use_transformer:
+                transformer_data = get_stock_data(ticker, period=transformer_period)
+                if len(transformer_data) >= 60:
+                    try:
+                        X_train, y_train, transformer_scaler = prepare_data(transformer_data)
+                        input_shape = (X_train.shape[1], X_train.shape[2])
+                        transformer_model = train_transformer_model(X_train, y_train, input_shape)
+                        transformer_predicted_prices = predict_transformer(transformer_model, transformer_data, transformer_scaler)
+                        transformer_current_price = transformer_data['Close'].values[-1].item()
+                        #transformer_predicted_price = float(transformer_predicted_prices[-1])
+                        transformer_predicted_price = float(max(transformer_predicted_prices))
+                        transformer_potential = (transformer_predicted_price - transformer_current_price) / transformer_current_price
+                        transformer_predictions.append((ticker, transformer_potential, transformer_current_price, transformer_predicted_price))
+                    except Exception as e:
+                        print(f"Transformer 預測失敗: {ticker}, 錯誤: {str(e)}")
+
             if use_prophet:
                 try:
-                    p_model = train_prophet_model(data)
-                    p_fore  = predict_with_prophet(p_model, data)
-                    cur  = data['Close'].iloc[-1]
-                    pred = float(p_fore['yhat'].max())
-                    pot  = (pred - cur) / cur
-                    prophet_preds.append((tic, pot, cur, pred))
+                    prophet_model = train_prophet_model(lstm_data)
+                    forecast = predict_with_prophet(prophet_model, lstm_data)
+                    prophet_current_price = lstm_data['Close'].values[-1].item()
+                    #prophet_predicted_price = float(forecast['yhat'].iloc[-1])
+                    prophet_predicted_price = float(forecast['yhat'].max()) 
+                    prophet_potential = (prophet_predicted_price - prophet_current_price) / prophet_current_price
+                    prophet_predictions.append((ticker, prophet_potential, prophet_current_price, prophet_predicted_price))
                 except Exception as e:
-                    print(f"Prophet 失敗 {tic}: {e}")
+                    print(f"Prophet 預測失敗: {ticker}, 錯誤: {str(e)}")
 
-            # ----- Chronos‑Bolt -----
+    # Chronos-Bolt 預測
             if use_chronos:
-                try:
-                    ch_data = get_stock_data(tic, chronos_period)
-                    if len(ch_data) < 60:
-                        continue
-                    ts_df = prepare_chronos_data(ch_data)
-                    predictor = TimeSeriesPredictor(
-                        prediction_length=10, freq="D", target="target")
-                    predictor.fit(ts_df, hyperparameters={
-                        "Chronos": {"model_path": "autogluon/chronos-bolt-base"}
-                    })
-                    preds = predictor.predict(ts_df)
-                    cur  = float(ch_data['Close'].iloc[-1])
-                    pred = float(preds.values.max())
-                    pot  = (pred - cur) / cur
-                    chronos_preds.append((tic, pot, cur, pred))
-                except Exception as e:
-                    print(f"Chronos 失敗 {tic}: {e}")
+                chronos_data = get_stock_data(ticker, period=chronos_period)
+                if len(chronos_data) >= 60:
+                    try:
+                        ts_data = prepare_chronos_data(chronos_data)
+                        predictor = TimeSeriesPredictor(
+                            prediction_length=10,
+                            freq="D",
+                            target="target"
+                        )
+                        
+                        predictor.fit(
+                            ts_data,
+                            hyperparameters={
+                                "Chronos": {"model_path": "autogluon/chronos-bolt-base"}
+                            }
+                        )
+                        
+                        predictions = predictor.predict(ts_data)
+                        chronos_current_price = float(chronos_data['Close'].iloc[-1])
+                        chronos_predicted_price = float(predictions.values.max())
+                        chronos_potential = (chronos_predicted_price - chronos_current_price) / chronos_current_price
+                        chronos_predictions.append((ticker, chronos_potential, chronos_current_price, chronos_predicted_price))
+                    except Exception as e:
+                        print(f"Chronos-Bolt 預測失敗: {ticker}, 錯誤: {str(e)}")                    
 
-        # --- MySQL：序列模型 ------------------------------
         if mysql_manager and mysql_manager.enabled:
-            if lstm_preds:
-                mysql_manager.save_predictions(index_name, lstm_preds, "LSTM", period)
-            if use_prophet and prophet_preds:
-                mysql_manager.save_predictions(index_name, prophet_preds, "Prophet", period)
-            if use_transformer and transformer_preds:
-                mysql_manager.save_predictions(index_name, transformer_preds, "Transformer", period)
-            if use_chronos and chronos_preds:
-                mysql_manager.save_predictions(index_name, chronos_preds, "Chronos-Bolt", chronos_period)
+            if lstm_predictions:
+                mysql_manager.save_predictions(index_name, lstm_predictions, "LSTM", period)
+            if use_prophet and prophet_predictions:
+                mysql_manager.save_predictions(index_name, prophet_predictions, "Prophet", period)
+            if use_transformer and transformer_predictions:
+                mysql_manager.save_predictions(index_name, transformer_predictions, "Transformer", period)
+            if use_chronos and chronos_predictions:
+                mysql_manager.save_predictions(index_name, chronos_predictions, "Chronos-Bolt", period)                
 
-        # --- 組排行榜（序列） -----------------------------
+
         stock_predictions = {
-            "🥇 前十名 LSTM 🧠": sorted(lstm_preds, key=lambda x: x[1], reverse=True)[:10],
-            "📉 後十名 LSTM 🧠": sorted(lstm_preds, key=lambda x: x[1])[:10],
+            "🥇 前十名 LSTM 🧠": sorted(lstm_predictions, key=lambda x: x[1], reverse=True)[:10],
+            "📉 後十名 LSTM 🧠": sorted(lstm_predictions, key=lambda x: x[1])[:10],
         }
-        if use_prophet and prophet_preds:
+
+        if use_prophet and prophet_predictions:
             stock_predictions.update({
-                "🚀 前十名 Prophet 🔮": sorted(prophet_preds, key=lambda x: x[1], reverse=True)[:10],
-                "⛔ 後十名 Prophet 🔮": sorted(prophet_preds, key=lambda x: x[1])[:10],
-            })
-        if use_transformer and transformer_preds:
-            stock_predictions.update({
-                "🚀 前十名 Transformer 🔄": sorted(transformer_preds, key=lambda x: x[1], reverse=True)[:10],
-                "⛔ 後十名 Transformer 🔄": sorted(transformer_preds, key=lambda x: x[1])[:10],
-            })
-        if use_chronos and chronos_preds:
-            stock_predictions.update({
-                "🚀 前十名 Chronos-Bolt ⚡": sorted(chronos_preds, key=lambda x: x[1], reverse=True)[:10],
-                "⛔ 後十名 Chronos-Bolt ⚡": sorted(chronos_preds, key=lambda x: x[1])[:10],
+                "🚀 前十名 Prophet 🔮": sorted(prophet_predictions, key=lambda x: x[1], reverse=True)[:10],
+                "⛔ 後十名 Prophet 🔮": sorted(prophet_predictions, key=lambda x: x[1])[:10],
             })
 
-        # ========== 橫斷面 TabNet ==========
-        if use_cross:
-            try:
-                raw_df = download_many(stock_list, cross_period)
-                Xc, yc, meta_c = build_cross_xy(raw_df)
-                mask_last = meta_c['Date'] == meta_c['Date'].max()
-                meta_last = meta_c[mask_last].reset_index(drop=True)
+        if use_transformer and transformer_predictions:
+            stock_predictions.update({
+                "🚀 前十名 Transformer 🔄": sorted(transformer_predictions, key=lambda x: x[1], reverse=True)[:10],
+                "⛔ 後十名 Transformer 🔄": sorted(transformer_predictions, key=lambda x: x[1])[:10],
+            })
 
-                max_date = raw_df['Date'].max()
-                latest_close = (
-                    raw_df[raw_df['Date'] == max_date]
-                    .groupby('Ticker')['Close']
-                    .first()
-                )
+        if use_chronos and chronos_predictions:
+            stock_predictions.update({
+                "🚀 前十名 Chronos-Bolt ⚡": sorted(chronos_predictions, key=lambda x: x[1], reverse=True)[:10],
+                "⛔ 後十名 Chronos-Bolt ⚡": sorted(chronos_predictions, key=lambda x: x[1])[:10],
+            })
 
-                print("🔍 Cross 訓練 TabNet …")
-                preds_all  = train_tabnet(Xc, yc, cross_epochs, device)
-                preds_last = preds_all[mask_last.values]
-
-                tabnet_records = [
-                    (
-                        tic,
-                        float(p),                           # 百分比潛力
-                        float(latest_close[tic]),           # 現價
-                        float(latest_close[tic] * (1 + p))  # 預測價
-                    )
-                    for tic, p in zip(meta_last['Ticker'], preds_last)
-                ]
-
-                # 寫 MySQL
-                if mysql_manager and mysql_manager.enabled:
-                    mysql_manager.save_predictions(index_name, tabnet_records, "TabNet", cross_period)
-
-                # 排行榜
-                stock_predictions.update({
-                    "🚀 前十名 TabNet": sorted(tabnet_records, key=lambda x: x[1], reverse=True)[:10],
-                    "⛔ 後十名 TabNet": sorted(tabnet_records, key=lambda x: x[1])[:10],
-                })
-
-            except Exception as e:
-                print(f"TabNet 流程錯誤: {e}")
-
-        # -------- 收尾 --------
         if stock_predictions:
             results[index_name] = stock_predictions
 
     return results
+
 
 
 # 主函數
@@ -835,7 +673,6 @@ def main():
 
         period = "6mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500"]
-        # selected_indices = ["台灣50"]
 
         print("計算潛力股...")
         analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager)
