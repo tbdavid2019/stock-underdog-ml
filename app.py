@@ -157,9 +157,9 @@ class MySQLManager:
                     current_time,
                     index_name,
                     ticker,
-                    float(current_price),
-                    float(predicted_price),
-                    float(potential),
+                    float(current_price.iloc[0]) if isinstance(current_price, pd.Series) else float(current_price),
+                    float(predicted_price.iloc[0]) if isinstance(predicted_price, pd.Series) else float(predicted_price),
+                    float(potential.iloc[0]) if isinstance(potential, pd.Series) else float(potential),
                     method,
                     period
                 )
@@ -469,6 +469,57 @@ CROSS_MODELS = [
     # ('qlib.contrib.model.pytorch_add',    ['ADDModel'])
 ]
 
+
+def train_cross_loop(model_cls, X, y, epochs, device="cpu"):
+    """
+    通用橫斷面訓練迴圈，支援 TabNet / SFM / ADDModel
+    會根據模型的 __init__ 參數自動決定要給哪些 kwargs
+    """
+    import inspect
+    sig = inspect.signature(model_cls.__init__)
+    param_names = sig.parameters
+
+    kw = {}
+    # --- 特徵輸入維度 ---
+    if 'd_feat'      in param_names: kw['d_feat']      = X.shape[1]
+    if 'feature_dim' in param_names: kw['feature_dim'] = X.shape[1]
+    if 'input_dim'   in param_names: kw['input_dim']   = X.shape[1]
+    if 'field_dim'   in param_names: kw['field_dim']   = X.shape[1]
+
+    # --- 輸出維度 ---
+    if 'output_dim'  in param_names: kw['output_dim']  = 1
+    if 'target_dim'  in param_names: kw['target_dim']  = 1
+    if 'embed_dim'   in param_names: kw['embed_dim']   = 16   # 例如 SFM 用
+
+    model = model_cls(**kw)
+    net   = model.model if hasattr(model, 'model') else model
+
+    # 有些模型本身不支援 .to()
+    if hasattr(net, 'to'):
+        net.to(device)
+
+    ds = DataLoader(TensorDataset(X.to(device), y.to(device)),
+                    batch_size=512, shuffle=True)
+    opt = torch.optim.Adam(net.parameters(), lr=1e-3)
+    loss_fn = nn.MSELoss()
+
+    net.train()
+    for _ in range(epochs):
+        for xb, yb in ds:
+            opt.zero_grad()
+            out = net(xb)
+            out = out[0] if isinstance(out, tuple) else out
+            loss_fn(out.squeeze(), yb).backward()
+            opt.step()
+
+    net.eval()
+    with torch.no_grad():
+        preds = net(X.to(device))
+        preds = preds[0] if isinstance(preds, tuple) else preds
+        preds = preds.squeeze().cpu().numpy()
+
+    return preds
+    
 def add_indicators(df):
     """給單支股票 DataFrame 加 MA5 / MA10 / RSI14"""
     df.ta.strategy(ta.Strategy(
@@ -501,6 +552,8 @@ def download_many(tickers, period):
             df[c] = 0.0    # 填 0（或用 np.nan）
 
     cols = ['Date','Ticker','Open','High','Low','Close','Volume','ma5','ma10','rsi14']
+    df['Date'] = pd.to_datetime(df['Date'])  # 確保 Date 欄位為 datetime 型態
+    df = df.reset_index(drop=True)           # 確保沒有 MultiIndex
     return df[cols].dropna().sort_values(['Date','Ticker'])
 
 
@@ -513,7 +566,7 @@ def build_cross_xy(df):
     df = df.copy()
     # 建立百分比標籤
     df['pct_ret1'] = (
-        df.groupby('Ticker')['Close'].shift(-1) - df['Close']
+        df.groupby('Ticker')['Close'].transform(lambda x: x.shift(-1)) - df['Close']
     ) / df['Close']
 
     df = df.dropna()                 # 移除最後一天無標籤資料
@@ -632,11 +685,13 @@ def send_results(index_name, stock_predictions):
         discord_message += f"**{key}:**\n"
         for stock in predictions:
             discord_message += f"股票: {stock[0]}, 潛力: {stock[1]:.2%}, 現價: {stock[2]:.2f}, 預測價: {stock[3]:.2f}\n"
+    print("[DEBUG] discord_message 組裝內容：")
+    print(discord_message)
     send_to_discord(discord_message)  # 不再傳入 webhook_url
 
 
 # -------------------------------------------------------
-# 股票分析函數：序列模型 + TabNet 橫斷面
+# 股票分析函數：先執行橫斷面模型，再執行時間序列模型
 # -------------------------------------------------------
 def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager=None):
     """
@@ -653,6 +708,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
     }
     """
     results = {}
+    stock_predictions = {}
 
     # --- 指數 → 股票清單 ---------------------------------
     index_stock_map = {
@@ -670,6 +726,11 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
     cross_epochs = int(os.getenv("CROSS_EPOCHS", "150"))
     device       = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # --- 時間序列模型設定 ---------------------------------
+    use_transformer = os.getenv("USE_TRANSFORMER", "false").lower() == "true"
+    use_prophet = os.getenv("USE_PROPHET", "false").lower() == "true"
+    use_chronos = os.getenv("USE_CHRONOS", "true").lower() == "true"
+
     for index_name, stock_list in index_stock_map.items():
         if index_name not in selected_indices:
             continue
@@ -679,7 +740,75 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
         lstm_preds, prophet_preds = [], []
         transformer_preds, chronos_preds = [], []
 
-        # ======== 逐股票做序列預測 ========
+        # ======== 先跑橫斷面模型（Cross Sectional Models） ========
+        if use_cross:
+            try:
+                raw_df = download_many(stock_list, cross_period)
+                Xc, yc, meta_c = build_cross_xy(raw_df)
+
+                # 修正 mask_last = Series vs Series 錯誤
+                max_date = pd.Timestamp(meta_c['Date'].max())
+                print(f"[LOG] max_date: {max_date}, type: {type(max_date)}")
+                print(f"[LOG] meta_c['Date'] head: {meta_c['Date'].head()}, dtype: {meta_c['Date'].dtype}")
+                mask_last = meta_c['Date'].values == max_date
+                print(f"[LOG] mask_last: {mask_last}, shape: {mask_last.shape}, type: {type(mask_last)}")
+                meta_last = meta_c[mask_last].reset_index(drop=True)
+                print(f"[LOG] meta_last shape: {meta_last.shape}, columns: {meta_last.columns}")
+
+                latest_close = (
+                    raw_df[raw_df['Date'] == max_date]
+                    .groupby('Ticker')['Close']
+                    .first()
+                )
+                print(f"[LOG] latest_close index: {latest_close.index}, type: {type(latest_close)}")
+
+                # 執行 Cross 模型（TabNet，SFM，ADDModel）
+                for m_path, cls_list in CROSS_MODELS:
+                    ModelClass = import_model(m_path, cls_list)
+                    if ModelClass is None:
+                        continue
+                    print(f"🔍 Cross 訓練 {ModelClass.__name__} …")
+                    try:
+                        if ModelClass.__name__ == "TabNet":
+                            preds_all = train_tabnet(Xc, yc, epochs=cross_epochs, device=device)
+                        else:
+                            preds_all = train_cross_loop(ModelClass, Xc, yc, cross_epochs, device)
+                        print(f"[LOG] preds_all shape: {getattr(preds_all, 'shape', None)}, type: {type(preds_all)}")
+                        preds_last = preds_all[mask_last]
+                        print(f"[LOG] preds_last shape: {getattr(preds_last, 'shape', None)}, type: {type(preds_last)}")
+
+                        # 組 TabNet / SFM / ADDModel 結果
+                        records = [
+                            (
+                                tic,
+                                p,                               # 預測潛力
+                                float(latest_close[tic]),        # 現價
+                                float(latest_close[tic] * (1+p)) # 預測價
+                            )
+                            for tic, p in zip(meta_last['Ticker'], preds_last)
+                        ]
+                        print(f"[LOG] records sample: {records[:3]}")
+
+                        # 寫 MySQL
+                        if mysql_manager and mysql_manager.enabled:
+                            mysql_manager.save_predictions(index_name, records, ModelClass.__name__, cross_period)
+
+                        # 排行榜
+                        stock_predictions.update({
+                            f"🚀 前十名 {ModelClass.__name__}": sorted(records, key=lambda x:x[1], reverse=True)[:10],
+                            f"⛔ 後十名 {ModelClass.__name__}": sorted(records, key=lambda x:x[1])[:10],
+                        })
+                        print(f"[DEBUG] stock_predictions keys after update: {list(stock_predictions.keys())}")
+                        print(f"[DEBUG] stock_predictions lens after update: {[len(v) for v in stock_predictions.values()]}")
+
+                    except Exception as e:
+                        print(f"{ModelClass.__name__} 失敗: {e}")
+                        continue
+
+            except Exception as e:
+                print(f"Cross‑section 流程錯誤: {e}")
+
+        # ======== 跑時間序列模型 ========
         for tic in stock_list:
             data = get_stock_data(tic, period)
             if len(data) < 60:
@@ -690,9 +819,12 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 X, y, scaler = prepare_data(data)
                 lstm_model = train_lstm_model(X, y)
                 lstm_series = predict_stock(lstm_model, data, scaler)
-                cur  = data['Close'].iloc[-1]
+                print(f"[DEBUG][LSTM] lstm_series type: {type(lstm_series)}, shape: {getattr(lstm_series, 'shape', None)}")
+                print(f"[DEBUG][LSTM] data['Close'] type: {type(data['Close'])}, shape: {getattr(data['Close'], 'shape', None)}")
+                cur  = float(data['Close'].iloc[-1, 0]) if isinstance(data['Close'], pd.DataFrame) else float(data['Close'].iloc[-1])
                 pred = float(lstm_series.max())
                 pot  = (pred - cur) / cur
+                print(f"[DEBUG][LSTM] cur: {cur}, pred: {pred}, pot: {pot}")
                 lstm_preds.append((tic, pot, cur, pred))
             except Exception as e:
                 print(f"LSTM 失敗 {tic}: {e}")
@@ -744,7 +876,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 except Exception as e:
                     print(f"Chronos 失敗 {tic}: {e}")
 
-        # --- MySQL：序列模型 ------------------------------
+        # --- MySQL：時間序列模型 ---------------------------
         if mysql_manager and mysql_manager.enabled:
             if lstm_preds:
                 mysql_manager.save_predictions(index_name, lstm_preds, "LSTM", period)
@@ -755,11 +887,13 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
             if use_chronos and chronos_preds:
                 mysql_manager.save_predictions(index_name, chronos_preds, "Chronos-Bolt", chronos_period)
 
-        # --- 組排行榜（序列） -----------------------------
-        stock_predictions = {
+        # --- 組排行榜（時間序列） -------------------------
+        stock_predictions = stock_predictions if 'stock_predictions' in locals() else {}
+
+        stock_predictions.update({
             "🥇 前十名 LSTM 🧠": sorted(lstm_preds, key=lambda x: x[1], reverse=True)[:10],
             "📉 後十名 LSTM 🧠": sorted(lstm_preds, key=lambda x: x[1])[:10],
-        }
+        })
         if use_prophet and prophet_preds:
             stock_predictions.update({
                 "🚀 前十名 Prophet 🔮": sorted(prophet_preds, key=lambda x: x[1], reverse=True)[:10],
@@ -775,48 +909,6 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
                 "🚀 前十名 Chronos-Bolt ⚡": sorted(chronos_preds, key=lambda x: x[1], reverse=True)[:10],
                 "⛔ 後十名 Chronos-Bolt ⚡": sorted(chronos_preds, key=lambda x: x[1])[:10],
             })
-
-        # ========== 橫斷面 TabNet ==========
-        if use_cross:
-            try:
-                raw_df = download_many(stock_list, cross_period)
-                Xc, yc, meta_c = build_cross_xy(raw_df)
-                mask_last = meta_c['Date'] == meta_c['Date'].max()
-                meta_last = meta_c[mask_last].reset_index(drop=True)
-
-                max_date = raw_df['Date'].max()
-                latest_close = (
-                    raw_df[raw_df['Date'] == max_date]
-                    .groupby('Ticker')['Close']
-                    .first()
-                )
-
-                print("🔍 Cross 訓練 TabNet …")
-                preds_all  = train_tabnet(Xc, yc, cross_epochs, device)
-                preds_last = preds_all[mask_last.values]
-
-                tabnet_records = [
-                    (
-                        tic,
-                        float(p),                           # 百分比潛力
-                        float(latest_close[tic]),           # 現價
-                        float(latest_close[tic] * (1 + p))  # 預測價
-                    )
-                    for tic, p in zip(meta_last['Ticker'], preds_last)
-                ]
-
-                # 寫 MySQL
-                if mysql_manager and mysql_manager.enabled:
-                    mysql_manager.save_predictions(index_name, tabnet_records, "TabNet", cross_period)
-
-                # 排行榜
-                stock_predictions.update({
-                    "🚀 前十名 TabNet": sorted(tabnet_records, key=lambda x: x[1], reverse=True)[:10],
-                    "⛔ 後十名 TabNet": sorted(tabnet_records, key=lambda x: x[1])[:10],
-                })
-
-            except Exception as e:
-                print(f"TabNet 流程錯誤: {e}")
 
         # -------- 收尾 --------
         if stock_predictions:
@@ -835,7 +927,7 @@ def main():
 
         period = "6mo"
         selected_indices = ["台灣50", "台灣中型100", "SP500"]
-        # selected_indices = ["台灣50"]
+        #selected_indices = ["費城半導體"]
 
         print("計算潛力股...")
         analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager)
