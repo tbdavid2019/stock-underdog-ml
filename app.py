@@ -708,7 +708,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
     }
     """
     results = {}
-    stock_predictions = {}
+    # stock_predictions = {}  # 移除這行，改到每個指數處理時初始化
 
     # --- 指數 → 股票清單 ---------------------------------
     index_stock_map = {
@@ -732,6 +732,7 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manag
     use_chronos = os.getenv("USE_CHRONOS", "true").lower() == "true"
 
     for index_name, stock_list in index_stock_map.items():
+        stock_predictions = {}  # 每個指數都重新初始化
         if index_name not in selected_indices:
             continue
         print(f"\n=== 處理指數: {index_name} ===")
