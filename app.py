@@ -207,11 +207,11 @@ def save_to_mongodb(index_name, stock_predictions):
 # Stock index mappings
 
 def get_tw0050_stocks():
-    response = requests.get('http://13.125.121.198:8090/stocks/0050')
+    response = requests.get('https://answerbook.david888.com/TW0050')
     data = response.json()
     
     # 取得股票代碼並加上 .TW
-    stocks = [f"{code}.TW" for code in data['stocks'].keys()]
+    stocks = [f"{code}.TW" for code in data['TW0050'].keys()]
     
     # 如果需要排序的話可以加上 sort()
     #stocks.sort()
@@ -220,11 +220,11 @@ def get_tw0050_stocks():
 
 
 def get_tw0051_stocks():
-    response = requests.get('http://13.125.121.198:8090/stocks/0100')
+    response = requests.get('https://answerbook.david888.com/TW0051')
     data = response.json()
     
     # 取得股票代碼並加上 .TW
-    stocks = [f"{code}.TW" for code in data['stocks'].keys()]
+    stocks = [f"{code}.TW" for code in data['TW0051'].keys()]
     
     # 如果需要排序的話可以加上 sort()
     # stocks.sort()
@@ -233,11 +233,16 @@ def get_tw0051_stocks():
 
 
 def get_sp500_stocks(limit=100):
-    response = requests.get('http://13.125.121.198:8090/stocks/sp500')
+    response = requests.get('https://answerbook.david888.com/SP500')
     data = response.json()
     
     # 取得股票代碼列表並限制數量
-    stocks = list(data['stocks'].keys())[:limit]
+    stocks = list(data['SP500'].keys())[:limit]
+    
+    # 修正特殊股票代碼格式，例如將 BRK.B 轉換為 BRK-B 以適應 yfinance
+    for i, stock in enumerate(stocks):
+        if stock == "BRK.B":
+            stocks[i] = "BRK-B"
     
     return stocks
     
@@ -246,11 +251,11 @@ def get_sp500_stocks(limit=100):
 def get_nasdaq_stocks():
 # Function to fetch Philadelphia Semiconductor Index component stocks
 
-    response = requests.get('http://13.125.121.198:8090/stocks/NASDAQ100')
+    response = requests.get('https://answerbook.david888.com/nasdaq100')
     data = response.json()
     
     # 取得股票代碼列表並限制數量
-    stocks = list(data['stocks'].keys())
+    stocks = list(data['nasdaq100'].keys())
     
     return stocks
 
@@ -265,11 +270,11 @@ def get_sox_stocks():
 # Function to fetch Dow Jones Industrial Average component stocks
 def get_dji_stocks():
 
-    response = requests.get('http://13.125.121.198:8090/stocks/DOWJONES')
+    response = requests.get('https://answerbook.david888.com/dowjones')
     data = response.json()
     
     # 取得股票代碼列表並限制數量
-    stocks = list(data['stocks'].keys())
+    stocks = list(data['dowjones'].keys())
     
     return stocks
 
@@ -927,8 +932,8 @@ def main():
         calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         period = "6mo"
-        selected_indices = ["台灣50", "台灣中型100", "SP500"]
-        #selected_indices = ["費城半導體"]
+        #selected_indices = ["台灣50", "台灣中型100", "SP500"]
+        selected_indices = ["SP500"]
 
         print("計算潛力股...")
         analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager)
