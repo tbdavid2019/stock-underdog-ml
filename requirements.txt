@@ -1,10 +1,10 @@
-urllib3==2.0.0
+urllib3>=2.0.0
 yfinance
 numpy
 pandas
 scikit-learn
 tensorflow
-gradio==3.50.2  # 使用較舊但穩定的版本
+gradio
 keras
 prophet
 pymongo
@@ -13,4 +13,4 @@ tensorflow
 mysql-connector-python>=8.0.0
 torch>=1.13
 pandas_ta
-git+https://github.com/microsoft/qlib.git@main#subdirectory=python[all]
+pyqlib[all]
