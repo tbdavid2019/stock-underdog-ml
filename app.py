@@ -232,7 +232,7 @@ def get_tw0051_stocks():
     return stocks
 
 
-def get_sp500_stocks(limit=100):
+def get_sp500_stocks(limit=110):
     response = requests.get('https://answerbook.david888.com/SP500')
     data = response.json()
     
@@ -932,8 +932,8 @@ def main():
         calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         period = "6mo"
-        #selected_indices = ["台灣50", "台灣中型100", "SP500"]
-        selected_indices = ["SP500"]
+        selected_indices = ["台灣50", "台灣中型100", "SP500"]
+        #selected_indices = ["SP500"]
 
         print("計算潛力股...")
         analysis_results = get_top_and_bottom_10_potential_stocks(period, selected_indices, mysql_manager)
