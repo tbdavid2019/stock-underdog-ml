@@ -1,81 +1,245 @@
-# tbdavid2019/stock-underdog-ml
-## 股市潛力股計算 (LSTM, Prophet, Transformer) 機器學習版本
+# Stock Prediction Application
 
-這是一個用於計算股市潛力股的工具，結合了多種機器學習模型，包括 LSTM、Prophet 和 Transformer。該工具能根據不同時間範圍的歷史數據，預測股票價格，並計算股票的潛力。透過此應用，投資者可以快速篩選出具有潛力的股票，做出更明智的投資決策。
+AI-powered stock analysis system using multiple ML models (LSTM, Prophet, Chronos) with parallel processing and Supabase integration.
 
-### 功能特點
-- **多模型支持**：LSTM（長短期記憶網絡）、Prophet（時間序列分析）、Transformer（高效預測）。
-- **多市場支持**：涵蓋台灣 50、SP500、NASDAQ、費城半導體等主要股市指數。
-- **靈活參數配置**：可以針對不同市場和股票自定義數據抓取期間與預測方法。
-- **結果導出**：支持透過電子郵件、Telegram、Discord 分享預測結果。
-- **數據存儲**：可將結果存儲於 MongoDB，方便後續查詢與分析。
+## Features
 
-### 使用方法
-1. 安裝必要的套件：
-    ```bash
-    pip install -r requirements.txt
-    ```
-2. 配置 `.env` 文件以設置以下參數：
-    - `SMTP_SERVER`, `SMTP_PORT`, `SENDER_EMAIL`, `EMAIL_PASSWORD`
-    - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`
-    - `MONGO_URI`
-3. 執行主程序：
-    ```bash
-    python app.py
-    ```
-4. 查看預測結果並檢查控制台輸出或配置的通知方式。
+- 🤖 **Multiple ML Models**: LSTM, Prophet, Chronos-Bolt for time series prediction
+- 🚀 **Parallel Processing**: 5 concurrent workers for faster analysis
+- 📊 **Cross-Sectional Models**: TabNet, SFM, ADDModel for comparative analysis
+- 💾 **Supabase Database**: Cloud-based PostgreSQL storage
+- 📝 **Comprehensive Logging**: All operations logged to `logs/app.log`
+- 🔔 **Multi-Channel Notifications**: Discord, Telegram, Email support
+- 🌏 **Multi-Market Support**: Taiwan (TW50, TW100), US (S&P500, NASDAQ, DJI), Semiconductors (SOX)
 
-### 資料結構與參數
-- **輸入數據**：
-    - 股票歷史數據，包括 `Open`, `High`, `Low`, `Close`, `Adj Close`, `Volume`。
-- **模型訓練**：
-    - LSTM 使用 3 個月的數據 (`3mo`)。
-    - Transformer 使用 5 年的數據 (`5y`)。
-    - Prophet 自適應所有數據範圍。
+## Requirements
 
-### 注意事項
-- 使用 Yahoo Finance 獲取數據，請確保網絡連線正常。
-- 預測模型需要一定的數據量，股票數據少於 60 條時將被跳過。
-- 訓練和預測過程可能需要較長的時間，建議使用具備 GPU 的環境提升效能。
+- Python 3.11+
+- Virtual environment (recommended)
 
----
+## Installation
 
-# tbdavid2019/stock-underdog-ml
-## Stock Potential Predictor (LSTM, Prophet, Transformer) Machine Learning Version
+1. **Clone the repository**
+```bash
+cd /home/ec2-user/stock-underdog-ml
+```
 
-This is a stock potential predictor tool combining multiple machine learning models, including LSTM, Prophet, and Transformer. The tool analyzes historical stock data to forecast prices and calculate potential. With this application, investors can identify promising stocks and make smarter investment decisions.
+2. **Create and activate virtual environment**
+```bash
+python3.11 -m venv myenv
+source myenv/bin/activate
+```
 
-### Features
-- **Multi-Model Support**: LSTM (Long Short-Term Memory), Prophet (Time Series Analysis), Transformer (Efficient Forecasting).
-- **Market Coverage**: Supports major indices like Taiwan 50, SP500, NASDAQ, and Philadelphia Semiconductor.
-- **Flexible Configuration**: Customize data periods and prediction methods for different markets and stocks.
-- **Result Export**: Share predictions via Email, Telegram, and Discord.
-- **Data Storage**: Save results in MongoDB for future reference and analysis.
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
 
-### How to Use
-1. Install required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-2. Configure the `.env` file with the following parameters:
-    - `SMTP_SERVER`, `SMTP_PORT`, `SENDER_EMAIL`, `EMAIL_PASSWORD`
-    - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`
-    - `MONGO_URI`
-3. Run the main script:
-    ```bash
-    python app.py
-    ```
-4. View prediction results in the console or via configured notifications.
+## Configuration
 
-### Data Structure and Parameters
-- **Input Data**:
-    - Historical stock data, including `Open`, `High`, `Low`, `Close`, `Adj Close`, `Volume`.
-- **Model Training**:
-    - LSTM uses 3 months of data (`3mo`).
-    - Transformer uses 5 years of data (`5y`).
-    - Prophet adapts to all available data ranges.
+### Quick Start
 
-### Notes
-- Data is fetched using Yahoo Finance. Ensure a stable internet connection.
-- Stocks with fewer than 60 data points will be skipped.
-- Training and prediction may take time; using a GPU-enabled environment is recommended for better performance.
+1. **Copy the example environment file**
+```bash
+cp .env.example .env
+```
+
+2. **Edit `.env` with your credentials**
+
+### Required Configuration
+
+```bash
+# Supabase (Required)
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_KEY=your_service_role_key
+
+# Model Flags (Choose which models to run)
+USE_PROPHET=true
+USE_CHRONOS=true
+USE_CROSS=true
+USE_TRANSFORMER=false  # Optional, slower
+```
+
+### Optional Notifications
+
+```bash
+# Discord
+DISCORD_WEBHOOK_URL=your_webhook_url
+
+# Telegram
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHANNEL_ID=your_channel_id
+
+***REMOVED***
+SMTP_SERVER=smtp.gmail.com
+SENDER_EMAIL=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+TO_EMAILS=recipient@example.com
+```
+
+See [.env.example](.env.example) for all available options.
+
+## Database Setup
+
+1. **Create Supabase Project** at [supabase.com](https://supabase.com)
+
+2. **Run SQL Schema** (in Supabase SQL Editor):
+```sql
+CREATE TABLE predictions (
+    id bigint generated by default as identity primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    index_name text,
+    model_name text,
+    ticker text,
+    current_price numeric,
+    predicted_price numeric,
+    potential numeric,
+    period text,
+    timestamp timestamp with time zone
+);
+```
+
+3. **Get Service Role Key** from Settings → API → Service Role Key
+
+## Usage
+
+### Basic Run
+```bash
+source myenv/bin/activate
+python main.py
+```
+
+### Customize Indices
+Edit `main.py` line ~208:
+```python
+selected_indices = ["台灣50", "台灣中型100", "SP500"]
+```
+
+Available indices:
+- `"台灣50"` - Taiwan Top 50
+- `"台灣中型100"` - Taiwan Mid-Cap 100
+- `"SP500"` - S&P 500
+- `"NASDAQ"` - NASDAQ 100
+- `"費城半導體"` - Philadelphia Semiconductor (SOX)
+- `"道瓊"` - Dow Jones Industrial
+
+## Project Structure
+
+```
+stock-underdog-ml/
+├── main.py                 # Main entry point
+├── config.py              # Configuration management
+├── database.py            # Supabase integration
+├── data_loader.py         # Stock data fetching
+├── logger.py              # Logging configuration
+├── notifier.py            # Notification services
+├── parallel_processor.py  # Parallel stock processing
+├── models/
+│   ├── lstm.py           # LSTM model
+│   ├── transformer.py    # Transformer model
+│   ├── prophet_model.py  # Prophet model
+│   ├── chronos_model.py  # Chronos-Bolt model
+│   └── cross_section.py  # Cross-sectional models
+├── logs/                 # Log files
+└── requirements.txt      # Python dependencies
+```
+
+## Models
+
+### Time Series Models (Per Stock)
+- **LSTM**: Deep learning recurrent neural network
+- **Prophet**: Facebook's time series forecasting
+- **Chronos-Bolt**: AutoGluon's foundation model
+
+### Cross-Sectional Models (All Stocks)
+- **TabNet**: Attention-based tabular model
+- **SFM**: Qlib's Stock Forecasting Model
+- **ADDModel**: Qlib's Attention-based model
+
+## Output
+
+Results are:
+1. **Saved to Supabase** (`predictions` table)
+2. **Sent to Discord/Telegram/Email** (if configured)
+3. **Logged to** `logs/app.log`
+
+### Output Format (All Channels)
+
+All notifications now use a unified table format:
+
+```
+**每日潛力股分析**
+運算日期和時間: 2026-01-05 14:30:00
+
+指數: 台灣50
+
+🥇 前五名 LSTM 🧠
+股票     現價      預測價     潛力
+----------------------------------------
+2357.TW    546.00    680.44   24.62%
+3034.TW    363.00    424.97   17.07%
+2912.TW    220.50    247.38   12.19%
+2395.TW    289.50    318.99   10.19%
+4938.TW     68.70     74.64    8.65%
+
+📉 後五名 LSTM 🧠
+股票     現價      預測價     潛力
+----------------------------------------
+3711.TW    263.50    220.82  -16.20%
+2330.TW   1670.00   1425.55  -14.64%
+...
+```
+
+## Performance
+
+- **Parallel Processing**: 5 concurrent workers
+- **Taiwan 50**: ~2-3 minutes for all models
+- **S&P 500**: ~15-20 minutes (110 stocks)
+
+## Troubleshooting
+
+### Keras Compatibility Error
+If you see `ValueError: Your currently installed version of Keras is Keras 3`:
+```bash
+pip install tf-keras
+```
+
+### Supabase Connection Error
+1. Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env`
+2. Check table exists in Supabase dashboard
+3. Ensure service role key (not anon key) is used
+
+### Data Download Issues
+- Check internet connection
+- Verify stock ticker format (e.g., `2330.TW` for Taiwan stocks)
+- Some stocks may have insufficient historical data
+
+## Development
+
+### Run Tests
+```bash
+# Test Prophet and Chronos
+python test_prophet_chronos.py
+
+# Test Supabase connection
+python test_service_key.py
+```
+
+### View Logs
+```bash
+tail -f logs/app.log
+```
+
+## License
+
+MIT
+
+## Author
+
+David (tbdavid2019)
+
+## Acknowledgments
+
+- Yahoo Finance for stock data
+- Supabase for database hosting
+- AutoGluon, Prophet, TensorFlow for ML frameworks

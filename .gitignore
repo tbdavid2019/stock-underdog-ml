@@ -1,5 +1,11 @@
 .env
 myenv/
+venv/
+env/
+*.pyc
+__pycache__/
+*.egg-info/
+.pytest_cache/
 app2.py
 run2.sh
 AutogluonModels/

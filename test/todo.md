@@ -4,16 +4,16 @@ Based on the analysis of `app.py`, the following improvements are recommended:
 
 ## 1. 程式架構與模組化 (Structure & Modularity)
 目前 `app.py` 過於龐大（近 1000 行），建議拆分為以下模組：
-- [ ] **config.py**: 集中管理 `.env` 環境變數與常數設定。
-- [ ] **database.py**: 封裝 `MySQLManager` 和 MongoDB 連線邏輯，實作連線管理。
-- [ ] **data_loader.py**: 負責 API 爬蟲（stock lists）與 `yfinance` 數據抓取。
-- [ ] **models/**: 將各模型邏輯拆分為獨立檔案：
+- [x] **config.py**: 集中管理 `.env` 環境變數與常數設定。
+- [x] **database.py**: 封裝 `MySQLManager` 和 MongoDB 連線邏輯，實作連線管理。
+- [x] **data_loader.py**: 負責 API 爬蟲（stock lists）與 `yfinance` 數據抓取。
+- [x] **models/**: 將各模型邏輯拆分為獨立檔案：
     - `models/lstm.py`
     - `models/transformer.py`
     - `models/prophet_model.py`
     - `models/cross_section.py` (TabNet, etc.)
-- [ ] **notifier.py**: 封裝 Email, Telegram, Discord 的發送邏輯。
-- [ ] **main.py**: 簡化為主流程控制腳本。
+- [x] **notifier.py**: 封裝 Email, Telegram, Discord 的發送邏輯。
+- [x] **main.py**: 簡化為主流程控制腳本。
 
 ## 2. 執行效能 (Performance)
 - [ ] **實作並行處理 (Parallel Processing)**:
@@ -23,10 +23,24 @@ Based on the analysis of `app.py`, the following improvements are recommended:
 - [ ] **模型訓練策略優化**:
     - 評估是否需要對每支股票每次都重新訓練 (`fit`)，或可改用增量訓練 / 通用模型策略。
 
-## 3. 資料庫連線 (Database Connections)
-- [ ] **連線管理**:
-    - 改進 `MySQLManager`，使用 Context Manager (`with` 語法) 或 Connection Pool，避免長時間運行導致連線 Timeout。
-    - 增加自動重連機制。
+## 3. 資料庫遷移至 Supabase (Database Migration)
+- [ ] **統一遷移至 Supabase**:
+    - 將 MySQL 和 MongoDB 統一遷移至 Supabase (PostgreSQL)
+    - 使用 Supabase 的即時資料庫功能，同時滿足關聯式查詢與 NoSQL 彈性需求
+- [ ] **認證設定**:
+    - 在 `.env` 中新增 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`
+    - 安裝 `supabase-py` 套件：`pip install supabase`
+- [ ] **重構資料庫模組**:
+    - 建立 `database.py` 封裝 Supabase 連線邏輯
+    - 實作 Context Manager 進行連線管理
+    - 設計資料表 Schema (predictions, stock_data 等)
+- [ ] **資料遷移**:
+    - 匯出現有 MySQL/MongoDB 資料
+    - 在 Supabase 建立對應的 Tables
+    - 執行資料遷移腳本
+- [ ] **連線優化**:
+    - 使用 Supabase 的內建 Connection Pool
+    - 實作錯誤重試機制
 
 ## 4. 錯誤處理與日誌 (Error Handling & Logging)
 - [ ] **導入 Logging 模組**:

@@ -1,6 +1,7 @@
-cd /home/ec2-user/stock-underdog-ml
-source /home/ec2-user/stock-underdog-ml/myenv/bin/activate
-pip install --upgrade networkx yfinance
-python app.py  > /tmp/underdog123.log 2>&1
-deactivate
+#!/bin/bash
+# Stock Prediction Application Runner
+# Activates virtual environment and runs main.py
 
+cd /home/ec2-user/stock-underdog-ml
+source myenv/bin/activate
+python main.py

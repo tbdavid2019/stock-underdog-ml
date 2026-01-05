@@ -1,16 +1,32 @@
+# Core dependencies
 urllib3>=2.0.0
-yfinance
+python-dotenv
+requests
+
+# Data processing
 numpy
 pandas
 scikit-learn
+# pandas_ta removed (using manual implementation)
+
+# Stock data
+yfinance
+
+# Machine Learning - Deep Learning
 tensorflow
-gradio
 keras
-prophet
-pymongo
-python-dotenv
-tensorflow
-mysql-connector-python>=8.0.0
 torch>=1.13
-pandas_ta
-pyqlib[all]
+
+# Machine Learning - Time Series  
+prophet
+autogluon.timeseries
+
+# Machine Learning - Cross-sectional models (Qlib)
+# pyqlib - Optional, currently disabled due to installation issues on Python 3.11/3.12
+# If needed: pip install pyqlib
+
+# Chronos dependency (Keras 2 compatibility for transformers)
+tf-keras
+
+# Database
+supabase
