@@ -1,5 +1,5 @@
 """
-LSTM (Long Short-Term Memory) model for stock price prediction
+LSTM (Long Short-Term Memory) model for NEXT-DAY stock price prediction
 """
 import numpy as np
 import pandas as pd
@@ -9,19 +9,19 @@ from keras.layers import LSTM, Dense, Dropout, Input
 from typing import Tuple
 
 
-def prepare_data(data: pd.DataFrame, time_step: int = 60, train_ratio: float = 0.8) -> Tuple[np.ndarray, np.ndarray, MinMaxScaler]:
+def prepare_data(data: pd.DataFrame, time_step: int = 90, train_ratio: float = 0.8) -> Tuple[np.ndarray, np.ndarray, MinMaxScaler]:
     """
     Prepare stock data for LSTM training WITHOUT data leakage
     
     Args:
         data: Stock price DataFrame with OHLCV columns
-        time_step: Number of time steps for sequence (default: 60)
+        time_step: Number of time steps for sequence (default: 90)
         train_ratio: Ratio of data to use for training (default: 0.8)
     
     Returns:
         Tuple of (X, y, scaler) where:
             X: Input sequences (samples, time_step, features)
-            y: Target values (samples, 1)
+            y: Target values (samples, 1) - NEXT DAY's close price
             scaler: Fitted MinMaxScaler (fitted ONLY on training data)
     
     Note: Scaler is fit ONLY on the training portion to prevent data leakage
@@ -39,68 +39,89 @@ def prepare_data(data: pd.DataFrame, time_step: int = 60, train_ratio: float = 0
     
     X, y = [], []
     for i in range(time_step, len(scaled_data)):
-        X.append(scaled_data[i - time_step:i])  # Shape: (time_step, features)
-        y.append(scaled_data[i, 3])  # Predict 'Close' price
+        X.append(scaled_data[i - time_step:i])  # Past time_step days
+        y.append(scaled_data[i, 3])  # NEXT day's Close price (index 3)
     
-    X, y = np.array(X), np.array(y).reshape(-1, 1)  # y shape: (samples, 1)
+    X, y = np.array(X), np.array(y).reshape(-1, 1)
     return X, y, scaler
 
 
 def train_lstm_model(X_train: np.ndarray, y_train: np.ndarray) -> Sequential:
     """
-    Train LSTM model for stock price prediction
+    Train LSTM model for NEXT-DAY stock price prediction
     
     Args:
         X_train: Training input sequences (samples, time_step, features)
-        y_train: Training target values (samples, 1)
+        y_train: Training target values (samples, 1) - next day's price
     
     Returns:
         Trained LSTM model
     """
+    # Improved architecture with more capacity
     model = Sequential([
         Input(shape=(X_train.shape[1], X_train.shape[2])),
-        LSTM(units=50, return_sequences=True),
+        LSTM(units=128, return_sequences=True),
+        Dropout(0.3),
+        LSTM(units=64, return_sequences=True),
+        Dropout(0.3),
+        LSTM(units=32, return_sequences=False),
         Dropout(0.2),
-        LSTM(units=50, return_sequences=False),
-        Dropout(0.2),
-        Dense(units=1)  # Predict Close price
+        Dense(units=16, activation='relu'),
+        Dense(units=1)
     ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=0)
+    # Use better optimizer with learning rate
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+    
+    optimizer = Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['mae'])
+    
+    # Add callbacks for better training
+    early_stop = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=0.00001)
+    
+    model.fit(
+        X_train, y_train, 
+        epochs=100,
+        batch_size=16,
+        verbose=0,
+        callbacks=[early_stop, reduce_lr],
+        validation_split=0.1
+    )
     return model
 
 
-def predict_stock(model: Sequential, data: pd.DataFrame, scaler: MinMaxScaler, time_step: int = 60) -> np.ndarray:
+def predict_next_day(model: Sequential, data: pd.DataFrame, scaler: MinMaxScaler, time_step: int = 90) -> float:
     """
-    Make predictions using trained LSTM model
+    Predict NEXT trading day's closing price
     
     Args:
         model: Trained LSTM model
         data: Stock price DataFrame with OHLCV columns
         scaler: Fitted scaler from training
-        time_step: Number of time steps for sequence (default: 60)
+        time_step: Number of time steps for sequence (default: 90)
     
     Returns:
-        Array of predicted Close prices
+        Predicted next day's closing price (single float value)
     """
-    # Scale data using multiple features
+    # Scale data
     scaled_data = scaler.transform(data[['Open', 'High', 'Low', 'Close', 'Volume']])
     
-    # Prepare test sequences
-    X_test = [scaled_data[i-time_step:i] for i in range(time_step, len(scaled_data))]
-    X_test = np.array(X_test)
+    # Use the last time_step days to predict next day
+    if len(scaled_data) < time_step:
+        raise ValueError(f"Not enough data: need {time_step} days, got {len(scaled_data)}")
     
-    # LSTM prediction
-    predicted_prices = model.predict(X_test, verbose=0)
+    last_sequence = scaled_data[-time_step:]  # Shape: (time_step, features)
+    X_pred = np.array([last_sequence])  # Shape: (1, time_step, features)
     
-    # Inverse transform - only denormalize 'Close' feature
-    close_index = 3  # 'Close' is at index 3
-    predicted_close_prices = scaler.inverse_transform(
-        np.concatenate([
-            np.zeros((predicted_prices.shape[0], close_index)),  # Padding for other features
-            predicted_prices,  # Insert predicted Close
-            np.zeros((predicted_prices.shape[0], scaled_data.shape[1] - close_index - 1))  # Padding
-        ], axis=1)
-    )[:, close_index]  # Extract only Close predictions
+    # Predict next day's scaled close price
+    predicted_scaled = model.predict(X_pred, verbose=0)  # Shape: (1, 1)
     
-    return predicted_close_prices
+    # Inverse transform to get actual price
+    # Create dummy array with zeros for other features
+    close_index = 3
+    dummy = np.zeros((1, 5))
+    dummy[0, close_index] = predicted_scaled[0, 0]
+    predicted_price = scaler.inverse_transform(dummy)[0, close_index]
+    
+    return float(predicted_price)

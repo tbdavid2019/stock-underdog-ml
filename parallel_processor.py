@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 from config import config
 from data_loader import get_stock_data
-from models.lstm import prepare_data, train_lstm_model, predict_stock
+from models.lstm import prepare_data, train_lstm_model, predict_next_day
 from models.transformer import train_transformer_model, predict_transformer
 from models.prophet_model import train_prophet_model, predict_with_prophet
 from models.chronos_model import prepare_chronos_data
@@ -25,17 +25,21 @@ def process_single_stock(tic, period):
         logger.warning(f"Data download failed for {tic}: {e}")
         return results
 
-    # ----- LSTM -----
+    # ----- LSTM (Next-Day Prediction) -----
     try:
         X, y, scaler = prepare_data(data)
         lstm_model = train_lstm_model(X, y)
-        lstm_series = predict_stock(lstm_model, data, scaler)
         
-        # Handle types safely
+        # Predict NEXT trading day's price
+        predicted_next_day = predict_next_day(lstm_model, data, scaler)
+        
+        # Current price (today's close)
         cur = float(data['Close'].iloc[-1].item()) if hasattr(data['Close'].iloc[-1], 'item') else float(data['Close'].iloc[-1])
-        pred = float(lstm_series.max())
-        pot = (pred - cur) / cur
-        results['lstm'] = (tic, pot, cur, pred)
+        
+        # Potential = (predicted_tomorrow - current_today) / current_today
+        pot = (predicted_next_day - cur) / cur
+        
+        results['lstm'] = (tic, pot, cur, predicted_next_day)
     except Exception as e:
         logger.debug(f"LSTM 失敗 {tic}: {e}")
         pass
