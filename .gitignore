@@ -1,12 +1,83 @@
+# ==========================================
+# CRITICAL: Environment variables and secrets
+# ==========================================
 .env
+.env.*
+.env.backup
+.env.local
+.env.production
+.env.development
+*.env
+*.env.backup
+*.env.bak
+
+# ==========================================
+# Virtual Environments
+# ==========================================
 myenv/
 venv/
 env/
-*.pyc
+.venv/
+ENV/
+
+# ==========================================
+# Python
+# ==========================================
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
 *.egg-info/
 .pytest_cache/
+dist/
+build/
+
+# ==========================================
+# Logs and Output
+# ==========================================
+logs/
+*.log
+*.out
+
+# ==========================================
+# Model Artifacts and Data
+# ==========================================
 app2.py
 run2.sh
 AutogluonModels/
 catboost_info/
+*.pkl
+*.h5
+*.pt
+*.pth
+*.model
+*.joblib
+
+# ==========================================
+# IDE and Editors
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ==========================================
+# Temporary and Backup Files
+# ==========================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*~
+
+# ==========================================
+# OS Files
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
