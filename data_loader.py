@@ -16,40 +16,45 @@ from logger import logger
 def get_tw0050_stocks() -> List[str]:
     """
     Fetch Taiwan 50 (台灣50) stock component list
+    Uses cache to reduce API dependency
     
     Returns:
         List of stock tickers with .TW suffix
     """
-    from config import config
-    response = requests.get(config.api.TW0050_URL)
-    data = response.json()
+    from stock_cache import get_cached_stocks
     
-    # Add .TW suffix to stock codes
-    stocks = [f"{code}.TW" for code in data['TW0050'].keys()]
+    def _fetch():
+        from config import config
+        response = requests.get(config.api.TW0050_URL)
+        data = response.json()
+        return [f"{code}.TW" for code in data['TW0050'].keys()]
     
-    return stocks
+    return get_cached_stocks("TW0050", _fetch)
 
 
 def get_tw0051_stocks() -> List[str]:
     """
     Fetch Taiwan Mid-Cap 100 (台灣中型100) stock component list
+    Uses cache to reduce API dependency
     
     Returns:
         List of stock tickers with .TW suffix
     """
-    from config import config
-    response = requests.get(config.api.TW0051_URL)
-    data = response.json()
+    from stock_cache import get_cached_stocks
     
-    # Add .TW suffix to stock codes
-    stocks = [f"{code}.TW" for code in data['TW0051'].keys()]
+    def _fetch():
+        from config import config
+        response = requests.get(config.api.TW0051_URL)
+        data = response.json()
+        return [f"{code}.TW" for code in data['TW0051'].keys()]
     
-    return stocks
+    return get_cached_stocks("TW0051", _fetch)
 
 
 def get_sp500_stocks(limit: int = 110) -> List[str]:
     """
     Fetch S&P 500 stock component list
+    Uses cache to reduce API dependency
     
     Args:
         limit: Maximum number of stocks to return (default: 110)
@@ -57,19 +62,22 @@ def get_sp500_stocks(limit: int = 110) -> List[str]:
     Returns:
         List of stock tickers
     """
-    from config import config
-    response = requests.get(config.api.SP500_URL)
-    data = response.json()
+    from stock_cache import get_cached_stocks
     
-    # Get stock ticker list with limit
-    stocks = list(data['SP500'].keys())[:limit]
+    def _fetch():
+        from config import config
+        response = requests.get(config.api.SP500_URL)
+        data = response.json()
+        stocks = list(data['SP500'].keys())[:limit]
+        
+        # Fix special ticker formats (e.g., BRK.B -> BRK-B for yfinance)
+        for i, stock in enumerate(stocks):
+            if stock == "BRK.B":
+                stocks[i] = "BRK-B"
+        
+        return stocks
     
-    # Fix special ticker formats (e.g., BRK.B -> BRK-B for yfinance)
-    for i, stock in enumerate(stocks):
-        if stock == "BRK.B":
-            stocks[i] = "BRK-B"
-    
-    return stocks
+    return get_cached_stocks("SP500", _fetch)
 
 
 def get_nasdaq_stocks() -> List[str]:
