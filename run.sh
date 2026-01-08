@@ -6,39 +6,52 @@
 cd /home/ec2-user/stock-underdog-ml
 source myenv/bin/activate
 
-echo "=========================================="
-echo "Stock Prediction System"
-echo "Start Time: $(date)"
-echo "=========================================="
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+# Create timestamped log file
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="logs/run_${TIMESTAMP}.log"
+
+# Function to log with timestamp
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "=========================================="
+log "Stock Prediction System"
+log "Start Time: $(date)"
+log "Log File: $LOG_FILE"
+log "=========================================="
 
 # Step 1: Backtest (verify past predictions)
-echo ""
-echo "[1/2] Running backtest..."
-python backtest/backtest.py
-BACKTEST_EXIT=$?
+log ""
+log "[1/2] Running backtest..."
+python backtest/backtest.py 2>&1 | tee -a "$LOG_FILE"
+BACKTEST_EXIT=${PIPESTATUS[0]}
 
 if [ $BACKTEST_EXIT -eq 0 ]; then
-    echo "✅ Backtest completed"
+    log "✅ Backtest completed"
 else
-    echo "⚠️ Backtest failed (exit code: $BACKTEST_EXIT)"
+    log "⚠️ Backtest failed (exit code: $BACKTEST_EXIT)"
 fi
 
 # Step 2: Generate new predictions
-echo ""
-echo "[2/2] Generating predictions..."
-python main.py
-PREDICT_EXIT=$?
+log ""
+log "[2/2] Generating predictions..."
+python main.py 2>&1 | tee -a "$LOG_FILE"
+PREDICT_EXIT=${PIPESTATUS[0]}
 
 if [ $PREDICT_EXIT -eq 0 ]; then
-    echo "✅ Predictions completed"
+    log "✅ Predictions completed"
 else
-    echo "❌ Predictions failed (exit code: $PREDICT_EXIT)"
+    log "❌ Predictions failed (exit code: $PREDICT_EXIT)"
 fi
 
-echo ""
-echo "=========================================="
-echo "End Time: $(date)"
-echo "=========================================="
+log ""
+log "=========================================="
+log "End Time: $(date)"
+log "=========================================="
 
 # Exit with prediction status (more critical)
 exit $PREDICT_EXIT

@@ -8,7 +8,7 @@ import pandas as pd
 from config import config
 from database import SupabaseManager
 from data_loader import get_stock_data, download_many, get_tw0050_stocks, get_tw0051_stocks, get_sp500_stocks, get_nasdaq_stocks, get_sox_stocks, get_dji_stocks
-from models.lstm import prepare_data, train_lstm_model, predict_stock
+from models.lstm import prepare_data, train_lstm_model, predict_next_day
 from models.transformer import train_transformer_model, predict_transformer
 from models.prophet_model import train_prophet_model, predict_with_prophet
 from models.chronos_model import prepare_chronos_data, train_and_predict_chronos

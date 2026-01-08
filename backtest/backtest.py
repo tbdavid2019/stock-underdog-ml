@@ -4,11 +4,19 @@ Improved Backtesting for NEXT-DAY Predictions
 Fetches actual prices from the NEXT trading day after prediction
 """
 import os
+import sys
 from dotenv import load_dotenv
 from supabase import create_client
 import yfinance as yf
 from datetime import datetime, timedelta
 import pandas as pd
+
+# Add parent directory to path to import logger
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from logger import setup_logger
+
+# Setup logger for backtest
+logger = setup_logger('backtest', 'logs/backtest.log')
 
 load_dotenv()
 
@@ -17,17 +25,17 @@ supabase = create_client(
     os.getenv("SUPABASE_SERVICE_KEY")
 )
 
-print("=== Next-Day Backtesting ===\n")
+logger.info("=== Next-Day Backtesting ===\n")
 
 # Fetch predictions without actual prices
-print("1. Fetching predictions to verify...")
+logger.info("1. Fetching predictions to verify...")
 response = supabase.table('predictions').select('*').is_('actual_price', 'null').execute()
 predictions = response.data
 
-print(f"Found {len(predictions)} predictions without actual prices\n")
+logger.info(f"Found {len(predictions)} predictions without actual prices\n")
 
 if len(predictions) == 0:
-    print("No predictions to verify!")
+    logger.info("No predictions to verify!")
     exit(0)
 
 # Group by ticker
@@ -38,7 +46,7 @@ for pred in predictions:
         tickers[ticker] = []
     tickers[ticker].append(pred)
 
-print(f"2. Downloading next-day actual prices for {len(tickers)} unique tickers...")
+logger.info(f"2. Downloading next-day actual prices for {len(tickers)} unique tickers...")
 
 updated = 0
 skipped = 0
@@ -97,20 +105,20 @@ for ticker, ticker_preds in tickers.items():
                 
                 updated += 1
                 direction_symbol = "✅" if direction_correct == 1.0 else "❌"
-                print(f"  {direction_symbol} {ticker}: Pred {predicted:.2f}, Actual {actual_price:.2f}, Error {percentage_error:.2f}%")
+                logger.info(f"  {direction_symbol} {ticker}: Pred {predicted:.2f}, Actual {actual_price:.2f}, Error {percentage_error:.2f}%")
             
             except Exception as e:
-                print(f"  ⚠️ {ticker} (single prediction): {e}")
+                logger.warning(f"  ⚠️ {ticker} (single prediction): {e}")
                 continue
     
     except Exception as e:
-        print(f"  ❌ {ticker}: {e}")
+        logger.error(f"  ❌ {ticker}: {e}")
 
-print(f"\n✅ Updated {updated} predictions")
-print(f"⏭️ Skipped {skipped} predictions (no next trading day data yet)")
+logger.info(f"\n✅ Updated {updated} predictions")
+logger.info(f"⏭️ Skipped {skipped} predictions (no next trading day data yet)")
 
 # Generate performance report
-print("\n3. Model Performance Summary:")
+logger.info("\n3. Model Performance Summary:")
 response = supabase.table('predictions').select('model_name, accuracy, percentage_error').not_.is_('actual_price', 'null').execute()
 results = response.data
 
@@ -122,9 +130,9 @@ if results:
         direction_acc = (model_df['accuracy'].sum() / len(model_df)) * 100
         avg_error = model_df['percentage_error'].abs().mean()
         
-        print(f"\n{model}:")
-        print(f"  Direction Accuracy: {direction_acc:.1f}%")
-        print(f"  Avg Absolute Error: {avg_error:.2f}%")
-        print(f"  Total Verified: {len(model_df)}")
+        logger.info(f"\n{model}:")
+        logger.info(f"  Direction Accuracy: {direction_acc:.1f}%")
+        logger.info(f"  Avg Absolute Error: {avg_error:.2f}%")
+        logger.info(f"  Total Verified: {len(model_df)}")
 else:
-    print("No verified predictions yet!")
+    logger.info("No verified predictions yet!")
