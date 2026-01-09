@@ -11,11 +11,11 @@ RUN conda install python=3.11 numpy pandas scikit-learn -y && \
 # 複製需求文件
 COPY requirements.txt .
 
-# 安裝其他 Python 依賴（包含 PyTorch 用 pip）    tensorflow keras tf-keras prophet supabase
+# 安裝其他 Python 依賴（只保留 LSTM 需要的）
 RUN pip install --no-cache-dir \
     python-dotenv requests urllib3 yfinance \
     torch torchvision \
-    tensorflow-cpu keras tf-keras prophet supabase
+    supabase
 
 # 複製應用程式代碼
 COPY . .

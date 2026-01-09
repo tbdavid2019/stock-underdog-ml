@@ -9,10 +9,11 @@ from config import config
 from database import SupabaseManager
 from data_loader import get_stock_data, download_many, get_tw0050_stocks, get_tw0051_stocks, get_sp500_stocks, get_nasdaq_stocks, get_sox_stocks, get_dji_stocks
 from models.lstm import prepare_data, train_lstm_model, predict_next_day
-from models.transformer import train_transformer_model, predict_transformer
-from models.prophet_model import train_prophet_model, predict_with_prophet
-from models.chronos_model import prepare_chronos_data, train_and_predict_chronos
-from models.cross_section import CROSS_MODELS, import_model, build_cross_xy, train_tabnet, train_cross_loop
+# 暫時不用的模型可以註解掉
+# from models.transformer import train_transformer_model, predict_transformer
+# from models.prophet_model import train_prophet_model, predict_with_prophet
+# from models.chronos_model import prepare_chronos_data, train_and_predict_chronos
+# from models.cross_section import CROSS_MODELS, import_model, build_cross_xy, train_tabnet, train_cross_loop
 from notifier import send_results, send_to_telegram
 from logger import logger
 from parallel_processor import process_single_stock
