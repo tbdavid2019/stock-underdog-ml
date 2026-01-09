@@ -1,32 +1,60 @@
-# Core dependencies
+# ==========================================
+# Stock Prediction ML Application
+# Requirements File
+# ==========================================
+
+# Core Dependencies
+# ==========================================
+python-dotenv>=1.0.0
+requests>=2.31.0
 urllib3>=2.0.0
-python-dotenv
-requests
 
-# Data processing
-numpy
-pandas
-scikit-learn
-# pandas_ta removed (using manual implementation)
+# Data Processing & Analysis
+# ==========================================
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
 
-# Stock data
-yfinance
+# Stock Market Data
+# ==========================================
+yfinance>=0.2.0
 
-# Machine Learning - Deep Learning
-tensorflow
-keras
-torch>=1.13
+# Deep Learning Frameworks
+# ==========================================
+# TensorFlow/Keras (for LSTM and Transformer models)
+tensorflow>=2.15.0
+keras>=3.0.0
+tf-keras  # Compatibility layer for Chronos
 
-# Machine Learning - Time Series  
-prophet
-autogluon.timeseries
+# PyTorch (for Cross-sectional models)
+torch>=1.13.0
 
-# Machine Learning - Cross-sectional models (Qlib)
-# pyqlib - Optional, currently disabled due to installation issues on Python 3.11/3.12
-# If needed: pip install pyqlib
+# Time Series Models
+# ==========================================
+# Prophet (Facebook's time series forecasting)
+prophet>=1.1.0
 
-# Chronos dependency (Keras 2 compatibility for transformers)
-tf-keras
+# AutoGluon Chronos (AutoML for time series)
+# Note: This package requires statsforecast, which needs C++ compiler (g++) AND python3-dev
+# If installation fails, comment this out and set USE_CHRONOS=false in .env
+# autogluon.timeseries
 
 # Database
-supabase
+# ==========================================
+supabase>=2.0.0
+
+# Optional Dependencies (commented out by default)
+# ==========================================
+# MongoDB support (only if you need MongoDB)
+# pymongo>=4.0.0
+
+# MySQL support (only if you need MySQL)
+# mysql-connector-python>=8.0.0
+
+# Cross-sectional models via Qlib (requires C++ compiler)
+# Note: Installation may fail on some systems without build tools
+# pyqlib
+
+# statsforecast (requires C++ compiler - g++)
+# Note: Requires system packages: build-essential, g++
+# statsforecast

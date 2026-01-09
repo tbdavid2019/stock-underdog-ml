@@ -31,9 +31,9 @@ python backtest/backtest.py 2>&1 | tee -a "$LOG_FILE"
 BACKTEST_EXIT=${PIPESTATUS[0]}
 
 if [ $BACKTEST_EXIT -eq 0 ]; then
-    log "✅ Backtest completed"
+    log "[OK] Backtest completed"
 else
-    log "⚠️ Backtest failed (exit code: $BACKTEST_EXIT)"
+    log "[WARN] Backtest failed (exit code: $BACKTEST_EXIT)"
 fi
 
 # Step 2: Generate new predictions
@@ -43,9 +43,9 @@ python main.py 2>&1 | tee -a "$LOG_FILE"
 PREDICT_EXIT=${PIPESTATUS[0]}
 
 if [ $PREDICT_EXIT -eq 0 ]; then
-    log "✅ Predictions completed"
+    log "[OK] Predictions completed"
 else
-    log "❌ Predictions failed (exit code: $PREDICT_EXIT)"
+    log "[ERROR] Predictions failed (exit code: $PREDICT_EXIT)"
 fi
 
 log ""

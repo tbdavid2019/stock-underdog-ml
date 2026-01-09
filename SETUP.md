@@ -30,6 +30,49 @@ source myenv/bin/activate
 pip install -r requirements.txt
 ```
 
+#### 可選套件（Optional）
+
+以下套件為可選功能，**不安裝不影響核心功能**：
+
+**MongoDB 支援**（目前使用 Supabase，不需要）
+```bash
+pip install pymongo>=4.0.0
+```
+
+**MySQL 支援**（目前使用 Supabase，不需要）
+```bash
+pip install mysql-connector-python>=8.0.0
+```
+
+**Chronos 模型（需要 C++ 編譯器 + Python 開發套件）**
+
+> ⚠️ **預設已關閉**：由於安裝複雜，`autogluon.timeseries` 在 `requirements.txt` 中預設已註解。
+
+如果要啟用 Chronos 模型：
+
+```bash
+# 1. 安裝系統依賴
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y build-essential g++ python3-dev
+
+# CentOS/RHEL/Amazon Linux
+sudo yum groupinstall "Development Tools"
+sudo yum install -y gcc-c++ python3-devel
+
+# 2. 在 requirements.txt 中取消註解 autogluon.timeseries
+# 將 # autogluon.timeseries 改為 autogluon.timeseries
+
+# 3. 安裝套件
+pip install autogluon.timeseries
+
+# 4. 在 .env 中啟用
+USE_CHRONOS=true
+```
+
+> ℹ️ **提示**：如果看到 "MongoDB 功能未啟用" 訊息，可以忽略。這是可選功能，不影響系統運行。
+
+
 ### 4. 設定環境變數
 
 ```bash

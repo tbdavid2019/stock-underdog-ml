@@ -81,3 +81,4 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+logs/app.log
