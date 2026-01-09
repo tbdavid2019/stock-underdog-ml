@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/*.log
+
+# Cache
+*.cache
+
+# Environment
+.env
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test/
+
+# Scripts that aren't needed in container
+scripts/
+elder/

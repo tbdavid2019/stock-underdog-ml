@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  stock-ml:
+    build: .
+    container_name: stock-underdog-ml
+    volumes:
+      # 掛載 .env 檔案（需要先建立）
+      - ./.env:/app/.env:ro
+      # 掛載日誌目錄
+      - ./logs:/app/logs
+      # 掛載快取目錄
+      - ./cache:/app/cache
+    environment:
+      - TZ=Asia/Taipei
+    restart: unless-stopped
+    # 如果需要排程執行，可以使用 cron 或 註解掉 command 改用外部排程
+    # command: python main.py
