@@ -56,21 +56,8 @@ class DiscordConfig:
 class ModelConfig:
     """Model feature flags and configuration"""
     
-    # Transformer settings
-    USE_TRANSFORMER = os.getenv("USE_TRANSFORMER", "false").lower() == "true"
-    TRANSFORMER_PERIOD = os.getenv("TRANSFORMER_PERIOD", "1y")
-    
-    # Prophet settings
-    USE_PROPHET = os.getenv("USE_PROPHET", "false").lower() == "true"
-    
-    # Chronos settings
-    USE_CHRONOS = os.getenv("USE_CHRONOS", "true").lower() == "true"
-    CHRONOS_PERIOD = os.getenv("CHRONOS_PERIOD", "6mo")
-    
-    # Cross-sectional model settings
-    USE_CROSS = os.getenv("USE_CROSS", "false").lower() == "true"
-    CROSS_PERIOD = os.getenv("CROSS_PERIOD", "6mo")
-    CROSS_EPOCHS = int(os.getenv("CROSS_EPOCHS", "150"))
+    # Only LSTM model is supported
+    pass
 
 
 class DataAPIConfig:
@@ -145,38 +132,6 @@ class Config:
     @property
     def supabase_key(self) -> Optional[str]:
         return DatabaseConfig.SUPABASE_KEY
-    
-    @property
-    def use_transformer(self) -> bool:
-        return ModelConfig.USE_TRANSFORMER
-    
-    @property
-    def transformer_period(self) -> str:
-        return ModelConfig.TRANSFORMER_PERIOD
-    
-    @property
-    def use_prophet(self) -> bool:
-        return ModelConfig.USE_PROPHET
-    
-    @property
-    def use_chronos(self) -> bool:
-        return ModelConfig.USE_CHRONOS
-    
-    @property
-    def chronos_period(self) -> str:
-        return ModelConfig.CHRONOS_PERIOD
-    
-    @property
-    def use_cross(self) -> bool:
-        return ModelConfig.USE_CROSS
-    
-    @property
-    def cross_period(self) -> str:
-        return ModelConfig.CROSS_PERIOD
-    
-    @property
-    def cross_epochs(self) -> int:
-        return ModelConfig.CROSS_EPOCHS
 
 
 # Create singleton instance

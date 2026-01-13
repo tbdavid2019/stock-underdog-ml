@@ -21,23 +21,9 @@ yfinance>=0.2.0
 
 # Deep Learning Frameworks
 # ==========================================
-# TensorFlow/Keras (for LSTM and Transformer models)
+# TensorFlow/Keras (for LSTM model)
 tensorflow>=2.15.0
 keras>=3.0.0
-tf-keras  # Compatibility layer for Chronos
-
-# PyTorch (for Cross-sectional models)
-torch>=1.13.0
-
-# Time Series Models
-# ==========================================
-# Prophet (Facebook's time series forecasting)
-prophet>=1.1.0
-
-# AutoGluon Chronos (AutoML for time series)
-# Note: This package requires statsforecast, which needs C++ compiler (g++) AND python3-dev
-# If installation fails, comment this out and set USE_CHRONOS=false in .env
-# autogluon.timeseries
 
 # Database
 # ==========================================
