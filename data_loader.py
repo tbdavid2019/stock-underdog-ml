@@ -5,10 +5,17 @@ Fetches stock lists from various indices and downloads stock data.
 import pandas as pd
 import yfinance as yf
 import requests
+import os
+import pickle
+from datetime import datetime, timedelta
 
 from typing import List, Optional
 from config import config
 from logger import logger
+
+# 快取目錄
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "stock_data")
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 # ========== Stock Index Fetchers ==========
@@ -130,26 +137,66 @@ def get_dji_stocks() -> List[str]:
 
 # ========== Stock Data Download ==========
 
-def get_stock_data(ticker: str, period: str) -> pd.DataFrame:
+def _get_cache_path(ticker: str, period: str) -> str:
+    """Get cache file path for a ticker and period"""
+    return os.path.join(CACHE_DIR, f"{ticker}_{period}.pkl")
+
+
+def _is_cache_valid(cache_path: str, max_age_hours: int = 12) -> bool:
+    """Check if cache file exists and is not too old"""
+    if not os.path.exists(cache_path):
+        return False
+    
+    # 檢查檔案修改時間
+    mtime = os.path.getmtime(cache_path)
+    age = datetime.now() - datetime.fromtimestamp(mtime)
+    
+    return age < timedelta(hours=max_age_hours)
+
+
+def get_stock_data(ticker: str, period: str, use_cache: bool = True, max_age_hours: int = 12) -> pd.DataFrame:
     """
-    Fetch stock data for a single ticker
+    Fetch stock data for a single ticker with cache support
     
     Args:
         ticker: Stock ticker symbol
         period: Time period (e.g., "1mo", "6mo", "1y")
+        use_cache: Whether to use cache (default: True)
+        max_age_hours: Maximum cache age in hours (default: 12)
     
     Returns:
         DataFrame with stock price data
     """
+    cache_path = _get_cache_path(ticker, period)
+    
+    # 嘗試從快取讀取
+    if use_cache and _is_cache_valid(cache_path, max_age_hours):
+        try:
+            with open(cache_path, 'rb') as f:
+                data = pickle.load(f)
+            logger.info(f"📦 使用快取 {ticker} ({len(data)} 條數據)")
+            return data
+        except Exception as e:
+            logger.warning(f"讀取快取失敗 {ticker}: {e}")
+    
+    # 下載新數據
     try:
-        logger.info(f"正在獲取 {ticker} 的數據...")
-        data = yf.download(ticker, period=period, progress=False) # Disable yfinance progress bar
+        logger.info(f"🌐 下載 {ticker} 的數據...")
+        data = yf.download(ticker, period=period, progress=False)
         
         if data.empty:
              logger.warning(f"無法獲取 {ticker} 的數據 (Empty)")
              return data
 
         logger.info(f"獲取到 {len(data)} 條交易日數據")
+        
+        # 儲存到快取
+        try:
+            with open(cache_path, 'wb') as f:
+                pickle.dump(data, f)
+        except Exception as e:
+            logger.warning(f"儲存快取失敗 {ticker}: {e}")
+        
         return data
     except Exception as e:
         logger.error(f"獲取 {ticker} 數據時發生錯誤: {str(e)}")
@@ -265,3 +312,31 @@ def get_stocks_by_index(index_name: str) -> Optional[List[str]]:
     if fetcher:
         return fetcher()
     return None
+
+
+def clear_stock_cache(ticker: str = None, period: str = None):
+    """
+    Clear cached stock data
+    
+    Args:
+        ticker: Specific ticker to clear (None = clear all)
+        period: Specific period to clear (None = clear all periods for ticker)
+    """
+    if ticker and period:
+        # 清除特定股票和時期
+        cache_path = _get_cache_path(ticker, period)
+        if os.path.exists(cache_path):
+            os.remove(cache_path)
+            logger.info(f"🗑️  已清除快取: {ticker} ({period})")
+    elif ticker:
+        # 清除特定股票的所有時期
+        pattern = f"{ticker}_"
+        for filename in os.listdir(CACHE_DIR):
+            if filename.startswith(pattern):
+                os.remove(os.path.join(CACHE_DIR, filename))
+        logger.info(f"🗑️  已清除快取: {ticker} (所有時期)")
+    else:
+        # 清除所有快取
+        for filename in os.listdir(CACHE_DIR):
+            os.remove(os.path.join(CACHE_DIR, filename))
+        logger.info(f"🗑️  已清除所有快取")
