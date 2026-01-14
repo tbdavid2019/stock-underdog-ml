@@ -82,7 +82,7 @@ def train_lstm_model(X_train: np.ndarray, y_train: np.ndarray) -> Sequential:
     
     model.fit(
         X_train, y_train, 
-        epochs=100,
+        epochs=20,
         batch_size=16,
         verbose=0,
         callbacks=[early_stop, reduce_lr],

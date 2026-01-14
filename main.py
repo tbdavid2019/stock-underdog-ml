@@ -58,19 +58,24 @@ def get_top_and_bottom_10_potential_stocks(period, selected_indices, db_manager=
         # ======== 跑時間序列模型 (Parallel) ========
         logger.info(f"啟動並行處理 (Max Workers: 5)... 分析 {len(stock_list)} 支股票")
         
+        completed = 0
         with ThreadPoolExecutor(max_workers=5) as executor:
             future_to_stock = {executor.submit(process_single_stock, tic, period): tic for tic in stock_list}
             
             for future in as_completed(future_to_stock):
                 tic = future_to_stock[future]
+                completed += 1
                 try:
-                    res = future.result()
-                    if 'lstm' in res: lstm_preds.append(res['lstm'])
-                    
-                    # Optional: Progress logging
-                    # print(f"完成: {tic}")
+                    res = future.result(timeout=60)  # 每支股票最多60秒
+                    if 'lstm' in res: 
+                        lstm_preds.append(res['lstm'])
+                        logger.info(f"✅ [{completed}/{len(stock_list)}] {tic} 完成")
+                    else:
+                        logger.info(f"⚠️  [{completed}/{len(stock_list)}] {tic} 無結果")
+                except TimeoutError:
+                    logger.warning(f"⏱️  [{completed}/{len(stock_list)}] 超時跳過 {tic} (60秒)")
                 except Exception as e:
-                    logger.error(f"處理失敗 {tic}: {e}")
+                    logger.error(f"❌ [{completed}/{len(stock_list)}] {tic} 失敗: {e}")
 
         # --- Database：時間序列模型 ---------------------------
         if db_manager and db_manager.enabled:
