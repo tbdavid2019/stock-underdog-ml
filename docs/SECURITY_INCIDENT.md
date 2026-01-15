@@ -18,7 +18,7 @@
 ## ⚠️ 必须立即撤销的凭证
 
 ### 1. Email 应用密码
-- **泄露内容**: `REDACTED_PASSWORD`
+- **泄露内容**: `REDACTED_PWD`
 - **受影响账户**: `user@example.com`
 - **操作步骤**:
   1. 前往 https://myaccount.google.com/apppasswords
@@ -74,7 +74,7 @@
 ---
 
 ### 4. Telegram Channel ID
-- **泄露内容**: `-1001234567`（部分）
+- **泄露内容**: `-1001234`（部分）
 - **风险**: 低（只有 ID，无法直接操作）
 - **建议**: 如果是私密频道，考虑创建新频道
 
@@ -122,9 +122,9 @@
 ### 验证 Git 历史已清理
 ```bash
 # 这些命令应该没有任何输出
-git log --all -S "REDACTED_PASSWORD" --oneline
+git log --all -S "REDACTED_PWD" --oneline
 git log --all -S "REDACTED_TK" --oneline
-git log --all -S "mongodb+srv://david:REDACTED" --oneline
+git log --all -S "mongodb+srv://david:REDACTED_PASS" --oneline
 ```
 
 ### 验证 GitHub 状态
