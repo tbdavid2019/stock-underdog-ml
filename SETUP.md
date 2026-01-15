@@ -137,7 +137,7 @@ CHRONOS_PERIOD=6mo    # Chronos 預測期間
 2. 取得 Bot Token
 3. 將 Bot 加入頻道並取得 Channel ID
 
-###***REMOVED***
+#### Email
 使用 Gmail 的話需要：
 1. 啟用 2FA
 2. 產生應用程式密碼

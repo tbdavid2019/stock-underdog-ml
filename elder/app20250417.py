@@ -28,7 +28,7 @@ load_dotenv()
 # MySQL 配置
 use_mysql = os.getenv("USE_MYSQL", "false").lower() == "true"
 
-***REMOVED*** 設置
+# Email 設置
 smtp_server = os.getenv("SMTP_SERVER")
 port = int(os.getenv("SMTP_PORT"))
 sender_email = os.getenv("SENDER_EMAIL")

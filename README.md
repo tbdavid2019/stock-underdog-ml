@@ -280,7 +280,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 # Discord
 DISCORD_WEBHOOK_URL=your_webhook_url
 
-***REMOVED*** (SMTP)
+# Email (SMTP)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_EMAIL=your_email@gmail.com
