@@ -1,111 +1,115 @@
 # Scripts Directory
 
-測試、除錯和維護腳本集合。
+測試、除錯、維護和遷移腳本集合。
 
 ## 📁 目錄結構
 
 ```
 scripts/
-├── README.md                    ← 你在這裡
-├── test_next_day_prediction.py  ← 測試下一日預測邏輯
-├── backfill_historical.py       ← 回填歷史預測的實際價格
-├── check_db_contents.py         ← 檢查資料庫內容
-├── debug_backfill.py            ← 除錯回測問題
-├── clear_backtest_data.py       ← 清空回測資料
-├── app.py                       ← 舊版主程式（已棄用）
-└── backtest_analysis.py         ← 舊版回測分析（已棄用）
+├── migration/                           🆕 數據庫遷移腳本
+│   ├── supabase_add_columns.sql              為現有表格添加雙軌策略欄位
+│   ├── supabase_drop_dual_table.sql          刪除測試表格
+│   └── add_columns_to_predictions.py         遷移幫助腳本
+│
+├── verification/                        🆕 驗證腳本
+│   └── verify_predictions_extended.py        驗證表格結構
+│
+├── test_next_day_prediction.py              測試下一日預測邏輯
+├── backfill_historical.py                   回填歷史預測的實際價格
+├── check_db_contents.py                     檢查資料庫內容
+├── check_cache.py                           檢查快取狀態
+├── test_cache.py                            測試快取功能
+├── debug_backfill.py                        除錯回測問題
+├── clear_backtest_data.py                   清空回測資料
+├── backtest_analysis.py                     回測分析
+├── app.py                                   Streamlit 測試應用
+└── README.md                                本文件
 ```
 
-## 🔧 腳本說明
+## 🆕 遷移腳本 (Migration)
 
-### test_next_day_prediction.py
-測試新的下一日預測邏輯。
+### 用途
+為現有用戶升級到雙軌策略系統。
 
-**用途：** 在部署前驗證預測功能是否正常
+### 使用時機
+- 從舊版本（純 LSTM）升級到新版本（LSTM + 玄鐵策略）
+- 需要在現有 `predictions` 表格添加新欄位
 
-**執行：**
+### 執行方式
 ```bash
-python scripts/test_next_day_prediction.py
+# 1. 在 Supabase SQL Editor 執行
+#    scripts/migration/supabase_add_columns.sql
+
+# 2. 驗證
+python scripts/verification/verify_predictions_extended.py
+
+# 3. (可選) 清理測試表
+#    在 Supabase SQL Editor 執行
+#    scripts/migration/supabase_drop_dual_table.sql
 ```
 
-**輸出：** 3 支測試股票的預測結果
+**注意**: 新用戶直接執行根目錄的 `supabase_schema.sql`，無需執行 migration 腳本。
 
 ---
 
-### backfill_historical.py
-回填歷史預測的實際價格並計算準確度。
+## ✅ 驗證腳本 (Verification)
 
-**用途：** 批次更新所有未驗證的預測
+### verify_predictions_extended.py
+驗證 `predictions` 表格包含所有雙軌策略欄位：
+- strategy_type
+- ma5, ma10, ma60, ma120, ma250
+- pullback_type
+- pe, pb, forward_pe
 
-**執行：**
 ```bash
-python scripts/backfill_historical.py
+python scripts/verification/verify_predictions_extended.py
 ```
-
-**輸出：**
-- 更新數量
-- 各指數準確度統計
-- 執行時間
 
 ---
 
-### check_db_contents.py
-檢查 Supabase 資料庫的預測記錄。
+## 🧪 測試腳本
 
-**用途：** 快速查看資料庫狀態
+### 預測相關
+- **test_next_day_prediction.py** - 測試 LSTM 下一日預測邏輯
+- **test_cache.py** - 測試股票數據快取功能
 
-**執行：**
+### 數據庫相關
+- **check_db_contents.py** - 查看資料庫內容和統計
+- **check_cache.py** - 檢查快取狀態和有效期
+
+### 回測相關
+- **backfill_historical.py** - 回填歷史預測的實際價格用於驗證
+- **backtest_analysis.py** - 分析回測結果和模型表現
+- **debug_backfill.py** - Debug 回填過程的問題
+- **clear_backtest_data.py** - 清空回測數據重新開始
+
+### 其他
+- **app.py** - Streamlit 網頁測試應用（可視化預測結果）
+
+---
+
+## 📝 常用命令
+
 ```bash
+# 檢查資料庫
 python scripts/check_db_contents.py
+
+# 測試預測功能
+python scripts/test_next_day_prediction.py
+
+# 回填並分析回測
+python scripts/backfill_historical.py
+python scripts/backtest_analysis.py
+
+# 檢查快取
+python scripts/check_cache.py
 ```
 
-**輸出：**
-- 總預測數
-- 日期範圍
-- 回測狀態
-- 樣本資料
-
 ---
 
-### debug_backfill.py
-除錯回測腳本的問題。
+## 🔗 相關文件
 
-**用途：** 當回測失敗時，診斷原因
-
-**執行：**
-```bash
-python scripts/debug_backfill.py
-```
-
-**輸出：** 詳細的日期比對和資料下載資訊
-
----
-
-### clear_backtest_data.py
-清空所有回測欄位（保留預測記錄）。
-
-**用途：** 重置回測資料，重新驗證
-
-**執行：**
-```bash
-python scripts/clear_backtest_data.py
-```
-
-**警告：** 會清空所有 `actual_price` 等欄位
-
----
-
-## 🔗 相關文檔
-
-- [主要 README](../README.md) - 專案總覽
-- [回測系統](../backtest/README.md) - 回測說明
-- [安裝指南](../SETUP.md) - 環境設定
-
----
-
-## 💡 使用建議
-
-1. **部署前測試：** 執行 `test_next_day_prediction.py`
-2. **定期回填：** 每週執行 `backfill_historical.py`
-3. **問題診斷：** 使用 `check_db_contents.py` 和 `debug_backfill.py`
-4. **重置資料：** 謹慎使用 `clear_backtest_data.py`
+- [../supabase_schema.sql](../supabase_schema.sql) - 完整資料庫結構（新用戶使用）
+- [../README.md](../README.md) - 專案主文件
+- [../main.py](../main.py) - 主程式入口（雙軌策略）
+- [../main_lstm_only.py](../main_lstm_only.py) - 單純 LSTM 版本（舊版保留）

@@ -188,6 +188,11 @@ def get_stock_data(ticker: str, period: str, use_cache: bool = True, max_age_hou
              logger.warning(f"無法獲取 {ticker} 的數據 (Empty)")
              return data
 
+        # 處理 MultiIndex 欄位（某些股票會有）
+        if isinstance(data.columns, pd.MultiIndex):
+            # 只取第一層欄位名稱
+            data.columns = data.columns.get_level_values(0)
+        
         logger.info(f"獲取到 {len(data)} 條交易日數據")
         
         # 儲存到快取

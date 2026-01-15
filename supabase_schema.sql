@@ -18,6 +18,22 @@ CREATE TABLE IF NOT EXISTS predictions (
     predicted_price numeric,
     potential numeric,
     
+    -- Dual strategy fields (雙軌策略欄位)
+    strategy_type text,                 -- 策略類型: '玄鐵重劍', 'LSTM預測', '雙重符合', 或 NULL (舊版資料)
+    
+    -- Technical indicators (技術面指標 - 移動平均線)
+    ma5 numeric,                        -- MA5 短期均線
+    ma10 numeric,                       -- MA10 短期均線
+    ma60 numeric,                       -- MA60 中期均線 (大勢判斷)
+    ma120 numeric,                      -- MA120 中期均線
+    ma250 numeric,                      -- MA250 長期均線 (價值中樞)
+    pullback_type text,                 -- 回調類型: 'MA60回調', 'MA120回調'
+    
+    -- Fundamental data (基本面數據)
+    pe numeric,                         -- 本益比 (P/E Ratio - Trailing)
+    pb numeric,                         -- 股價淨值比 (P/B Ratio)
+    forward_pe numeric,                 -- 預估本益比 (Forward P/E)
+    
     -- Backtesting fields (for model evaluation)
     actual_price numeric,
     actual_date timestamp with time zone,
@@ -37,6 +53,13 @@ CREATE INDEX IF NOT EXISTS idx_predictions_backtest
 ON predictions(ticker, timestamp) 
 WHERE actual_price IS NOT NULL;
 
+-- Dual strategy indexes (雙軌策略索引)
+CREATE INDEX IF NOT EXISTS idx_predictions_strategy_type 
+ON predictions(strategy_type);
+
+CREATE INDEX IF NOT EXISTS idx_predictions_index_strategy 
+ON predictions(index_name, strategy_type);
+
 -- Row Level Security
 ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
 
@@ -54,6 +77,7 @@ FOR UPDATE USING (true);
 CREATE OR REPLACE VIEW model_performance AS
 SELECT 
     model_name,
+    strategy_type,
     index_name,
     COUNT(*) as total_predictions,
     COUNT(actual_price) as verified_predictions,
@@ -65,7 +89,7 @@ SELECT
           THEN 1 END) * 100.0 / NULLIF(COUNT(actual_price), 0) as direction_accuracy
 FROM predictions
 WHERE actual_price IS NOT NULL
-GROUP BY model_name, index_name;
+GROUP BY model_name, strategy_type, index_name;
 
 CREATE OR REPLACE VIEW predictions_to_verify AS
 SELECT 
@@ -90,9 +114,60 @@ WHERE actual_price IS NULL
 ORDER BY timestamp DESC;
 
 -- Comments for documentation
-COMMENT ON TABLE predictions IS 'Stock price predictions with backtesting support';
+COMMENT ON TABLE predictions IS 'Stock price predictions with backtesting support and dual strategy (LSTM + MA indicators)';
 COMMENT ON COLUMN predictions.actual_price IS 'Actual stock price observed after prediction period';
 COMMENT ON COLUMN predictions.accuracy IS 'Prediction accuracy: 1.0 = perfect, 0.0 = no better than baseline';
 COMMENT ON COLUMN predictions.percentage_error IS 'Percentage error: (predicted - actual) / actual * 100';
+COMMENT ON COLUMN predictions.strategy_type IS '策略類型: 玄鐵重劍 (MA strategy), LSTM預測 (AI prediction), 雙重符合 (both), or NULL (legacy data)';
+COMMENT ON COLUMN predictions.ma60 IS '60-day moving average for trend analysis';
+COMMENT ON COLUMN predictions.pullback_type IS 'Pullback type: MA60回調 or MA120回調';
+COMMENT ON COLUMN predictions.pe IS 'Price-to-Earnings ratio (trailing)';
+COMMENT ON COLUMN predictions.pb IS 'Price-to-Book ratio';
+COMMENT ON COLUMN predictions.forward_pe IS 'Forward P/E ratio (estimated)';
 COMMENT ON VIEW model_performance IS 'Aggregated model performance metrics for backtesting';
 COMMENT ON VIEW predictions_to_verify IS 'Predictions that need actual price verification';
+
+-- ========================================
+-- Dual Strategy Query Examples (雙軌策略查詢範例)
+-- ========================================
+
+-- 1. Query dual-matched stocks (highest confidence)
+-- SELECT ticker, current_price, predicted_price, potential, 
+--        ma60, pullback_type, pe, pb, timestamp
+-- FROM predictions
+-- WHERE strategy_type = '雙重符合'
+--   AND timestamp > NOW() - interval '1 day'
+-- ORDER BY potential DESC;
+
+-- 2. Query Xuantie strategy results (MA-based)
+-- SELECT ticker, current_price, ma5, ma60, ma120, 
+--        pullback_type, pe, pb, timestamp
+-- FROM predictions
+-- WHERE strategy_type = '玄鐵重劍'
+--   AND timestamp > NOW() - interval '1 day'
+-- ORDER BY timestamp DESC;
+
+-- 3. Query LSTM predictions with fundamentals
+-- SELECT ticker, current_price, predicted_price, potential,
+--        pe, pb, forward_pe, timestamp
+-- FROM predictions
+-- WHERE strategy_type = 'LSTM預測'
+--   AND potential > 3
+--   AND timestamp > NOW() - interval '1 day'
+-- ORDER BY potential DESC;
+
+-- 4. Mixed query (backward compatible with legacy data)
+-- SELECT ticker, model_name, strategy_type, current_price, 
+--        predicted_price, potential, timestamp
+-- FROM predictions
+-- WHERE timestamp > NOW() - interval '7 days'
+-- ORDER BY timestamp DESC;
+
+-- 5. Performance comparison by strategy type
+-- SELECT strategy_type, 
+--        COUNT(*) as count,
+--        AVG(potential) as avg_potential,
+--        AVG(pe) as avg_pe
+-- FROM predictions
+-- WHERE timestamp > NOW() - interval '30 days'
+-- GROUP BY strategy_type;

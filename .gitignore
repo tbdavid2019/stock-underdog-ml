@@ -11,6 +11,33 @@
 *.env.backup
 *.env.bak
 
+# Credentials and keys
+*credentials*.json
+*secrets*.json
+*keys*.json
+*tokens*.txt
+*password*.txt
+service-account*.json
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
+
+# API keys and tokens (防止意外提交)
+*api_key*
+*api-key*
+*apikey*
+*access_token*
+*refresh_token*
+*secret_key*
+*private_key*
+
+# Supabase service keys (額外保護)
+*SUPABASE*KEY*.txt
+*supabase*key*.txt
+
 # ==========================================
 # Virtual Environments
 # ==========================================
@@ -40,6 +67,21 @@ build/
 logs/
 *.log
 *.out
+
+# Output files
+output/
+*.csv
+
+# Nohup output (可能包含敏感資訊)
+nohup.out
+
+# SQL dumps and backups (可能包含實際數據)
+*.sql.backup
+*.sql.bak
+*.dump
+*.sqlite
+*.sqlite3
+*.db
 
 # ==========================================
 # Cache and Temporary Data
@@ -87,5 +129,25 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
-logs/app.log
-logs/app.log
+
+# SSH keys (防止意外提交)
+id_rsa
+id_rsa.pub
+*.pub
+authorized_keys
+
+# Config files that might contain sensitive data
+config.json
+config.yml
+config.yaml
+docker-compose.override.yml
+
+# ==========================================
+# Personal/Test files
+# ==========================================
+test_*.py
+debug_*.py
+scratch_*.py
+temp_*.py
+*_personal.py
+*_local.py

@@ -313,10 +313,8 @@ def main():
         # 設定
         period = "6mo"
         
-        # 指數清單
+        # 指數清單（僅美股 SP500 完整測試）
         indices = {
-            "台灣50": get_tw0050_stocks(),
-            "台灣中型100": get_tw0051_stocks(),
             "SP500": get_sp500_stocks()
         }
         
