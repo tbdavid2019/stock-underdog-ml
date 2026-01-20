@@ -107,7 +107,7 @@ def check_minor_pullback(data: pd.DataFrame, tolerance: float = 0.05) -> Tuple[b
         if ma120 is not None:
             diff_pct = (close_price - ma120) / ma120
             if -tolerance <= diff_pct <= tolerance:
-                return True, f"MA120回調 ({diff_pct*100:.1f}%)"
+                return True, f"MA120 ({diff_pct*100:.1f}%)"
     
     # 檢查 MA60 回調
     if 'MA60' in data.columns:
@@ -115,7 +115,7 @@ def check_minor_pullback(data: pd.DataFrame, tolerance: float = 0.05) -> Tuple[b
         if ma60 is not None:
             diff_pct = (close_price - ma60) / ma60
             if -tolerance <= diff_pct <= tolerance:
-                return True, f"MA60回調 ({diff_pct*100:.1f}%)"
+                return True, f"MA60 ({diff_pct*100:.1f}%)"
     
     return False, ""
 
