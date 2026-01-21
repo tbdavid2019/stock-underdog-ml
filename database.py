@@ -123,7 +123,7 @@ class SupabaseManager:
         - strategy_type: 策略類型
         - ma5, ma10, ma60, ma120, ma250: 均線指標
         - pullback_type: 回調類型
-        - pe, pb, forward_pe: 基本面數據
+        - pe, pb, forward_pe, ev_ebitda: 基本面數據
         """
         if not self.enabled:
             return
@@ -154,6 +154,7 @@ class SupabaseManager:
                     "pe": float(row.get('pe')) if row.get('pe') and not pd.isna(row.get('pe')) else None,
                     "pb": float(row.get('pb')) if row.get('pb') and not pd.isna(row.get('pb')) else None,
                     "forward_pe": float(row.get('forward_pe')) if row.get('forward_pe') and not pd.isna(row.get('forward_pe')) else None,
+                    "ev_ebitda": float(row.get('ev_ebitda')) if row.get('ev_ebitda') and not pd.isna(row.get('ev_ebitda')) else None,
                     "period": period,
                     "timestamp": timestamp
                 }
@@ -179,6 +180,7 @@ class SupabaseManager:
                 "pe": float(result.get('pe')) if result.get('pe') and not pd.isna(result.get('pe')) else None,
                 "pb": float(result.get('pb')) if result.get('pb') and not pd.isna(result.get('pb')) else None,
                 "forward_pe": float(result.get('forward_pe')) if result.get('forward_pe') and not pd.isna(result.get('forward_pe')) else None,
+                "ev_ebitda": float(result.get('ev_ebitda')) if result.get('ev_ebitda') and not pd.isna(result.get('ev_ebitda')) else None,
                 "period": period,
                 "timestamp": timestamp
             }
@@ -205,6 +207,7 @@ class SupabaseManager:
                     "pe": float(row.get('pe')) if row.get('pe') and not pd.isna(row.get('pe')) else None,
                     "pb": float(row.get('pb')) if row.get('pb') and not pd.isna(row.get('pb')) else None,
                     "forward_pe": float(row.get('forward_pe')) if row.get('forward_pe') and not pd.isna(row.get('forward_pe')) else None,
+                    "ev_ebitda": float(row.get('ev_ebitda')) if row.get('ev_ebitda') and not pd.isna(row.get('ev_ebitda')) else None,
                     "period": period,
                     "timestamp": timestamp
                 }
@@ -232,7 +235,7 @@ class SupabaseManager:
             logger.error(f"❌ Supabase 寫入失敗: {str(e)}")
             if "column" in str(e).lower() and "does not exist" in str(e).lower():
                 logger.warning("💡 請在 Supabase SQL Editor 執行 supabase_add_columns.sql")
-                logger.warning("   這會在 predictions 表格新增: strategy_type, ma5, ma10, ma60, ma120, ma250, pullback_type, pe, pb, forward_pe")
+                logger.warning("   這會在 predictions 表格新增: strategy_type, ma5, ma10, ma60, ma120, ma250, pullback_type, pe, pb, forward_pe, ev_ebitda")
             elif "relation" in str(e) and "does not exist" in str(e):
                 logger.warning("💡 請在 Supabase SQL Editor 執行 supabase_schema.sql 建立 predictions 表格")
                 logger.warning("💡 請在 Supabase SQL Editor 執行建表指令 (見 docstring)")

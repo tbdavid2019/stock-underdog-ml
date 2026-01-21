@@ -66,10 +66,10 @@ def run_lstm_predictions(stock_list, period="6mo"):
 
 def get_fundamental_data(ticker):
     """
-    獲取基本面數據 (PE/PB)
+    獲取基本面數據 (PE/PB/EV/EBITDA)
     
     Returns:
-        dict with pe, pb, forward_pe
+        dict with pe, pb, forward_pe, ev_ebitda
     """
     try:
         import yfinance as yf
@@ -79,10 +79,11 @@ def get_fundamental_data(ticker):
         return {
             'pe': info.get('trailingPE'),
             'forward_pe': info.get('forwardPE'),
-            'pb': info.get('priceToBook')
+            'pb': info.get('priceToBook'),
+            'ev_ebitda': info.get('enterpriseToEbitda')
         }
     except:
-        return {'pe': None, 'forward_pe': None, 'pb': None}
+        return {'pe': None, 'forward_pe': None, 'pb': None, 'ev_ebitda': None}
 
 
 def process_single_stock_lstm(ticker, period):
@@ -126,7 +127,8 @@ def process_single_stock_lstm(ticker, period):
             'current_price': current_price,
             'predicted_price': predicted_price,
             'pe': fundamentals['pe'],
-            'pb': fundamentals['pb']
+            'pb': fundamentals['pb'],
+            'ev_ebitda': fundamentals['ev_ebitda']
         }
         
     except Exception as e:
@@ -161,12 +163,13 @@ def run_dual_strategy(index_name, stock_list, period="6mo"):
     
     xuantie_stocks = set(xuantie_df['ticker'].tolist()) if not xuantie_df.empty else set()
     
-    # 為玄鐵結果加入 PE/PB
+    # 為玄鐵結果加入 PE/PB/EV/EBITDA
     if not xuantie_df.empty:
         for idx, row in xuantie_df.iterrows():
             fundamentals = get_fundamental_data(row['ticker'])
             xuantie_df.at[idx, 'pe'] = fundamentals['pe']
             xuantie_df.at[idx, 'pb'] = fundamentals['pb']
+            xuantie_df.at[idx, 'ev_ebitda'] = fundamentals['ev_ebitda']
     
     logger.info(f"✅ 玄鐵策略符合: {len(xuantie_stocks)} 支\n")
     
@@ -190,7 +193,8 @@ def run_dual_strategy(index_name, stock_list, period="6mo"):
                 'pullback_type': xuantie_info['pullback_type'],
                 'ma60': xuantie_info['ma60'],
                 'pe': result['pe'],
-                'pb': result['pb']
+                'pb': result['pb'],
+                'ev_ebitda': result['ev_ebitda']
             })
     
     overlap_df = pd.DataFrame(overlap) if overlap else pd.DataFrame()

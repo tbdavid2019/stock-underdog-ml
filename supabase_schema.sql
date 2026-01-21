@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS predictions (
     pe numeric,                         -- 本益比 (P/E Ratio - Trailing)
     pb numeric,                         -- 股價淨值比 (P/B Ratio)
     forward_pe numeric,                 -- 預估本益比 (Forward P/E)
+    ev_ebitda numeric,                  -- 企業價值倍數 (EV/EBITDA Ratio)
     
     -- Backtesting fields (for model evaluation)
     actual_price numeric,
@@ -124,6 +125,8 @@ COMMENT ON COLUMN predictions.pullback_type IS 'Pullback type: MA60回調 or MA1
 COMMENT ON COLUMN predictions.pe IS 'Price-to-Earnings ratio (trailing)';
 COMMENT ON COLUMN predictions.pb IS 'Price-to-Book ratio';
 COMMENT ON COLUMN predictions.forward_pe IS 'Forward P/E ratio (estimated)';
+COMMENT ON COLUMN predictions.ev_ebitda IS 'Enterprise Value to EBITDA ratio';
+
 COMMENT ON VIEW model_performance IS 'Aggregated model performance metrics for backtesting';
 COMMENT ON VIEW predictions_to_verify IS 'Predictions that need actual price verification';
 

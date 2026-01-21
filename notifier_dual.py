@@ -30,11 +30,12 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
     telegram_msg += f"符合條件: {len(xuantie_df)} 支 (顯示前5名)\n"
     if not xuantie_df.empty:
         telegram_msg += "<pre>\n"
-        telegram_msg += f"{'代碼':<6} {'價格':>8} {'PE':>5} {'PB':>5} {'回調':<10}\n"
+        telegram_msg += f"{'代碼':<6} {'價格':>8} {'PE':>5} {'PB':>5} {'EV':>5} {'回調':<10}\n"
         for idx, row in xuantie_df.head(5).iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            telegram_msg += f"{row['ticker']:<6} {row['current_price']:>8.2f} {pe_str:>5} {pb_str:>5} {row['pullback_type']:<10}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            telegram_msg += f"{row['ticker']:<6} {row['current_price']:>8.2f} {pe_str:>5} {pb_str:>5} {ev_str:>5} {row['pullback_type']:<10}\n"
         telegram_msg += "</pre>\n\n"
     
     # LSTM 預測
@@ -44,22 +45,24 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
         # 前5名 (預測上漲)
         telegram_msg += "<b>📈 預測上漲 TOP 5</b>\n"
         telegram_msg += "<pre>\n"
-        telegram_msg += f"{'代碼':<6} {'漲幅':>8} {'PE':>5} {'PB':>5}\n"
+        telegram_msg += f"{'代碼':<6} {'漲幅':>8} {'PE':>5} {'PB':>5} {'EV':>5}\n"
         for result in lstm_results[:5]:
             pe_str = f"{result.get('pe', 0):.1f}" if result.get('pe') else "N/A"
             pb_str = f"{result.get('pb', 0):.1f}" if result.get('pb') else "N/A"
-            telegram_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5}\n"
+            ev_str = f"{result.get('ev_ebitda', 0):.1f}" if result.get('ev_ebitda') else "N/A"
+            telegram_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
         telegram_msg += "</pre>\n\n"
         
         # 後5名 (預測下跌)
         if len(lstm_results) > 5:
             telegram_msg += "<b>📉 預測下跌 TOP 5</b>\n"
             telegram_msg += "<pre>\n"
-            telegram_msg += f"{'代碼':<6} {'跌幅':>8} {'PE':>5} {'PB':>5}\n"
+            telegram_msg += f"{'代碼':<6} {'跌幅':>8} {'PE':>5} {'PB':>5} {'EV':>5}\n"
             for result in lstm_results[-5:]:
                 pe_str = f"{result.get('pe', 0):.1f}" if result.get('pe') else "N/A"
                 pb_str = f"{result.get('pb', 0):.1f}" if result.get('pb') else "N/A"
-                telegram_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5}\n"
+                ev_str = f"{result.get('ev_ebitda', 0):.1f}" if result.get('ev_ebitda') else "N/A"
+                telegram_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
             telegram_msg += "</pre>\n\n"
     
     # 雙重符合
@@ -70,7 +73,8 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
         for idx, row in overlap_df.iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            telegram_msg += f"{row['ticker']} LSTM:{row['lstm_potential']:+.1f}% PE:{pe_str} PB:{pb_str}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            telegram_msg += f"{row['ticker']} LSTM:{row['lstm_potential']:+.1f}% EV:{ev_str} {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
         telegram_msg += "</pre>"
     
     # ===== Discord (Markdown) =====
@@ -82,11 +86,12 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
     discord_msg += f"**🗡️ 波段操作 (玄鐵重劍)** - 符合: {len(xuantie_df)} 支 (顯示前5名)\n"
     if not xuantie_df.empty:
         discord_msg += "```\n"
-        discord_msg += f"{'代碼':<6} {'價格':>8} {'PE':>5} {'PB':>5} {'回調':<10}\n"
+        discord_msg += f"{'代碼':<6} {'價格':>8} {'PE':>5} {'PB':>5} {'EV':>5} {'回調':<10}\n"
         for idx, row in xuantie_df.head(5).iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            discord_msg += f"{row['ticker']:<6} {row['current_price']:>8.2f} {pe_str:>5} {pb_str:>5} {row['pullback_type']:<10}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            discord_msg += f"{row['ticker']:<6} {row['current_price']:>8.2f} {pe_str:>5} {pb_str:>5} {ev_str:>5} {row['pullback_type']:<10}\n"
         discord_msg += "```\n"
     
     # LSTM 預測
@@ -95,22 +100,24 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
         # 前5名
         discord_msg += "**📈 預測上漲 TOP 5**\n"
         discord_msg += "```\n"
-        discord_msg += f"{'代碼':<6} {'漲幅':>8} {'PE':>5} {'PB':>5}\n"
+        discord_msg += f"{'代碼':<6} {'漲幅':>8} {'PE':>5} {'PB':>5} {'EV':>5}\n"
         for result in lstm_results[:5]:
             pe_str = f"{result.get('pe', 0):.1f}" if result.get('pe') else "N/A"
             pb_str = f"{result.get('pb', 0):.1f}" if result.get('pb') else "N/A"
-            discord_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5}\n"
+            ev_str = f"{result.get('ev_ebitda', 0):.1f}" if result.get('ev_ebitda') else "N/A"
+            discord_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
         discord_msg += "```\n\n"
         
         # 後5名
         if len(lstm_results) > 5:
             discord_msg += "**📉 預測下跌 TOP 5**\n"
             discord_msg += "```\n"
-            discord_msg += f"{'代碼':<6} {'跌幅':>8} {'PE':>5} {'PB':>5}\n"
+            discord_msg += f"{'代碼':<6} {'跌幅':>8} {'PE':>5} {'PB':>5} {'EV':>5}\n"
             for result in lstm_results[-5:]:
                 pe_str = f"{result.get('pe', 0):.1f}" if result.get('pe') else "N/A"
                 pb_str = f"{result.get('pb', 0):.1f}" if result.get('pb') else "N/A"
-                discord_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5}\n"
+                ev_str = f"{result.get('ev_ebitda', 0):.1f}" if result.get('ev_ebitda') else "N/A"
+                discord_msg += f"{result['ticker']:<6} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
             discord_msg += "```\n"
     
     # 雙重符合
@@ -120,7 +127,8 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
         for idx, row in overlap_df.iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            discord_msg += f"{row['ticker']} LSTM:{row['lstm_potential']:+.1f}% PE:{pe_str} PB:{pb_str}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            discord_msg += f"{row['ticker']} LSTM:{row['lstm_potential']:+.1f}% EV:{ev_str} {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
         discord_msg += "```"
     
     # ===== Email (Plain Text) =====
@@ -132,12 +140,13 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
     # 玄鐵重劍
     email_body += f"🗡️  波段操作 (玄鐵重劍) - 符合條件: {len(xuantie_df)} 支 (顯示前10名)\n\n"
     if not xuantie_df.empty:
-        email_body += f"{'代碼':<10} {'價格':>10} {'PE':>8} {'PB':>8} 回調類型\n"
-        email_body += "-" * 60 + "\n"
+        email_body += f"{'代碼':<10} {'價格':>10} {'PE':>8} {'PB':>8} {'EV':>8} 回調類型\n"
+        email_body += "-" * 70 + "\n"
         for idx, row in xuantie_df.head(10).iterrows():
             pe_str = f"{row.get('pe', 0):.2f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.2f}" if row.get('pb') else "N/A"
-            email_body += f"{row['ticker']:<10} {row['current_price']:>10.2f} {pe_str:>8} {pb_str:>8} {row['pullback_type']}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.2f}" if row.get('ev_ebitda') else "N/A"
+            email_body += f"{row['ticker']:<10} {row['current_price']:>10.2f} {pe_str:>8} {pb_str:>8} {ev_str:>8} {row['pullback_type']}\n"
     email_body += "\n\n"
     
     # LSTM 預測
@@ -145,34 +154,37 @@ def format_dual_strategy_message(index_name: str, results: dict, calculation_tim
     if lstm_results:
         # 前10名 (預測上漲)
         email_body += "📈 預測上漲 TOP 10\n\n"
-        email_body += f"{'代碼':<10} {'預測漲幅':>10} {'現價':>10} {'預測價':>10} {'PE':>8} {'PB':>8}\n"
-        email_body += "-" * 60 + "\n"
+        email_body += f"{'代碼':<10} {'預測漲幅':>10} {'現價':>10} {'預測價':>10} {'PE':>8} {'PB':>8} {'EV':>8}\n"
+        email_body += "-" * 70 + "\n"
         for result in lstm_results[:10]:
             pe_str = f"{result.get('pe', 0):.2f}" if result.get('pe') else "N/A"
             pb_str = f"{result.get('pb', 0):.2f}" if result.get('pb') else "N/A"
-            email_body += f"{result['ticker']:<10} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {result['predicted_price']:>10.2f} {pe_str:>8} {pb_str:>8}\n"
+            ev_str = f"{result.get('ev_ebitda', 0):.2f}" if result.get('ev_ebitda') else "N/A"
+            email_body += f"{result['ticker']:<10} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {result['predicted_price']:>10.2f} {pe_str:>8} {pb_str:>8} {ev_str:>8}\n"
         email_body += "\n"
         
         # 後10名 (預測下跌)
         if len(lstm_results) > 10:
             email_body += "📉 預測下跌 TOP 10\n\n"
-            email_body += f"{'代碼':<10} {'預測跌幅':>10} {'現價':>10} {'預測價':>10} {'PE':>8} {'PB':>8}\n"
-            email_body += "-" * 60 + "\n"
+            email_body += f"{'代碼':<10} {'預測跌幅':>10} {'現價':>10} {'預測價':>10} {'PE':>8} {'PB':>8} {'EV':>8}\n"
+            email_body += "-" * 70 + "\n"
             for result in lstm_results[-10:]:
                 pe_str = f"{result.get('pe', 0):.2f}" if result.get('pe') else "N/A"
                 pb_str = f"{result.get('pb', 0):.2f}" if result.get('pb') else "N/A"
-                email_body += f"{result['ticker']:<10} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {result['predicted_price']:>10.2f} {pe_str:>8} {pb_str:>8}\n"
+                ev_str = f"{result.get('ev_ebitda', 0):.2f}" if result.get('ev_ebitda') else "N/A"
+                email_body += f"{result['ticker']:<10} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {result['predicted_price']:>10.2f} {pe_str:>8} {pb_str:>8} {ev_str:>8}\n"
     email_body += "\n\n"
     
     # 雙重符合
     email_body += f"⭐ 優先推薦 (雙重符合) - 符合條件: {len(overlap_df)} 支\n\n"
     if not overlap_df.empty:
-        email_body += f"{'代碼':<10} {'LSTM漲幅':>10} {'回調類型':<15} {'PE':>8} {'PB':>8}\n"
-        email_body += "-" * 60 + "\n"
+        email_body += f"{'代碼':<10} {'LSTM漲幅':>10} {'EV':>8} {'回調類型':<15} {'PE':>8} {'PB':>8}\n"
+        email_body += "-" * 70 + "\n"
         for idx, row in overlap_df.iterrows():
             pe_str = f"{row.get('pe', 0):.2f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.2f}" if row.get('pb') else "N/A"
-            email_body += f"{row['ticker']:<10} {row['lstm_potential']:>+9.2f}% {row['pullback_type'][:15]:<15} {pe_str:>8} {pb_str:>8}\n"
+            ev_str = f"{row.get('ev_ebitda', 0):.2f}" if row.get('ev_ebitda') else "N/A"
+            email_body += f"{row['ticker']:<10} {row['lstm_potential']:>+9.2f}% {ev_str:>8} {row['pullback_type'][:15]:<15} {pe_str:>8} {pb_str:>8}\n"
     
     return {
         'telegram': telegram_msg,
