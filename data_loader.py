@@ -9,7 +9,7 @@ import os
 import pickle
 from datetime import datetime, timedelta
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from config import config
 from logger import logger
 
@@ -19,6 +19,16 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 # ========== Stock Index Fetchers ==========
+
+def _fetch_index_with_names(url: str, index_key: str, suffix: str = ".TW") -> Dict[str, Any]:
+    response = requests.get(url)
+    data = response.json()
+    name_map = {f"{code}{suffix}": name for code, name in data[index_key].items()}
+    return {
+        'stocks': list(name_map.keys()),
+        'name_map': name_map
+    }
+
 
 def get_tw0050_stocks() -> List[str]:
     """
@@ -32,9 +42,7 @@ def get_tw0050_stocks() -> List[str]:
     
     def _fetch():
         from config import config
-        response = requests.get(config.api.TW0050_URL)
-        data = response.json()
-        return [f"{code}.TW" for code in data['TW0050'].keys()]
+        return _fetch_index_with_names(config.api.TW0050_URL, 'TW0050')
     
     return get_cached_stocks("TW0050", _fetch)
 
@@ -51,11 +59,49 @@ def get_tw0051_stocks() -> List[str]:
     
     def _fetch():
         from config import config
-        response = requests.get(config.api.TW0051_URL)
-        data = response.json()
-        return [f"{code}.TW" for code in data['TW0051'].keys()]
+        return _fetch_index_with_names(config.api.TW0051_URL, 'TW0051')
     
     return get_cached_stocks("TW0051", _fetch)
+
+
+def get_tw0050_name_map() -> Dict[str, str]:
+    """
+    Fetch Taiwan 50 (台灣50) stock name mapping
+    """
+    from stock_cache import get_cached_stock_map
+
+    def _fetch():
+        from config import config
+        return _fetch_index_with_names(config.api.TW0050_URL, 'TW0050')
+
+    return get_cached_stock_map("TW0050", _fetch)
+
+
+def get_tw0051_name_map() -> Dict[str, str]:
+    """
+    Fetch Taiwan Mid-Cap 100 (台灣中型100) stock name mapping
+    """
+    from stock_cache import get_cached_stock_map
+
+    def _fetch():
+        from config import config
+        return _fetch_index_with_names(config.api.TW0051_URL, 'TW0051')
+
+    return get_cached_stock_map("TW0051", _fetch)
+
+
+def get_index_name_map(index_name: str) -> Dict[str, str]:
+    """
+    Get name mapping for supported indices
+    """
+    index_map = {
+        "台灣50": get_tw0050_name_map,
+        "台灣中型100": get_tw0051_name_map
+    }
+    fetcher = index_map.get(index_name)
+    if not fetcher:
+        return {}
+    return fetcher()
 
 
 def get_sp500_stocks(limit: int = 110) -> List[str]:

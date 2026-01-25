@@ -77,7 +77,7 @@ def send_to_discord(message: str):
         print(f"傳送訊息到 Discord 時發生錯誤: {str(e)}")
 
 
-def send_results(index_name: str, stock_predictions: Dict[str, List[Any]]):
+def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_map: Dict[str, str] = None):
     """
     Send stock prediction results via all configured notification channels
     
@@ -100,10 +100,15 @@ def send_results(index_name: str, stock_predictions: Dict[str, List[Any]]):
     # Helper function to format table
     def format_table(predictions, display_count=5):
         """Format predictions as a table string"""
-        table = f"{'股票':<8} {'現價':>10} {'預測價':>10} {'潛力':>8}\n"
+        lookup = name_map or {}
+        label_width = 16 if lookup else 8
+        label_header = "代碼/名稱" if lookup else "股票"
+        table = f"{label_header:<{label_width}} {'現價':>10} {'預測價':>10} {'潛力':>8}\n"
         table += "-" * 40 + "\n"
         for stock, potential, current, predicted in predictions[:display_count]:
-            table += f"{stock:<8} {current:>10.2f} {predicted:>10.2f} {potential*100:>7.2f}%\n"
+            name = lookup.get(stock)
+            label = f"{stock} {name}" if name else stock
+            table += f"{label:<{label_width}} {current:>10.2f} {predicted:>10.2f} {potential*100:>7.2f}%\n"
         return table
     
     # ===== Email =====

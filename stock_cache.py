@@ -5,7 +5,7 @@ Caches stock index components to reduce API dependency
 import json
 import os
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from logger import logger
 
 CACHE_FILE = "cache/stock_lists.json"
@@ -83,6 +83,13 @@ class StockListCache:
             return age > MAX_CACHE_AGE
         except:
             return True
+
+    def _parse_fetch_result(self, result) -> Tuple[List[str], Dict[str, str]]:
+        if isinstance(result, dict) and 'stocks' in result:
+            return result.get('stocks', []), result.get('name_map', {})
+        if isinstance(result, tuple) and len(result) == 2:
+            return result[0], result[1]
+        return result, {}
     
     def get(self, index_name: str, fetcher_func) -> List[str]:
         """
@@ -105,13 +112,17 @@ class StockListCache:
         # 第二層：嘗試從 API 更新
         try:
             logger.info(f"🔄 更新 {index_name} 快取...")
-            stocks = fetcher_func()
+            fetch_result = fetcher_func()
+            stocks, name_map = self._parse_fetch_result(fetch_result)
             
             # 更新快取
-            self.cache_data[index_name] = {
+            payload = {
                 'stocks': stocks,
                 'timestamp': datetime.now().isoformat()
             }
+            if name_map:
+                payload['name_map'] = name_map
+            self.cache_data[index_name] = payload
             self._save_cache()
             
             logger.info(f"✅ {index_name} 快取已更新 ({len(stocks)} 支股票)")
@@ -136,6 +147,47 @@ class StockListCache:
             # 最後手段：回傳空清單
             logger.error(f"❌ 無法取得 {index_name} 股票清單")
             return []
+
+    def get_name_map(self, index_name: str, fetcher_func) -> Dict[str, str]:
+        """
+        取得股票名稱對照表（帶快取和容錯）
+        """
+        if not self._is_expired(index_name):
+            name_map = self.cache_data[index_name].get('name_map')
+            if name_map:
+                logger.info(f"✅ 使用快取名稱: {index_name} ({len(name_map)} 支股票)")
+                return name_map
+
+        try:
+            logger.info(f"🔄 更新 {index_name} 名稱快取...")
+            fetch_result = fetcher_func()
+            stocks, name_map = self._parse_fetch_result(fetch_result)
+
+            payload = {
+                'stocks': stocks,
+                'timestamp': datetime.now().isoformat()
+            }
+            if name_map:
+                payload['name_map'] = name_map
+            self.cache_data[index_name] = payload
+            self._save_cache()
+
+            if name_map:
+                logger.info(f"✅ {index_name} 名稱快取已更新 ({len(name_map)} 支股票)")
+            return name_map
+
+        except Exception as e:
+            logger.warning(f"⚠️ 名稱 API 失敗 ({index_name}): {e}")
+
+            if index_name in self.cache_data and not self._is_too_old(index_name):
+                name_map = self.cache_data[index_name].get('name_map')
+                if name_map:
+                    cache_age = self._get_cache_age(index_name)
+                    logger.warning(f"⚠️ 使用過期名稱快取: {index_name} (已 {cache_age} 天)")
+                    return name_map
+
+            logger.error(f"❌ 無法取得 {index_name} 名稱對照表")
+            return {}
     
     def _get_cache_age(self, index_name: str) -> int:
         """取得快取年齡（天數）"""
@@ -204,6 +256,13 @@ def get_cached_stocks(index_name: str, fetcher_func) -> List[str]:
         股票清單
     """
     return _cache.get(index_name, fetcher_func)
+
+
+def get_cached_stock_map(index_name: str, fetcher_func) -> Dict[str, str]:
+    """
+    取得股票名稱對照表（帶快取）
+    """
+    return _cache.get_name_map(index_name, fetcher_func)
 
 
 def force_refresh_cache(index_name: str, fetcher_func) -> List[str]:

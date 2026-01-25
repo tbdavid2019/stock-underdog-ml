@@ -7,7 +7,7 @@ import torch
 import pandas as pd
 from config import config
 from database import SupabaseManager
-from data_loader import get_stock_data, download_many, get_tw0050_stocks, get_tw0051_stocks, get_sp500_stocks, get_nasdaq_stocks, get_sox_stocks, get_dji_stocks
+from data_loader import get_stock_data, download_many, get_tw0050_stocks, get_tw0051_stocks, get_sp500_stocks, get_nasdaq_stocks, get_sox_stocks, get_dji_stocks, get_index_name_map
 from models.lstm import prepare_data, train_lstm_model, predict_next_day
 from notifier import send_results, send_to_telegram
 from logger import logger
@@ -114,7 +114,8 @@ def main():
         # Process and send results for each index separately
         for index_name, stock_predictions in analysis_results.items():
             print(f"處理並發送結果: {index_name}")
-            send_results(index_name, stock_predictions)
+            name_map = get_index_name_map(index_name)
+            send_results(index_name, stock_predictions, name_map=name_map)
 
     except Exception as e:
         print(f"錯誤: {str(e)}")

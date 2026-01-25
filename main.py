@@ -9,10 +9,11 @@ import pandas as pd
 from config import config
 from database import SupabaseManager
 from data_loader import (
-    get_stock_data, 
-    get_tw0050_stocks, 
-    get_tw0051_stocks, 
-    get_sp500_stocks
+    get_stock_data,
+    get_tw0050_stocks,
+    get_tw0051_stocks,
+    get_sp500_stocks,
+    get_index_name_map
 )
 from models.lstm import prepare_data, train_lstm_model, predict_next_day
 from xuantie_strategy import filter_stocks_by_xuantie, check_xuantie_signal
@@ -336,7 +337,8 @@ def main():
             print_dual_strategy_report(index_name, results)
             
             # 發送通知
-            send_dual_strategy_results(index_name, results)
+            name_map = get_index_name_map(index_name)
+            send_dual_strategy_results(index_name, results, name_map=name_map)
             
             # 保存到資料庫
             if db_manager.enabled:

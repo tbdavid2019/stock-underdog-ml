@@ -248,6 +248,8 @@ tolerance = 0.05   # ±5% 回調容忍範圍
 
 所有基本面數據來自 **Yahoo Finance**，透過 `yfinance` 套件自動獲取，無需手動更新。
 
+台灣50/台灣中型100 成分股與名稱來自 `https://answerbook.david888.com`，通知與報表會顯示「代碼 + 公司名稱」。
+
 ---
 
 
