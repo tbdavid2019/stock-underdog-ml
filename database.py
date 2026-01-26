@@ -21,7 +21,18 @@ except ImportError:
 try:
     from supabase import create_client, Client
     HAS_SUPABASE = True
-except ImportError:
+except ImportError as e:
+    # Log the specific error instead of setting flag silently, or just let it raise if it's critical
+    # But to answer "Why", we want to see the error.
+    # The user wants to see the error.
+    # However, existing code checks HAS_SUPABASE.
+    # Let's keep the flag but print the specific error to stderr or stdout so it shows in logs.
+    import sys
+    print(f"Supabase Import Failed: {e}", file=sys.stderr)
+    HAS_SUPABASE = False
+except Exception as e:
+    import sys
+    print(f"Supabase Import Unexpected Error: {e}", file=sys.stderr)
     HAS_SUPABASE = False
 
 from typing import List, Tuple, Optional, Any

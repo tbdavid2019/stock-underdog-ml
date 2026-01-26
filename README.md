@@ -49,6 +49,10 @@ AI 驅動的股票預測系統，使用 **LSTM** 預測下一個交易日的股�
 ```bash
 git clone https://github.com/tbdavid2019/stock-underdog-ml.git
 cd stock-underdog-ml
+# 方法 A：使用自動腳本
+bash scripts/setup.sh
+
+# 方法 B：手動設定
 python3.11 -m venv myenv
 source myenv/bin/activate
 pip install -r requirements.txt
@@ -78,7 +82,7 @@ USE_TRANSFORMER=false
 
 在 [Supabase Dashboard](https://app.supabase.com) 執行 `supabase_schema.sql`
 
-**新用戶**：直接執行，已包含所有雙軌策略欄位
+**新用戶**：直接執行 `supabase_schema.sql`，已包含所有雙軌策略欄位
 **舊用戶升級**：執行 `scripts/migration/supabase_add_columns.sql` 添加新欄位
 
 表格結構：
@@ -790,13 +794,13 @@ crontab -e
 
 ```bash
 # 台股收盤後執行（週一至週五 14:30）
-30 14 * * 1-5 /home/human/stock-underdog-ml/run_daily.sh >> /home/human/stock-underdog-ml/logs/cron.log 2>&1
+30 14 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
 
 # 美股收盤後執行（週一至週五 6:30）
-30 6 * * 1-5 /home/human/stock-underdog-ml/run_daily.sh >> /home/human/stock-underdog-ml/logs/cron.log 2>&1
+30 6 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
 
 # 每日午夜執行（使用快取數據）
-0 0 * * * /home/human/stock-underdog-ml/run_daily.sh >> /home/human/stock-underdog-ml/logs/cron.log 2>&1
+0 0 * * * /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
 ```
 
 ### 執行腳本說明
@@ -887,14 +891,14 @@ Cron 觸發 (例如：14:30)
 which conda
 
 # 修改 run_daily.sh 第 7 行
-source /home/human/miniconda3/etc/profile.d/conda.sh
+source /path/to/your/miniconda3/etc/profile.d/conda.sh
 ```
 
 #### Q2: 環境沒有正確啟動？
 
 **A:** 手動測試環境啟動：
 ```bash
-source /home/human/miniconda3/etc/profile.d/conda.sh
+source /path/to/your/miniconda3/etc/profile.d/conda.sh
 conda activate stockml
 python --version  # 確認 Python 版本
 pip list | grep tensorflow  # 確認套件安裝
@@ -913,7 +917,7 @@ crontab -l
 ```bash
 crontab -e
 # 在行首加上 # 註解
-# 30 14 * * 1-5 /home/human/stock-underdog-ml/run_daily.sh ...
+# 30 14 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh ...
 ```
 
 #### Q5: 執行時間建議？

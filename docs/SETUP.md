@@ -7,8 +7,21 @@
 - Python 3.11+
 - Supabase 帳號
 - 8GB+ RAM（用於模型訓練）
+- Bash 環境 (Linux/macOS/WSL)
 
-## 安裝步驟
+## 快速安裝 (推薦)
+
+如果您使用的是 Linux 或 macOS，可以使用自動化腳本完成大部份設定：
+
+```bash
+git clone https://github.com/tbdavid2019/stock-underdog-ml.git
+cd stock-underdog-ml
+bash scripts/setup.sh
+```
+
+接著請跳到 [第 4 步：設定環境變數](#4-設定環境變數) 進行設定。
+
+## 手動安裝步驟
 
 ### 1. Clone 專案
 
@@ -99,6 +112,8 @@ TELEGRAM_CHANNEL_ID=your_channel_id
 3. 到 **SQL Editor**
 4. 執行 `supabase_schema.sql` 的內容
 
+> 💡 **舊用戶升級**：如果您已經有 `predictions` 表格，請執行 `scripts/migration/supabase_add_columns.sql` 來補齊新欄位。
+
 ### 6. 測試執行
 
 ```bash
@@ -153,7 +168,7 @@ crontab -e
 加入：
 ```bash
 # 每天早上 8 點執行
-0 8 * * * /home/ec2-user/stock-underdog-ml/run.sh
+0 8 * * * /path/to/stock-underdog-ml/run_daily.sh
 ```
 
 ## 回測功能

@@ -1,7 +1,10 @@
 #!/bin/bash
 # Git 历史清理脚本 - 移除敏感数据
 
-cd /home/human/stock-underdog-ml
+# 自動切換到專案目錄
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR/../.."
+cd "$PROJECT_ROOT"
 
 echo "⚠️  警告：此操作将重写 Git 历史，不可逆！"
 echo "请确保：1) 已备份重要数据  2) 通知协作者"
