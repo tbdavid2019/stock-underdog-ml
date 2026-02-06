@@ -8,8 +8,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # 載入 conda (如果存在且有需要)
-if [ -f "/home/human/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "/home/human/miniconda3/etc/profile.d/conda.sh"
+if [ -f "/home/david/stock-underdog-ml/venv/bin/activate" ]; then
+    source "/home/david/stock-underdog-ml/venv/bin/activate"
 elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
     source "$HOME/miniconda3/etc/profile.d/conda.sh"
 elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
@@ -32,11 +32,11 @@ log() {
 # 1. 優先尋找本地 venv (SETUP.md 建議)
 # 2. 其次尋找指定的 conda 環境
 # 3. 最後使用系統預設 python
-if [ -f "myenv/bin/python" ]; then
-    PYTHON_EXEC="myenv/bin/python"
-    ENV_NAME="myenv (venv)"
-elif [ -d "/home/human/miniconda3/envs/stockml" ]; then
-    PYTHON_EXEC="/home/human/miniconda3/envs/stockml/bin/python"
+if [ -f "venv/bin/python" ]; then
+    PYTHON_EXEC="venv/bin/python"
+    ENV_NAME="venv"
+elif [ -d "/home/david/stock-underdog-ml/venv" ]; then
+    PYTHON_EXEC="/home/david/stock-underdog-ml/venv/bin/python"
     ENV_NAME="stockml (conda)"
 elif [ -d "$HOME/miniconda3/envs/stockml" ]; then
     PYTHON_EXEC="$HOME/miniconda3/envs/stockml/bin/python"

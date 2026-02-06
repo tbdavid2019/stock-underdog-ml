@@ -53,28 +53,32 @@ def send_to_telegram(message: str):
 
 def send_to_discord(message: str):
     """
-    Send message to Discord channel via webhook
+    Send message to Discord channel via webhook as a text file
     
     Args:
-        message: Message content (supports Discord markdown)
+        message: Message content
     """
     try:
-        payload = {"content": message}
-        headers = {"Content-Type": "application/json"}
+        import io
+        file_data = io.BytesIO(message.encode('utf-8'))
+        files = {
+            'file': ('prediction_results.txt', file_data, 'text/plain')
+        }
+        payload = {"content": "📊 每日潛力股分析結果已生成，詳見附件。"}
         
         response = requests.post(
             DiscordConfig.WEBHOOK_URL,
-            json=payload,
-            headers=headers
+            data=payload,
+            files=files
         )
         
-        if response.status_code == 204:
-            print("訊息已成功傳送到 Discord 頻道。")
+        if response.status_code in [200, 204]:
+            print("訊息及檔案已成功傳送到 Discord 頻道。")
         else:
-            print(f"傳送訊息到 Discord 時發生錯誤: {response.status_code}, {response.text}")
+            print(f"傳送檔案到 Discord 時發生錯誤: {response.status_code}, {response.text}")
     
     except Exception as e:
-        print(f"傳送訊息到 Discord 時發生錯誤: {str(e)}")
+        print(f"傳送檔案到 Discord 時發生錯誤: {str(e)}")
 
 
 def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_map: Dict[str, str] = None):
