@@ -21,6 +21,10 @@
 
 - 新增 `AGENTS.md`，規範 changelog、README、安全與測試同步要求。
 
+### Maintenance
+
+- 將未被正式流程使用的 `main500.py` 與 `repro_import.py` 移至 `archive/`，保留歷史程式但縮減根目錄正式入口。
+
 ## [2.0.0] - 2026-01-08
 
 ### 🎯 重大變更

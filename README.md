@@ -437,6 +437,10 @@ stock-underdog-ml/
 │   ├── README.md
 │   └── [其他測試腳本...]
 │
+├── archive/              ← 非正式入口與歷史診斷程式
+│   ├── main500.py        ← 舊版主程式
+│   └── repro_import.py   ← 一次性 import 診斷
+│
 ├── supabase_schema.sql  ← 完整資料庫結構（已包含雙軌策略欄位）🆕
 │
 └── logs/                ← 執行日誌
@@ -449,6 +453,10 @@ stock-underdog-ml/
 ### 主程式
 - **main.py** - 雙軌策略主程式（LSTM + 玄鐵重劍）
 - **main_lstm_only.py** - 純 LSTM 版本（向後兼容）
+
+### Archive
+- **archive/main500.py** - 舊版主程式，非每日正式入口
+- **archive/repro_import.py** - 一次性 import 診斷工具
 
 ### 策略模組
 - **xuantie_strategy.py** - MA 均線策略（MA5/MA10/MA60/MA120/MA250）
