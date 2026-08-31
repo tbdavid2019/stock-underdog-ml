@@ -6,6 +6,8 @@
 # 自動取得腳本所在目錄，並切換過去
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
+export PYTHONPATH="$SCRIPT_DIR"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 # 載入 conda (如果存在且有需要)
 if [ -f "/home/david/stock-underdog-ml/venv/bin/activate" ]; then
