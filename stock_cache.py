@@ -9,7 +9,8 @@ from typing import List, Optional, Dict, Any, Tuple
 from logger import logger
 
 CACHE_FILE = "cache/stock_lists.json"
-CACHE_DURATION = timedelta(days=5)  # 5 天快取
+# Used for reporting cache freshness. Reads always try the upstream API first.
+CACHE_DURATION = timedelta(days=5)
 MAX_CACHE_AGE = timedelta(days=90)  # 最大快取壽命
 
 # 備份清單（API 完全失敗時使用）
@@ -102,18 +103,13 @@ class StockListCache:
         Returns:
             股票清單
         """
-        # 第一層：檢查快取是否新鮮
-        if not self._is_expired(index_name):
-            stocks = self.cache_data[index_name].get('stocks', [])
-            if stocks:
-                logger.info(f"✅ 使用快取: {index_name} ({len(stocks)} 支股票)")
-                return stocks
-        
-        # 第二層：嘗試從 API 更新
+        # Always try the upstream API first so each run sees the latest list.
         try:
             logger.info(f"🔄 更新 {index_name} 快取...")
             fetch_result = fetcher_func()
             stocks, name_map = self._parse_fetch_result(fetch_result)
+            if not stocks:
+                raise ValueError("API 回傳空股票清單")
             
             # 更新快取
             payload = {
@@ -131,12 +127,12 @@ class StockListCache:
         except Exception as e:
             logger.warning(f"⚠️ API 失敗 ({index_name}): {e}")
             
-            # 第三層：使用舊快取（如果不太舊）
+            # Use the previous cache only when the upstream fetch fails.
             if index_name in self.cache_data and not self._is_too_old(index_name):
                 stocks = self.cache_data[index_name].get('stocks', [])
                 if stocks:
                     cache_age = self._get_cache_age(index_name)
-                    logger.warning(f"⚠️ 使用過期快取: {index_name} (已 {cache_age} 天)")
+                    logger.warning(f"⚠️ API 失敗，使用快取 fallback: {index_name} (已 {cache_age} 天)")
                     return stocks
             
             # 第四層：使用備份清單
@@ -152,16 +148,13 @@ class StockListCache:
         """
         取得股票名稱對照表（帶快取和容錯）
         """
-        if not self._is_expired(index_name):
-            name_map = self.cache_data[index_name].get('name_map')
-            if name_map:
-                logger.info(f"✅ 使用快取名稱: {index_name} ({len(name_map)} 支股票)")
-                return name_map
-
+        # Always try the upstream API first so names stay current.
         try:
             logger.info(f"🔄 更新 {index_name} 名稱快取...")
             fetch_result = fetcher_func()
             stocks, name_map = self._parse_fetch_result(fetch_result)
+            if not name_map:
+                raise ValueError("API 未回傳名稱對照表")
 
             payload = {
                 'stocks': stocks,
@@ -183,7 +176,7 @@ class StockListCache:
                 name_map = self.cache_data[index_name].get('name_map')
                 if name_map:
                     cache_age = self._get_cache_age(index_name)
-                    logger.warning(f"⚠️ 使用過期名稱快取: {index_name} (已 {cache_age} 天)")
+                    logger.warning(f"⚠️ API 失敗，使用名稱快取 fallback: {index_name} (已 {cache_age} 天)")
                     return name_map
 
             logger.error(f"❌ 無法取得 {index_name} 名稱對照表")

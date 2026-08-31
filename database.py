@@ -37,6 +37,7 @@ except Exception as e:
 
 from typing import List, Tuple, Optional, Any
 from config import DatabaseConfig, config
+from json_safety import sanitize_json_value, validate_json_payload
 from logger import logger
 
 
@@ -105,9 +106,13 @@ class SupabaseManager:
             data.append(record)
             
         try:
+            data = sanitize_json_value(data)
+            validate_json_payload(data)
             # Perform batch insert
             self.client.table("predictions").insert(data).execute()
             logger.info(f"✅ 成功寫入 {len(data)} 筆預測結果到 Supabase (Model: {model_name})")
+        except ValueError as e:
+            logger.error(f"❌ Supabase 寫入前 JSON 檢查失敗，已取消寫入: {str(e)}")
         except Exception as e:
             logger.error(f"❌ Supabase 寫入失敗: {str(e)}")
             if "relation" in str(e) and "does not exist" in str(e):
@@ -229,6 +234,8 @@ class SupabaseManager:
             return
         
         try:
+            all_data = sanitize_json_value(all_data)
+            validate_json_payload(all_data)
             # 寫入 predictions 表格（原表擴展版）
             self.client.table("predictions").insert(all_data).execute()
             logger.info(f"✅ 成功寫入 {len(all_data)} 筆雙軌策略結果到 Supabase predictions 表")
@@ -242,6 +249,8 @@ class SupabaseManager:
             for strategy, count in strategy_counts.items():
                 logger.info(f"   ├─ {strategy}: {count} 筆")
                 
+        except ValueError as e:
+            logger.error(f"❌ Supabase 寫入前 JSON 檢查失敗，已取消寫入: {str(e)}")
         except Exception as e:
             logger.error(f"❌ Supabase 寫入失敗: {str(e)}")
             if "column" in str(e).lower() and "does not exist" in str(e).lower():
