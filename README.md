@@ -104,17 +104,64 @@ USE_TRANSFORMER=false
 
 ### 4. 執行
 
-**主程式（雙軌策略）：**
+**主程式（現代化兩階段管線）：**
 ```bash
 python main.py
 ```
 
-**舊版（純 LSTM）：**
-```bash
-python main_lstm_only.py
+系統將依序自動完成：
+1. **Stage 1 (I/O Prefetch)**：並發批次預載指數成分股之 OHLCV 行情與基本面（PE/PB/EV/EBITDA）至快取。
+2. **Stage 2 (Compute)**：自動偵測硬體（CUDA / MPS / CPU）並多型執行所有啟用之量化策略。
+3. **Stage 3 (Evaluation)**：多策略動態綜合評分（0~100）、N-of-M 交集標籤生成與 Top-N 排序。
+4. **Stage 4 (Sinks)**：產生格式化報告，非同步寫入 Supabase 並發送 Telegram/Discord 通知。
+
+---
+
+## 🏗️ 系統分層架構 (Modular Pipeline Architecture)
+
+專案採用低耦合、高擴展性的分層架構：
+
+```
+stock-underdog-ml/
+├── core/                  # 核心層：硬體管理 (DeviceManager)、系統配置 (Config)
+├── data/                  # 資料層：指數成分股 (StockFetcher)、基本面 (FundamentalProvider)、快取 (CacheManager)
+├── strategies/            # 策略層：統一介面 (BaseStrategy)、註冊中心 (StrategyRegistry)、玄鐵重劍、LSTM
+├── evaluators/            # 綜合評價層：多策略動態評分 (CompositeEvaluator)、報告美化 (Formatter)
+├── pipeline/              # 管線排程層：兩階段執行調度器 (PipelineOrchestrator)
+├── database.py            # 儲存適配器：Supabase 連線與嚴格 JSON 驗證
+├── notifier_dual.py       # 通知適配器：Telegram / Discord 格式化發送
+└── main.py                # 輕量化系統主入口
 ```
 
-詳細步驟請參考 **[SETUP.md](SETUP.md)**
+### 🧩 擴充新選股策略指南
+
+新增自訂選股策略（如動量突破、RSI背離或新型 ML 模型）只需 1 個檔案：
+
+```python
+# strategies/my_strategy.py
+from strategies.base import BaseStrategy, StockContext, StrategyResult
+from strategies.registry import register_strategy
+
+@register_strategy("my_strategy")
+class MyCustomStrategy(BaseStrategy):
+    name = "我的自訂策略"
+    category = "technical"
+    required_lookback = 30
+
+    def evaluate(self, ctx: StockContext) -> StrategyResult:
+        df = ctx.df
+        is_hit = df['Close'].iloc[-1] > df['Close'].rolling(20).mean().iloc[-1]
+        return StrategyResult(
+            ticker=ctx.ticker,
+            strategy_name=self.name,
+            is_hit=is_hit,
+            score=85.0 if is_hit else 0.0,
+            current_price=float(df['Close'].iloc[-1]),
+            tags=["突破20日線"] if is_hit else []
+        )
+```
+
+在 `core/config.py` 的 `ENABLED_STRATEGIES` 加入 `"my_strategy"` 即可立即納入每日自動化選股與綜合評分！
 
 ---
 

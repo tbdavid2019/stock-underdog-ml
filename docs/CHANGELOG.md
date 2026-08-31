@@ -21,9 +21,29 @@
 
 - 新增 `AGENTS.md`，規範 changelog、README、安全與測試同步要求。
 
+### Added
+
+- **模組化分層架構 (Modular Pipeline Architecture)**：新增 `core/`、`data/`、`strategies/`、`evaluators/`、`pipeline/` 模組，徹底解決單一程式碼檔案過度耦合（God Object）的問題。
+- **統一硬體管理 (`core.device.DeviceManager`)**：支援 CUDA、Apple Silicon (MPS) 與 CPU 運行時自動偵測、手動指定與平滑降級。
+- **統一快取與資料管線 (`data.cache.CacheManager`, `data.fetcher.StockFetcher`, `data.fundamentals.FundamentalProvider`)**：
+  - 支援指數成分股 JSON 快取與行情 Pickle 快取生命週期管理。
+  - 基本面估值指標（PE/PB/EV/EBITDA）批次快取與錯誤容錯。
+  - 完整保留 `answerbook` 優先最新、失敗回退本機快取之可靠性策略。
+- **插件式策略註冊中心 (`strategies.registry.StrategyRegistry`)**：
+  - 標準化 `BaseStrategy`、`StockContext` 與 `StrategyResult` 契約。
+  - 提供 `@register_strategy` 裝飾器，使未來擴充技術面、籌碼面、機器學習選股策略只需新增單一檔案。
+  - 完整封裝 `XuanTieStrategy`（玄鐵重劍）與 `LSTMStrategy`（LSTM 深度學習）。
+- **動態多策略綜合評價引擎 (`evaluators.composite_evaluator.CompositeEvaluator`)**：
+  - 支援多策略動態權重評分（0~100）與 N-of-M 多策略交集自動標籤聚合。
+  - 獨立的美化終端機表格輸出工具 (`evaluators.formatter.print_evaluation_report`)。
+- **兩階段執行調度器 (`pipeline.orchestrator.PipelineOrchestrator`)**：
+  - Stage 1 (I/O Prefetch) 與 Stage 2 (Compute) 分流，大幅改善並發效率並避免 GIL 衝突。
+
 ### Maintenance
 
-- 將未被正式流程使用的 `main500.py` 與 `repro_import.py` 移至 `archive/`，保留歷史程式但縮減根目錄正式入口。
+- 將 `main.py` 重構為輕量化管線調度入口（縮減至 40 行左右）。
+- 清理 `database.py` 中殘留的 MySQL 與 MongoDB 廢棄類別與驅動檢查。
+- 將過渡期檔案 `parallel_processor.py` 與 `main_lstm_only.py` 移至 `archive/`。
 - `run_daily.sh` 補充 `PYTHONPATH` 與系統 `PATH` 環境變數匯出，確保在 Cron 最小環境下順利執行回測與主程式。
 - 於 `10.9.0.99` 部署自動化 Cron 排程：包含台股收盤後（15:30 CST / 07:30 UTC）與美股收盤後（07:00 CST / 23:00 UTC）自動執行雙軌選股分析。
 
