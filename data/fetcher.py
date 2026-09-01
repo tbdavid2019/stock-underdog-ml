@@ -1,13 +1,13 @@
 """
 Stock Data & Index Fetcher.
 Retrieves stock lists from various indices (with answerbook upstream and cache fallback)
-and downloads market price series with indicator preparation.
+and downloads market price series with native batch support and indicator preparation.
 """
 import os
 import logging
 import requests
+import time
 from typing import List, Optional, Dict, Any, Tuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
 from core.config import config
@@ -25,6 +25,13 @@ def add_base_indicators(data: pd.DataFrame) -> pd.DataFrame:
         return data
 
     df = data.copy()
+    
+    # Handle MultiIndex columns if present
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
+    # Ensure numeric Close
+    df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
     close = df["Close"]
 
     # Moving Averages
@@ -70,7 +77,6 @@ class StockFetcher:
         """
         Fetch index constituents from upstream API with automatic local cache fallback.
         """
-        # Try fetching from upstream API first
         try:
             resp = requests.get(url, timeout=10)
             if resp.status_code == 200:
@@ -82,7 +88,6 @@ class StockFetcher:
                     stocks = stocks[:limit]
                     name_map = {k: v for k, v in name_map.items() if k in stocks}
 
-                # Update local cache
                 CacheManager.set_index_cache(index_key, stocks, name_map)
                 return stocks, name_map
             else:
@@ -90,7 +95,6 @@ class StockFetcher:
         except Exception as e:
             logger.warning(f"⚠️ 抓取 {index_key} 上游失敗: {e}")
 
-        # Fallback to local cache
         cached = CacheManager.get_index_cache(index_key, max_age_days=config.pipeline.INDEX_CACHE_MAX_AGE_DAYS)
         if cached:
             logger.info(f"📦 使用本機快取 fallback ({index_key}): {len(cached.get('stocks', []))} 支股票")
@@ -112,7 +116,6 @@ class StockFetcher:
     @classmethod
     def get_sp500_stocks(cls, limit: int = 110) -> List[str]:
         stocks, _ = cls._fetch_index_with_cache_fallback("SP500", config.api.SP500_URL, "SP500", limit=limit)
-        # Format tickers like BRK.B -> BRK-B for yfinance
         return [s.replace("BRK.B", "BRK-B") for s in stocks]
 
     @classmethod
@@ -180,18 +183,19 @@ class StockFetcher:
         # 2. Download from yfinance
         try:
             import yfinance as yf
-            logger.info(f"🌐 下載 {ticker} 行情數據 ({period})...")
-            data = yf.download(ticker, period=period, progress=False)
+            # Use Ticker.history for reliable single ticker fetch
+            t = yf.Ticker(ticker)
+            data = t.history(period=period, auto_adjust=True)
 
             if data.empty:
                 logger.warning(f"⚠️ {ticker} 獲取數據為空 (Empty)")
                 return pd.DataFrame()
 
-            # Handle MultiIndex columns
+            # Handle MultiIndex columns if present
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = data.columns.get_level_values(0)
 
-            # Ensure basic columns exist
+            # Ensure standard OHLCV columns exist
             for col in ["Open", "High", "Low", "Close", "Volume"]:
                 if col not in data.columns:
                     data[col] = 0.0
@@ -211,14 +215,14 @@ class StockFetcher:
         cls, 
         tickers: List[str], 
         period: str = "6mo", 
-        use_cache: bool = True, 
-        max_workers: int = 8
+        use_cache: bool = True
     ) -> Dict[str, pd.DataFrame]:
         """
-        Concurrently retrieve historical price data for a batch of tickers.
+        Retrieve historical price data for a batch of tickers.
+        Uses native yfinance batch download to prevent concurrency crumb race conditions.
         """
         results: Dict[str, pd.DataFrame] = {}
-        pending_tickers = []
+        pending_tickers: List[str] = []
 
         # 1. Check cache first
         for ticker in tickers:
@@ -232,20 +236,60 @@ class StockFetcher:
         if not pending_tickers:
             return results
 
-        logger.info(f"🌐 正在並發下載 {len(pending_tickers)} 支股票之行情數據...")
+        logger.info(f"🌐 正在批次下載 {len(pending_tickers)} 支股票之行情數據 ({period})...")
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(cls.get_stock_data, ticker, period, use_cache): ticker
-                for ticker in pending_tickers
-            }
-            for future in as_completed(futures):
-                ticker = futures[future]
-                try:
-                    df = future.result(timeout=60)
+        try:
+            import yfinance as yf
+            
+            # Native yfinance batch download handles internal threading safely
+            batch_data = yf.download(
+                pending_tickers,
+                period=period,
+                group_by="ticker",
+                auto_adjust=True,
+                threads=True,
+                progress=False
+            )
+
+            if not batch_data.empty:
+                if len(pending_tickers) == 1:
+                    # Single ticker batch returns 1D or 2D dataframe
+                    tk = pending_tickers[0]
+                    df = batch_data.copy()
+                    if isinstance(df.columns, pd.MultiIndex):
+                        df.columns = df.columns.get_level_values(0)
+                    df = df.dropna(how="all")
                     if not df.empty:
-                        results[ticker] = df
-                except Exception as e:
-                    logger.warning(f"下載 {ticker} 失敗或超時: {e}")
+                        if use_cache:
+                            CacheManager.set_stock_data(tk, period, df)
+                        results[tk] = add_base_indicators(df)
+                else:
+                    # Multi-ticker batch
+                    for tk in pending_tickers:
+                        try:
+                            if tk in batch_data.columns:
+                                sub_df = batch_data[tk].dropna(how="all").copy()
+                                if not sub_df.empty:
+                                    for col in ["Open", "High", "Low", "Close", "Volume"]:
+                                        if col not in sub_df.columns:
+                                            sub_df[col] = 0.0
+                                    if use_cache:
+                                        CacheManager.set_stock_data(tk, period, sub_df)
+                                    results[tk] = add_base_indicators(sub_df)
+                        except Exception as e:
+                            logger.debug(f"處理批次股票 {tk} 時出錯: {e}")
 
+        except Exception as e:
+            logger.warning(f"⚠️ yfinance 批次下載失敗: {e}，切換為單支回退下載")
+
+        # 2. Fallback for any missing tickers in batch
+        missing = [tk for tk in pending_tickers if tk not in results or results[tk].empty]
+        if missing:
+            logger.info(f"🔄 正在回退下載 {len(missing)} 支缺失的股票...")
+            for tk in missing:
+                df = cls.get_stock_data(tk, period=period, use_cache=use_cache)
+                if not df.empty:
+                    results[tk] = df
+
+        logger.info(f"✅ 行情數據下載完成: 成功 {len(results)}/{len(tickers)} 支")
         return results
