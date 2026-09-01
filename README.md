@@ -267,6 +267,17 @@ stock-underdog-ml/
 
 ---
 
+## 🌐 線上服務與 WebMCP / Agent 入口 (Live Endpoints)
+
+* **🖥️ 即時操盤儀表板**: [https://stockdata.david888.com](https://stockdata.david888.com)
+* **🤖 WebMCP SSE 串流**: `https://stockdata.david888.com/mcp/sse`
+* **📑 WebMCP Manifest**: `https://stockdata.david888.com/.well-known/mcp.json` & `/mcp.json`
+* **📄 LLM Context 協議**: `https://stockdata.david888.com/llms.txt` & `/llms-full.txt`
+* **🌉 Cloudflare WebMCP Bridge**: `https://stockdata.david888.com/.webmcp/bridge.js`
+* **📘 Swagger API 文件**: `https://stockdata.david888.com/docs`
+
+---
+
 ## 🤖 GitHub Actions 自動化 CI/CD
 
 本專案配置了完整 GitHub Actions 自動化流程（`.github/workflows/docker-ci-cd.yml`）：
