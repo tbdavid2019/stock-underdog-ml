@@ -71,10 +71,23 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# 判斷執行模式 (Docker 優先，本機 Python 備援)
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    RUNNER="docker"
+    log "🐳 偵測到 Docker 環境，使用 Docker Compose 容器執行..."
+else
+    RUNNER="python"
+    log "🐍 使用本機 Python 環境執行 ($PYTHON_EXEC)..."
+fi
+
 # Step 1: 先執行回測（驗證昨日預測）
 log ""
 log "[1/3] 執行回測驗證..."
-$PYTHON_EXEC backtest/backtest.py 2>&1 | tee -a "$LOG_FILE"
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml backtest 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC backtest/backtest.py 2>&1 | tee -a "$LOG_FILE"
+fi
 BACKTEST_EXIT=${PIPESTATUS[0]}
 
 if [ $BACKTEST_EXIT -eq 0 ]; then
@@ -83,10 +96,14 @@ else
     log "⚠️ [WARN] 回測失敗 (exit code: $BACKTEST_EXIT)"
 fi
 
-# Step 2: 執行雙軌策略分析
+# Step 2: 執行雙軌量化策略分析
 log ""
-log "[2/3] 執行雙軌策略分析 (LSTM + 玄鐵重劍)..."
-$PYTHON_EXEC main.py 2>&1 | tee -a "$LOG_FILE"
+log "[2/3] 執行多維量化策略分析 (宏觀 + LSTM + 玄鐵重劍 + 板塊輪動 + 法人籌碼)..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC main.py 2>&1 | tee -a "$LOG_FILE"
+fi
 PREDICT_EXIT=${PIPESTATUS[0]}
 
 if [ $PREDICT_EXIT -eq 0 ]; then
