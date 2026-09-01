@@ -1,9 +1,9 @@
 ---
 name: stock-quant
-description: 專業級 AI 深度學習與多維量化決策大腦 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。
+description: 888 Stock Quant 專業級深度學習與多維量化決策大腦 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。
 ---
 
-# 📈 Stock Quant AI Agent Skill
+# 📈 888 Stock Quant Agent Skill
 
 ## 1. 概述 (Overview)
 

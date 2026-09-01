@@ -12,9 +12,9 @@ from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 
 app = FastAPI(
-    title="Stock Quantitative Multi-Strategy Platform API",
+    title="888 Stock Quant Platform API",
     description="""
-    🚀 **AI & 多維量化交易決策系統 REST API**
+    🚀 **888 Stock Quant 多維量化交易決策系統 REST API**
     
     支援基於 DuckDB 高效能時序資料庫之即時量化訊號查詢：
     * 🗡️ **玄鐵重劍策略**：MA60/120 均線趨勢回調技術買點
@@ -54,26 +54,26 @@ app.include_router(stats.router, prefix="/api/v1")
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root():
     """
-    量化決策平台首頁：提供人類即時操盤儀表板與 AI Agent / MCP 對接指南。
+    量化決策平台首頁：提供即時操盤儀表板與 Agent / MCP 對接指南。
     """
     template_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(template_path):
         with open(template_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
-    return HTMLResponse(content="<h1>Stock Quant AI Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
+    return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
 
 
 @app.get("/.well-known/ai-plugin.json", include_in_schema=False)
 def get_ai_plugin_manifest():
     """
-    WebMCP / OpenAI Plugin Standard Discovery Manifest
+    WebMCP / Plugin Standard Discovery Manifest
     """
     return JSONResponse(content={
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
-        "name_for_human": "Stock Quant AI Platform",
-        "description_for_model": "專業級 AI 深度學習與多維量化決策大腦 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。",
-        "description_for_human": "AI Quant Multi-Strategy Stock Trading Engine and Live Screener.",
+        "name_for_human": "888 Stock Quant",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。",
+        "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"
         },

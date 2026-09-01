@@ -138,7 +138,7 @@ class TestFastAPIService(unittest.TestCase):
     def test_root_homepage(self):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("Stock Quant AI", resp.text)
+        self.assertIn("888 Stock Quant", resp.text)
 
     def test_ai_plugin_manifest(self):
         resp = self.client.get("/.well-known/ai-plugin.json")
