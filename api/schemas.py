@@ -26,6 +26,10 @@ class StockPredictionItem(BaseModel):
     ev_ebitda: Optional[float] = Field(None, description="企業價值倍數")
     period: Optional[str] = Field(None, description="訓練週期")
     timestamp: Optional[str] = Field(None, description="預測產出時間戳記 (ISO 8601)")
+    analysis_date: Optional[str] = Field(None, description="分析所屬日期 (YYYY-MM-DD)")
+    data_as_of: Optional[str] = Field(None, description="資料產生時間戳記 (ISO 8601)")
+    age_hours: Optional[float] = Field(None, description="資料產生迄今經過小時數")
+    is_stale: Optional[bool] = Field(None, description="資料是否已超過 48 小時過期")
     macro_regime: Optional[str] = Field(None, description="當時美股宏觀市場環境")
     trust_net_5d: Optional[int] = Field(None, description="投信 5 日累計買賣超 (張)")
     foreign_net_5d: Optional[int] = Field(None, description="外資 5 日累計買賣超 (張)")
@@ -34,8 +38,11 @@ class StockPredictionItem(BaseModel):
 
 class PredictionResponse(BaseModel):
     success: bool = True
-    count: int
-    data: List[StockPredictionItem]
+    batch_date: Optional[str] = Field(None, description="最新批次分析日期 (YYYY-MM-DD)")
+    latest_batch_timestamp: Optional[str] = Field(None, description="最新批次完整時間戳記")
+    is_stale: bool = Field(False, description="整個批次資料是否已逾期 (> 48h)")
+    count: int = Field(..., description="符合條件的記錄總數")
+    data: List[StockPredictionItem] = Field(default_factory=list, description="預測結果清單")
 
 
 class MacroRegimeResponse(BaseModel):
@@ -57,7 +64,6 @@ class DBStatsResponse(BaseModel):
     latest_timestamp: Optional[str] = Field(None, description="最新預測時間戳記")
     indices: List[str] = Field(default_factory=list, description="已分析指數清單")
     models: List[str] = Field(default_factory=list, description="已啟用模型清單")
-    db_path: str
 
 
 class HealthResponse(BaseModel):

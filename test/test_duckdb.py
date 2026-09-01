@@ -65,11 +65,46 @@ class TestDuckDBManager(unittest.TestCase):
         }
 
         macro = MacroState(regime_name="全面多頭 (Bullish)", exposure=1.0)
+        results_dict["candidates_map"] = {
+            "2330.TW": {"tags": ["🏆三重共振", "土洋合買"], "composite_score": 85.0}
+        }
+        results_dict["institutional_summaries"] = {
+            "2330.TW": {"trust_net_5d": 300, "foreign_net_5d": 800}
+        }
         saved = self.mgr.save_dual_strategy_results("台灣50", results_dict, macro_state=macro)
         self.assertEqual(saved, 3)
 
         count = self.mgr.get_row_count("predictions")
         self.assertEqual(count, 3)
+
+        # 驗證宏觀與法人籌碼寫入
+        df = self.mgr.query("SELECT macro_regime, trust_net_5d, foreign_net_5d, tags FROM predictions WHERE ticker = '2330.TW' AND model_name = '多維共振'")
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.iloc[0]["macro_regime"], "全面多頭 (Bullish)")
+        self.assertEqual(df.iloc[0]["trust_net_5d"], 300)
+        self.assertEqual(df.iloc[0]["foreign_net_5d"], 800)
+        self.assertIn("🏆三重共振", df.iloc[0]["tags"])
+
+    def test_clean_test_data_and_stats(self):
+        # 寫入一筆測試資料
+        self.mgr.save_predictions_batch([{
+            "index_name": "DEBUG_TEST",
+            "model_name": "DEBUG_MODEL",
+            "strategy_type": "DEBUG",
+            "ticker": "TEST_TICKER",
+            "current_price": 100.0,
+            "period": "6mo",
+            "timestamp": "2026-09-01T10:00:00"
+        }])
+
+        stats = self.mgr.get_db_stats()
+        self.assertNotIn("db_path", stats)
+        self.assertNotIn("DEBUG_TEST", stats["indices"])
+        self.assertNotIn("DEBUG_MODEL", stats["models"])
+
+        # 執行清理
+        deleted = self.mgr.clean_test_data()
+        self.assertGreaterEqual(deleted, 0)
 
 
 if __name__ == "__main__":

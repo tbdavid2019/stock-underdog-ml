@@ -20,6 +20,9 @@ class TestFastAPIService(unittest.TestCase):
 
         cls.db = DuckDBManager(db_path=cls.test_db_path)
         
+        import datetime
+        now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        
         # 寫入測試模擬數據
         sample_records = [
             {
@@ -35,8 +38,10 @@ class TestFastAPIService(unittest.TestCase):
                 "pe": 28.0,
                 "pb": 9.5,
                 "period": "6mo",
-                "timestamp": "2026-09-01T10:00:00",
+                "timestamp": now_ts,
                 "macro_regime": "全面多頭",
+                "trust_net_5d": 500,
+                "foreign_net_5d": 1200,
                 "tags": "🏆三重共振 | 土洋合買 | 投信連買4天"
             },
             {
@@ -49,7 +54,7 @@ class TestFastAPIService(unittest.TestCase):
                 "potential": -7.69,
                 "pe": 60.0,
                 "period": "6mo",
-                "timestamp": "2026-09-01T10:00:00",
+                "timestamp": now_ts,
                 "macro_regime": "全面多頭",
                 "tags": "LSTM看跌"
             },
@@ -63,7 +68,7 @@ class TestFastAPIService(unittest.TestCase):
                 "pullback_type": "MA60 (+2.7%)",
                 "pe": 18.5,
                 "period": "6mo",
-                "timestamp": "2026-09-01T10:00:00",
+                "timestamp": now_ts,
                 "macro_regime": "全面多頭",
                 "tags": "玄鐵買點"
             }
@@ -96,6 +101,12 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertTrue(data["success"])
         self.assertGreaterEqual(data["count"], 1)
+        self.assertIn("batch_date", data)
+        self.assertIn("is_stale", data)
+        item = data["data"][0]
+        self.assertIn("analysis_date", item)
+        self.assertIn("data_as_of", item)
+        self.assertIn("age_hours", item)
 
     def test_resonance_endpoint(self):
         resp = self.client.get("/api/v1/predictions/resonance")
@@ -122,6 +133,7 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertTrue(data["success"])
         self.assertIn("total_records", data)
+        self.assertNotIn("db_path", data)
 
 
 if __name__ == "__main__":

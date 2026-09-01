@@ -132,15 +132,25 @@ class DuckDBManager:
         macro_regime_str = macro_state.regime_name if macro_state else None
         all_data = []
 
+        # 提取候選標的綜合評估與法人籌碼
+        candidates_map = results.get("candidates_map", {})
+        inst_summaries = results.get("institutional_summaries", {})
+
         # 1. 玄鐵策略結果
         xuantie_df = results.get("xuantie_results", pd.DataFrame())
         if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
             for idx, row in xuantie_df.iterrows():
+                t = row["ticker"]
+                cand = candidates_map.get(t, {})
+                inst = inst_summaries.get(t, {})
+                cand_tags = cand.get("tags")
+                tags_str = " | ".join(cand_tags) if cand_tags else "玄鐵買點"
+
                 all_data.append({
                     "index_name": index_name,
                     "model_name": "玄鐵重劍",
                     "strategy_type": "玄鐵重劍",
-                    "ticker": row["ticker"],
+                    "ticker": t,
                     "current_price": float(row["current_price"]),
                     "predicted_price": None,
                     "potential": None,
@@ -157,19 +167,26 @@ class DuckDBManager:
                     "period": period,
                     "timestamp": timestamp,
                     "macro_regime": macro_regime_str,
-                    "trust_net_5d": None,
-                    "foreign_net_5d": None,
-                    "tags": "玄鐵買點"
+                    "trust_net_5d": inst.get("trust_net_5d"),
+                    "foreign_net_5d": inst.get("foreign_net_5d"),
+                    "tags": tags_str
                 })
 
         # 2. LSTM 預測結果
         lstm_results = results.get("lstm_results", [])
         for r in lstm_results:
+            t = r["ticker"]
+            cand = candidates_map.get(t, {})
+            inst = inst_summaries.get(t, {})
+            cand_tags = cand.get("tags")
+            default_lstm_tag = "LSTM看漲" if float(r["potential"]) > 0 else "LSTM看跌"
+            tags_str = " | ".join(cand_tags) if cand_tags else default_lstm_tag
+
             all_data.append({
                 "index_name": index_name,
                 "model_name": "LSTM",
                 "strategy_type": "LSTM預測",
-                "ticker": r["ticker"],
+                "ticker": t,
                 "current_price": float(r["current_price"]),
                 "predicted_price": float(r["predicted_price"]),
                 "potential": float(r["potential"]),
@@ -182,20 +199,26 @@ class DuckDBManager:
                 "period": period,
                 "timestamp": timestamp,
                 "macro_regime": macro_regime_str,
-                "trust_net_5d": None,
-                "foreign_net_5d": None,
-                "tags": "LSTM看漲" if float(r["potential"]) > 0 else "LSTM看跌"
+                "trust_net_5d": inst.get("trust_net_5d"),
+                "foreign_net_5d": inst.get("foreign_net_5d"),
+                "tags": tags_str
             })
 
         # 3. 雙重/三重符合結果
         overlap_df = results.get("overlap_results", pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
             for idx, row in overlap_df.iterrows():
+                t = row["ticker"]
+                cand = candidates_map.get(t, {})
+                inst = inst_summaries.get(t, {})
+                cand_tags = cand.get("tags")
+                tags_str = " | ".join(cand_tags) if cand_tags else "🏆三重共振"
+
                 all_data.append({
                     "index_name": index_name,
                     "model_name": "多維共振",
                     "strategy_type": "多維共振",
-                    "ticker": row["ticker"],
+                    "ticker": t,
                     "current_price": float(row["current_price"]),
                     "predicted_price": float(row["predicted_price"]),
                     "potential": float(row["lstm_potential"]),
@@ -212,9 +235,9 @@ class DuckDBManager:
                     "period": period,
                     "timestamp": timestamp,
                     "macro_regime": macro_regime_str,
-                    "trust_net_5d": None,
-                    "foreign_net_5d": None,
-                    "tags": "重點推薦"
+                    "trust_net_5d": inst.get("trust_net_5d"),
+                    "foreign_net_5d": inst.get("foreign_net_5d"),
+                    "tags": tags_str
                 })
 
         return self.save_predictions_batch(all_data)
@@ -227,12 +250,31 @@ class DuckDBManager:
             return con.execute(sql).df()
 
     def get_row_count(self, table_name: str = "predictions") -> int:
-        """取得指定表格的總記錄數"""
+        """取得指定表格的總記錄數 (排除測試假資料)"""
         try:
             with self._get_connection() as con:
-                res = con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
+                filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
+                res = con.execute(f"SELECT COUNT(*) FROM {table_name} {filter_sql}").fetchone()
                 return res[0] if res else 0
         except Exception:
+            return 0
+
+    def clean_test_data(self) -> int:
+        """清理歷史混入的測試與除錯假數據 (TEST, DEBUG, SERVICE_KEY 等)"""
+        try:
+            with self._get_connection() as con:
+                res = con.execute("""
+                    DELETE FROM predictions 
+                    WHERE index_name LIKE '%TEST%' 
+                       OR index_name LIKE '%DEBUG%' 
+                       OR index_name LIKE '%SERVICE_KEY%'
+                       OR model_name LIKE '%DEBUG%'
+                       OR ticker LIKE 'TEST%';
+                """).fetchone()
+                logger.info("🧹 已成功清理非生產測試資料")
+                return res[0] if res else 0
+        except Exception as e:
+            logger.error(f"❌ 清理測試資料失敗: {e}")
             return 0
 
     def export_to_parquet(self, output_path: str, table_name: str = "predictions") -> str:
@@ -273,10 +315,23 @@ class DuckDBManager:
         index_name: Optional[str] = None, 
         model_name: Optional[str] = None, 
         limit: int = 50, 
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        """取得各股票最新一筆預測與策略記錄"""
-        where_clauses = []
+        offset: int = 0,
+        batch_only: bool = True
+    ) -> Dict[str, Any]:
+        """
+        取得量化預測記錄。
+        預設 (batch_only=True) 僅鎖定最新執行批次（例如 24 小時內或最新批次日期），
+        並計算 analysis_date, data_as_of, age_hours, is_stale。
+        """
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+
+        where_clauses = [
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'",
+            "model_name NOT LIKE '%DEBUG%'"
+        ]
         params = []
         if index_name:
             where_clauses.append("index_name = ?")
@@ -285,7 +340,44 @@ class DuckDBManager:
             where_clauses.append("model_name = ?")
             params.append(model_name)
 
-        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        # 1. 取得最新批次的時間戳記
+        latest_ts_sql = f"""
+            SELECT MAX(timestamp) 
+            FROM predictions 
+            WHERE {' AND '.join(where_clauses)}
+        """
+        latest_ts = None
+        with self._get_connection() as con:
+            res = con.execute(latest_ts_sql, params).fetchone()
+            if res and res[0]:
+                latest_ts = str(res[0])
+
+        if not latest_ts:
+            return {
+                "batch_date": None,
+                "latest_batch_timestamp": None,
+                "is_stale": False,
+                "records": []
+            }
+
+        try:
+            ts_clean = latest_ts.replace("Z", "+00:00")
+            batch_dt = datetime.datetime.fromisoformat(ts_clean)
+            if batch_dt.tzinfo is None:
+                batch_dt = batch_dt.replace(tzinfo=datetime.timezone.utc)
+            age_hours = round((now - batch_dt).total_seconds() / 3600.0, 1)
+            is_stale = age_hours > 48.0
+            batch_date = batch_dt.strftime("%Y-%m-%d")
+        except Exception:
+            age_hours = 0.0
+            is_stale = False
+            batch_date = str(latest_ts)[:10]
+
+        if batch_only:
+            where_clauses.append("timestamp >= (?::TIMESTAMP - INTERVAL 24 HOUR)")
+            params.append(latest_ts)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
         WITH ranked AS (
             SELECT *,
@@ -301,11 +393,44 @@ class DuckDBManager:
         """
         params.extend([limit, offset])
         df = self.query(sql, params)
-        return self._clean_df_records(df)
+        records = self._clean_df_records(df)
+
+        for r in records:
+            r_ts = r.get("timestamp")
+            if r_ts:
+                r["data_as_of"] = str(r_ts)
+                r["analysis_date"] = str(r_ts)[:10]
+                try:
+                    r_dt = datetime.datetime.fromisoformat(str(r_ts).replace("Z", "+00:00"))
+                    if r_dt.tzinfo is None:
+                        r_dt = r_dt.replace(tzinfo=datetime.timezone.utc)
+                    r_age = round((now - r_dt).total_seconds() / 3600.0, 1)
+                    r["age_hours"] = r_age
+                    r["is_stale"] = r_age > 48.0
+                except Exception:
+                    r["age_hours"] = age_hours
+                    r["is_stale"] = is_stale
+            else:
+                r["analysis_date"] = batch_date
+                r["data_as_of"] = latest_ts
+                r["age_hours"] = age_hours
+                r["is_stale"] = is_stale
+
+        return {
+            "batch_date": batch_date,
+            "latest_batch_timestamp": latest_ts,
+            "is_stale": is_stale,
+            "records": records
+        }
 
     def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得多策略重合 / 雙重符合 / 🏆 三重共振股票"""
-        where_clauses = ["(model_name = '多維共振' OR strategy_type = '多維共振' OR tags LIKE '%共振%' OR tags LIKE '%雙重符合%' OR tags LIKE '%3重符合%')"]
+        where_clauses = [
+            "(model_name = '多維共振' OR strategy_type = '多維共振' OR tags LIKE '%共振%' OR tags LIKE '%雙重符合%' OR tags LIKE '%3重符合%')",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
         params = []
         if index_name:
             where_clauses.append("index_name = ?")
@@ -336,7 +461,12 @@ class DuckDBManager:
         limit: int = 50
     ) -> List[Dict[str, Any]]:
         """取得玄鐵重劍技術買點 (MA60/120 回調) 股票"""
-        where_clauses = ["(model_name = '玄鐵重劍' OR strategy_type = '玄鐵重劍' OR pullback_type IS NOT NULL)"]
+        where_clauses = [
+            "(model_name = '玄鐵重劍' OR strategy_type = '玄鐵重劍' OR pullback_type IS NOT NULL)",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
         params = []
         if index_name:
             where_clauses.append("index_name = ?")
@@ -365,7 +495,13 @@ class DuckDBManager:
 
     def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測漲幅最大 TOP N 標的"""
-        where_clauses = ["potential IS NOT NULL", "model_name = 'LSTM'"]
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "model_name = 'LSTM'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
         params = []
         if index_name:
             where_clauses.append("index_name = ?")
@@ -391,7 +527,13 @@ class DuckDBManager:
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        where_clauses = ["potential IS NOT NULL", "model_name = 'LSTM'"]
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "model_name = 'LSTM'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
         params = []
         if index_name:
             where_clauses.append("index_name = ?")
@@ -421,6 +563,9 @@ class DuckDBManager:
         SELECT *
         FROM predictions
         WHERE ticker = ?
+          AND index_name NOT LIKE '%TEST%'
+          AND index_name NOT LIKE '%DEBUG%'
+          AND index_name NOT LIKE '%SERVICE_KEY%'
         ORDER BY timestamp DESC
         LIMIT ?;
         """
@@ -428,15 +573,16 @@ class DuckDBManager:
         return self._clean_df_records(df)
 
     def get_db_stats(self) -> Dict[str, Any]:
-        """取得 DuckDB 全局時序庫統計資訊"""
+        """取得 DuckDB 全局時序庫統計資訊 (已排除內部路徑與測試資料)"""
         try:
             with self._get_connection() as con:
-                row_count = con.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
-                distinct_tickers = con.execute("SELECT COUNT(DISTINCT ticker) FROM predictions").fetchone()[0]
-                min_time = con.execute("SELECT MIN(timestamp) FROM predictions").fetchone()[0]
-                max_time = con.execute("SELECT MAX(timestamp) FROM predictions").fetchone()[0]
-                indices = [r[0] for r in con.execute("SELECT DISTINCT index_name FROM predictions WHERE index_name IS NOT NULL").fetchall()]
-                models = [r[0] for r in con.execute("SELECT DISTINCT model_name FROM predictions WHERE model_name IS NOT NULL").fetchall()]
+                filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
+                row_count = con.execute(f"SELECT COUNT(*) FROM predictions {filter_sql}").fetchone()[0]
+                distinct_tickers = con.execute(f"SELECT COUNT(DISTINCT ticker) FROM predictions {filter_sql}").fetchone()[0]
+                min_time = con.execute(f"SELECT MIN(timestamp) FROM predictions {filter_sql}").fetchone()[0]
+                max_time = con.execute(f"SELECT MAX(timestamp) FROM predictions {filter_sql}").fetchone()[0]
+                indices = [r[0] for r in con.execute(f"SELECT DISTINCT index_name FROM predictions {filter_sql} AND index_name IS NOT NULL ORDER BY index_name").fetchall()]
+                models = [r[0] for r in con.execute(f"SELECT DISTINCT model_name FROM predictions {filter_sql} AND model_name IS NOT NULL ORDER BY model_name").fetchall()]
                 
                 return {
                     "total_records": row_count,
@@ -444,8 +590,7 @@ class DuckDBManager:
                     "earliest_timestamp": str(min_time) if min_time else None,
                     "latest_timestamp": str(max_time) if max_time else None,
                     "indices": indices,
-                    "models": models,
-                    "db_path": self.db_path
+                    "models": models
                 }
         except Exception as e:
             logger.error(f"❌ 查詢 DB 統計失敗: {e}")

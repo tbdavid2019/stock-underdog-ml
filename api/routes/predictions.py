@@ -14,19 +14,33 @@ def get_duckdb():
     return DuckDBManager()
 
 
-@router.get("/latest", response_model=PredictionResponse, summary="取得各標的最新量化預測與指標")
+@router.get("/latest", response_model=PredictionResponse, summary="取得最新量化日報批次預測與指標")
 def get_latest_predictions(
     index_name: Optional[str] = Query(None, description="指數篩選 (台灣50, 台灣中型100, S&P500)"),
     model_name: Optional[str] = Query(None, description="策略篩選 (玄鐵重劍, LSTM, 多維共振)"),
+    batch_only: bool = Query(True, description="是否僅回傳最新執行批次 (預設: True；設為 False 則回傳各標的歷史最新一筆)"),
     limit: int = Query(50, ge=1, le=500, description="回傳數量"),
     offset: int = Query(0, ge=0, description="分頁偏移量"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    查詢各股票最新一筆量化運算結果，包含價格、預測目標價、均線數據、PE/PB估值與籌碼指標。
+    查詢最新量化批次運算結果。預設 (batch_only=True) 僅回傳最新成功執行批次之標的，並附帶 batch_date, data_as_of, age_hours 與 is_stale 狀態。
     """
-    records = db.get_latest_predictions(index_name=index_name, model_name=model_name, limit=limit, offset=offset)
-    return PredictionResponse(count=len(records), data=records)
+    res = db.get_latest_predictions(
+        index_name=index_name, 
+        model_name=model_name, 
+        limit=limit, 
+        offset=offset, 
+        batch_only=batch_only
+    )
+    records = res.get("records", [])
+    return PredictionResponse(
+        count=len(records),
+        batch_date=res.get("batch_date"),
+        latest_batch_timestamp=res.get("latest_batch_timestamp"),
+        is_stale=res.get("is_stale", False),
+        data=records
+    )
 
 
 @router.get("/resonance", response_model=PredictionResponse, summary="查詢多策略交集與 🏆 三重共振焦點股")

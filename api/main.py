@@ -27,11 +27,19 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# 啟用跨來源資源共享 (CORS) 方便 Web 前端、儀表板與 MCP 工具存取
+# 安全 CORS 配置：支援環境變數自訂白名單，預設不啟用通配符 credentials
+cors_origins_env = os.getenv("CORS_ORIGINS", "*")
+if cors_origins_env == "*":
+    allow_origins = ["*"]
+    allow_credentials = False  # 安全規範：萬用字元禁止 credentials
+else:
+    allow_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+    allow_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allow_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

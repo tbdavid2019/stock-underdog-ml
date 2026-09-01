@@ -25,6 +25,5 @@ def get_database_summary(db: DuckDBManager = Depends(get_duckdb)):
         earliest_timestamp=stats.get("earliest_timestamp"),
         latest_timestamp=stats.get("latest_timestamp"),
         indices=stats.get("indices", []),
-        models=stats.get("models", []),
-        db_path=stats.get("db_path", "")
+        models=stats.get("models", [])
     )

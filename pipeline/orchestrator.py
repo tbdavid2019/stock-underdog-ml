@@ -132,12 +132,27 @@ class PipelineOrchestrator:
             macro_state=macro_state
         )
         
-        # 3.1 構造相容舊版結構字典
+        # 3.1 構造相容舊版結構字典，並附帶多維標籤與法人籌碼
+        candidates_map = {}
+        for c in report.candidates:
+            candidates_map[c.ticker] = {
+                "tags": c.tags,
+                "composite_score": c.composite_score,
+                "signals": c.signals
+            }
+        
+        inst_summaries = {}
+        for t, ctx in stock_contexts.items():
+            if ctx.institutional_summary:
+                inst_summaries[t] = ctx.institutional_summary.to_dict()
+
         report_dict = {
             "xuantie_results": report.xuantie_results,
             "lstm_results": report.lstm_results,
             "overlap_results": report.overlap_results,
-            "macro_state": macro_state
+            "macro_state": macro_state,
+            "candidates_map": candidates_map,
+            "institutional_summaries": inst_summaries
         }
 
         # 3.2 生成 AI 操盤解讀 (3-Tier Fallback)
