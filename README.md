@@ -1,1048 +1,265 @@
-# Stock Prediction Application
+# 🚀 Stock Quantitative Multi-Strategy Platform (股票多維量化決策平台)
 
-AI 驅動的股票預測系統，使用 **LSTM** 預測下一個交易日的股價。
-
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.0+-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org/)
+[![Docker Multi-Arch](https://img.shields.io/badge/Docker-x64%20%7C%20ARM64-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 📚 快速導航
-
-- **[SETUP.md](SETUP.md)** - 完整安裝指南（新用戶必讀）
-- **[CHANGELOG.md](CHANGELOG.md)** - 版本更新記錄
-- **[backtest/](backtest/)** - 回測系統說明
-- **[scripts/](scripts/)** - 測試和維護腳本
-- **[.env.example](.env.example)** - 環境變數範本
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **FastAPI REST / MCP 服務**。
 
 ---
 
-## 🎯 核心功能
+## 🏗️ 系統架構圖 (Architecture Overview)
 
-### 預測模型與多維量化引擎
-- **LSTM 深度學習** - 預測下一交易日收盤價 ⭐ 主要模型
-- **玄鐵重劍策略** - 順大勢、逆小勢 MA60/120 均線技術分析買點
-- **7 大板塊資金輪動 (Sector Rotation)** - 追蹤產業 10D/15D/20D 加權動量資金流 🆕
-- **三大法人籌碼分析 (Institutional Flow)** - TWSE 官方 T86/MI_QFIIS 投信連買與土洋合買 🆕
-- **美股宏觀風控門檻 (Macro Regime Gate)** - SPY/VIX/SOX 動態計算市場曝險比例 (0~100%) 🆕
-- **3 級 Fallback LLM 操盤解讀** - Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板 (Gemini/DeepSeek/OpenAI) 🆕
+```mermaid
+graph TD
+    subgraph S1 [Stage 1: 宏觀風控與數據預載]
+        Macro[🌐 美股宏觀門檻: SPY / ^VIX / ^SOX] --> Exposure[動態曝險計算 0~100%]
+        IO[⚡ 並發行情與基本面 I/O Prefetch] --> Pool[StockContext 記憶體池]
+    end
 
-### 多維共振量化系統 🆕
-結合總經宏觀、產業板塊、籌碼主力、深度學習與技術面的立體評估機制：
-- **🏆 三重共振** - 同時符合技術買點 + LSTM看漲 + 投信/外資主力鎖碼的高信心標的
-- **土洋合買 / 投信連買** - 捕捉法人連續性資金進駐
-- **美股宏觀門檻** - VIX > 28 或雙破季線時自動觸發空倉或輕倉避險
-- **AI 研報解讀** - LLM 自動生成每日 100~150 字精闢操盤重點解讀
+    subgraph S2 [Stage 2: 模組化多策略矩陣]
+        Pool --> ST1[🗡️ 玄鐵重劍: MA60/120 趨勢回調買點]
+        Pool --> ST2[🤖 LSTM: 深度學習次日潛力預測]
+        Pool --> ST3[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
+        Pool --> ST4[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
+    end
 
-### 關鍵特性
-- ✅ **下一日預測** - 預測明天的股價，實用性高
-- ✅ **宏觀風控** - VIX / SPY / SOX 全球市場避險門檻
-- ✅ **板塊輪動** - 7 大產業板塊資金流即時評估
-- ✅ **法人籌碼** - 投信連續買超與外資 5D/20D 累積買賣超
-- ✅ **3 級 LLM 備援** - OpenAI 相容端點支援 Gemini、DeepSeek、GPT-4o-mini
-- ✅ **多市場支持** - 台股 50、台股中型 100、S&P 500、SpaceX 太空概念
-- ✅ **雙備份架構** - 雲端 Supabase + 本地 DuckDB 列式時序庫（`data/storage/stock_quant.duckdb`）
-- ✅ **FastAPI & MCP 支援** - 內建高效能 REST API（Port 8000）與 Swagger 互動文檔，支援 AI Agent / MCP
-- ✅ **多架構容器與 CI/CD** - 現代化 Python 3.12 Slim、GitHub Actions 自動構建 x64 & ARM64 映像
-- ✅ **多通知管道** - Discord Rich Embed、Telegram HTML、Email Plain Text
+    subgraph S3 [Stage 3: 綜合評估與 AI 研報]
+        ST1 & ST2 & ST3 & ST4 --> Composite[⭐ 多維綜合評估引擎]
+        Exposure -.->|宏觀折減| Composite
+        Composite --> Overlap[🏆 三重共振 / 雙重符合焦點標的]
+        Composite --> LLM[🧠 3-Tier Fallback LLM 操盤解讀<br>Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板]
+    end
 
-### 資料來源與可靠性
+    subgraph S4 [Stage 4: 多管道分發與雙備份持久化]
+        Overlap & LLM --> Sinks[🚀 Sinks 分發中心]
+        Sinks --> Push[📱 多平台推播: Discord / Telegram / Email]
+        Sinks --> CloudDB[(☁️ Supabase 雲端資料庫)]
+        Sinks --> LocalDB[(🦆 DuckDB 本地列式時序庫: stock_quant.duckdb)]
+    end
 
-- 指數榜單優先使用 `answerbook.david888.com` 的 `TW0050`、`TW0051`、`SP500`、`nasdaq100` 與 `dowjones` API。
-- 每次執行會先抓取最新榜單；只有 API 抓取失敗時才使用既有快取，快取超過 90 天才改用內建 fallback。
-- S&P500 API 目前回傳完整榜單，但策略預設只分析前 110 名，以控制 LSTM 執行時間。
-- 雙儲存持久化：同時寫入 Supabase 雲端與 DuckDB 本地列式資料庫，並支援 `python scripts/export_supabase_to_duckdb.py` 隨時自 Supabase 全量導回本地備份。
-- Supabase 寫入前會檢查 JSON：非有限數字轉為 `null`，不可序列化資料會阻止該批寫入。
-
----
-
-## 🚀 快速開始
-
-### 1. 安裝
-
-```bash
-git clone https://github.com/tbdavid2019/stock-underdog-ml.git
-cd stock-underdog-ml
-# 方法 A：使用自動腳本
-bash scripts/setup.sh
-
-# 方法 B：手動設定
-python3.11 -m venv myenv
-source myenv/bin/activate
-pip install -r requirements.txt
-
-# 方法 C：使用 Docker 容器化執行
-docker compose build
-docker compose run --rm stock-ml python main.py
+    LocalDB --> API[🌐 FastAPI REST & MCP 服務 :8000]
 ```
 
-### 2. 設定
+---
+
+## 🎯 核心功能與策略矩陣
+
+### 1. 🌐 美股宏觀風控門檻 (Macro Regime Gate)
+* 每日預檢美股三大指標：**S&P 500 (`SPY`)**、**VIX 恐慌指數 (`^VIX`)** 與 **費城半導體 (`^SOX`)**。
+* 動態識別 4 種市場情境：`全面多頭` (100% 曝險)、`多頭回調` (85% 曝險)、`避險防禦` (30~50% 曝險) 與 `極度恐慌` (0% 空倉)。
+* 當費半跌破季線時，自動觸發科技股部位上限保護。
+
+### 2. 🗡️ 玄鐵重劍策略 (XuanTie Trend Pullback)
+* 核心思維：「**順大勢（MA60/120 多頭排列）、逆小勢（回踩均線支撐）**」。
+* 精確捕捉股價回測 MA60 季線 (`MA60 Pullback`) 或 MA120 半年線之波段技術買點。
+
+### 3. 🤖 LSTM 深度學習預測 (Deep Learning Forecaster)
+* 針對目標股票最近 60 個交易日量價特徵進行深度學習推論，輸出次日預測目標價與潛在漲跌幅潛力（`Potential %`）。
+
+### 4. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
+* 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
+* 計算各板塊 10D (40%) + 15D (30%) + 20D (30%) 加權動量資金流，挑選當日前 3 大主流強勢板塊。
+
+### 5. 📈 台灣三大法人籌碼分析 (TWSE Institutional Flow)
+* 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
+* 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
+
+### 6. ⭐ 🏆 三重共振極選評估 (Triple Resonance Evaluation)
+* 跨維度篩選同時符合 **「技術買點 ∩ LSTM 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
+* 自動貼上 `🏆三重共振`、`土洋合買`、`投信連買`、`主流板塊`、`低PE` 等量化標籤。
+
+### 7. 🧠 3 級 Fallback AI 研報引擎 (AI Narrative Generator)
+* 支援 **Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 純程式規則模板** 4 級容錯。
+* 採用標準 OpenAI 相容協定，支援 Google Gemini 2.5 Flash、DeepSeek-V3、OpenAI GPT-4o-mini 或自建 Gateway。
+* 無 API Key 時自動平滑降級為確定性規則模板，確保推播與日報 100% 不中斷。
+
+### 8. 🦆 本地 DuckDB 列式時序庫與雙備份架構
+* 本地採用高性能嵌入式列式資料庫 **DuckDB**（`data/storage/stock_quant.duckdb`），已納入 44,000+ 筆歷史時序記錄（壓縮後僅 4.1 MB）。
+* 支援零延遲 Pandas 查詢、一鍵導出 `.parquet` 冷備份，並提供一鍵資料庫全量同步工具：
+  ```bash
+  python scripts/export_supabase_to_duckdb.py
+  ```
+
+---
+
+## 🌐 FastAPI REST API 與 MCP 服務
+
+本平台內建現代化 FastAPI 高效能對外服務（預設連接埠 `8000`），提供 OpenAPI / Swagger 互動式文檔，並隨時支援封裝為 **Anthropic Claude Desktop MCP** 或 **AI Agent Skills**。
+
+### 互動式 API 文檔
+啟動後直接瀏覽：
+* **Swagger UI**：`http://localhost:8000/docs`
+* **ReDoc**：`http://localhost:8000/redoc`
+
+### 核心 REST API 端點清單
+
+| 端點 | 方法 | 說明 |
+| :--- | :---: | :--- |
+| `/health` | `GET` | 系統健康狀態與 DuckDB 總記錄筆數 |
+| `/api/v1/predictions/latest` | `GET` | 查詢多指數最新各標的現價、預測價、均線數據、PE/PB 估值與籌碼 |
+| `/api/v1/predictions/resonance` | `GET` | 篩選 **雙重符合 / 🏆三重共振** 重點焦點股 |
+| `/api/v1/predictions/xuantie` | `GET` | 篩選 **玄鐵重劍技術買點**（回測 MA60 季線 / MA120 半年線） |
+| `/api/v1/predictions/lstm/top-bullish` | `GET` | 查詢 **LSTM 預測漲幅 TOP N** 短線看漲榜 |
+| `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
+| `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
+| `/api/v1/macro/latest` | `GET` | 即時取得美股三大指標（SPY / VIX / SOX）宏觀風控狀態與建議曝險 |
+| `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
+
+---
+
+## 🚀 快速開始 (Quick Start)
+
+### 1. 環境配置
+
+複製環境變數範本並填入必要設定：
 
 ```bash
 cp .env.example .env
-# 編輯 .env 填入 Supabase credentials
 ```
 
-**關鍵設定：**
+**關鍵配置項 (`.env`)：**
 ```bash
-# 必填
+# 雲端 Supabase 資料庫 (必填)
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your_service_role_key
 
-# 模型選擇（建議只開 LSTM）
-USE_PROPHET=false
-USE_CHRONOS=false
-USE_CROSS=false
-USE_TRANSFORMER=false
-```
-
-### 3. 建立資料庫
-
-在 [Supabase Dashboard](https://app.supabase.com) 執行 `supabase_schema.sql`
-
-**新用戶**：直接執行 `supabase_schema.sql`，已包含所有雙軌策略欄位
-**舊用戶升級**：執行 `scripts/migration/supabase_add_columns.sql` 添加新欄位
-
-表格結構：
-```sql
--- predictions 表格（已包含雙軌策略欄位）
--- 基本欄位：ticker, current_price, predicted_price, potential
--- 策略欄位：strategy_type, model_name
--- 技術面：ma5, ma10, ma60, ma120, ma250, pullback_type
--- 基本面：pe, pb, forward_pe
--- 回測欄位：actual_price, accuracy, percentage_error
-```
-
-### 4. 執行
-
-**主程式（現代化兩階段管線）：**
-```bash
-python main.py
-```
-
-系統將依序自動完成：
-1. **Stage 1 (I/O Prefetch)**：並發批次預載指數成分股之 OHLCV 行情與基本面（PE/PB/EV/EBITDA）至快取。
-2. **Stage 2 (Compute)**：自動偵測硬體（CUDA / MPS / CPU）並多型執行所有啟用之量化策略。
-3. **Stage 3 (Evaluation)**：多策略動態綜合評分（0~100）、N-of-M 交集標籤生成與 Top-N 排序。
-4. **Stage 4 (Sinks)**：產生格式化報告，非同步寫入 Supabase 並發送 Telegram/Discord 通知。
-
----
-
-## 🏗️ 系統分層架構 (Modular Pipeline Architecture)
-
-專案採用低耦合、高擴展性的分層架構：
-
-```
-stock-underdog-ml/
-├── core/                  # 核心層：硬體管理 (DeviceManager)、系統配置 (Config)
-├── data/                  # 資料層：指數成分股 (StockFetcher)、基本面 (FundamentalProvider)、快取 (CacheManager)
-├── strategies/            # 策略層：統一介面 (BaseStrategy)、註冊中心 (StrategyRegistry)、玄鐵重劍、LSTM
-├── evaluators/            # 綜合評價層：多策略動態評分 (CompositeEvaluator)、報告美化 (Formatter)
-├── pipeline/              # 管線排程層：兩階段執行調度器 (PipelineOrchestrator)
-├── database.py            # 儲存適配器：Supabase 連線與嚴格 JSON 驗證
-├── notifier_dual.py       # 通知適配器：Telegram / Discord 格式化發送
-└── main.py                # 輕量化系統主入口
-```
-
-### 🧩 擴充新選股策略指南
-
-新增自訂選股策略（如動量突破、RSI背離或新型 ML 模型）只需 1 個檔案：
-
-```python
-# strategies/my_strategy.py
-from strategies.base import BaseStrategy, StockContext, StrategyResult
-from strategies.registry import register_strategy
-
-@register_strategy("my_strategy")
-class MyCustomStrategy(BaseStrategy):
-    name = "我的自訂策略"
-    category = "technical"
-    required_lookback = 30
-
-    def evaluate(self, ctx: StockContext) -> StrategyResult:
-        df = ctx.df
-        is_hit = df['Close'].iloc[-1] > df['Close'].rolling(20).mean().iloc[-1]
-        return StrategyResult(
-            ticker=ctx.ticker,
-            strategy_name=self.name,
-            is_hit=is_hit,
-            score=85.0 if is_hit else 0.0,
-            current_price=float(df['Close'].iloc[-1]),
-            tags=["突破20日線"] if is_hit else []
-        )
-```
-
-在 `core/config.py` 的 `ENABLED_STRATEGIES` 加入 `"my_strategy"` 即可立即納入每日自動化選股與綜合評分！
-
----
-
-## 📊 預測邏輯
-
-### LSTM 時間軸
-
-```
-今天 1/8              明天 1/9              後天 1/10
-   │                    │                    │
-   ▼                    ▼                    ▼
-執行 main.py      ← 預測這天的價格    執行 backtest.py
-下載 6 個月資料                        驗證預測準確度
-訓練 LSTM 模型
-預測明天收盤價
-儲存到資料庫
-```
-
-### 玄鐵重劍策略 🆕
-
-基於《笑傲江湖》中「重劍無鋒，大巧不工」的理念，使用均線判斷大勢：
-
-**Filter 1 - 大勢向上（MA60 上升趨勢）：**
-- MA60 在過去 10 個交易日呈現上升
-- 股價位於 MA60 之上
-
-**Filter 2 - 小勢回調（買入時機）：**
-- 價格接近或短暫跌破 MA60 (±5% 容忍)
-- 或接近 MA120 (±5% 容忍)
-
-**回調類型判讀：**
-
-| 回調類型 | 含義 | 買點強度 | 說明 |
-|---------|------|---------|------|
-| **MA60回調** | 價格在 MA60 附近 ±5% | ⭐⭐⭐ 較激進 | 剛從中期均線反彈，適合積極型投資者 |
-| **MA120回調** | 價格在 MA120 附近 ±5% | ⭐⭐⭐⭐ 較穩健 | 價格回到更強支撐位，風險相對較低 |
-
-**技術指標計算：**
-- MA5：5 日均線（短期趨勢）
-- MA10：10 日均線（短期趨勢確認）
-- MA60：60 日均線（中期趨勢，大勢判斷核心）
-- MA120：120 日均線（中期支撐）
-- MA250：250 日均線（長期價值中樞）
-
-**參數設定：**
-```python
-lookback = 10      # MA60 斜率檢查天數
-tolerance = 0.05   # ±5% 回調容忍範圍
-```
-
-**預期通過率：** 約 15-20%（嚴格篩選）
-
-### 雙軌策略整合 🆕
-
-同時執行兩種分析方法，輸出三種結果：
-
-1. **玄鐵重劍** - 僅通過 MA 均線篩選
-2. **LSTM預測** - 僅 AI 預測有潛力
-3. **雙重符合** - 同時符合兩種策略（最高信心）
-
-### 預測內容
-
-- **輸入**：過去 90 個交易日的 OHLCV 資料
-- **輸出**：下一個交易日的收盤價
-- **潛力計算**：`(預測價 - 當前價) / 當前價 × 100%`
-- **基本面數據** 🆕：PE (本益比), PB (股價淨值比), Forward PE (預估本益比), EV/EBITDA (企業價值倍數)
-
-
-### 回測驗證
-
-- **頻率**：每日執行（建議用 cron）
-- **方法**：比對預測價 vs 實際收盤價
-- **指標**：方向準確度、平均誤差、誤差分布
-
-詳細說明請參考 **[backtest/README.md](backtest/README.md)**
-
-### 📊 基本面指標更新頻率 🆕
-
-本系統使用三個關鍵基本面指標：**PE (本益比)**、**PB (股價淨值比)**、**EV/EBITDA (企業價值倍數)**
-
-#### 更新機制說明
-
-所有三個指標都是**比率**，其數值每天變動，但使用的是**最近一季的財報數據**：
-
-| 指標 | 公式 | 更新頻率 | 說明 |
-|------|------|----------|------|
-| **PE** | 股價 ÷ 每股盈餘 (EPS) | 股價每秒更新<br>EPS 每季更新 | 買這家公司的股票，要付幾倍的年盈餘 |
-| **PB** | 股價 ÷ 每股淨值 | 股價每秒更新<br>淨值每季更新 | 買這家公司的股票，要付幾倍的淨資產 |
-| **EV/EBITDA** | 企業價值 ÷ EBITDA | 企業價值每天更新<br>EBITDA 每季更新 | 買下整家公司，要付幾倍的營運獲利 |
-
-#### 為什麼每天執行有意義？
-
-雖然財報數據每季才更新一次，但**股價每天變動**，因此：
-
-1. **捕捉價格變化**：股價下跌 → PE/PB/EV 變低 → 相對便宜 ✅
-2. **識別買點機會**：「股價回調但基本面穩定」的情況
-3. **穩定的比較基準**：財報數據 3 個月才更新，提供穩定的評估基礎
-
-#### 實際範例
-
-以台積電 (2330.TW) 為例：
-
-```
-2025-12-31: Q4 財報公布 📊
-  └─ EPS = $66.18, EBITDA = $2.6B, 淨值 = $200
-
-2026-01-01: 
-  └─ PE = 股價($1800) ÷ EPS($66.18) = 27.2
-  └─ EV/EBITDA = 企業價值 ÷ EBITDA($2.6B) = 16.6
-
-2026-01-10: 股價下跌
-  └─ PE = 股價($1750) ÷ EPS($66.18) = 26.4  ← 變便宜！
-  └─ EV/EBITDA = 16.2  ← 也變便宜！
-
-2026-03-31: Q1 財報公布 📊
-  └─ EPS = $70.00 (更新)
-  
-2026-04-01: 
-  └─ PE = 股價($1800) ÷ EPS($70.00) = 25.7  ← 新基準
-```
-
-#### EV/EBITDA 的優勢
-
-相比 PE/PB，EV/EBITDA 有以下優點：
-
-- ✅ **考慮債務結構**：企業價值 = 市值 + 負債 - 現金
-- ✅ **不受會計政策影響**：EBITDA 排除折舊和攤銷
-- ✅ **適合跨產業比較**：尤其是資本密集型產業（製造業、航空業）
-- ✅ **更全面的估值**：同時考慮股權和債務
-
-#### 估值標準參考
-
-| 指標 | 便宜 | 合理 | 稍貴 | 昂貴 |
-|------|------|------|------|------|
-| **PE** | < 15 | 15-20 | 20-25 | > 25 |
-| **PB** | < 1.5 | 1.5-3 | 3-5 | > 5 |
-| **EV/EBITDA** | < 10 | 10-15 | 15-20 | > 20 |
-
-**注意**：不同產業標準不同，科技股通常估值較高
-
-#### 數據來源
-
-所有基本面數據來自 **Yahoo Finance**，透過 `yfinance` 套件自動獲取，無需手動更新。
-
-台灣50/台灣中型100 成分股與名稱來自 `https://answerbook.david888.com`，通知與報表會顯示「代碼 + 公司名稱」。
-
----
-
-
-## 🎯 雙軌策略詳解 🆕
-
-### 設計理念
-
-**為何需要雙軌策略？**
-- LSTM 善於捕捉價格變化模式，但可能忽略技術面訊號
-- 均線策略基於成熟的技術分析，但缺乏 AI 的預測能力
-- 結合兩者可提供**雙重驗證**，降低誤判風險
-
-### 執行流程
-
-```
-1. 下載股票列表 (台灣50/SP500...)
-            │
-            ├─────────────────────┬─────────────────────┐
-            ▼                     ▼                     ▼
-    2a. LSTM 預測          2b. 玄鐵篩選          3. 計算重疊
-    (並行 8 workers)       (MA 均線檢查)
-    - 訓練模型               - MA60 上升趨勢
-    - 預測明日價             - MA60/MA120 回調
-    - 計算潛力 %             - 獲取 MA5/MA10/MA250
-    - 抓取 PE/PB             - 抓取 PE/PB
-            │                     │                     │
-            └─────────────────────┴─────────────────────┘
-                                  ▼
-            4. 三種輸出結果
-            ┌─────────────────────────────────────┐
-            │ 🎯 玄鐵重劍 (技術面符合)           │
-            │ 🧠 LSTM預測 (AI 看好)              │
-            │ ⭐ 雙重符合 (兩者皆符合，最高信心) │
-            └─────────────────────────────────────┘
-                                  ▼
-            5. 保存到 Supabase + 發送通知
-```
-
-### 策略參數
-
-**玄鐵重劍策略：**
-```python
-lookback = 10      # MA60 上升趨勢檢查天數
-tolerance = 0.05   # ±5% 回調容忍範圍
-period = "1y"      # 使用 1 年數據計算均線
-```
-
-**LSTM 策略：**
-```python
-sequence_length = 90  # 使用 90 天數據訓練
-epochs = 20           # 訓練輪數
-period = "6mo"        # 使用 6 個月數據
-```
-
-### 輸出格式
-
-執行 `python main.py` 後會看到：
-
-```
-========================================
-📊 台灣50 雙軌策略報告
-========================================
-
-🎯 玄鐵重劍策略 (3 檔)
-股票       現價      MA60      MA120     回調類型    PE    PB
-─────────────────────────────────────────────────────────────
-2330.TW    1670.00   1650.00   1600.00   MA60回調   24.5  8.2
-2317.TW     234.50    230.00    225.00   MA60回調   18.3  3.1
-2454.TW    1234.50   1220.00   1200.00   MA120回調  15.8  2.9
-
-🧠 LSTM 預測策略 (8 檔)
-股票       現價      預測價     潛力      PE    Forward PE
-────────────────────────────────────────────────────────────
-2454.TW    1234.50   1280.00   3.68%    15.2    14.8
-2412.TW     456.00    478.00   4.82%    22.1    20.5
-...
-
-⭐ 雙重符合 (2 檔) ← 最高信心
-股票       現價      預測價    潛力     MA60      PE    PB
-─────────────────────────────────────────────────────────────
-2330.TW    1670.00   1720.00   3.00%   1650.00  24.5  8.2
-2454.TW    1234.50   1280.00   3.68%   1220.00  15.8  2.9
-
-執行時間: 45.2 秒
-```
-
-### 如何解讀
-
-1. **只看雙重符合**：保守型投資者，只關注同時通過兩種策略的股票
-2. **玄鐵 + LSTM**：參考兩者交集，手動篩選
-3. **單看玄鐵**：偏好技術面分析
-4. **單看 LSTM**：信任 AI 預測
-
-### 配置通知
-
-在 `.env` 中設定：
-```bash
-# Telegram
+# 本地 DuckDB 路徑 (預設: data/storage/stock_quant.duckdb)
+ENABLE_DUCKDB=true
+DUCKDB_PATH=data/storage/stock_quant.duckdb
+
+# 3-Tier Fallback LLM 操盤解讀配置 (選填，無 Key 則使用純規則模板)
+LLM_PRIMARY_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_PRIMARY_MODEL=gemini-2.5-flash
+LLM_PRIMARY_API_KEY=your_gemini_key
+
+LLM_FALLBACK1_BASE_URL=https://api.deepseek.com/v1
+LLM_FALLBACK1_MODEL=deepseek-chat
+LLM_FALLBACK1_API_KEY=your_deepseek_key
+
+# 推播通知 (選填)
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
-
-# Discord
-DISCORD_WEBHOOK_URL=your_webhook_url
-
-# Email (SMTP)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_EMAIL=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-EMAIL_TO=recipient@example.com
-```
-
-### Supabase 設定
-
-1. 進入 [Supabase Dashboard](https://app.supabase.com)
-2. 選擇專案 → SQL Editor
-3. 執行 `supabase_dual_strategy_schema.sql`
-4. 確認表格建立：`dual_strategy_predictions`
-
-表格欄位：
-```sql
-- index_name          指數名稱
-- strategy_type       策略類型 (玄鐵重劍/LSTM預測/雙重符合)
-- ticker              股票代碼
-- current_price       當前價格
-- predicted_price     LSTM 預測價格
-- potential           預測漲幅 %
-- ma5, ma10, ma60,    各均線值
-  ma120, ma250
-- pullback_type       回調類型 (MA60回調/MA120回調)
-- pe, pb, forward_pe  基本面數據
-- period              數據週期
-- timestamp           分析時間
 ```
 
 ---
 
-## 📁 專案結構
+### 2. 執行方式 A：本機 Python 原生模式（推薦開發與除錯）
 
+```bash
+# 建立並啟用虛擬環境
+python3.12 -m venv venv
+source venv/bin/activate
+
+# 安裝依賴
+pip install -r requirements.txt
+
+# 1. 執行全量多維量化分析 (台灣50 + 台灣中型100 + S&P500)
+python main.py
+
+# 2. 啟動 FastAPI REST 服務 (Port 8000)
+python api/main.py
+
+# 3. 執行全套單元測試 (50 項測試)
+python -m unittest discover -s test -p 'test_*.py'
+
+# 4. 從 Supabase 全量導出歷史資料至 DuckDB
+python scripts/export_supabase_to_duckdb.py
 ```
+
+---
+
+### 3. 執行方式 B：Docker 容器化模式（推薦無人值守生產部署）
+
+本專案支援 **x86_64 與 ARM64 雙架構**，並提供完整的多服務配置：
+
+```bash
+# 1. 一鍵拉取/構建 Docker 映像
+docker compose pull # 或 docker compose build
+
+# 2. 啟動 FastAPI REST 服務 (常駐背景: http://localhost:8000/docs)
+docker compose up -d stock-ml-api
+
+# 3. 啟動 24H 定時排程容器 (依台北時間盤後與美股收盤自動出報表)
+docker compose up -d stock-ml-cron
+
+# 4. 手動單次執行全量日報
+docker compose run --rm stock-ml
+
+# 5. 容器內執行 Supabase ➔ DuckDB 資料同步
+docker compose run --rm stock-ml-sync
+
+# 6. 容器內執行全套 50 項單元測試
+docker compose run --rm stock-ml-test
+```
+
+---
+
+## 📂 專案目錄結構 (Project Structure)
+
+```text
 stock-underdog-ml/
-├── README.md              ← 你在這裡
-├── SETUP.md              ← 安裝指南
-├── .env.example          ← 環境變數範本
-│
-├── main.py               ← 主程式（雙軌策略）🆕
-├── main_lstm_only.py     ← 單一 LSTM 模型（舊版保留）
-│
-├── config.py             ← 設定管理
-├── database.py           ← Supabase 整合（寫入 predictions 表格）🆕
-├── parallel_processor.py ← 並行處理
-├── data_loader.py        ← 數據下載（含 12hr 快取）🆕
-│
-├── xuantie_strategy.py   ← 玄鐵重劍均線策略 🆕
-├── notifier_dual.py      ← 雙軌策略通知器 🆕
-│
-├── models/               ← 預測模型
-│   └── lstm.py          ← LSTM 下一日預測
-│
-├── cache/               ← 資料快取 🆕
-│   └── stock_data/      ← 股票數據 pickle 快取（12小時）
-│
-├── output/              ← 輸出文件 🆕
-│   └── xuantie_signals_*.csv  ← 玄鐵策略篩選結果
-│
-├── backtest/            ← 回測系統
-│   ├── README.md        ← 回測說明
-│   ├── backtest.py      ← 回測腳本
-│   └── run_backtest.sh  ← 自動化腳本
-│
-├── scripts/             ← 測試和維護腳本
-│   ├── migration/       ← 數據庫遷移腳本（舊版升級用）🆕
-│   ├── verification/    ← 驗證腳本 🆕
-│   ├── README.md
-│   └── [其他測試腳本...]
-│
-├── archive/              ← 非正式入口與歷史診斷程式
-│   ├── main500.py        ← 舊版主程式
-│   └── repro_import.py   ← 一次性 import 診斷
-│
-├── supabase_schema.sql  ← 完整資料庫結構（已包含雙軌策略欄位）🆕
-│
-└── logs/                ← 執行日誌
+├── api/                        # FastAPI REST & MCP 服務模組
+│   ├── routes/                 # predictions, macro, stats 路由
+│   ├── schemas.py              # Pydantic v2 資料結構
+│   └── main.py                 # FastAPI 入口與 CORS/Swagger 配置
+├── core/                       # 核心基礎設施
+│   ├── config.py               # 集中式環境配置 (LLM, 板塊, DB)
+│   └── device.py               # CUDA / MPS / CPU 硬體管理
+├── data/                       # 資料獲取與時序儲存
+│   ├── cache.py                # 指數與行情快取管理器
+│   ├── duckdb_manager.py       # DuckDB 本地列式時序資料庫
+│   ├── fetcher.py              # 行情與 Answerbook 榜單抓取
+│   ├── fundamentals.py         # PE/PB/EV/EBITDA 基本面抓取
+│   ├── institutional.py        # TWSE/TPEX 三大法人籌碼分析器
+│   └── macro.py                # 美股宏觀風控分析器 (SPY/VIX/SOX)
+├── strategies/                 # 插件式量化策略註冊中心
+│   ├── base.py                 # BaseStrategy 抽象基底類別
+│   ├── registry.py             # 策略自動發現與註冊中心
+│   ├── xuantie.py              # 玄鐵重劍均線趨勢回調策略
+│   ├── lstm.py                 # LSTM 深度學習價格預測策略
+│   ├── sector_rotation.py      # 7 大板塊資金輪動策略
+│   └── institutional.py        # 三大法人連買與土洋合買策略
+├── evaluators/                 # 綜合評價與研報引擎
+│   ├── composite_evaluator.py  # 多策略動態評分與三重共振標籤
+│   ├── ai_narrative.py         # 3 級 Fallback LLM 操盤解讀引擎
+│   └── formatter.py            # 美化終端機與推播日報排版工具
+├── pipeline/                   # 分層管線排程器
+│   └── orchestrator.py         # 4-Stage 量化管線執行調度器
+├── docker/                     # 容器化腳本與排程
+│   ├── entrypoint.sh           # 多模式啟動入口
+│   └── crontab                 # 台北時區定時排程定義
+├── scripts/                    # 遷移與維護腳本
+│   └── export_supabase_to_duckdb.py # Supabase ➔ DuckDB 全量遷移工具
+├── test/                       # 自動化測試套件 (50+ 項單元測試)
+├── Dockerfile                  # 生產級 Python 3.12 Slim 映像
+├── docker-compose.yml          # 多服務 Docker 堆疊定義
+└── main.py                     # CLI 主程序入口
 ```
 
 ---
 
-## 📋 檔案說明
+## 🤖 GitHub Actions 自動化 CI/CD
 
-### 主程式
-- **main.py** - 雙軌策略主程式（LSTM + 玄鐵重劍）
-- **main_lstm_only.py** - 純 LSTM 版本（向後兼容）
-
-### Archive
-- **archive/main500.py** - 舊版主程式，非每日正式入口
-- **archive/repro_import.py** - 一次性 import 診斷工具
-
-### 策略模組
-- **xuantie_strategy.py** - MA 均線策略（MA5/MA10/MA60/MA120/MA250）
-- **notifier_dual.py** - 多平台通知（Telegram/Discord/Email）
-
-### 資料庫
-- **supabase_schema.sql** - 完整資料庫結構
-  - 包含：predictions 表格（已擴展）
-  - 欄位：strategy_type, ma5-ma250, pe/pb/forward_pe
-  - 索引：針對雙軌策略查詢優化
-- **database.py** - Python 資料庫操作
-  - 寫入 predictions 表格
-  - 支援三種策略類型（玄鐵重劍/LSTM預測/雙重符合）
-
-### 遷移腳本（舊版用戶升級）
-- **scripts/migration/supabase_add_columns.sql** - 為現有表格添加新欄位
-- **scripts/verification/verify_predictions_extended.py** - 驗證表格結構
+本專案配置了完整 GitHub Actions 自動化流程（`.github/workflows/docker-ci-cd.yml`）：
+1. **🧪 測試關卡 (Test Gate)**：每次 Push / PR 自動執行 50 項單元測試。
+2. **🐳 多架構構建**：測試通過後自動構建 `linux/amd64` (Intel/AMD) 與 `linux/arm64` (Apple Silicon / ARM) 雙架構映像。
+3. **📦 自動推送**：發布至 GitHub Container Registry (`ghcr.io/tbdavid2019/stock-underdog-ml`) 與 Docker Hub。
 
 ---
 
-## ⚙️ 設定選項
+## 📜 開發規範與文件同步
 
-### 模型開關（.env）
-
-```bash
-# 建議配置：只使用 LSTM
-USE_PROPHET=false
-USE_CHRONOS=false
-USE_CROSS=false
-USE_TRANSFORMER=false
-```
-
-### 選擇股票指數（main.py）
-
-```python
-selected_indices = ["台灣50", "台灣中型100", "SP500"]
-```
-
-可用指數：
-- `台灣50` - 台灣市值前 50
-- `台灣中型100` - 台灣中型股
-- `SP500` - 標普 500
-- `NASDAQ` - 那斯達克 100
-- `費城半導體` - SOX 指數
-- `道瓊` - 道瓊工業
+遵循本專案開發鐵律（`AGENTS.md`）：
+- 每次功能或行為變更均同步記錄於 [`CHANGELOG.md`](CHANGELOG.md)。
+- Docker 詳細指南請參閱 [`docs/DOCKER.md`](docs/DOCKER.md)。
+- OpenSpec 變更與規格請參閱 [`openspec/specs/`](openspec/specs/)。
 
 ---
 
-## 📈 模型表現
+## 📄 授權條款 (License)
 
-基於 543 筆回測資料（2026-01-05 ~ 2026-01-08）：
-
-### LSTM
-- **方向準確度：54.6%** ⚠️（略高於隨機 50%）
-- **平均誤差：21.3%**
-- **誤差 ≤10%：53.3%**
-- **誤差 ≤20%：71.2%**
-
-### 各指數表現
-- **台灣中型100：51.9%** - 最佳
-- **SP500：48.5%**
-- **台灣50：41.5%** - 需改進
-
-**結論：** 模型有改進空間，但邏輯正確，可用於實際交易參考。
-
----
-
-## 📈 輸出結果
-
-### 資料庫（Supabase）
-
-**單一 LSTM 模型：**
-```sql
-SELECT ticker, predicted_price, potential 
-FROM predictions 
-WHERE timestamp > NOW() - interval '1 day'
-ORDER BY potential DESC
-LIMIT 10;
-```
-
-**雙軌策略** 🆕：
-```sql
--- 查詢雙重符合（最高信心）
-SELECT ticker, strategy_type, current_price, predicted_price, potential,
-       ma5, ma60, ma120, ma250, pullback_type, pe, pb
-FROM dual_strategy_predictions 
-WHERE strategy_type = '雙重符合'
-  AND timestamp > NOW() - interval '1 day'
-ORDER BY potential DESC;
-
--- 查詢各策略統計
-SELECT strategy_type, COUNT(*) as count
-FROM dual_strategy_predictions
-WHERE timestamp > NOW() - interval '1 day'
-GROUP BY strategy_type;
-```
-
-### 通知（Discord/Telegram）
-
-**單一模型：**
-```
-🥇 前五名 LSTM 🧠
-股票     現價      預測價     潛力
-----------------------------------------
-2330.TW  1670.00   1720.00    3.00%
-2317.TW   234.50    245.00    4.48%
-...
-```
-
-**雙軌策略** 🆕：
-```
-========================================
-📊 台灣50 雙軌策略報告
-========================================
-
-🎯 玄鐵重劍策略 (MA均線篩選)
-股票      現價      MA60      回調類型    PE    PB
-────────────────────────────────────────────
-2330.TW   1670.00   1650.00   MA60回調   24.5  8.2
-2317.TW    234.50    230.00   MA60回調   18.3  3.1
-
-🧠 LSTM 預測策略
-股票      現價      預測價     潛力      PE    Forward PE
-─────────────────────────────────────────────────────
-2454.TW   1234.50   1280.00   3.68%    15.2    14.8
-2412.TW    456.00    478.00   4.82%    22.1    20.5
-
-⭐ 雙重符合 (高信心)
-股票      現價      預測價    潛力     MA60      PE    PB
-───────────────────────────────────────────────────
-2330.TW   1670.00   1720.00   3.00%   1650.00  24.5  8.2
-
-執行時間: 45.2 秒
-```
-
----
-
-## 🔄 自動化執行
-
-### Cron 設定
-
-**單一 LSTM 模型：**
-```bash
-crontab -e
-
-# 每天早上 8 點執行預測
-0 8 * * * /home/ec2-user/stock-underdog-ml/run.sh
-
-# 每天早上 9 點執行回測（約 3 分鐘）
-0 9 * * * /home/ec2-user/stock-underdog-ml/backtest/run_backtest.sh
-```
-
-**雙軌策略** 🆕：
-```bash
-crontab -e
-
-# 每天台股收盤後 15:00 執行雙軌分析
-0 15 * * 1-5 cd /home/ec2-user/stock-underdog-ml && source myenv/bin/activate && python main_dual_strategy.py >> logs/dual_strategy.log 2>&1
-
-# 或使用 bash 腳本
-0 15 * * 1-5 /home/ec2-user/stock-underdog-ml/run_dual.sh
-```
-
-**run_dual.sh 範例：**
-```bash
-#!/bin/bash
-cd /home/ec2-user/stock-underdog-ml
-source myenv/bin/activate
-python main_dual_strategy.py
-deactivate
-```
-
----
-
-## 🧪 回測系統
-
-驗證模型預測準確度的完整系統。
-
-### 關鍵指標
-
-- **方向準確度** - 預測漲跌方向的正確率（目標 >60%）
-- **平均誤差** - 預測價格的平均誤差百分比
-- **誤差 ≤5%** - 高精度預測的比例
-
-### 執行回測
-
-```bash
-python backtest/backtest.py
-python backtest/analyze_backtest.py
-```
-
-詳細說明請參考 **[backtest/README.md](backtest/README.md)**
-
----
-
-## 🛠️ 疑難排解
-
-### Keras 版本問題
-```bash
-pip install tf-keras
-```
-
-### Supabase 連線失敗
-1. 確認使用 **service_role** key（不是 anon key）
-2. 檢查 `SUPABASE_URL` 格式正確
-3. 確認資料表已建立
-   - 單一模型：執行 `supabase_schema.sql`
-   - 雙軌策略：執行 `supabase_dual_strategy_schema.sql` 🆕
-
-### 記憶體不足
-編輯 `main_dual_strategy.py` 降低並行數：
-```python
-max_workers=4  # 從 8 降到 4
-```
-
-### 玄鐵策略通過率 0% 🆕
-可能原因：
-- 市場處於下跌趨勢（MA60 未上升）
-- 參數太嚴格
-
-調整參數：
-```python
-# 在 main_dual_strategy.py 中
-xuantie_stocks = filter_stocks_by_xuantie(
-    stock_list,
-    period="1y",
-    lookback=7,      # 降低至 7 天
-    tolerance=0.08   # 放寬至 ±8%
-)
-```
-
-### 數據快取問題 🆕
-快取位置：`cache/stock_data/`
-快取有效期：12 小時
-
-清除快取：
-```bash
-rm -rf cache/stock_data/*
-```
-
-更多問題請參考 **[SETUP.md](SETUP.md)** 的疑難排解章節
-
----
-
-## 📝 更新日誌
-
-### v2.1 (2025-01-22) 🆕
-- ✨ **新增雙軌策略系統**：結合 LSTM + 玄鐵重劍 MA 均線策略
-- ✨ **玄鐵重劍策略**：基於 MA5/MA10/MA60/MA120/MA250 的技術面篩選
-  - Filter 1：MA60 上升趨勢（10 天）+ 股價在 MA60 之上
-  - Filter 2：價格回調至 MA60/MA120 (±5%)
-  - 通過率：約 15-20%
-- ✨ **基本面整合**：自動抓取 PE/PB/Forward PE 數據
-- ✨ **數據快取系統**：12 小時 pickle 快取，加速重複查詢
-- ✨ **雙軌策略資料表**：包含 ma5, ma10, ma60, ma120, ma250, pe, pb, forward_pe 欄位
-- ✨ **多平台通知**：Telegram (HTML)、Discord (Markdown)、Email
-- 🔧 優化 LSTM 並行處理：8 workers 同時運行
-- 📊 新增 `main_dual_strategy.py` 雙軌策略入口
-- 📊 新增 `xuantie_strategy.py` 均線策略模組
-- 📊 新增 `notifier_dual.py` 雙軌通知器
-- 📊 新增 `data_loader.py` 快取系統
-
-### v2.0 (2026-01-08)
-- ✨ **重大改進**：改為預測下一交易日（原為歷史最大值）
-- ✨ 新增自動回測系統
-- ✨ 優化 LSTM 架構（3 層，128→64→32 units）
-- ✨ 增加訓練 epochs（10→100，後優化為 20）
-- 🐛 修復資料洩漏問題
-- 🔧 關閉 Prophet 和 Chronos（準確度不佳）
-- 📁 整理專案結構（新增 scripts/ 資料夾）
-
-### v1.0
-- 初始版本
-
----
-
-## �️ 檔案結構整理
-
-### 目錄分類
-
-**根目錄** - 主程式和核心模組
-- `main.py` - 主程式（雙軌策略）
-- `main_lstm_only.py` - 舊版保留
-
-**cache/** - 數據快取（自動生成）
-- `stock_data/` - 股票數據 pickle 快取（12小時）
-
-**output/** - 輸出文件（自動生成）
-- `xuantie_signals_*.csv` - 玄鐵策略篩選結果
-
-**logs/** - 執行日誌（自動生成）
-- `app.log` - 主程式日誌
-
-**scripts/** - 維護和測試腳本
-- `migration/` - 數據庫遷移（舊版升級用）
-- `verification/` - 表格驗證腳本
-- 其他測試腳本
-
-**backtest/** - 回測系統
-- `backtest.py` - 回測腳本
-- `run_backtest.sh` - 自動化腳本
-
-**models/** - AI 模型
-- `lstm.py` - LSTM 模型
-
-### 數據庫檔案
-
-**新用戶（推薦）：**
-- `supabase_schema.sql` - 執行此檔案，已包含所有欄位
-
-**舊用戶升級：**
-- `scripts/migration/supabase_add_columns.sql` - 添加雙軌策略欄位
-- `scripts/verification/verify_predictions_extended.py` - 驗證表格結構
-
-### 重要提示
-
-1. **單一資料表** - 所有數據（LSTM + 玄鐵策略）寫入同一張 `predictions` 表格
-2. **向後兼容** - 舊數據 `strategy_type = NULL`，新數據有明確策略類型
-3. **回測兼容** - 因為使用同一張表，回測功能完全兼容
-4. **自動生成** - `cache/`, `output/`, `logs/` 會自動創建，不需手動建立
-
----
-## ⏰ 自動化與排程
-
-### 環境說明
-
-本專案使用 **conda stockml** 環境，請確保排程腳本正確啟動環境。
-
-### 快速設置排程
-
-#### 方法 1：使用互動式設置腳本（推薦）
-
-```bash
-./setup_cron.sh
-```
-
-腳本會詢問您想要的執行時間：
-- **選項 1**：台股收盤後 14:30（週一至週五）
-- **選項 2**：美股收盤後 06:30（週一至週五）
-- **選項 3**：每日午夜 00:00
-- **選項 4**：自訂時間
-
-#### 方法 2：手動設置 crontab
-
-```bash
-crontab -e
-```
-
-添加以下其中一行：
-
-```bash
-# 台股收盤後執行（週一至週五 14:30）
-30 14 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
-
-# 美股收盤後執行（週一至週五 6:30）
-30 6 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
-
-# 每日午夜執行（使用快取數據）
-0 0 * * * /path/to/stock-underdog-ml/run_daily.sh >> /path/to/stock-underdog-ml/logs/cron.log 2>&1
-```
-
-### 執行腳本說明
-
-#### run_daily.sh（每日自動執行）
-
-**功能：**
-1. ✅ 自動啟動 stockml conda 環境
-2. ✅ 執行回測（驗證昨日預測）
-3. ✅ 執行雙軌策略分析（今日預測）
-4. ✅ 清理 30 天前的舊日誌
-5. ✅ 所有輸出記錄到 logs/daily_YYYYMMDD_HHMMSS.log
-
-**手動測試：**
-```bash
-./run_daily.sh
-```
-
-**查看執行日誌：**
-```bash
-# 即時查看最新日誌
-tail -f logs/daily_*.log
-
-# 查看 cron 執行記錄
-tail -f logs/cron.log
-
-# 列出最近 10 次執行
-ls -lt logs/daily_*.log | head -10
-```
-
-### 環境變數檢查
-
-確保 `.env` 檔案已正確設置：
-
-```bash
-# 必填項目
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_service_role_key
-
-# 通知（選填）
-TELEGRAM_BOT_TOKEN=your_token
-TELEGRAM_CHANNEL_ID=your_channel_id
-DISCORD_WEBHOOK_URL=your_webhook
-SENDER_EMAIL=your_email@gmail.com
-EMAIL_PASSWORD=your_app_password
-TO_EMAILS=recipient1@example.com,recipient2@example.com
-```
-
-### 排程執行流程
-
-```
-Cron 觸發 (例如：14:30)
-         ↓
-啟動 run_daily.sh
-         ↓
-載入 conda stockml 環境
-         ↓
-┌────────┴────────┬───────────────┐
-│                 │               │
-執行回測      執行雙軌策略    清理舊日誌
-(驗證昨日)    (預測今日)    (保留30天)
-         ↓
-記錄到 logs/daily_YYYYMMDD_HHMMSS.log
-         ↓
-發送通知 (Telegram/Discord/Email)
-         ↓
-完成
-```
-
-### 日誌管理
-
-**日誌類型：**
-- `logs/daily_*.log` - 每日執行主日誌（自動生成時間戳記）
-- `logs/cron.log` - Cron 執行記錄（包含錯誤訊息）
-- `logs/app.log` - 應用程式運行日誌
-
-**自動清理：**
-- 超過 30 天的日誌會自動刪除
-- 保持 logs/ 目錄整潔
-
-### 常見問題
-
-#### Q1: Cron 執行失敗，找不到 conda？
-
-**A:** 確保 `run_daily.sh` 中 conda 路徑正確：
-```bash
-# 檢查您的 conda 安裝路徑
-which conda
-
-# 修改 run_daily.sh 第 7 行
-source /path/to/your/miniconda3/etc/profile.d/conda.sh
-```
-
-#### Q2: 環境沒有正確啟動？
-
-**A:** 手動測試環境啟動：
-```bash
-source /path/to/your/miniconda3/etc/profile.d/conda.sh
-conda activate stockml
-python --version  # 確認 Python 版本
-pip list | grep tensorflow  # 確認套件安裝
-```
-
-#### Q3: 如何確認 Cron 設置成功？
-
-**A:** 檢查 crontab 列表：
-```bash
-crontab -l
-```
-
-#### Q4: 如何暫停自動執行？
-
-**A:** 註解掉 crontab 中的行：
-```bash
-crontab -e
-# 在行首加上 # 註解
-# 30 14 * * 1-5 /path/to/stock-underdog-ml/run_daily.sh ...
-```
-
-#### Q5: 執行時間建議？
-
-**A:** 建議時間：
-- **台股為主**：14:30（收盤後 30 分鐘，數據已更新）
-- **美股為主**：06:30（美東時間收盤後，台灣早上）
-- **兩者都做**：設置兩個排程分別執行
-
-### 監控與維護
-
-**檢查系統狀態：**
-```bash
-# 查看 Cron 服務狀態
-systemctl status cron
-
-# 查看最近執行結果
-tail -100 logs/cron.log | grep -E "(✅|❌|完成|失敗)"
-
-# 檢查資料庫連線
-python -c "from database import SupabaseManager; db = SupabaseManager(); print('✅ 連線成功' if db.enabled else '❌ 連線失敗')"
-```
-
-**效能監控：**
-```bash
-# 查看執行時間
-grep "執行時間\|結束時間" logs/daily_*.log | tail -20
-
-# 查看預測數量
-grep "符合條件\|預測完成\|雙重符合" logs/daily_*.log | tail -10
-```
-
----
-
-## 📊 結果解讀指南
-
-完整的輸出解讀邏輯請參考 **[explain.md](explain.md)**，包含：
-- 回調類型判讀（MA60 vs MA120）
-- PE/PB 估值分析
-- LSTM 預測強度評級
-- 綜合決策矩陣
-- 風險等級分類（S/A/B/C/D）
-
----
-## �📄 授權
-
-MIT License
-
-## 👤 作者
-
-David (tbdavid2019)
-
-## 🙏 致謝
-
-- Yahoo Finance - 股價資料
-- Supabase - 資料庫服務
-- TensorFlow - LSTM 框架
+本專案採用 [MIT License](LICENSE) 授權。
