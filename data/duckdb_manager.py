@@ -243,6 +243,15 @@ class DuckDBManager:
         logger.info(f"📦 已成功導出 {table_name} 至 Parquet: {output_path}")
         return output_path
 
+    @staticmethod
+    def _clean_df_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
+        """將 DataFrame 轉為乾淨的字典清單，將 NaN / NaT / inf 轉為 None"""
+        if df.empty:
+            return []
+        # 將所有型態的 NaN 統一轉為 Python None
+        cleaned = df.map(lambda x: None if pd.isna(x) else x)
+        return cleaned.to_dict(orient="records")
+
     # =========================================================================
     # REST API & MCP 專用高吞吐量化分析查詢接口
     # =========================================================================
@@ -280,8 +289,7 @@ class DuckDBManager:
         """
         params.extend([limit, offset])
         df = self.query(sql, params)
-        # NaN 轉 None
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得多策略重合 / 雙重符合 / 🏆 三重共振股票"""
@@ -307,7 +315,7 @@ class DuckDBManager:
         """
         params.append(limit)
         df = self.query(sql, params)
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_xuantie_candidates(
         self, 
@@ -341,7 +349,7 @@ class DuckDBManager:
         """
         params.append(limit)
         df = self.query(sql, params)
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測漲幅最大 TOP N 標的"""
@@ -367,7 +375,7 @@ class DuckDBManager:
         """
         params.append(limit)
         df = self.query(sql, params)
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測跌幅最大 / 潛在做空 TOP N 標的"""
@@ -393,7 +401,7 @@ class DuckDBManager:
         """
         params.append(limit)
         df = self.query(sql, params)
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
         """取得特定股票代碼之歷史預測軌跡"""
@@ -405,7 +413,7 @@ class DuckDBManager:
         LIMIT ?;
         """
         df = self.query(sql, [ticker, limit])
-        return df.where(pd.notnull(df), None).to_dict(orient="records")
+        return self._clean_df_records(df)
 
     def get_db_stats(self) -> Dict[str, Any]:
         """取得 DuckDB 全局時序庫統計資訊"""
@@ -437,7 +445,8 @@ class DuckDBManager:
             with self._get_connection() as con:
                 res = con.execute("SELECT * FROM macro_regimes ORDER BY timestamp DESC LIMIT 1").df()
                 if not res.empty:
-                    return res.where(pd.notnull(res), None).to_dict(orient="records")[0]
+                    clean = self._clean_df_records(res)
+                    return clean[0] if clean else None
         except Exception:
             pass
         return None
