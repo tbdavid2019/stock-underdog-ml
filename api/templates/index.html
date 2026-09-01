@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Quant AI Platform | 專業級多維量化決策平台</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-border:hover {
+            border-color: rgba(14, 165, 233, 0.5);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen font-sans antialiased selection:bg-sky-500 selection:text-white">
+    <div id="app" v-cloak class="flex flex-col min-h-screen">
+
+        <!-- Top Navigation Bar -->
+        <header class="sticky top-0 z-50 glass-panel border-b border-gray-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab = 'dashboard'">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 font-black text-xl text-white">
+                        📈
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-300">Stock Quant AI</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-950/80 text-sky-400 border border-sky-800/60">v2.2.0</span>
+                        </div>
+                        <p class="text-xs text-gray-400 hidden sm:block">多維量化決策與時序預測大腦</p>
+                    </div>
+                </div>
+
+                <!-- Live Macro Pill -->
+                <div class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-gray-800/80 border border-gray-700/60 text-xs">
+                    <span class="w-2 h-2 rounded-full animate-pulse" :class="macro.exposure >= 0.8 ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+                    <span class="text-gray-400">宏觀環境:</span>
+                    <span class="font-medium text-gray-200">{{ macro.regime_name || '評估中...' }}</span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">建議曝險:</span>
+                    <span class="font-bold text-sky-400">{{ (macro.exposure * 100) || 85 }}%</span>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="flex items-center space-x-1 sm:space-x-2">
+                    <button @click="activeTab = 'dashboard'" 
+                            :class="activeTab === 'dashboard' ? 'bg-sky-600/30 text-sky-400 border-sky-500/50' : 'text-gray-300 hover:bg-gray-800 border-transparent'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all flex items-center space-x-1.5">
+                        <span>📊 操盤看板</span>
+                    </button>
+                    <button @click="activeTab = 'history'" 
+                            :class="activeTab === 'history' ? 'bg-sky-600/30 text-sky-400 border-sky-500/50' : 'text-gray-300 hover:bg-gray-800 border-transparent'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all flex items-center space-x-1.5">
+                        <span>🔍 個股歷史</span>
+                    </button>
+                    <button @click="activeTab = 'agent_hub'" 
+                            :class="activeTab === 'agent_hub' ? 'bg-sky-600/30 text-sky-400 border-sky-500/50' : 'text-gray-300 hover:bg-gray-800 border-transparent'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all flex items-center space-x-1.5">
+                        <span>🤖 Agent & MCP</span>
+                    </button>
+                    <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-all hidden sm:inline-flex items-center space-x-1">
+                        <span>API 文檔 ↗</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+            <!-- ================= TAB 1: DASHBOARD ================= -->
+            <div v-if="activeTab === 'dashboard'" class="space-y-6">
+
+                <!-- 1. Macro Risk Banner -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="glass-panel p-5 rounded-2xl glow-border transition-all">
+                        <div class="flex items-center justify-between text-gray-400 text-xs mb-2">
+                            <span>宏觀風控狀態</span>
+                            <span class="text-base">🌍</span>
+                        </div>
+                        <div class="text-xl font-bold text-gray-100 truncate">{{ macro.regime_name || '載入中...' }}</div>
+                        <div class="text-xs text-sky-400 mt-2 flex items-center space-x-1">
+                            <span>建議曝險水位:</span>
+                            <span class="font-bold text-sm">{{ (macro.exposure * 100) || 85 }}%</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl glow-border transition-all">
+                        <div class="flex items-center justify-between text-gray-400 text-xs mb-2">
+                            <span>恐慌指數 VIX</span>
+                            <span class="text-base">⚡</span>
+                        </div>
+                        <div class="text-xl font-bold" :class="macro.vix > 20 ? 'text-amber-400' : 'text-emerald-400'">
+                            {{ macro.vix || '14.9' }}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            {{ macro.vix < 20 ? '情緒穩定 (低恐慌)' : '市場情緒波動偏高' }}
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl glow-border transition-all">
+                        <div class="flex items-center justify-between text-gray-400 text-xs mb-2">
+                            <span>SPY 標普 / SOX 費半</span>
+                            <span class="text-base">📊</span>
+                        </div>
+                        <div class="text-sm font-semibold space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400 text-xs">SPY (季線):</span>
+                                <span :class="macro.spy_above_ma60 ? 'text-emerald-400' : 'text-rose-400'">{{ macro.spy_above_ma60 ? '站穩 MA60 ✓' : '破季線 ✗' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400 text-xs">SOX 費半:</span>
+                                <span :class="macro.sox_above_ma60 ? 'text-emerald-400' : 'text-amber-400'">{{ macro.sox_above_ma60 ? '站穩 MA60 ✓' : '破季線 (科技半倉)' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl glow-border transition-all">
+                        <div class="flex items-center justify-between text-gray-400 text-xs mb-2">
+                            <span>DuckDB 時序庫存檔</span>
+                            <span class="text-base">🦆</span>
+                        </div>
+                        <div class="text-xl font-bold text-sky-400">{{ stats.total_records || '44,146' }} <span class="text-xs text-gray-400 font-normal">筆</span></div>
+                        <div class="text-xs text-gray-400 mt-2 flex items-center justify-between">
+                            <span>分析標的: {{ stats.distinct_tickers || '294' }} 檔</span>
+                            <span class="text-emerald-400">● 極速 &lt; 3ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Strategy Filter & Index Tabs -->
+                <div class="glass-panel p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <!-- Strategy Selector -->
+                    <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+                        <button v-for="strat in strategyOptions" :key="strat.id"
+                                @click="selectedStrategy = strat.id; loadData()"
+                                :class="selectedStrategy === strat.id ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/30' : 'bg-gray-800/80 text-gray-400 hover:bg-gray-700 hover:text-gray-200'"
+                                class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                            <span>{{ strat.icon }}</span>
+                            <span>{{ strat.label }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Index Filter -->
+                    <div class="flex items-center space-x-2 self-end md:self-auto">
+                        <span class="text-xs text-gray-400">市場篩選:</span>
+                        <select v-model="selectedIndex" @change="loadData()" 
+                                class="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-sky-500">
+                            <option value="">全部市場 (All)</option>
+                            <option value="台灣50">台灣50 (TW0050)</option>
+                            <option value="台灣中型100">台灣中型100 (TW0051)</option>
+                            <option value="SP500">S&P 500 (美股)</option>
+                            <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
+                        </select>
+                        <button @click="loadData()" class="p-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-300 transition-all" title="重新整理">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Batch Header Info -->
+                <div class="flex items-center justify-between text-xs text-gray-400 px-1">
+                    <div class="flex items-center space-x-3">
+                        <span>日報日期: <strong class="text-gray-200">{{ batchDate || '最新' }}</strong></span>
+                        <span v-if="batchTimestamp">產出時間: {{ batchTimestamp }}</span>
+                    </div>
+                    <div>共篩選出 <strong class="text-sky-400">{{ records.length }}</strong> 檔標的</div>
+                </div>
+
+                <!-- 3. Stock Cards Grid -->
+                <div v-if="loading" class="text-center py-20">
+                    <div class="inline-block animate-spin text-3xl mb-3">⚡</div>
+                    <p class="text-gray-400 text-sm">正在從 DuckDB 讀取最新量化數據...</p>
+                </div>
+
+                <div v-else-if="records.length === 0" class="glass-panel text-center py-16 rounded-2xl">
+                    <div class="text-4xl mb-3">🎯</div>
+                    <div class="text-gray-300 font-medium">當前篩選條件下無符合標的</div>
+                    <p class="text-xs text-gray-500 mt-1">請嘗試切換其他策略或選擇全部市場</p>
+                </div>
+
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div v-for="item in records" :key="item.ticker + item.model_name" 
+                         class="glass-panel p-5 rounded-2xl glow-border transition-all flex flex-col justify-between space-y-4">
+                        
+                        <!-- Card Header: Ticker, Index & Strategy -->
+                        <div>
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-lg font-black text-gray-100 tracking-wide">{{ item.ticker }}</span>
+                                        <span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-800 text-gray-400 border border-gray-700">
+                                            {{ item.index_name }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 mt-0.5">策略: {{ item.strategy_type || item.model_name }}</div>
+                                </div>
+
+                                <!-- Potential Badge -->
+                                <div v-if="item.potential !== null && item.potential !== undefined" 
+                                     :class="item.potential >= 0 ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80' : 'bg-rose-950/80 text-rose-400 border-rose-800/80'"
+                                     class="px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center space-x-1">
+                                    <span>{{ item.potential >= 0 ? '▲' : '▼' }}</span>
+                                    <span>{{ item.potential > 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%</span>
+                                </div>
+                            </div>
+
+                            <!-- Price & Target -->
+                            <div class="mt-4 grid grid-cols-2 gap-2 bg-gray-900/60 p-3 rounded-xl border border-gray-800/60 text-xs">
+                                <div>
+                                    <div class="text-gray-400">現價</div>
+                                    <div class="text-sm font-bold text-gray-200">${{ Number(item.current_price).toFixed(2) }}</div>
+                                </div>
+                                <div v-if="item.predicted_price">
+                                    <div class="text-gray-400">預測目標價</div>
+                                    <div class="text-sm font-bold text-sky-400">${{ Number(item.predicted_price).toFixed(2) }}</div>
+                                </div>
+                                <div v-else-if="item.pullback_type">
+                                    <div class="text-gray-400">技術買點</div>
+                                    <div class="text-sm font-bold text-amber-400">{{ item.pullback_type }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Institutional Chips & Valuation Metrics -->
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center justify-between text-gray-400 border-b border-gray-800/60 pb-1.5">
+                                <span>估值指標:</span>
+                                <span class="text-gray-300">
+                                    PE: <strong class="text-gray-100">{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}</strong> | 
+                                    PB: <strong class="text-gray-100">{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</strong>
+                                </span>
+                            </div>
+
+                            <div v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" 
+                                 class="flex items-center justify-between text-gray-400 border-b border-gray-800/60 pb-1.5">
+                                <span>籌碼動向 (5日):</span>
+                                <span class="text-gray-300">
+                                    <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400 font-medium' : 'text-gray-400'">
+                                        投信 {{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}張
+                                    </span>
+                                    <span v-if="item.foreign_net_5d !== null" class="ml-1.5" :class="item.foreign_net_5d > 0 ? 'text-emerald-400 font-medium' : 'text-gray-400'">
+                                        外資 {{ item.foreign_net_5d > 0 ? '+' : '' }}{{ item.foreign_net_5d }}張
+                                    </span>
+                                </span>
+                            </div>
+
+                            <!-- Tags Pills -->
+                            <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
+                                <span v-for="tag in parseTags(item.tags)" :key="tag"
+                                      :class="tag.includes('三重共振') ? 'bg-amber-950/80 text-amber-300 border-amber-800' : 'bg-gray-800 text-sky-300 border-gray-700'"
+                                      class="px-2 py-0.5 text-[11px] font-medium rounded-md border">
+                                    {{ tag }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="pt-2 flex items-center justify-between text-[11px] text-gray-500 border-t border-gray-800/40">
+                            <span>資料時效: {{ item.age_hours !== undefined ? item.age_hours + 'h 前' : '最新批次' }}</span>
+                            <button @click="searchTickerHistory(item.ticker)" class="text-sky-400 hover:text-sky-300 font-medium flex items-center space-x-1">
+                                <span>歷史走勢 ↗</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ================= TAB 2: TICKER EXPLORER ================= -->
+            <div v-if="activeTab === 'history'" class="space-y-6">
+                <!-- Search Box -->
+                <div class="glass-panel p-6 rounded-2xl space-y-4">
+                    <h2 class="text-lg font-bold text-gray-100 flex items-center space-x-2">
+                        <span>🔍 個股歷史時間序列查詢</span>
+                    </h2>
+                    <p class="text-xs text-gray-400">輸入股票代號（例如台股 <code>2330.TW</code>, <code>2454.TW</code> 或美股 <code>NVDA</code>, <code>AAPL</code>）查詢其在 DuckDB 中的歷史量化預測紀錄與技術信號軌跡。</p>
+                    
+                    <div class="flex items-center space-x-3 max-w-lg">
+                        <input v-model="searchTicker" @keyup.enter="loadHistory()" 
+                               type="text" placeholder="輸入股票代號 (如 2330.TW)..."
+                               class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-sky-500 uppercase">
+                        <button @click="loadHistory()" 
+                                class="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-sky-600/30 transition-all">
+                            查詢
+                        </button>
+                    </div>
+                </div>
+
+                <!-- History Results Table -->
+                <div v-if="historyLoading" class="text-center py-16">
+                    <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+                    <p class="text-gray-400 text-xs">正在檢索歷史時序軌跡...</p>
+                </div>
+
+                <div v-else-if="historyRecords.length > 0" class="glass-panel p-5 rounded-2xl overflow-x-auto space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-gray-200 text-sm">
+                            <span class="text-sky-400">{{ searchTicker.toUpperCase() }}</span> 歷史預測軌跡 (共 {{ historyRecords.length }} 筆)
+                        </h3>
+                    </div>
+
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-gray-800/80 text-gray-400 border-b border-gray-700">
+                            <tr>
+                                <th class="p-3">時間戳記</th>
+                                <th class="p-3">策略 / 模型</th>
+                                <th class="p-3">現價</th>
+                                <th class="p-3">預測目標價</th>
+                                <th class="p-3">預期潛力</th>
+                                <th class="p-3">均線 / 買點</th>
+                                <th class="p-3">PE / PB</th>
+                                <th class="p-3">籌碼 (投信/外資)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <tr v-for="row in historyRecords" :key="row.timestamp + row.strategy_type" class="hover:bg-gray-800/50">
+                                <td class="p-3 font-mono text-gray-400">{{ row.timestamp ? row.timestamp.replace('T', ' ').substring(0, 19) : '-' }}</td>
+                                <td class="p-3 font-medium text-gray-200">{{ row.strategy_type || row.model_name }}</td>
+                                <td class="p-3 font-bold">${{ Number(row.current_price).toFixed(2) }}</td>
+                                <td class="p-3 text-sky-400 font-bold">{{ row.predicted_price ? '$' + Number(row.predicted_price).toFixed(2) : '-' }}</td>
+                                <td class="p-3" :class="row.potential > 0 ? 'text-emerald-400 font-bold' : 'text-rose-400'">
+                                    {{ row.potential !== null ? (row.potential > 0 ? '+' : '') + Number(row.potential).toFixed(2) + '%' : '-' }}
+                                </td>
+                                <td class="p-3 text-amber-400">{{ row.pullback_type || (row.ma60 ? 'MA60: $' + Number(row.ma60).toFixed(1) : '-') }}</td>
+                                <td class="p-3">{{ row.pe ? Number(row.pe).toFixed(1) : '-' }} / {{ row.pb ? Number(row.pb).toFixed(1) : '-' }}</td>
+                                <td class="p-3">
+                                    <span v-if="row.trust_net_5d !== null || row.foreign_net_5d !== null">
+                                        投:{{ row.trust_net_5d || 0 }} / 外:{{ row.foreign_net_5d || 0 }}
+                                    </span>
+                                    <span v-else class="text-gray-600">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else-if="hasSearched" class="glass-panel text-center py-12 rounded-2xl text-gray-400 text-xs">
+                    查無 <strong>{{ searchTicker }}</strong> 的歷史時序資料。
+                </div>
+            </div>
+
+
+            <!-- ================= TAB 3: AGENT & MCP HUB ================= -->
+            <div v-if="activeTab === 'agent_hub'" class="space-y-8">
+                <!-- Banner -->
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-sky-500">
+                    <h2 class="text-xl font-bold text-gray-100 flex items-center space-x-2">
+                        <span>🤖 AI Agent & MCP 整合中心</span>
+                    </h2>
+                    <p class="text-xs text-gray-300 mt-2 leading-relaxed">
+                        本量化引擎原生支援 <strong>Model Context Protocol (MCP)</strong>、<strong>WebMCP</strong> 以及標準 <strong>OpenAPI 3.1</strong>。<br>
+                        任何 AI Agent（如 Claude Desktop、Cursor、Antigravity、Open-WebUI、LangChain、AutoGen）皆可直接將其掛載為原生決策工具。
+                    </p>
+                </div>
+
+                <!-- Integration Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- 1. Claude Desktop MCP Config -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-gray-100 flex items-center space-x-2">
+                                    <span class="text-lg">🟣</span>
+                                    <span>Claude Desktop 設定 (MCP)</span>
+                                </h3>
+                                <span class="text-xs px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">stdio</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">將以下配置加入你的 <code>claude_desktop_config.json</code> 中：</p>
+                            
+                            <pre class="mt-3 p-3 bg-gray-950 rounded-xl text-[11px] text-sky-300 font-mono overflow-x-auto border border-gray-800"><code>{
+  "mcpServers": {
+    "stock-quant": {
+      "command": "python",
+      "args": [
+        "/Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py"
+      ]
+    }
+  }
+}</code></pre>
+                        </div>
+
+                        <button @click="copyText(claudeMcpConfig, 'Claude Desktop 配置已複製！')" 
+                                class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold border border-gray-700 transition-all flex items-center justify-center space-x-2">
+                            <span>📋 一鍵複製配置</span>
+                        </button>
+                    </div>
+
+                    <!-- 2. Cursor / Antigravity Agent Skill -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-gray-100 flex items-center space-x-2">
+                                    <span class="text-lg">⚡</span>
+                                    <span>Agent Skill 定義檔 (SKILL.md)</span>
+                                </h3>
+                                <span class="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">Skill Spec</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">本專案已封裝標準 <code>SKILL.md</code>，包含操盤工作流、選股指標規則與停損防守邏輯：</p>
+                            
+                            <div class="mt-3 p-3 bg-gray-950 rounded-xl text-xs text-gray-300 font-mono border border-gray-800 space-y-1">
+                                <div>📁 路徑: <code>skills/stock-quant/SKILL.md</code></div>
+                                <div>🛠️ 工具組: <code>6 大原生量化 MCP 函數</code></div>
+                                <div>🏆 支援: <code>三重共振 / 玄鐵波段 / LSTM預測</code></div>
+                            </div>
+                        </div>
+
+                        <a href="/skill" target="_blank"
+                           class="w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold text-center transition-all shadow-lg shadow-sky-600/30">
+                            📖 檢視完整 SKILL.md 規格
+                        </a>
+                    </div>
+
+                    <!-- 3. WebMCP & OpenAPI Spec -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-gray-100 flex items-center space-x-2">
+                                    <span class="text-lg">🌐</span>
+                                    <span>WebMCP / OpenAPI 端點</span>
+                                </h3>
+                                <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">REST API</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">供 Web 代理程式、GPT Actions 或外部自動化腳本調用：</p>
+                            
+                            <div class="mt-3 p-3 bg-gray-950 rounded-xl text-xs text-sky-400 font-mono border border-gray-800 space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span>OpenAPI 3.1:</span>
+                                    <a href="/openapi.json" target="_blank" class="text-gray-300 hover:underline">/openapi.json ↗</a>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>AI Plugin:</span>
+                                    <a href="/.well-known/ai-plugin.json" target="_blank" class="text-gray-300 hover:underline">/.well-known/ai-plugin.json ↗</a>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>Swagger Docs:</span>
+                                    <a href="/docs" target="_blank" class="text-gray-300 hover:underline">/docs ↗</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="copyText('http://10.9.0.99:8088/openapi.json', 'OpenAPI URL 已複製！')" 
+                                class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold border border-gray-700 transition-all flex items-center justify-center space-x-2">
+                            <span>📋 複製 OpenAPI URL</span>
+                        </button>
+                    </div>
+
+                    <!-- 4. Quick cURL / Python Snippet -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-gray-100 flex items-center space-x-2">
+                                    <span class="text-lg">💻</span>
+                                    <span>Python 快速調用範例</span>
+                                </h3>
+                                <span class="text-xs px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">Python 3</span>
+                            </div>
+                            
+                            <pre class="mt-3 p-3 bg-gray-950 rounded-xl text-[11px] text-emerald-400 font-mono overflow-x-auto border border-gray-800"><code>import requests
+
+# 取得 🏆 三重共振焦點推薦
+res = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")
+picks = res.json().get("data", [])
+for p in picks:
+    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")</code></pre>
+                        </div>
+
+                        <button @click="copyText(pythonSnippet, 'Python 代碼範例已複製！')" 
+                                class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-semibold border border-gray-700 transition-all flex items-center justify-center space-x-2">
+                            <span>📋 複製 Python 腳本</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-gray-800 glass-panel py-6 text-center text-xs text-gray-500">
+            <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div>© 2026 Stock Quant Platform. Built with DuckDB & PyTorch & FastAPI.</div>
+                <div class="flex items-center space-x-4">
+                    <a href="/docs" target="_blank" class="hover:text-gray-300">Swagger UI</a>
+                    <a href="/redoc" target="_blank" class="hover:text-gray-300">ReDoc</a>
+                    <a href="/skill" target="_blank" class="hover:text-gray-300">SKILL.md</a>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Toast Notification -->
+        <div v-if="toastMessage" 
+             class="fixed bottom-6 right-6 px-4 py-2.5 bg-sky-600 text-white text-xs font-bold rounded-xl shadow-2xl shadow-sky-500/50 flex items-center space-x-2 transition-all">
+            <span>✓</span>
+            <span>{{ toastMessage }}</span>
+        </div>
+
+    </div>
+
+    <!-- Vue App Logic -->
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'dashboard',
+                    selectedStrategy: 'resonance',
+                    selectedIndex: '',
+                    strategyOptions: [
+                        { id: 'resonance', label: '🏆 三重共振 / 焦點股', icon: '✨' },
+                        { id: 'xuantie', label: '⚔️ 玄鐵均線波段買點', icon: '🗡️' },
+                        { id: 'bullish', label: '🤖 LSTM 看漲 TOP', icon: '📈' },
+                        { id: 'bearish', label: '🐻 LSTM 看跌避險', icon: '📉' },
+                        { id: 'latest', label: '📋 最新全量批次', icon: '📦' }
+                    ],
+                    macro: {},
+                    stats: {},
+                    records: [],
+                    batchDate: '',
+                    batchTimestamp: '',
+                    loading: false,
+
+                    // Ticker Explorer
+                    searchTicker: '2330.TW',
+                    historyRecords: [],
+                    historyLoading: false,
+                    hasSearched: false,
+
+                    // Toast
+                    toastMessage: '',
+
+                    // Snippets
+                    claudeMcpConfig: JSON.stringify({
+                        "mcpServers": {
+                            "stock-quant": {
+                                "command": "python",
+                                "args": [
+                                    "/Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py"
+                                ]
+                            }
+                        }
+                    }, null, 2),
+
+                    pythonSnippet: `import requests\n\n# 取得 🏆 三重共振焦點推薦\nres = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
+                }
+            },
+            mounted() {
+                this.loadMacro();
+                this.loadStats();
+                this.loadData();
+            },
+            methods: {
+                async loadMacro() {
+                    try {
+                        const res = await fetch('/api/v1/macro/latest');
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success && data.data) {
+                                this.macro = data.data;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load macro", e);
+                    }
+                },
+                async loadStats() {
+                    try {
+                        const res = await fetch('/api/v1/stats/summary');
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                this.stats = data;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load stats", e);
+                    }
+                },
+                async loadData() {
+                    this.loading = true;
+                    try {
+                        let url = '/api/v1/predictions/latest?limit=60';
+                        if (this.selectedStrategy === 'resonance') {
+                            url = '/api/v1/predictions/resonance?limit=60';
+                        } else if (this.selectedStrategy === 'xuantie') {
+                            url = '/api/v1/predictions/xuantie?limit=60';
+                        } else if (this.selectedStrategy === 'bullish') {
+                            url = '/api/v1/predictions/lstm/top-bullish?limit=60';
+                        } else if (this.selectedStrategy === 'bearish') {
+                            url = '/api/v1/predictions/lstm/top-bearish?limit=60';
+                        }
+
+                        if (this.selectedIndex) {
+                            url += '&index_name=' + encodeURIComponent(this.selectedIndex);
+                        }
+
+                        const res = await fetch(url);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                this.records = data.data || [];
+                                this.batchDate = data.batch_date || '';
+                                this.batchTimestamp = data.latest_batch_timestamp ? data.latest_batch_timestamp.replace('T', ' ').substring(0, 19) : '';
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load strategy data", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async loadHistory() {
+                    if (!this.searchTicker.trim()) return;
+                    this.historyLoading = true;
+                    this.hasSearched = true;
+                    try {
+                        const ticker = encodeURIComponent(this.searchTicker.trim().toUpperCase());
+                        const res = await fetch(`/api/v1/predictions/history/${ticker}?limit=40`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                this.historyRecords = data.data || [];
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load ticker history", e);
+                    } finally {
+                        this.historyLoading = false;
+                    }
+                },
+                searchTickerHistory(ticker) {
+                    this.searchTicker = ticker;
+                    this.activeTab = 'history';
+                    this.loadHistory();
+                },
+                parseTags(tags) {
+                    if (!tags) return [];
+                    if (Array.isArray(tags)) return tags;
+                    return String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
+                },
+                copyText(text, msg) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.toastMessage = msg || '已複製到剪貼簿！';
+                        setTimeout(() => {
+                            this.toastMessage = '';
+                        }, 2500);
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

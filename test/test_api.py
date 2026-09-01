@@ -135,6 +135,23 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("total_records", data)
         self.assertNotIn("db_path", data)
 
+    def test_root_homepage(self):
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Stock Quant AI", resp.text)
+
+    def test_ai_plugin_manifest(self):
+        resp = self.client.get("/.well-known/ai-plugin.json")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["name_for_model"], "stock_quant_engine")
+        self.assertIn("openapi", data["api"]["type"])
+
+    def test_skill_endpoint(self):
+        resp = self.client.get("/skill")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("name: stock-quant", resp.text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,7 @@ import os
 import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from api.routes import predictions, macro, stats
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
@@ -50,13 +51,52 @@ app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root():
-    return {
-        "message": "Stock Quantitative Multi-Strategy API is running.",
-        "docs_url": "/docs",
-        "health_check": "/health"
-    }
+    """
+    量化決策平台首頁：提供人類即時操盤儀表板與 AI Agent / MCP 對接指南。
+    """
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+    if os.path.exists(template_path):
+        with open(template_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Stock Quant AI Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
+
+
+@app.get("/.well-known/ai-plugin.json", include_in_schema=False)
+def get_ai_plugin_manifest():
+    """
+    WebMCP / OpenAI Plugin Standard Discovery Manifest
+    """
+    return JSONResponse(content={
+        "schema_version": "v1",
+        "name_for_model": "stock_quant_engine",
+        "name_for_human": "Stock Quant AI Platform",
+        "description_for_model": "專業級 AI 深度學習與多維量化決策大腦 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。",
+        "description_for_human": "AI Quant Multi-Strategy Stock Trading Engine and Live Screener.",
+        "auth": {
+            "type": "none"
+        },
+        "api": {
+            "type": "openapi",
+            "url": "/openapi.json"
+        },
+        "logo_url": "https://img.icons8.com/color/96/bullish.png",
+        "contact_email": "admin@david888.com",
+        "legal_info_url": "https://david888.com"
+    })
+
+
+@app.get("/skill", response_class=PlainTextResponse, include_in_schema=False)
+def get_agent_skill():
+    """
+    獲取 Agent Skill 規範檔 (SKILL.md) 供 AI 代理人直接學習量化分析工作流。
+    """
+    skill_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills", "stock-quant", "SKILL.md")
+    if os.path.exists(skill_path):
+        with open(skill_path, "r", encoding="utf-8") as f:
+            return PlainTextResponse(content=f.read(), media_type="text/markdown; charset=utf-8")
+    return PlainTextResponse(content="# Stock Quant Skill not found", status_code=404)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health Check"])

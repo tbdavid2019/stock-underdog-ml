@@ -10,6 +10,16 @@
 
 ### Added
 
+- **FastMCP 原生 AI Agent 工具伺服器 (`mcp_server.py`)**：
+  - 封裝 6 大標準 MCP 決策工具（`get_market_macro_regime`、`get_triple_resonance_stocks`、`get_xuantie_pullback_stocks`、`get_lstm_top_predictions`、`get_stock_history`、`get_latest_market_snapshot`），直接直連 DuckDB 記憶體極速引擎。
+  - 支援 Claude Desktop、Cursor、Antigravity、Open-WebUI 原生掛載與 stdio/SSE 傳輸。
+- **AI Agent Skill 規格文檔 (`skills/stock-quant/SKILL.md` & `/skill`)**：
+  - 結構化定義操盤工作流（大盤宏觀 ➔ 三重共振 ➔ 波段/短線候選 ➔ 風控防守位）與金融因子指標解讀指南。
+- **WebMCP / OpenAPI 自動發現標準 (`/.well-known/ai-plugin.json`)**：
+  - 支援 Web 代理程式、GPT Actions 與自動化管線透過標準協議自動發現並使用量化 API。
+- **雙模式互動首頁 (`/` - `api/templates/index.html`)**：
+  - 提供現代化暗黑風格響應式介面（Tailwind CSS + Vue 3 CDN），兼具「人類操盤視覺化儀表板」與「AI Agent 對接整合中心」。
+  - 支援即時策略切換（三重共振、玄鐵回調、LSTM 看漲/看跌）、市場指數篩選、個股時間序列歷史即時查詢與一鍵複製 Agent 配置。
 - **美股宏觀風控門檻 (`data.macro.MacroRegimeAnalyzer`)**：
   - 於 Stage 1 Pre-flight 監控美股指標（`SPY`、`^VIX`、`^SOX`）。
   - 動態評估全球市場狀態（全面多頭、多頭回調、避險防禦、極度恐慌熔斷）並動態調節建議投資曝險比例（0.0 ~ 1.0）。

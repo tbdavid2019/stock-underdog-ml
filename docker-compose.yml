@@ -24,6 +24,8 @@ x-stock-service: &default-service
     - ./scripts:/app/scripts
     - ./test:/app/test
     - ./main.py:/app/main.py
+    - ./mcp_server.py:/app/mcp_server.py
+    - ./skills:/app/skills
     - ./notifier_dual.py:/app/notifier_dual.py
     - ./database.py:/app/database.py
     - ./logger.py:/app/logger.py
