@@ -62,8 +62,9 @@
             }
         }
     </script>
-    <!-- Vue 3 CDN -->
+    <!-- Vue 3 & Chart.js CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         [v-cloak] { display: none; }
         html.dark {
@@ -814,56 +815,89 @@
 
                 </div>
 
-                <!-- Individual Ticker Institutional Flow Time-Series -->
+                <!-- Individual Ticker Institutional Flow Chart & Time-Series -->
                 <div v-if="tickerInstHistory.length > 0" 
                      :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
-                     class="p-5 rounded-2xl border overflow-x-auto space-y-3">
+                     class="p-5 rounded-2xl border space-y-4">
                     
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
-                            <span>🏛️ <span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ searchTicker.toUpperCase() }}</span> 三大法人歷史連續進出時序 (近 {{ tickerInstHistory.length }} 天)</span>
-                        </h3>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                <span>📈 <span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ searchTicker.toUpperCase() }}</span> 三大法人累計買賣超趨勢折線圖</span>
+                            </h3>
+                            <p class="text-xs mt-0.5" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                追蹤最近 {{ tickerInstHistory.length }} 個交易日法人主力波段建倉與出貨曲線
+                            </p>
+                        </div>
+
+                        <!-- Chart Legends -->
+                        <div class="flex flex-wrap items-center gap-3 text-xs num-font">
+                            <span class="inline-flex items-center space-x-1 font-bold text-sky-400">
+                                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span>
+                                <span>外資累計</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1 font-bold text-rose-400">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                                <span>投信累計</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1 font-bold text-amber-400">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                                <span>自營商累計</span>
+                            </span>
+                            <span class="inline-flex items-center space-x-1 font-black text-emerald-400">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                                <span>三大法人合計</span>
+                            </span>
+                        </div>
                     </div>
 
-                    <table class="w-full text-left text-xs sm:text-sm">
-                        <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-claude-cardInner text-claude-text border-b border-claude-border'">
-                            <tr>
-                                <th class="p-3 font-bold num-font">交易日期</th>
-                                <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">三大法人合計 (張)</th>
-                                <th class="p-3 font-bold text-center num-font">外資持股比率</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
-                            <tr v-for="row in tickerInstHistory" :key="row.date" 
-                                :class="isDark ? 'hover:bg-dark-cardInner' : 'hover:bg-claude-cardInner'" class="transition-all">
-                                <td class="p-3 num-font font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ row.date }}</td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="row.foreign_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.foreign_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ row.foreign_net > 0 ? '+' : '' }}{{ Number(row.foreign_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="row.trust_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.trust_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ row.trust_net > 0 ? '+' : '' }}{{ Number(row.trust_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="row.dealer_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.dealer_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ row.dealer_net > 0 ? '+' : '' }}{{ Number(row.dealer_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-black">
-                                    <span class="px-2 py-0.5 rounded-md border text-xs"
-                                          :class="row.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-black') : (row.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200 font-black') : '')">
-                                        {{ row.total_net > 0 ? '+' : '' }}{{ Number(row.total_net).toLocaleString() }}
-                                    </span>
-                                </td>
-                                <td class="p-3 text-center num-font font-bold">
-                                    {{ row.foreign_ratio ? Number(row.foreign_ratio).toFixed(2) + '%' : '—' }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <!-- Canvas Chart -->
+                    <div class="w-full h-64 sm:h-80 relative pt-2">
+                        <canvas id="instChartCanvas"></canvas>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="pt-4 border-t overflow-x-auto" :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-claude-cardInner text-claude-text border-b border-claude-border'">
+                                <tr>
+                                    <th class="p-3 font-bold num-font">交易日期</th>
+                                    <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">三大法人合計 (張)</th>
+                                    <th class="p-3 font-bold text-center num-font">外資持股比率</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
+                                <tr v-for="row in tickerInstHistory" :key="row.date" 
+                                    :class="isDark ? 'hover:bg-dark-cardInner' : 'hover:bg-claude-cardInner'" class="transition-all">
+                                    <td class="p-3 num-font font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ row.date }}</td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="row.foreign_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.foreign_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ row.foreign_net > 0 ? '+' : '' }}{{ Number(row.foreign_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="row.trust_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.trust_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ row.trust_net > 0 ? '+' : '' }}{{ Number(row.trust_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="row.dealer_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (row.dealer_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ row.dealer_net > 0 ? '+' : '' }}{{ Number(row.dealer_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-black">
+                                        <span class="px-2 py-0.5 rounded-md border text-xs"
+                                              :class="row.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-black') : (row.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200 font-black') : '')">
+                                            {{ row.total_net > 0 ? '+' : '' }}{{ Number(row.total_net).toLocaleString() }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-center num-font font-bold">
+                                        {{ row.foreign_ratio ? Number(row.foreign_ratio).toFixed(2) + '%' : '—' }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
                 </div>
 
@@ -1163,6 +1197,9 @@ for p in picks:
                     this.isDark = !this.isDark;
                     localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
                     this.applyTheme();
+                    if (this.tickerInstHistory && this.tickerInstHistory.length > 0) {
+                        this.renderInstChart();
+                    }
                 },
                 applyTheme() {
                     if (this.isDark) {
@@ -1312,6 +1349,7 @@ for p in picks:
                             } else if (dataInst.data) {
                                 this.tickerInstHistory = dataInst.data;
                             }
+                            this.renderInstChart();
                         } else {
                             this.tickerInstHistory = [];
                         }
@@ -1320,6 +1358,135 @@ for p in picks:
                     } finally {
                         this.historyLoading = false;
                     }
+                },
+                renderInstChart() {
+                    this.$nextTick(() => {
+                        const canvas = document.getElementById('instChartCanvas');
+                        if (!canvas || !this.tickerInstHistory.length) return;
+
+                        if (this.chartInstance) {
+                            this.chartInstance.destroy();
+                            this.chartInstance = null;
+                        }
+
+                        // Chronological sorting (earliest to latest)
+                        const sorted = [...this.tickerInstHistory].reverse();
+                        const labels = sorted.map(d => d.date);
+
+                        // Calculate cumulative net buys
+                        let cumForeign = 0, cumTrust = 0, cumDealer = 0, cumTotal = 0;
+                        const dataForeign = [], dataTrust = [], dataDealer = [], dataTotal = [];
+
+                        for (const row of sorted) {
+                            cumForeign += (Number(row.foreign_net) || 0);
+                            cumTrust += (Number(row.trust_net) || 0);
+                            cumDealer += (Number(row.dealer_net) || 0);
+                            cumTotal += (Number(row.total_net) || 0);
+
+                            dataForeign.push(Math.round(cumForeign));
+                            dataTrust.push(Math.round(cumTrust));
+                            dataDealer.push(Math.round(cumDealer));
+                            dataTotal.push(Math.round(cumTotal));
+                        }
+
+                        const isDark = this.isDark;
+                        const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+                        const textColor = isDark ? '#94A3B8' : '#737067';
+
+                        this.chartInstance = new Chart(canvas, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: '三大法人合計',
+                                        data: dataTotal,
+                                        borderColor: '#10B981',
+                                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
+                                        borderWidth: 2.5,
+                                        tension: 0.3,
+                                        pointRadius: labels.length > 40 ? 0 : 2,
+                                        pointHoverRadius: 5,
+                                        fill: true
+                                    },
+                                    {
+                                        label: '外資累計',
+                                        data: dataForeign,
+                                        borderColor: '#38BDF8',
+                                        borderWidth: 2,
+                                        tension: 0.3,
+                                        pointRadius: labels.length > 40 ? 0 : 2,
+                                        pointHoverRadius: 5
+                                    },
+                                    {
+                                        label: '投信累計',
+                                        data: dataTrust,
+                                        borderColor: '#F43F5E',
+                                        borderWidth: 2,
+                                        tension: 0.3,
+                                        pointRadius: labels.length > 40 ? 0 : 2,
+                                        pointHoverRadius: 5
+                                    },
+                                    {
+                                        label: '自營商累計',
+                                        data: dataDealer,
+                                        borderColor: '#F59E0B',
+                                        borderWidth: 1.5,
+                                        borderDash: [3, 3],
+                                        tension: 0.3,
+                                        pointRadius: labels.length > 40 ? 0 : 1,
+                                        pointHoverRadius: 4
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: isDark ? '#172236' : '#FFFFFF',
+                                        titleColor: isDark ? '#FFFFFF' : '#141413',
+                                        bodyColor: isDark ? '#F1F5F9' : '#141413',
+                                        borderColor: isDark ? '#334155' : '#E8E6DC',
+                                        borderWidth: 1,
+                                        padding: 10,
+                                        bodyFont: { family: 'JetBrains Mono' },
+                                        titleFont: { family: 'JetBrains Mono', weight: 'bold' },
+                                        callbacks: {
+                                            label: function(ctx) {
+                                                const val = ctx.parsed.y;
+                                                const sign = val > 0 ? '+' : '';
+                                                return ` ${ctx.dataset.label}: ${sign}${val.toLocaleString()} 張`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { color: gridColor },
+                                        ticks: {
+                                            color: textColor,
+                                            font: { family: 'JetBrains Mono', size: 10 },
+                                            maxTicksLimit: 8
+                                        }
+                                    },
+                                    y: {
+                                        grid: { color: gridColor },
+                                        ticks: {
+                                            color: textColor,
+                                            font: { family: 'JetBrains Mono', size: 10 },
+                                            callback: (v) => v.toLocaleString() + ' 張'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
                 },
                 searchTickerHistory(ticker) {
                     this.searchTicker = ticker;
