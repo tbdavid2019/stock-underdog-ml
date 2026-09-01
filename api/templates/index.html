@@ -75,6 +75,38 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        :focus-visible {
+            outline: 3px solid #D97757;
+            outline-offset: 2px;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, rgba(232, 230, 220, 0.55) 25%, rgba(244, 242, 235, 0.95) 50%, rgba(232, 230, 220, 0.55) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.4s ease-in-out infinite;
+        }
+        .dark .skeleton {
+            background: linear-gradient(90deg, rgba(30, 41, 59, 0.65) 25%, rgba(51, 65, 85, 0.9) 50%, rgba(30, 41, 59, 0.65) 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes skeleton-shimmer {
+            from { background-position: 200% 0; }
+            to { background-position: -200% 0; }
+        }
+        .toast-enter {
+            animation: toast-in 180ms ease-out both;
+        }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200"
@@ -114,15 +146,15 @@
                 <!-- Global Macro Pill (Hidden on Narrow Screens) -->
                 <div class="hidden xl:flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0"
                      :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300' : 'bg-claude-cardInner border-claude-border text-claude-text'">
-                    <span class="w-2 h-2 rounded-full animate-pulse" 
-                          :class="macro.exposure >= 0.8 ? (isDark ? 'bg-emerald-500' : 'bg-emerald-600') : 'bg-amber-500'"></span>
+                    <span class="w-2 h-2 rounded-full"
+                          :class="macro.exposure === null || macro.exposure === undefined ? 'bg-slate-400' : (macro.exposure >= 0.8 ? (isDark ? 'bg-emerald-500' : 'bg-emerald-600') : 'bg-amber-500')"></span>
                     <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">大盤:</span>
                     <span class="font-bold">{{ macro.regime_name || '評估中...' }}</span>
                     <span class="opacity-40">|</span>
                     <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">建議曝險:</span>
                     <span class="font-black num-font text-sm"
                           :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
-                        {{ (macro.exposure * 100) || 85 }}%
+                        {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
                     </span>
                 </div>
 
@@ -130,18 +162,18 @@
                 <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
                     <nav class="flex items-center space-x-1 p-1 rounded-xl border"
                          :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
-                        <button @click="activeTab = 'dashboard'" 
-                                :class="activeTab === 'dashboard' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                        <button @click="activeTab = 'dashboard'" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
+                                :class="activeTab === 'dashboard' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>📊 操盤看板</span>
                         </button>
-                        <button @click="activeTab = 'history'" 
-                                :class="activeTab === 'history' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                        <button @click="activeTab = 'history'" :aria-current="activeTab === 'history' ? 'page' : undefined"
+                                :class="activeTab === 'history' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🔍 個股歷史</span>
                         </button>
-                        <button @click="activeTab = 'agent_hub'" 
-                                :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                        <button @click="activeTab = 'agent_hub'" :aria-current="activeTab === 'agent_hub' ? 'page' : undefined"
+                                :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🤖 Agent / MCP</span>
                         </button>
@@ -151,7 +183,8 @@
                     <button @click="toggleTheme()" 
                             class="p-2 rounded-xl border transition-all text-base flex items-center justify-center"
                             :class="isDark ? 'bg-dark-cardInner border-dark-border text-amber-400 hover:bg-dark-border' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'"
-                            :title="isDark ? '切換為 Claude 淺色模式' : '切換為黑曜石深色模式'">
+                            :title="isDark ? '切換為 Claude 淺色模式' : '切換為黑曜石深色模式'"
+                            :aria-label="isDark ? '切換為淺色模式' : '切換為深色模式'">
                         <span v-if="isDark">☀️</span>
                         <span v-else>🌙</span>
                     </button>
@@ -169,10 +202,27 @@
 
 
         <!-- ================= MAIN CONTENT ================= -->
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
             <!-- ================= TAB 1: 操盤看板 (DASHBOARD) ================= -->
             <div v-if="activeTab === 'dashboard'" class="space-y-6">
+
+                <section class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4" aria-labelledby="daily-report-title">
+                    <div class="max-w-2xl">
+                        <h1 id="daily-report-title" class="text-2xl sm:text-3xl font-black tracking-tight" :class="isDark ? 'text-white' : 'text-claude-text'">
+                            今日量化訊號
+                        </h1>
+                        <p class="mt-2 text-sm leading-relaxed" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                            先看市場風險，再依策略檢視每日計算出的候選標的與預測軌跡。
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 self-start lg:self-auto px-3 py-2 rounded-xl border text-xs font-bold"
+                         :class="loadError ? (isDark ? 'bg-rose-950/40 border-rose-900 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700') : (isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-claude-card border-claude-border text-claude-text')"
+                         role="status" aria-live="polite">
+                        <span class="w-2 h-2 rounded-full" :class="loadError ? 'bg-rose-500' : (loading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')"></span>
+                        <span>{{ loadError ? '日報載入失敗' : (loading ? '日報讀取中' : (batchDate ? '最新日報 ' + batchDate : '最近日報')) }}</span>
+                    </div>
+                </section>
 
                 <!-- 1. Macro Regime Overview Cards (4 等分精美卡片) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -185,13 +235,13 @@
                             <span class="text-base">🌍</span>
                         </div>
                         <div class="text-lg font-black tracking-tight truncate" :class="isDark ? 'text-white' : 'text-claude-text'">
-                            {{ macro.regime_name || '🌱 多頭回調 (Bull Pullback)' }}
+                            {{ macro.regime_name || '評估中…' }}
                         </div>
                         <div class="pt-2 border-t flex items-center justify-between text-xs" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>建議曝險:</span>
                             <span class="text-sm font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
-                                {{ (macro.exposure * 100) || 85 }}%
+                                {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
                             </span>
                         </div>
                     </div>
@@ -204,13 +254,13 @@
                             <span class="text-base">⚡</span>
                         </div>
                         <div class="text-2xl font-black num-font" 
-                             :class="macro.vix > 20 ? 'text-amber-500' : (isDark ? 'text-emerald-400' : 'text-emerald-600')">
-                            {{ macro.vix ? Number(macro.vix).toFixed(1) : '14.9' }}
+                             :class="macro.vix === null || macro.vix === undefined ? (isDark ? 'text-slate-300' : 'text-slate-500') : (macro.vix > 20 ? 'text-amber-500' : (isDark ? 'text-emerald-400' : 'text-emerald-600'))">
+                            {{ macro.vix !== null && macro.vix !== undefined ? Number(macro.vix).toFixed(1) : '—' }}
                         </div>
                         <div class="pt-2 border-t text-xs flex items-center space-x-1.5" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
-                            <span class="w-2 h-2 rounded-full" :class="macro.vix > 20 ? 'bg-amber-500' : 'bg-emerald-500'"></span>
-                            <span class="truncate">{{ macro.vix < 20 ? '低恐慌 (市場情緒穩定)' : '情緒波動偏高，注意風控' }}</span>
+                            <span class="w-2 h-2 rounded-full" :class="macro.vix === null || macro.vix === undefined ? 'bg-slate-400' : (macro.vix > 20 ? 'bg-amber-500' : 'bg-emerald-500')"></span>
+                            <span class="truncate">{{ macro.vix === null || macro.vix === undefined ? '等待宏觀資料' : (macro.vix < 20 ? '低恐慌 (市場情緒穩定)' : '情緒波動偏高，注意風控') }}</span>
                         </div>
                     </div>
 
@@ -224,22 +274,24 @@
                         <div class="space-y-1 text-xs font-bold">
                             <div class="flex items-center justify-between">
                                 <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">SPY 標普:</span>
-                                <span :class="macro.spy_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : 'text-rose-500'">
+                                <span v-if="macro.spy_above_ma60 !== null && macro.spy_above_ma60 !== undefined" :class="macro.spy_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : 'text-rose-500'">
                                     {{ macro.spy_above_ma60 ? '站穩 MA60 ✓' : '跌破季線 ✗' }}
                                 </span>
+                                <span v-else class="text-slate-400">讀取中…</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">SOX 費半:</span>
-                                <span :class="macro.sox_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-amber-400' : 'text-amber-700')">
+                                <span v-if="macro.sox_above_ma60 !== null && macro.sox_above_ma60 !== undefined" :class="macro.sox_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-amber-400' : 'text-amber-700')">
                                     {{ macro.sox_above_ma60 ? '站穩季線 ✓' : '破季線 (科技半倉)' }}
                                 </span>
+                                <span v-else class="text-slate-400">讀取中…</span>
                             </div>
                         </div>
                         <div class="pt-2 border-t text-xs flex items-center justify-between" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>科技股上限:</span>
                             <span class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
-                                {{ macro.tech_exposure_cap ? (macro.tech_exposure_cap * 100) + '%' : '100%' }}
+                                {{ macro.tech_exposure_cap !== null && macro.tech_exposure_cap !== undefined ? (macro.tech_exposure_cap * 100).toFixed(0) + '%' : '—' }}
                             </span>
                         </div>
                     </div>
@@ -248,31 +300,32 @@
                     <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border flex flex-col justify-between space-y-3">
                         <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
-                            <span>DuckDB 時序資料庫</span>
+                            <span>歷史報告資料</span>
                             <span class="text-base">🦆</span>
                         </div>
                         <div class="text-2xl font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
-                            {{ stats.total_records ? Number(stats.total_records).toLocaleString() : '44,154' }}
+                            {{ stats.total_records !== null && stats.total_records !== undefined ? Number(stats.total_records).toLocaleString() : '—' }}
                             <span class="text-xs font-normal" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">筆</span>
                         </div>
                         <div class="pt-2 border-t flex items-center justify-between text-xs" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
-                            <span>標的: {{ stats.distinct_tickers || '294' }} 檔</span>
-                            <span class="num-font font-bold" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">● 極速 &lt; 3ms</span>
+                            <span>標的: {{ stats.distinct_tickers !== null && stats.distinct_tickers !== undefined ? stats.distinct_tickers : '—' }} 檔</span>
+                            <span class="num-font font-bold" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">● 可追溯</span>
                         </div>
                     </div>
 
                 </div>
 
                 <!-- 2. Strategy Filter Bar & Market Selector -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
                      class="p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     
                     <!-- Strategy Buttons -->
                     <div class="flex items-center space-x-2 overflow-x-auto pb-1 lg:pb-0">
                         <button v-for="strat in strategyOptions" :key="strat.id"
                                 @click="selectedStrategy = strat.id; loadData()"
-                                :class="selectedStrategy === strat.id ? (isDark ? 'bg-sky-600 text-white border-sky-500 font-bold shadow-sm' : 'bg-claude-terracotta text-white border-claude-terracotta font-bold shadow-sm') : (isDark ? 'bg-dark-cardInner text-slate-300 border-dark-border hover:bg-dark-border hover:text-white' : 'bg-claude-cardInner text-claude-text border-claude-border hover:bg-white')"
+                                :aria-pressed="selectedStrategy === strat.id"
+                                :class="selectedStrategy === strat.id ? (isDark ? 'bg-sky-600 text-white border-sky-500 font-bold shadow-sm' : 'bg-claude-terracotta text-white border-claude-terracotta font-bold shadow-sm') : (isDark ? 'bg-dark-cardInner text-white border-dark-border hover:bg-dark-border' : 'bg-claude-cardInner text-claude-text border-claude-border hover:bg-white')"
                                 class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 border">
                             <span>{{ strat.icon }}</span>
                             <span>{{ strat.label }}</span>
@@ -295,7 +348,7 @@
                         <button @click="loadData()" 
                                 class="p-2 rounded-xl border transition-all text-xs font-bold flex items-center justify-center"
                                 :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:bg-dark-border hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'"
-                                title="重新整理">
+                                title="重新整理" aria-label="重新整理日報">
                             🔄
                         </button>
                     </div>
@@ -303,18 +356,45 @@
                 </div>
 
                 <!-- Batch Header & Count Indicator -->
-                <div class="flex items-center justify-between text-xs px-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs px-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                     <div class="flex items-center space-x-3">
-                        <span>日報批次: <strong class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ batchDate || '最新' }}</strong></span>
+                        <span>日報批次: <strong class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ batchDate || '最近批次' }}</strong></span>
                         <span v-if="batchTimestamp" class="num-font">時間: {{ batchTimestamp }}</span>
+                        <span v-if="batchStale" class="font-bold text-amber-600">資料需更新</span>
                     </div>
                     <div>共篩選出 <strong class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ records.length }}</strong> 檔標的</div>
                 </div>
 
                 <!-- 3. Stock Cards Grid -->
-                <div v-if="loading" class="text-center py-20 space-y-2">
-                    <div class="inline-block animate-spin text-3xl">⚡</div>
-                    <p class="text-sm font-medium" :class="isDark ? 'text-slate-300' : 'text-claude-muted'">正在讀取 DuckDB 最新量化數據...</p>
+                <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" aria-label="日報載入中" aria-busy="true">
+                    <div v-for="slot in 3" :key="slot"
+                         class="p-5 rounded-2xl border space-y-5"
+                         :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'">
+                        <div class="flex items-start justify-between">
+                            <div class="space-y-2">
+                                <div class="skeleton h-6 w-28 rounded-lg"></div>
+                                <div class="skeleton h-3 w-24 rounded"></div>
+                            </div>
+                            <div class="skeleton h-7 w-20 rounded-xl"></div>
+                        </div>
+                        <div class="skeleton h-20 w-full rounded-xl"></div>
+                        <div class="space-y-3">
+                            <div class="skeleton h-3 w-full rounded"></div>
+                            <div class="skeleton h-3 w-4/5 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="loadError"
+                     class="text-center py-14 rounded-2xl border space-y-3"
+                     :class="isDark ? 'bg-dark-card border-rose-900/60' : 'bg-rose-50/60 border-rose-200'"
+                     role="alert">
+                    <div class="text-3xl">!</div>
+                    <div class="text-base font-bold" :class="isDark ? 'text-rose-200' : 'text-rose-800'">{{ loadError }}</div>
+                    <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all"
+                            :class="isDark ? 'bg-sky-600 hover:bg-sky-500' : 'bg-claude-terracotta hover:bg-claude-terracottaHover'">
+                        重新整理
+                    </button>
                 </div>
 
                 <div v-else-if="records.length === 0" 
@@ -326,7 +406,7 @@
                 </div>
 
                 <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <div v-for="item in records" :key="item.ticker + item.model_name" 
+                    <div v-for="item in records" :key="item.ticker + item.model_name + item.timestamp"
                          :class="isDark ? 'bg-dark-card border-dark-border hover:border-sky-500/50' : 'bg-claude-card border-claude-border hover:border-claude-terracotta/70 shadow-sm'"
                          class="p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4">
                         
@@ -429,7 +509,8 @@
                             <span class="num-font">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
                             <button @click="searchTickerHistory(item.ticker)" 
                                     class="font-bold flex items-center space-x-1 transition-all"
-                                    :class="isDark ? 'text-sky-400 hover:text-sky-300' : 'text-claude-terracotta hover:text-claude-terracottaHover'">
+                                    :class="isDark ? 'text-sky-400 hover:text-sky-300' : 'text-claude-terracotta hover:text-claude-terracottaHover'"
+                                    :aria-label="'查看 ' + item.ticker + ' 歷史軌跡'">
                                 <span>歷史軌跡 ↗</span>
                             </button>
                         </div>
@@ -444,7 +525,7 @@
             <div v-if="activeTab === 'history'" class="space-y-6">
                 
                 <!-- Search Box Card -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
                      class="p-6 rounded-2xl border space-y-4">
                     <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                         <span>🔍 個股時間序列量化預測查詢</span>
@@ -456,6 +537,7 @@
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 max-w-lg pt-1">
                         <input v-model="searchTicker" @keyup.enter="loadHistory()" 
                                type="text" placeholder="輸入股票代號 (如 2330.TW)..."
+                               aria-label="股票代號"
                                class="flex-1 border rounded-xl px-4 py-2.5 text-sm num-font font-bold uppercase focus:outline-none transition-all"
                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500' : 'bg-white border-claude-border text-claude-text placeholder-slate-400 focus:ring-2 focus:ring-claude-terracotta shadow-sm'">
                         <button @click="loadHistory()" 
@@ -546,7 +628,7 @@
             <div v-if="activeTab === 'agent_hub'" class="space-y-6">
                 
                 <!-- Hub Header Banner -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border border-l-4 border-sky-500' : 'bg-claude-card border-claude-border border-l-4 border-claude-terracotta shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
                      class="p-6 rounded-2xl border space-y-2">
                     <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                         <span>🤖 Agent & MCP 協議對接中心</span>
@@ -726,7 +808,7 @@ for p in picks:
                 
                 <!-- Left Copyright -->
                 <div class="font-sans flex items-center space-x-2">
-                    <span>© 2026 888 Stock Quant. 驅動於 DuckDB 列式引擎與深度學習.</span>
+                    <span>© 2026 888 Stock Quant.</span>
                 </div>
 
                 <!-- Center/Right: david888.com Tech Provider Pill -->
@@ -751,7 +833,7 @@ for p in picks:
 
         <!-- Toast Notification Pop-up -->
         <div v-if="toastMessage" 
-             class="fixed bottom-6 right-6 px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 animate-bounce"
+             class="fixed bottom-6 right-6 px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter"
              :class="isDark ? 'bg-sky-600' : 'bg-claude-terracotta'">
             <span>✓</span>
             <span>{{ toastMessage }}</span>
@@ -783,7 +865,9 @@ for p in picks:
                     records: [],
                     batchDate: '',
                     batchTimestamp: '',
+                    batchStale: false,
                     loading: false,
+                    loadError: '',
 
                     // Ticker Explorer
                     searchTicker: '2330.TW',
@@ -808,12 +892,6 @@ for p in picks:
 
                     pythonSnippet: `import requests\n\n# 取得 🏆 三重共振焦點推薦標的\nres = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
                 }
-            },
-            mounted() {
-                this.applyTheme();
-                this.loadMacro();
-                this.loadStats();
-                this.loadData();
             },
             methods: {
                 toggleTheme() {
@@ -856,6 +934,7 @@ for p in picks:
                 },
                 async loadData() {
                     this.loading = true;
+                    this.loadError = '';
                     try {
                         let url = '/api/v1/predictions/latest?limit=60';
                         if (this.selectedStrategy === 'resonance') {
@@ -873,15 +952,25 @@ for p in picks:
                         }
 
                         const res = await fetch(url);
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data.success) {
-                                this.records = data.data || [];
-                                this.batchDate = data.batch_date || '';
-                                this.batchTimestamp = data.latest_batch_timestamp ? data.latest_batch_timestamp.replace('T', ' ').substring(0, 19) : '';
-                            }
+                        if (!res.ok) {
+                            throw new Error(`HTTP ${res.status}`);
                         }
+                        const data = await res.json();
+                        if (!data.success) {
+                            throw new Error('API returned an unsuccessful response');
+                        }
+                        this.records = data.data || [];
+                        const firstRecord = this.records[0] || {};
+                        this.batchDate = data.batch_date || firstRecord.analysis_date || '';
+                        const timestamp = data.latest_batch_timestamp || firstRecord.data_as_of || firstRecord.timestamp || '';
+                        this.batchTimestamp = timestamp ? timestamp.replace('T', ' ').substring(0, 19) : '';
+                        this.batchStale = Boolean(data.is_stale || firstRecord.is_stale);
                     } catch (e) {
+                        this.records = [];
+                        this.batchDate = '';
+                        this.batchTimestamp = '';
+                        this.batchStale = false;
+                        this.loadError = '暫時無法取得日報，請重新整理。';
                         console.error("Failed to load strategy data", e);
                     } finally {
                         this.loading = false;
