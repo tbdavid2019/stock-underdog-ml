@@ -23,6 +23,10 @@ case "$1" in
     echo "📈 [Docker] 啟動量化回測系統 (backtest.py)..."
     exec python backtest/backtest.py "${@:2}"
     ;;
+  api|server)
+    echo "🌐 [Docker] 啟動 FastAPI 高效能量化 REST 服務 (0.0.0.0:8000)..."
+    exec uvicorn api.main:app --host 0.0.0.0 --port 8000
+    ;;
   test)
     echo "🧪 [Docker] 執行全套單元測試 (unittest)..."
     exec python -m unittest discover -s test -p 'test_*.py'

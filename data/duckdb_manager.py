@@ -242,3 +242,202 @@ class DuckDBManager:
             con.execute(f"COPY {table_name} TO '{output_path}' (FORMAT PARQUET, COMPRESSION ZSTD);")
         logger.info(f"📦 已成功導出 {table_name} 至 Parquet: {output_path}")
         return output_path
+
+    # =========================================================================
+    # REST API & MCP 專用高吞吐量化分析查詢接口
+    # =========================================================================
+
+    def get_latest_predictions(
+        self, 
+        index_name: Optional[str] = None, 
+        model_name: Optional[str] = None, 
+        limit: int = 50, 
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """取得各股票最新一筆預測與策略記錄"""
+        where_clauses = []
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+        if model_name:
+            where_clauses.append("model_name = ?")
+            params.append(model_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker, strategy_type ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC NULLS LAST, ticker ASC
+        LIMIT ? OFFSET ?;
+        """
+        params.extend([limit, offset])
+        df = self.query(sql, params)
+        # NaN 轉 None
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """取得多策略重合 / 雙重符合 / 🏆 三重共振股票"""
+        where_clauses = ["(model_name = '多維共振' OR strategy_type = '多維共振' OR tags LIKE '%共振%' OR tags LIKE '%雙重符合%' OR tags LIKE '%3重符合%')"]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC NULLS LAST, ticker ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_xuantie_candidates(
+        self, 
+        index_name: Optional[str] = None, 
+        pullback_type: Optional[str] = None, 
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """取得玄鐵重劍技術買點 (MA60/120 回調) 股票"""
+        where_clauses = ["(model_name = '玄鐵重劍' OR strategy_type = '玄鐵重劍' OR pullback_type IS NOT NULL)"]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+        if pullback_type:
+            where_clauses.append("pullback_type LIKE ?")
+            params.append(f"%{pullback_type}%")
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY pe ASC NULLS LAST, ticker ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 LSTM 預測漲幅最大 TOP N 標的"""
+        where_clauses = ["potential IS NOT NULL", "model_name = 'LSTM'"]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 LSTM 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        where_clauses = ["potential IS NOT NULL", "model_name = 'LSTM'"]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
+        """取得特定股票代碼之歷史預測軌跡"""
+        sql = """
+        SELECT *
+        FROM predictions
+        WHERE ticker = ?
+        ORDER BY timestamp DESC
+        LIMIT ?;
+        """
+        df = self.query(sql, [ticker, limit])
+        return df.where(pd.notnull(df), None).to_dict(orient="records")
+
+    def get_db_stats(self) -> Dict[str, Any]:
+        """取得 DuckDB 全局時序庫統計資訊"""
+        try:
+            with self._get_connection() as con:
+                row_count = con.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+                distinct_tickers = con.execute("SELECT COUNT(DISTINCT ticker) FROM predictions").fetchone()[0]
+                min_time = con.execute("SELECT MIN(timestamp) FROM predictions").fetchone()[0]
+                max_time = con.execute("SELECT MAX(timestamp) FROM predictions").fetchone()[0]
+                indices = [r[0] for r in con.execute("SELECT DISTINCT index_name FROM predictions WHERE index_name IS NOT NULL").fetchall()]
+                models = [r[0] for r in con.execute("SELECT DISTINCT model_name FROM predictions WHERE model_name IS NOT NULL").fetchall()]
+                
+                return {
+                    "total_records": row_count,
+                    "distinct_tickers": distinct_tickers,
+                    "earliest_timestamp": str(min_time) if min_time else None,
+                    "latest_timestamp": str(max_time) if max_time else None,
+                    "indices": indices,
+                    "models": models,
+                    "db_path": self.db_path
+                }
+        except Exception as e:
+            logger.error(f"❌ 查詢 DB 統計失敗: {e}")
+            return {"total_records": 0, "error": str(e)}
+
+    def get_latest_macro_regime(self) -> Optional[Dict[str, Any]]:
+        """取得最新一筆宏觀市場狀態"""
+        try:
+            with self._get_connection() as con:
+                res = con.execute("SELECT * FROM macro_regimes ORDER BY timestamp DESC LIMIT 1").df()
+                if not res.empty:
+                    return res.where(pd.notnull(res), None).to_dict(orient="records")[0]
+        except Exception:
+            pass
+        return None

@@ -54,3 +54,13 @@ services:
     <<: *default-service
     container_name: stock-underdog-ml-test
     command: ["test"]
+
+  # 5. FastAPI 量化訊號 REST & MCP 服務 (對外提供 HTTP API 與 Swagger 交互式文檔)
+  # 使用方式: docker compose up -d stock-ml-api
+  stock-ml-api:
+    <<: *default-service
+    container_name: stock-underdog-ml-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    command: ["api"]
