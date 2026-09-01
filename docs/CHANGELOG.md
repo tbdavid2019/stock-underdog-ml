@@ -19,6 +19,10 @@
 
 ## [Unreleased] - 2026-09-01
 
+### 🐛 問題修復 (Bug Fixes)
+- **修復 Web UI `index.html` 標籤閉合不對稱導致 Vue 掛載中斷問題**：
+  - 移除法人籌碼分頁末端多餘的 `</div>` 標籤，恢復 Vue 根容器完整閉合，解決模板未編譯（顯示 `{{ ... }}`）之渲染異常。
+
 ### 🚀 新增與重大升級 (Features & Enhancements)
 - **全面升級開源授權為 GNU AGPL-3.0 (`LICENSE` & `README.md`)**：
   - 符合強 Copyleft 網路服務條款，保護量化策略與深度學習引擎之開源完整性。
