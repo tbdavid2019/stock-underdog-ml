@@ -1,7 +1,8 @@
 """
-Console and Notification Output Formatter.
-Provides ASCII tables, alignment, and structured reports for evaluation results.
+evaluators/formatter.py - 終端機與推播訊息排版格式化工具
+包含宏觀風控卡片、AI 操盤解讀、三重共振交集與分項策略表格。
 """
+
 import logging
 from typing import Any, Optional
 import pandas as pd
@@ -27,17 +28,60 @@ def format_value(val: Any, decimal: int = 2) -> str:
 
 def print_evaluation_report(report: EvaluationReport, log=None):
     """
-    Print beautiful tabular evaluation report to logger or console.
+    輸出美化之終端機與日誌量化報告
     """
     logger = log or default_logger
     index_name = report.index_name
     xuantie_df = report.xuantie_results
     lstm_results = report.lstm_results
     overlap_df = report.overlap_results
+    macro = report.macro_state
 
     logger.info(f"\n{'='*100}")
     logger.info(f"📊 投資建議報告 - {index_name}")
     logger.info(f"{'='*100}\n")
+
+    # ====== 頂層 1: 美股宏觀風控 ======
+    if macro:
+        logger.info("🌍 【美股宏觀環境與風控門檻】")
+        logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
+        logger.info(f"   • 關鍵指標: VIX={macro.vix:.1f} | SPY={'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX={'站穩MA60' if macro.sox_above_ma60 else '破季線'}")
+        if macro.warnings:
+            for w in macro.warnings:
+                logger.info(f"   • ⚠️  {w}")
+        logger.info("")
+
+    # ====== 頂層 2: AI 量化操盤解讀 ======
+    if report.ai_summary:
+        logger.info("🧠 【AI 量化操盤解讀】")
+        for line in report.ai_summary.split("\n"):
+            logger.info(f"   {line}")
+        logger.info("")
+
+    # ====== 多策略交集 / 三重共振 ======
+    logger.info("⭐ 【優先推薦】三重共振 / 多策略交集 (技術面 + ML + 籌碼 + 估值)")
+    logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
+
+    if not overlap_df.empty:
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'LSTM':>8} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
+        logger.info(f"   {'-'*4} {'-'*10} {'-'*8} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
+        for idx, row in overlap_df.iterrows():
+            cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
+            tags_str = " | ".join(cand["tags"]) if cand and cand.get("tags") else "觀察"
+
+            logger.info(
+                f"   {idx+1:<4} {row['ticker']:<10} "
+                f"{row['lstm_potential']:>+7.2f}% "
+                f"{str(row['pullback_type'])[:6]:>6} "
+                f"{format_value(row.get('ma60')):>8} "
+                f"{format_value(row.get('pe')):>6} "
+                f"{format_value(row.get('pb')):>6} "
+                f"{tags_str}"
+            )
+    else:
+        logger.info("   (本期無多策略共振股票)")
+
+    logger.info("")
 
     # ====== 軌道 1: 玄鐵重劍 ======
     logger.info("🗡️  【波段操作】玄鐵重劍策略 (持有 2-4 週) - 技術面買點")
@@ -78,30 +122,5 @@ def print_evaluation_report(report: EvaluationReport, log=None):
             )
     else:
         logger.info("   (本期無預測結果)")
-
-    logger.info("")
-
-    # ====== 多策略交集 / 雙重符合 ======
-    logger.info("⭐ 【優先推薦】技術面買點 + ML看漲 + 基本面檢視")
-    logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
-
-    if not overlap_df.empty:
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'LSTM':>8} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
-        logger.info(f"   {'-'*4} {'-'*10} {'-'*8} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*25}")
-        for idx, row in overlap_df.iterrows():
-            cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
-            tags_str = " | ".join(cand["tags"]) if cand and cand.get("tags") else "觀察"
-
-            logger.info(
-                f"   {idx+1:<4} {row['ticker']:<10} "
-                f"{row['lstm_potential']:>+7.2f}% "
-                f"{str(row['pullback_type'])[:6]:>6} "
-                f"{format_value(row.get('ma60')):>8} "
-                f"{format_value(row.get('pe')):>6} "
-                f"{format_value(row.get('pb')):>6} "
-                f"{tags_str}"
-            )
-    else:
-        logger.info("   (本期無雙重符合的股票)")
 
     logger.info(f"\n{'='*100}\n")

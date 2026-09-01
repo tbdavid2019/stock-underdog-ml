@@ -1,7 +1,7 @@
 """
 Two-Stage Execution Pipeline Orchestrator.
 Coordinates concurrent I/O data prefetching, strategy computation, composite evaluation,
-and sinks routing (database persistence & notifications).
+AI narrative commentary synthesis, and sinks routing (database persistence & notifications).
 """
 import logging
 from typing import Dict, List, Optional, Any
@@ -12,13 +12,17 @@ from core.config import config
 from core.device import DeviceManager
 from data.fetcher import StockFetcher
 from data.fundamentals import FundamentalProvider
+from data.macro import MacroRegimeAnalyzer, MacroState
 from strategies.base import StockContext, StrategyResult
 from strategies.registry import StrategyRegistry
 # Import strategy modules to trigger registration
 import strategies.xuantie
 import strategies.lstm
+import strategies.sector_rotation
+import strategies.institutional
 
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
+from evaluators.ai_narrative import AINarrativeEngine
 from evaluators.formatter import print_evaluation_report
 from database import SupabaseManager
 from notifier_dual import send_dual_strategy_results
@@ -36,8 +40,15 @@ class PipelineOrchestrator:
         db_manager: Optional[SupabaseManager] = None
     ):
         self.enabled_strategy_names = enabled_strategies or config.pipeline.ENABLED_STRATEGIES
+        # 自動納入 sector_rotation 與 institutional 策略若未指定
+        if "sector_rotation" not in self.enabled_strategy_names:
+            self.enabled_strategy_names.append("sector_rotation")
+        if "institutional" not in self.enabled_strategy_names:
+            self.enabled_strategy_names.append("institutional")
+
         self.strategies = StrategyRegistry.create_strategies(self.enabled_strategy_names)
         self.evaluator = CompositeEvaluator(weights=strategy_weights or config.pipeline.STRATEGY_WEIGHTS)
+        self.ai_narrative_engine = AINarrativeEngine()
         self.db_manager = db_manager or SupabaseManager()
 
     def run_index_analysis(
@@ -45,6 +56,7 @@ class PipelineOrchestrator:
         index_name: str, 
         stock_list: List[str], 
         period: str = "6mo",
+        macro_state: Optional[MacroState] = None,
         persist_db: bool = True,
         send_notify: bool = True
     ) -> EvaluationReport:
@@ -54,7 +66,7 @@ class PipelineOrchestrator:
         Stages:
         1. Stage 1 (I/O): Concurrent download of OHLCV and fundamental metrics.
         2. Stage 2 (Compute): Polymorphic strategy execution across all preloaded data.
-        3. Stage 3 (Evaluation): Multi-factor composite scoring, intersection, and ranking.
+        3. Stage 3 (Evaluation): Multi-factor composite scoring, intersection, and AI narrative synthesis.
         4. Stage 4 (Sinks): Output formatted console tables, send notifications, and save to DB.
         """
         logger.info(f"\n{'='*70}")
@@ -95,6 +107,10 @@ class PipelineOrchestrator:
                 strat_key = "xuantie"
             elif "LSTM" in strat.name or strat.name == "lstm":
                 strat_key = "lstm"
+            elif "板塊" in strat.name or strat.name == "sector_rotation":
+                strat_key = "sector_rotation"
+            elif "籌碼" in strat.name or strat.name == "institutional":
+                strat_key = "institutional"
 
             logger.info(f"   ▶ 正在執行策略: {strat.name} ({strat.category})...")
             results = strat.evaluate_batch(contexts)
@@ -104,30 +120,50 @@ class PipelineOrchestrator:
 
         logger.info("")
 
-        # ============= Stage 3: Composite Evaluation =============
+        # ============= Stage 3: Composite Evaluation & AI Narrative =============
         logger.info("⭐ [Stage 3/4] 進行多策略綜合評分與交集分析...")
-        report = self.evaluator.evaluate(index_name, strategy_outputs, fundamentals_map)
+        report = self.evaluator.evaluate(
+            index_name, 
+            strategy_outputs, 
+            fundamentals_map, 
+            macro_state=macro_state
+        )
         
+        # 3.1 構造相容舊版結構字典
+        report_dict = {
+            "xuantie_results": report.xuantie_results,
+            "lstm_results": report.lstm_results,
+            "overlap_results": report.overlap_results,
+            "macro_state": macro_state
+        }
+
+        # 3.2 生成 AI 操盤解讀 (3-Tier Fallback)
+        report.ai_summary = self.ai_narrative_engine.generate_narrative(
+            index_name, 
+            macro_state, 
+            report_dict
+        )
+        report_dict["ai_summary"] = report.ai_summary
+
         # 輸出終端機美化報告
         print_evaluation_report(report, logger)
 
         # ============= Stage 4: Sinks (Notifications & DB) =============
-        # 4.1 構造相容舊版結構字典
-        report_dict = {
-            "xuantie_results": report.xuantie_results,
-            "lstm_results": report.lstm_results,
-            "overlap_results": report.overlap_results
-        }
-
-        # 4.2 發送通知
+        # 4.1 發送通知 (Telegram, Discord, Email)
         if send_notify:
             try:
                 name_map = StockFetcher.get_index_name_map(index_name)
-                send_dual_strategy_results(index_name, report_dict, name_map=name_map)
+                send_dual_strategy_results(
+                    index_name, 
+                    report_dict, 
+                    name_map=name_map,
+                    macro_state=macro_state,
+                    ai_summary=report.ai_summary
+                )
             except Exception as e:
                 logger.error(f"❌ 發送通知失敗 ({index_name}): {e}")
 
-        # 4.3 寫入 Supabase 資料庫
+        # 4.2 寫入 Supabase 資料庫
         if persist_db and self.db_manager and self.db_manager.enabled:
             try:
                 self.db_manager.save_dual_strategy_results(index_name, report_dict, period=period)
@@ -144,8 +180,13 @@ class PipelineOrchestrator:
         send_notify: bool = True
     ) -> Dict[str, EvaluationReport]:
         """
-        Execute analysis across all major supported stock indices.
+        Execute analysis across all major supported stock indices with pre-flight Macro check.
         """
+        # ============= Pre-flight Stage: US Macro Regime Gate =============
+        logger.info("🌍 [Pre-flight] 評估美股宏觀環境與全球風控門檻...")
+        macro_state = MacroRegimeAnalyzer.evaluate_us_market(period=period)
+        logger.info(f"   • 當前市場狀態: {macro_state.regime_name} (建議曝險: {int(macro_state.exposure*100)}%)\n")
+
         if indices is None:
             indices = {
                 "台灣50": StockFetcher.get_tw0050_stocks(),
@@ -162,6 +203,7 @@ class PipelineOrchestrator:
                 index_name, 
                 stock_list, 
                 period=period, 
+                macro_state=macro_state,
                 persist_db=persist_db, 
                 send_notify=send_notify
             )

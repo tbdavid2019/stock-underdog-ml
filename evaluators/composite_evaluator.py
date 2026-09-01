@@ -1,12 +1,8 @@
-"""
-Dynamic Multi-Strategy Composite Evaluator.
-Aggregates arbitrary strategy results, identifies N-of-M overlaps,
-computes weighted composite scores, and generates descriptive analytical tags.
-"""
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 import pandas as pd
 from strategies.base import StrategyResult
+from data.macro import MacroState
 
 
 @dataclass
@@ -19,10 +15,12 @@ class EvaluationReport:
     xuantie_results: pd.DataFrame = field(default_factory=pd.DataFrame)
     lstm_results: List[Dict[str, Any]] = field(default_factory=list)
     overlap_results: pd.DataFrame = field(default_factory=pd.DataFrame)
+    macro_state: Optional[MacroState] = None
+    ai_summary: str = ""
 
 
 class CompositeEvaluator:
-    """Evaluator that combines multiple strategy signals and fundamental factors"""
+    """Evaluator that combines multiple strategy signals, institutional flows, and macro gates"""
 
     def __init__(
         self, 
@@ -30,9 +28,11 @@ class CompositeEvaluator:
         min_overlap_count: int = 2
     ):
         self.weights = weights or {
-            "xuantie": 0.4,
-            "lstm": 0.4,
-            "fundamental": 0.2
+            "xuantie": 0.35,
+            "lstm": 0.35,
+            "institutional": 0.15,
+            "sector": 0.10,
+            "fundamental": 0.05
         }
         self.min_overlap_count = min_overlap_count
 
@@ -40,7 +40,8 @@ class CompositeEvaluator:
         self, 
         index_name: str, 
         strategy_outputs: Dict[str, List[StrategyResult]], 
-        fundamentals_map: Optional[Dict[str, Dict[str, Optional[float]]]] = None
+        fundamentals_map: Optional[Dict[str, Dict[str, Optional[float]]]] = None,
+        macro_state: Optional[MacroState] = None
     ) -> EvaluationReport:
         """
         Evaluate all strategy outputs for an index, computing composite scores and overlap.
@@ -135,6 +136,36 @@ class CompositeEvaluator:
                 elif pb_val < 5.0:
                     fund_score += 5.0
 
+            # Check specific strategies
+            xuantie_res = strats.get("xuantie")
+            lstm_res = strats.get("lstm")
+            inst_res = strats.get("institutional")
+            sector_res = strats.get("sector_rotation") or strats.get("sector")
+
+            if xuantie_res and xuantie_res.is_hit:
+                combined_tags.append("玄鐵買點")
+            if lstm_res and lstm_res.is_hit:
+                combined_tags.append("LSTM看漲")
+            if inst_res:
+                meta = inst_res.metadata or {}
+                if meta.get("is_sync_buy"):
+                    combined_tags.append("土洋合買")
+                if meta.get("is_trust_streak"):
+                    combined_tags.append(f"投信連買{meta.get('trust_streak', '')}天")
+                elif meta.get("trust_net_5d", 0) > 0:
+                    combined_tags.append("投信買超")
+            if sector_res:
+                sec_meta = sector_res.metadata or {}
+                if sec_meta.get("is_top_sector"):
+                    combined_tags.append(f"主流板塊({sec_meta.get('sector', '')})")
+
+            # Triple Resonance (三重共振): 玄鐵 + LSTM + 投信/法人
+            is_triple_resonance = (
+                xuantie_res and xuantie_res.is_hit and
+                lstm_res and lstm_res.is_hit and
+                inst_res and inst_res.is_hit
+            )
+
             # Calculate Weighted Composite Score (0~100)
             score_total = 0.0
             weight_total = 0.0
@@ -149,8 +180,19 @@ class CompositeEvaluator:
 
             composite_score = round(score_total / weight_total, 2) if weight_total > 0 else 0.0
 
+            # Macro Exposure Multiplier Discount
+            if macro_state and macro_state.exposure < 1.0:
+                composite_score = round(composite_score * macro_state.exposure, 2)
+
             # Get current price from first available result
             curr_price = next(iter(strats.values())).current_price if strats else 0.0
+
+            # Deduplicate tags
+            final_tags = list(dict.fromkeys(combined_tags))
+            if is_triple_resonance:
+                final_tags.insert(0, "🏆三重共振")
+            elif hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and lstm_res and lstm_res.is_hit):
+                final_tags.insert(0, "雙重符合" if hit_count == 2 else f"{hit_count}重符合")
 
             entry = {
                 "ticker": ticker,
@@ -158,13 +200,9 @@ class CompositeEvaluator:
                 "current_price": curr_price,
                 "hit_count": hit_count,
                 "hit_strategies": [s.strategy_name for s in hits],
-                "tags": list(dict.fromkeys(combined_tags)),  # Deduplicate tags
+                "tags": final_tags,
                 "fundamentals": fund
             }
-
-            # If XuanTie and LSTM both exist
-            xuantie_res = strats.get("xuantie")
-            lstm_res = strats.get("lstm")
 
             if xuantie_res:
                 entry["ma60"] = xuantie_res.metrics.get("ma60")
@@ -172,12 +210,13 @@ class CompositeEvaluator:
             if lstm_res:
                 entry["lstm_potential"] = lstm_res.potential
                 entry["predicted_price"] = lstm_res.predicted_price
+            if inst_res:
+                entry["institutional"] = inst_res.metadata
 
             ranked_stocks.append(entry)
 
-            # Check overlap threshold
-            if hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and lstm_res and lstm_res.is_hit):
-                entry["tags"].insert(0, "雙重符合" if hit_count == 2 else f"{hit_count}重符合")
+            # Check overlap threshold (2 or more hits or Triple Resonance)
+            if is_triple_resonance or hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and lstm_res and lstm_res.is_hit):
                 overlap_candidates.append(entry)
 
         # Sort ranked stocks and overlaps
@@ -208,5 +247,6 @@ class CompositeEvaluator:
             ranked_stocks=ranked_stocks,
             xuantie_results=xuantie_df,
             lstm_results=lstm_results_legacy,
-            overlap_results=overlap_df
+            overlap_results=overlap_df,
+            macro_state=macro_state
         )
