@@ -13,6 +13,20 @@ x-stock-service: &default-service
   volumes:
     # 唯讀環境變數
     - ./.env:/app/.env:ro
+    # 應用程式程式碼 (Git Pull 立即生效，免重新 Build)
+    - ./api:/app/api
+    - ./core:/app/core
+    - ./data:/app/data
+    - ./evaluators:/app/evaluators
+    - ./strategies:/app/strategies
+    - ./pipeline:/app/pipeline
+    - ./docker:/app/docker
+    - ./scripts:/app/scripts
+    - ./test:/app/test
+    - ./main.py:/app/main.py
+    - ./notifier_dual.py:/app/notifier_dual.py
+    - ./database.py:/app/database.py
+    - ./logger.py:/app/logger.py
     # 應用程式日誌
     - ./logs:/app/logs
     # 行情快取與法人籌碼快取
@@ -24,6 +38,7 @@ x-stock-service: &default-service
     - TZ=Asia/Taipei
     - PYTHONUNBUFFERED=1
     - TF_CPP_MIN_LOG_LEVEL=2
+    - API_PORT=8088
 
 services:
   # 1. 預設執行服務 (單次執行全量日報)
