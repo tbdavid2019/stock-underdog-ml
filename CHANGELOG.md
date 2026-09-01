@@ -10,16 +10,30 @@
 
 ### Added
 
-- **FastMCP 原生 AI Agent 工具伺服器 (`mcp_server.py`)**：
-  - 封裝 6 大標準 MCP 決策工具（`get_market_macro_regime`、`get_triple_resonance_stocks`、`get_xuantie_pullback_stocks`、`get_lstm_top_predictions`、`get_stock_history`、`get_latest_market_snapshot`），直接直連 DuckDB 記憶體極速引擎。
+- **888 Stock Quant 品牌重塑與文案淨化**：
+  - 全面統一平台名稱為 **`888 Stock Quant`**，移除全站、API 說明與 Agent / MCP 規格文件中所有「AI」字眼，回歸硬核多維量化決策與工程架構。
+- **Anthropic Claude 官方美學（Normal Mode）**：
+  - 淺色模式全面導入 Anthropic Claude 官方暖色調視覺設計（暖羊皮紙白底色 `#FAF9F5`、陶土珊瑚紅焦點色 `#D97757`、暖灰柔和邊框 `#E8E6DC`、炭黑高對比文字 `#141413`）。
+- **JetBrains Mono 數據字體排版與層次重構**：
+  - 全局中文字體採用標準平滑無襯線字體（`Noto Sans TC`），將 `JetBrains Mono`（`.num-font`）精準作用於所有股票代號、現價、目標價、漲跌潛力%、PE/PB 與時間戳記。
+- **頁腳技術提供標章**：
+  - 頁面底部新增 `⚡ 技術提供 david888.com ↗` 專屬外鏈標章。
+- **FastMCP 原生 Agent 工具伺服器 (`mcp_server.py`)**：
+  - 封裝 6 大標準 MCP 決策工具（`get_market_macro_regime`、`get_triple_resonance_stocks`、`get_xuantie_pullback_stocks`、`get_lstm_top_predictions`、`get_stock_history`、`get_latest_market_snapshot`），直連 DuckDB 記憶體極速引擎。
   - 支援 Claude Desktop、Cursor、Antigravity、Open-WebUI 原生掛載與 stdio/SSE 傳輸。
-- **AI Agent Skill 規格文檔 (`skills/stock-quant/SKILL.md` & `/skill`)**：
+- **Agent Skill 規格文檔 (`skills/stock-quant/SKILL.md` & `/skill`)**：
   - 結構化定義操盤工作流（大盤宏觀 ➔ 三重共振 ➔ 波段/短線候選 ➔ 風控防守位）與金融因子指標解讀指南。
 - **WebMCP / OpenAPI 自動發現標準 (`/.well-known/ai-plugin.json`)**：
   - 支援 Web 代理程式、GPT Actions 與自動化管線透過標準協議自動發現並使用量化 API。
 - **雙模式互動首頁 (`/` - `api/templates/index.html`)**：
-  - 提供現代化暗黑風格響應式介面（Tailwind CSS + Vue 3 CDN），兼具「人類操盤視覺化儀表板」與「AI Agent 對接整合中心」。
+  - 提供黑曜石深色（Dark）與 Claude 暖調淺色（Light）雙模式切換，支援 `localStorage` 自動記憶。
   - 支援即時策略切換（三重共振、玄鐵回調、LSTM 看漲/看跌）、市場指數篩選、個股時間序列歷史即時查詢與一鍵複製 Agent 配置。
+
+### Fixed
+
+- **UI 佈局與折行修復**：修復頂部導航列品牌標題在特定寬度下折行（`whitespace-nowrap` 防護），確保標題與導航欄位永不拆字。
+- **宏觀狀態解析路徑**：修復前端對 `/api/v1/macro/latest` 頂層欄位之解析邏輯，解決先前面板持續呈現「評估中...」的問題。
+- **時效標籤顯示**：修復卡片底部時效標籤在空值時誤顯 `nullh` 之問題。
 - **美股宏觀風控門檻 (`data.macro.MacroRegimeAnalyzer`)**：
   - 於 Stage 1 Pre-flight 監控美股指標（`SPY`、`^VIX`、`^SOX`）。
   - 動態評估全球市場狀態（全面多頭、多頭回調、避險防禦、極度恐慌熔斷）並動態調節建議投資曝險比例（0.0 ~ 1.0）。
