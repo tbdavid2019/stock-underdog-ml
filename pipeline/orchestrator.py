@@ -147,7 +147,7 @@ class PipelineOrchestrator:
                 }
         
         inst_summaries = {}
-        for t, ctx in stock_contexts.items():
+        for t, ctx in contexts.items():
             if ctx.institutional_summary:
                 inst_summaries[t] = ctx.institutional_summary.to_dict()
 
