@@ -78,6 +78,9 @@ class PipelineOrchestrator:
         logger.info(f"{'='*70}\n")
 
         # ============= Stage 1: Batch I/O Prefetching =============
+        if macro_state is None:
+            macro_state = MacroRegimeAnalyzer.evaluate_us_market(period=period)
+
         logger.info("🌐 [Stage 1/4] 並發預載行情數據與基本面指標...")
         
         # 1.1 批次下載歷史行情

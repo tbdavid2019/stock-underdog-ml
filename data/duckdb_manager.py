@@ -374,8 +374,11 @@ class DuckDBManager:
             batch_date = str(latest_ts)[:10]
 
         if batch_only:
-            where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (TRY_CAST(? AS TIMESTAMP) - INTERVAL 24 HOUR)")
-            params.append(latest_ts)
+            if index_name:
+                where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (TRY_CAST(? AS TIMESTAMP) - INTERVAL 12 HOUR)")
+                params.append(latest_ts)
+            else:
+                where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (SELECT MAX(TRY_CAST(p2.timestamp AS TIMESTAMP)) - INTERVAL 12 HOUR FROM predictions p2 WHERE p2.index_name = predictions.index_name)")
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
