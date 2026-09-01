@@ -32,6 +32,7 @@ keras>=3.0.0
 # Database
 # ==========================================
 supabase>=2.0.0
+duckdb>=1.0.0
 
 # Optional Dependencies (commented out by default)
 # ==========================================

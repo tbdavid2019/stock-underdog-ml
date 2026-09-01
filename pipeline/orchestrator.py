@@ -25,6 +25,7 @@ from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
 from evaluators.ai_narrative import AINarrativeEngine
 from evaluators.formatter import print_evaluation_report
 from database import SupabaseManager
+from data.duckdb_manager import DuckDBManager
 from notifier_dual import send_dual_strategy_results
 
 logger = logging.getLogger("stock_app.pipeline")
@@ -37,7 +38,8 @@ class PipelineOrchestrator:
         self, 
         enabled_strategies: Optional[List[str]] = None,
         strategy_weights: Optional[Dict[str, float]] = None,
-        db_manager: Optional[SupabaseManager] = None
+        db_manager: Optional[SupabaseManager] = None,
+        duckdb_manager: Optional[DuckDBManager] = None
     ):
         self.enabled_strategy_names = enabled_strategies or config.pipeline.ENABLED_STRATEGIES
         # 自動納入 sector_rotation 與 institutional 策略若未指定
@@ -50,6 +52,7 @@ class PipelineOrchestrator:
         self.evaluator = CompositeEvaluator(weights=strategy_weights or config.pipeline.STRATEGY_WEIGHTS)
         self.ai_narrative_engine = AINarrativeEngine()
         self.db_manager = db_manager or SupabaseManager()
+        self.duckdb_manager = duckdb_manager or DuckDBManager()
 
     def run_index_analysis(
         self, 
@@ -163,12 +166,24 @@ class PipelineOrchestrator:
             except Exception as e:
                 logger.error(f"❌ 發送通知失敗 ({index_name}): {e}")
 
-        # 4.2 寫入 Supabase 資料庫
+        # 4.2 寫入 Supabase 雲端資料庫
         if persist_db and self.db_manager and self.db_manager.enabled:
             try:
                 self.db_manager.save_dual_strategy_results(index_name, report_dict, period=period)
             except Exception as e:
-                logger.error(f"❌ 資料庫寫入失敗 ({index_name}): {e}")
+                logger.error(f"❌ Supabase 資料庫寫入失敗 ({index_name}): {e}")
+
+        # 4.3 雙備份：寫入本地 DuckDB 時序資料庫
+        if persist_db and self.duckdb_manager and self.duckdb_manager.enabled:
+            try:
+                self.duckdb_manager.save_dual_strategy_results(
+                    index_name, 
+                    report_dict, 
+                    period=period, 
+                    macro_state=macro_state
+                )
+            except Exception as e:
+                logger.error(f"❌ DuckDB 本地寫入失敗 ({index_name}): {e}")
 
         return report
 

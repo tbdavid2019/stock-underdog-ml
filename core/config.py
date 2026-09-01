@@ -11,10 +11,16 @@ load_dotenv()
 
 
 class DatabaseConfig:
-    """Supabase database configuration settings"""
+    """Database configuration settings (Supabase & DuckDB)"""
     SUPABASE_URL: Optional[str] = os.getenv("SUPABASE_URL")
     SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY")
     SUPABASE_SERVICE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY")
+    
+    ENABLE_DUCKDB: bool = os.getenv("ENABLE_DUCKDB", "true").lower() in ("true", "1", "yes")
+    DUCKDB_PATH: str = os.getenv(
+        "DUCKDB_PATH", 
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "storage", "stock_quant.duckdb")
+    )
 
 
 class EmailConfig:

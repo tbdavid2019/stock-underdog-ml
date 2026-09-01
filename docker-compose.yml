@@ -2,17 +2,22 @@ version: '3.8'
 
 services:
   stock-ml:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: stock-underdog-ml
     volumes:
-      # 掛載 .env 檔案（需要先建立）
+      # 掛載環境變數配置 (唯讀)
       - ./.env:/app/.env:ro
       # 掛載日誌目錄
       - ./logs:/app/logs
-      # 掛載快取目錄
+      # 掛載行情快取目錄
       - ./cache:/app/cache
+      - ./data/cache:/app/data/cache
+      # 掛載本地 DuckDB 時序資料庫儲存目錄 (持久化備份)
+      - ./data/storage:/app/data/storage
     environment:
       - TZ=Asia/Taipei
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    # 如果需要排程執行，可以使用 cron 或 註解掉 command 改用外部排程
-    # command: python main.py
+    command: python main.py
