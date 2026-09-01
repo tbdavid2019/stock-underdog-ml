@@ -85,19 +85,44 @@ graph TD
 
 ---
 
-## 🌐 FastAPI REST API 與 MCP 服務
+## 🌐 互動式操盤首頁、FastAPI REST 與 MCP 服務
 
-本平台內建現代化 FastAPI 高效能對外服務（預設連接埠 `8000`），提供 OpenAPI / Swagger 互動式文檔，並隨時支援封裝為 **Anthropic Claude Desktop MCP** 或 **AI Agent Skills**。
+本平台內建現代化 FastAPI 高效能對外服務（預設連接埠 `8088`），同時提供「人類操盤視覺化儀表板」、「Anthropic Claude Desktop MCP 工具伺服器」以及「AI Agent Skill」：
 
-### 互動式 API 文檔
-啟動後直接瀏覽：
-* **Swagger UI**：`http://localhost:8000/docs`
-* **ReDoc**：`http://localhost:8000/redoc`
+### 1. 📊 現代化量化操盤首頁 (Web Dashboard)
+啟動後直接瀏覽 `http://localhost:8088/` 或 `http://10.9.0.99:8088/`：
+* **宏觀風控看板**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態與建議曝險比例。
+* **策略即時切換**：快速瀏覽 🏆 三重共振焦點股、玄鐵 MA60/120 回調買點、LSTM 看漲/看跌榜。
+* **個股歷史查詢**：輸入股票代號（如 `2330.TW`、`NVDA`）檢索 DuckDB 中的歷史量化預測與技術軌跡。
+* **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼。
 
-### 核心 REST API 端點清單
+### 2. 🤖 Model Context Protocol (MCP) 原生工具伺服器
+提供符合 Anthropic 官方標準的 FastMCP 伺服器（[`mcp_server.py`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py)），可直接掛載至 Claude Desktop、Cursor、Antigravity：
+
+**Claude Desktop 設定 (`claude_desktop_config.json`)：**
+```json
+{
+  "mcpServers": {
+    "stock-quant": {
+      "command": "python",
+      "args": [
+        "/Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
+本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
+
+### 4. 核心 REST API 端點清單
 
 | 端點 | 方法 | 說明 |
 | :--- | :---: | :--- |
+| `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
+| `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
+| `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
 | `/health` | `GET` | 系統健康狀態與 DuckDB 總記錄筆數 |
 | `/api/v1/predictions/latest` | `GET` | 查詢多指數最新各標的現價、預測價、均線數據、PE/PB 估值與籌碼 |
 | `/api/v1/predictions/resonance` | `GET` | 篩選 **雙重符合 / 🏆三重共振** 重點焦點股 |
