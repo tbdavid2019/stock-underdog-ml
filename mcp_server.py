@@ -20,7 +20,7 @@ from data.macro import MacroRegimeAnalyzer
 # Initialize FastMCP Server with name and instructions
 mcp = FastMCP(
     "stock-quant-engine",
-    description="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)"
+    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)"
 )
 
 # Global DuckDB Manager

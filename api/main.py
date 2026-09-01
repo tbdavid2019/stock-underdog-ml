@@ -50,6 +50,15 @@ app.include_router(predictions.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 
+# 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
+try:
+    from mcp_server import mcp as mcp_instance
+    mcp_app = mcp_instance.sse_app()
+    app.mount("/mcp", mcp_app)
+except Exception as e:
+    import logging
+    logging.getLogger("stock_app.api").warning(f"⚠️ WebMCP SSE 掛載略過: {e}")
+
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def root():
@@ -63,10 +72,35 @@ def root():
     return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
 
 
+@app.get("/.well-known/mcp.json", include_in_schema=False)
+def get_webmcp_manifest():
+    """
+    WebMCP Remote Discovery Manifest
+    """
+    return JSONResponse(content={
+        "name": "stock-quant-engine",
+        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台",
+        "version": "2.2.0",
+        "transport": "sse",
+        "endpoints": {
+            "sse": "/mcp/sse",
+            "messages": "/mcp/messages/"
+        },
+        "tools": [
+            "get_market_macro_regime",
+            "get_triple_resonance_stocks",
+            "get_xuantie_pullback_stocks",
+            "get_lstm_top_predictions",
+            "get_stock_history",
+            "get_latest_market_snapshot"
+        ]
+    })
+
+
 @app.get("/.well-known/ai-plugin.json", include_in_schema=False)
 def get_ai_plugin_manifest():
     """
-    WebMCP / Plugin Standard Discovery Manifest
+    Web Plugin Standard Discovery Manifest
     """
     return JSONResponse(content={
         "schema_version": "v1",

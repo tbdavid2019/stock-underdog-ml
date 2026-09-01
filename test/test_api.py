@@ -152,6 +152,14 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("name: stock-quant", resp.text)
 
+    def test_webmcp_manifest(self):
+        resp = self.client.get("/.well-known/mcp.json")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["name"], "stock-quant-engine")
+        self.assertEqual(data["transport"], "sse")
+        self.assertIn("get_market_macro_regime", data["tools"])
+
 
 if __name__ == "__main__":
     unittest.main()

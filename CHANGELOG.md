@@ -23,11 +23,12 @@
   - 支援 Claude Desktop、Cursor、Antigravity、Open-WebUI 原生掛載與 stdio/SSE 傳輸。
 - **Agent Skill 規格文檔 (`skills/stock-quant/SKILL.md` & `/skill`)**：
   - 結構化定義操盤工作流（大盤宏觀 ➔ 三重共振 ➔ 波段/短線候選 ➔ 風控防守位）與金融因子指標解讀指南。
-- **WebMCP / OpenAPI 自動發現標準 (`/.well-known/ai-plugin.json`)**：
-  - 支援 Web 代理程式、GPT Actions 與自動化管線透過標準協議自動發現並使用量化 API。
+- **WebMCP 原生 SSE 串流與自動發現標準 (`/mcp/sse` & `/.well-known/mcp.json`)**：
+  - 於 FastAPI 原生掛載 FastMCP SSE 串流傳輸協議，支援遠端 Agent（Cursor、Claude、Antigravity、Open-WebUI、LangChain）透過 HTTP SSE 即時連接與調用量化工具。
+  - 提供 `/.well-known/mcp.json` 標準端點與 `/.well-known/ai-plugin.json`，支援自動偵測協議。
 - **雙模式互動首頁 (`/` - `api/templates/index.html`)**：
   - 提供黑曜石深色（Dark）與 Claude 暖調淺色（Light）雙模式切換，支援 `localStorage` 自動記憶。
-  - 支援即時策略切換（三重共振、玄鐵回調、LSTM 看漲/看跌）、市場指數篩選、個股時間序列歷史即時查詢與一鍵複製 Agent 配置。
+  - 支援即時策略切換（三重共振、玄鐵回調、LSTM 看漲/看跌）、市場指數篩選、個股時間序列歷史即時查詢、WebMCP SSE 一鍵複製與 Agent 配置。
 
 ### Fixed
 
