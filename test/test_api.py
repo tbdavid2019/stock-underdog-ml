@@ -179,6 +179,12 @@ class TestFastAPIService(unittest.TestCase):
         resp = self.client.head("/")
         self.assertEqual(resp.status_code, 200)
 
+    def test_cloudflare_webmcp_bridge(self):
+        resp = self.client.get("/.webmcp/bridge.js")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Cloudflare & Chrome WebMCP Bridge", resp.text)
+        self.assertIn("registerTool", resp.text)
+
 
 if __name__ == "__main__":
     unittest.main()

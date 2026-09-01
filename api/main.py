@@ -136,7 +136,74 @@ def get_llms_txt():
 ## Powered By
 技術提供: [david888.com](https://david888.com)
 """
-    return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
+@app.get("/.webmcp/bridge.js", response_class=PlainTextResponse, include_in_schema=False)
+def get_webmcp_bridge():
+    """
+    Cloudflare & Chrome WebMCP Dynamic Bridge Script (https://blog.cloudflare.com/webmcp/)
+    """
+    js_content = """// Cloudflare & Chrome WebMCP Bridge
+// https://blog.cloudflare.com/webmcp/
+(async function() {
+    const modelCtx = window.document?.modelContext || window.navigator?.modelContext;
+    if (!modelCtx || typeof modelCtx.registerTool !== 'function') return;
+    
+    const tools = [
+        {
+            name: 'get_market_macro_regime',
+            description: '查詢最新美股宏觀風控狀態與建議投資曝險比例',
+            inputSchema: { type: 'object', properties: {} },
+            execute: async () => JSON.stringify(await (await fetch('/api/v1/macro/latest')).json())
+        },
+        {
+            name: 'get_triple_resonance_stocks',
+            description: '篩選三重共振強勢股（技術面 ∩ LSTM ∩ 籌碼 ∩ 估值）',
+            inputSchema: { type: 'object', properties: { index_name: { type: 'string' }, limit: { type: 'integer' } } },
+            execute: async (args) => {
+                let url = '/api/v1/predictions/resonance?limit=' + (args?.limit || 20);
+                if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_xuantie_pullback_stocks',
+            description: '查詢玄鐵重劍策略均線波段回調買點標的',
+            inputSchema: { type: 'object', properties: { index_name: { type: 'string' }, limit: { type: 'integer' } } },
+            execute: async (args) => {
+                let url = '/api/v1/predictions/xuantie?limit=' + (args?.limit || 20);
+                if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_lstm_top_predictions',
+            description: '取得 LSTM 深度學習下一交易日預測漲跌幅排行',
+            inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['bullish', 'bearish'] }, limit: { type: 'integer' } }, required: ['direction'] },
+            execute: async (args) => {
+                const ep = args?.direction === 'bearish' ? 'top-bearish' : 'top-bullish';
+                return JSON.stringify(await (await fetch('/api/v1/predictions/lstm/' + ep + '?limit=' + (args?.limit || 20))).json());
+            }
+        },
+        {
+            name: 'get_stock_history',
+            description: '查詢個股歷史時序預測軌跡與法人籌碼',
+            inputSchema: { type: 'object', properties: { ticker: { type: 'string' }, limit: { type: 'integer' } }, required: ['ticker'] },
+            execute: async (args) => {
+                return JSON.stringify(await (await fetch('/api/v1/predictions/history/' + encodeURIComponent(args.ticker.toUpperCase()) + '?limit=' + (args?.limit || 30))).json());
+            }
+        }
+    ];
+
+    for (const tool of tools) {
+        try {
+            await modelCtx.registerTool(tool);
+        } catch (e) {
+            console.warn('[WebMCP] registerTool error:', e);
+        }
+    }
+    console.log('[WebMCP] Cloudflare WebMCP Bridge initialized with 5 tools.');
+})();
+"""
+    return PlainTextResponse(content=js_content, media_type="application/javascript; charset=utf-8")
 
 
 @app.get("/.well-known/ai-plugin.json", include_in_schema=False)
