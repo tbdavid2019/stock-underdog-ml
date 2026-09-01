@@ -56,6 +56,14 @@ log "Python 路徑: $PYTHON_EXEC"
 log "日誌檔案: $LOG_FILE"
 log "=========================================="
 
+# 自動同步最新程式碼 (CI/CD Auto-Sync)
+if [ -d ".git" ]; then
+    log "📥 檢查並同步 GitHub 最新程式碼..."
+    git fetch origin main --quiet 2>/dev/null && git reset --hard origin/main --quiet 2>/dev/null
+    CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    log "✅ 程式碼已同步至最新提交: $CURRENT_COMMIT"
+fi
+
 # 檢查 Python 是否可用
 $PYTHON_EXEC --version 2>&1 | tee -a "$LOG_FILE"
 if [ $? -ne 0 ]; then
