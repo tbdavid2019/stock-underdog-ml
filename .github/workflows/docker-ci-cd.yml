@@ -15,6 +15,11 @@ permissions:
   contents: read
   packages: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "true"
+  ACTIONS_RUNNER_FORCE_NODE24: "true"
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
 jobs:
   # ============================================================================
   # 1. 測試關卡 (Unit Tests Gate)
@@ -38,8 +43,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: 🧪 Run Quantitative Unit Tests
+        env:
+          PYTHONPATH: .
         run: |
-          PYTHONPATH=. python -m unittest discover -s test -p 'test_*.py'
+          python -m unittest discover -s test -p 'test_*.py'
 
   # ============================================================================
   # 2. 多架構 Docker 構建與發布 (Multi-Arch: linux/amd64, linux/arm64)
@@ -71,8 +78,6 @@ jobs:
       - name: 🔑 Log in to Docker Hub (Optional if secrets exist)
         if: env.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -83,7 +88,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}
-            ${{ secrets.DOCKERHUB_USERNAME && format('{0}/stock-underdog-ml', secrets.DOCKERHUB_USERNAME) || '' }}
+            ${{ env.DOCKERHUB_USERNAME != '' && format('{0}/stock-underdog-ml', env.DOCKERHUB_USERNAME) || '' }}
           flavor: |
             latest=auto
           tags: |
@@ -94,7 +99,7 @@ jobs:
             type=sha,format=short
 
       - name: 🚀 Build and Push Multi-Arch Image (x64 & ARM64)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
