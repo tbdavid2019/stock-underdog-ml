@@ -23,12 +23,13 @@ class StrategyResult:
     ticker: str
     strategy_name: str
     is_hit: bool
-    score: float
-    current_price: float
+    score: float = 0.0
+    current_price: float = 0.0
     predicted_price: Optional[float] = None
     potential: Optional[float] = None
     signals: Dict[str, Any] = field(default_factory=dict)
     metrics: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     tags: List[str] = field(default_factory=list)
 
 
@@ -36,8 +37,21 @@ class BaseStrategy(ABC):
     """Abstract base class for all trading and stock selection strategies"""
     
     name: str = "base_strategy"
-    category: str = "technical"   # 'technical', 'ml', 'fundamental', 'chip'
+    category: str = "technical"   # 'technical', 'ml', 'fundamental', 'chip', 'sector'
     required_lookback: int = 60   # Minimum required historical bars
+
+    def __init__(
+        self, 
+        name: Optional[str] = None, 
+        category: Optional[str] = None, 
+        required_lookback: Optional[int] = None
+    ):
+        if name:
+            self.name = name
+        if category:
+            self.category = category
+        if required_lookback:
+            self.required_lookback = required_lookback
 
     @abstractmethod
     def evaluate(self, context: StockContext) -> StrategyResult:
