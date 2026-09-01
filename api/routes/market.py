@@ -125,6 +125,22 @@ def get_top_institutional_flows(
         raise HTTPException(status_code=500, detail=f"查詢法人買賣超排行失敗: {e}")
 
 
+@router.get("/institutional/dates", response_model=List[str], summary="取得法人籌碼所有可用歷史交易日")
+def get_available_institutional_dates(
+    limit: int = Query(60, ge=1, le=500, description="回傳天數上限"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    回傳 DuckDB 中 tw_institutional_daily 所有歷史交易日期清單 (降冪排序)。
+    """
+    try:
+        with db._get_connection() as con:
+            df = con.execute("SELECT DISTINCT date FROM tw_institutional_daily ORDER BY date DESC LIMIT ?", [limit]).df()
+            return [str(d) for d in df["date"].tolist()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查詢日期清單失敗: {e}")
+
+
 @router.get("/institutional/{ticker}", response_model=List[InstitutionalFlowItem], summary="取得單一個股歷史法人進出時序")
 def get_ticker_institutional_history(
     ticker: str,
@@ -138,3 +154,4 @@ def get_ticker_institutional_history(
     if df.empty:
         return []
     return df.to_dict(orient="records")
+
