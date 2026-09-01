@@ -78,8 +78,8 @@ def root():
     return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
 
 
-@app.get("/.well-known/mcp.json", include_in_schema=False)
-@app.get("/mcp.json", include_in_schema=False)
+@app.api_route("/.well-known/mcp.json", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/mcp.json", methods=["GET", "HEAD"], include_in_schema=False)
 def get_webmcp_manifest():
     """
     WebMCP Remote Discovery Manifest
@@ -104,8 +104,8 @@ def get_webmcp_manifest():
     })
 
 
-@app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
-@app.get("/llms-full.txt", response_class=PlainTextResponse, include_in_schema=False)
+@app.api_route("/llms.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
+@app.api_route("/llms-full.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
 def get_llms_txt():
     """
     LLM Context & System Summary (https://llmstxt.org Standard)
@@ -139,7 +139,7 @@ def get_llms_txt():
     return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
 
 
-@app.get("/.webmcp/bridge.js", response_class=PlainTextResponse, include_in_schema=False)
+@app.api_route("/.webmcp/bridge.js", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
 def get_webmcp_bridge():
     """
     Cloudflare & Chrome WebMCP Dynamic Bridge Script (https://blog.cloudflare.com/webmcp/)
