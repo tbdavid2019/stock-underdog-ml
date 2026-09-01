@@ -95,6 +95,23 @@ class DuckDBManager:
                     created_at VARCHAR
                 );
                 """)
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS tw_institutional_daily (
+                    date VARCHAR,
+                    ticker VARCHAR,
+                    raw_code VARCHAR,
+                    name VARCHAR,
+                    foreign_net BIGINT,
+                    trust_net BIGINT,
+                    dealer_net BIGINT,
+                    total_net BIGINT,
+                    foreign_ratio DOUBLE,
+                    total_shares BIGINT,
+                    foreign_shares BIGINT,
+                    market VARCHAR,
+                    created_at VARCHAR
+                );
+                """)
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
@@ -694,4 +711,70 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 日 K 失敗: {e}")
             return pd.DataFrame()
+
+    def save_institutional_flows_batch(self, records: List[Dict[str, Any]]) -> int:
+        """
+        批次寫入三大法人每日進出與持股數據，並自動去重 (Upsert on date + ticker)
+        """
+        if not self.enabled or not records:
+            return 0
+
+        df = pd.DataFrame(records)
+        expected_cols = [
+            "date", "ticker", "raw_code", "name",
+            "foreign_net", "trust_net", "dealer_net", "total_net",
+            "foreign_ratio", "total_shares", "foreign_shares",
+            "market", "created_at"
+        ]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        try:
+            with self._get_connection() as con:
+                con.register("temp_inst_df", df[expected_cols])
+                con.execute("""
+                DELETE FROM tw_institutional_daily
+                WHERE (date, ticker) IN (
+                    SELECT date, ticker FROM temp_inst_df
+                );
+                """)
+                con.execute("INSERT INTO tw_institutional_daily SELECT * FROM temp_inst_df;")
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆法人籌碼數據至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_institutional_daily 失敗: {e}", exc_info=True)
+            return 0
+
+    def get_institutional_flow_for_ticker(self, ticker: str, limit: int = 60) -> pd.DataFrame:
+        """
+        取得特定標的之歷史法人籌碼進出時序
+        """
+        if not self.enabled:
+            return pd.DataFrame()
+
+        clean_code = ticker.split(".")[0]
+        sql = """
+        SELECT 
+            date,
+            ticker,
+            name,
+            foreign_net,
+            trust_net,
+            dealer_net,
+            total_net,
+            foreign_ratio
+        FROM tw_institutional_daily
+        WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+        ORDER BY date DESC
+        LIMIT ?;
+        """
+        try:
+            with self._get_connection() as con:
+                df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
+                return df
+        except Exception as e:
+            logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 法人時序失敗: {e}")
+            return pd.DataFrame()
+
 
