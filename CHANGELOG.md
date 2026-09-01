@@ -27,6 +27,8 @@
   - Entrypoint 支援 `main` 指令的後續參數透傳。
 - **修復 GitHub Actions 排程同步工作流 (`.github/workflows/tw_stock_daily_sync.yml`)**：
   - 將遺留之 `pytest` 指令修正為標準 `python -m unittest`，解決因環境缺少 pytest 導致排程工作流失敗（Exit code 127）問題。
+- **CI/CD 全面恢復 ARM64 + x86_64 雙架構編譯 (`.github/workflows/docker-ci-cd.yml`)**：
+  - 移除先前的 platform 條件限制，在每次推送到 `main` 分支時，皆自動透過 QEMU 構建並發布 `linux/amd64` 與 `linux/arm64` (Apple Silicon / Raspberry Pi / Ampere) 雙架構 Docker 映像檔至 GHCR。
 - **修復 Web UI `index.html` 標籤閉合不對稱導致 Vue 掛載中斷問題**：
   - 移除法人籌碼分頁末端多餘的 `</div>` 標籤，恢復 Vue 根容器完整閉合，解決模板未編譯（顯示 `{{ ... }}`）之渲染異常。
 
