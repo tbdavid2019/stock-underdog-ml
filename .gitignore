@@ -146,11 +146,13 @@ config.yaml
 docker-compose.override.yml
 
 # ==========================================
-# Personal/Test files
+# Personal/Test files (root only)
 # ==========================================
-test_*.py
-debug_*.py
-scratch_*.py
-temp_*.py
+/test_*.py
+/debug_*.py
+/scratch_*.py
+/temp_*.py
 *_personal.py
 *_local.py
+!test/
+
