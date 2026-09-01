@@ -142,19 +142,29 @@ class AINarrativeEngine:
                 f"SOX費半: {'站穩MA60' if macro_state.sox_above_ma60 else '破季線'}"
             )
 
-        overlap = report_data.get("overlap_results", [])
+        overlap_raw = report_data.get("overlap_results")
+        if isinstance(overlap_raw, pd.DataFrame):
+            overlap_list = overlap_raw.to_dict(orient="records") if not overlap_raw.empty else []
+        elif isinstance(overlap_raw, list):
+            overlap_list = overlap_raw
+        else:
+            overlap_list = []
+
         overlap_summary = []
-        for r in overlap[:3]:
+        for r in overlap_list[:3]:
             ticker = r.get("ticker", "")
-            pot = r.get("potential", 0.0)
-            tags = ",".join(r.get("tags", []))
+            pot = r.get("potential") or r.get("lstm_potential", 0.0)
+            raw_tags = r.get("tags", [])
+            tags = ",".join(raw_tags) if isinstance(raw_tags, list) else str(raw_tags)
             pe = r.get("pe", "N/A")
             pb = r.get("pb", "N/A")
             pullback = r.get("pullback_type", "MA60")
             overlap_summary.append(f"{ticker}: 預測漲幅 {pot:+.2f}%, 回調支撐 {pullback}, 估值 PE:{pe}/PB:{pb}, 標籤:[{tags}]")
 
-        xuantie_hits = len(report_data.get("xuantie_results", []))
-        lstm_predictions = len(report_data.get("lstm_results", []))
+        xuantie_raw = report_data.get("xuantie_results")
+        xuantie_hits = len(xuantie_raw) if xuantie_raw is not None else 0
+        lstm_raw = report_data.get("lstm_results")
+        lstm_predictions = len(lstm_raw) if lstm_raw is not None else 0
 
         prompt = f"""
 分析指數: {index_name}
@@ -176,18 +186,26 @@ class AINarrativeEngine:
         report_data: Dict[str, Any]
     ) -> str:
         """規則式純文字模板生成 (零依賴終極備援)"""
-        overlap = report_data.get("overlap_results", [])
+        overlap_raw = report_data.get("overlap_results")
+        if isinstance(overlap_raw, pd.DataFrame):
+            overlap_list = overlap_raw.to_dict(orient="records") if not overlap_raw.empty else []
+        elif isinstance(overlap_raw, list):
+            overlap_list = overlap_raw
+        else:
+            overlap_list = []
+
         exposure_str = f"{int(macro_state.exposure * 100)}%" if macro_state else "100%"
         regime_str = macro_state.regime_name if macro_state else "正常"
 
-        if overlap:
-            top_stock = overlap[0].get("ticker", "")
-            top_pot = overlap[0].get("potential", 0.0)
-            tags_str = "、".join(overlap[0].get("tags", [])[:3])
+        if overlap_list:
+            top_stock = overlap_list[0].get("ticker", "")
+            top_pot = overlap_list[0].get("potential") or overlap_list[0].get("lstm_potential", 0.0)
+            raw_tags = overlap_list[0].get("tags", [])
+            tags_str = "、".join(raw_tags[:3]) if isinstance(raw_tags, list) else str(raw_tags)
             return (
                 f"【量化操盤觀點】當前美股宏觀環境處於「{regime_str}」，整體建議曝險為 {exposure_str}。"
                 f"今日 {index_name} 優先聚焦 {top_stock}（預期潛力 {top_pot:+.2f}%），"
-                f"符合 {tags_str} 等多維共振條件，建議順應大盤水位分批佈局。"
+                f"符合 {tags_str or '多維共振'} 等條件，建議順應大盤水位分批佈局。"
             )
         else:
             return (
