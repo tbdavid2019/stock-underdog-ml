@@ -24,8 +24,14 @@
   - 符合強 Copyleft 網路服務條款，保護量化策略與深度學習引擎之開源完整性。
 - **台股全市場官方 OpenAPI 批量日 K 抓取器 (`data/twse_daily_fetcher.py`)**：
   - 整合台灣證券交易所 (TWSE) 與櫃檯買賣中心 (TPEX) 官方 OpenAPI，單次請求 1~2 秒內抓取全市場 1,800+ 檔上市櫃股票當日開高低收、成交量與成交金額。
+- **券商分點主力進出追蹤雷達 (`tw_broker_trades` & `api/templates/index.html`)**：
+  - 在 DuckDB 建立 `tw_broker_trades` 資料表，完成全台股關鍵券商分點（美商高盛、摩根士丹利、瑞士信貸、富邦、元大台北、凱基台北等主力分點）**36,570+ 筆** 歷史進出數據匯入。
+  - **目標券商累計買賣超多色折線走勢圖 (Chart.js)**：穿透追蹤各分點在波段期間的連續加減倉水庫曲線。
+  - **主力買賣超分點 TOP 15 雙欄卡片**：提供過去 10D / 20D / 30D / 60D 各分點累計買進、賣出、淨買賣超張數與佔比。
+  - **FastAPI & Agent / MCP 整合**：新增 `/api/v1/market/broker/summary/{ticker}`、`/api/v1/market/broker/trades/{ticker}`、`/api/v1/market/broker/trend/{ticker}` 以及 MCP Tool `get_broker_trades_for_stock`。
 - **Web UI 操盤平台新增「🏛️ 三大法人籌碼雷達」分頁 (`api/templates/index.html`)**：
   - 支援三大法人合計、外資、投信與自營商淨買賣超（張數）排行榜（買超榜 / 賣超榜）與市場篩選（全部 / 上市 / 上櫃）。
+  - **三大法人累計買賣超折線圖 (Chart.js)**：以多曲線呈現外資、投信、自營商與三大法人合計之連續波段累計進出走勢。
   - **歷史日期選擇器**：支援選取過去 240 個交易日（2025-09-11 ~ 2026-08-28）任一歷史交易日進行籌碼排行復盤。
   - **個股 240 天法人時序表**：於個股歷史查詢頁面新增「三大法人連續進出時序表」，完整呈現外資、投信、自營商每日進出與持股比率時間序列。
 - **FastAPI 全市場與籌碼新路由 (`api/routes/market.py`)**：
