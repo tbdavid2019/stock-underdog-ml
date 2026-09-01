@@ -25,6 +25,8 @@
 - **Docker 容器排程與 Entrypoint 同步更新 (`docker/crontab` & `docker/entrypoint.sh`)**：
   - 容器內排程同步更新為 Asia/Taipei 08:00 (TW) 與 20:30 (US) 盤前執行。
   - Entrypoint 支援 `main` 指令的後續參數透傳。
+- **修復 GitHub Actions 排程同步工作流 (`.github/workflows/tw_stock_daily_sync.yml`)**：
+  - 將遺留之 `pytest` 指令修正為標準 `python -m unittest`，解決因環境缺少 pytest 導致排程工作流失敗（Exit code 127）問題。
 - **修復 Web UI `index.html` 標籤閉合不對稱導致 Vue 掛載中斷問題**：
   - 移除法人籌碼分頁末端多餘的 `</div>` 標籤，恢復 Vue 根容器完整閉合，解決模板未編譯（顯示 `{{ ... }}`）之渲染異常。
 

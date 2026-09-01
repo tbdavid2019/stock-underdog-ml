@@ -32,8 +32,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: 🧪 Run TWSE Fetcher Unit Tests
+        env:
+          PYTHONPATH: .
         run: |
-          pytest test/test_twse_fetcher.py -v
+          python -m unittest test/test_twse_fetcher.py
 
       - name: 🌐 Run Full Market Sync (TWSE & TPEX -> DuckDB)
         run: |
