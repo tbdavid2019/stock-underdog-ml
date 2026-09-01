@@ -6,9 +6,15 @@
 
 ## 🚀 快速上手
 
-### 1. 建立映像檔 (Build Image)
+### 1. 直接拉取多架構預建映像檔 (x64 / ARM64)
 
-使用現代 Docker Compose v2 指令：
+GitHub Actions 會在每次代碼推送時自動構建支援 **x86_64 (Intel/AMD)** 與 **ARM64 (Apple Silicon M系列 / Raspberry Pi / Ampere)** 的雙架構映像檔並發布至 GitHub Container Registry (GHCR)：
+
+```bash
+docker compose pull
+```
+
+### 2. 或於本地自行構建映像檔 (Local Build)
 
 ```bash
 docker compose build

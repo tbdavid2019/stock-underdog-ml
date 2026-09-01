@@ -33,8 +33,12 @@
 - **Supabase 全量數據導出遷移工具 (`scripts/export_supabase_to_duckdb.py`)**：
   - 自動分頁拉取 Supabase 線上所有歷史預測與量化數據，無縫回存本地 DuckDB（44,153 筆時序數據經 DuckDB 壓縮僅 4.1MB）。
 - **現代化生產級 Docker 容器環境 (`Dockerfile` & `docker-compose.yml`)**：
-  - 全面翻新升級為 `python:3.11-slim` 現代映像，移除廢棄 Miniconda 配置。
+  - 全面翻新升級為 `python:3.12-slim` 現代生產級映像，移除廢棄 Miniconda 配置。
+  - 新增多服務架構：`stock-ml`（單次執行）、`stock-ml-cron`（後台常駐定時排程）、`stock-ml-sync`（Supabase 導出）、`stock-ml-test`（測試）。
   - 整合台北時區設定、系統依賴、DuckDB 與快取目錄自動掛載（`./data/storage`、`./data/cache`、`./logs`）。
+- **GitHub Actions 自動化 CI/CD 與雙架構映像構建 (`.github/workflows/docker-ci-cd.yml`)**：
+  - 新增 44 項單元測試自動化防護網關（Test Gate）。
+  - 自動構建並推送支援 `linux/amd64` (x64) 與 `linux/arm64` (Apple Silicon M系列 / ARM) 之雙架構映像至 GitHub Container Registry (`ghcr.io/tbdavid2019/stock-underdog-ml`)。
 - **多平台推播訊息升級 (`notifier_dual.py`)**：
   - Telegram、Discord、Email 報告全面整合美股宏觀卡片、AI 操盤解讀與三重共振標籤。
 
