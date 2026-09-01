@@ -537,187 +537,346 @@
 
 
             <!-- ================= TAB: 三大法人籌碼雷達 (INSTITUTIONAL RADAR) ================= -->
+            <!-- ================= TAB: 法人與主力籌碼 (INSTITUTIONAL & BROKER RADAR) ================= -->
             <div v-if="activeTab === 'institutional'" class="space-y-6">
 
-                <!-- Header Banner Card -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
-                     class="p-6 rounded-2xl border space-y-4">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
-                                <span>🏛️ 台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
-                            </h2>
-                            <p class="text-xs sm:text-sm mt-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
-                                追蹤全市場 <strong class="num-font font-black" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">512,000+ 筆</strong> 上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 官方 OpenAPI 自動更新。
-                            </p>
-                        </div>
+                <!-- Sub-tab Navigation (Three Inst vs Broker) -->
+                <div class="flex items-center space-x-2">
+                    <button @click="instSubTab = 'three_inst'"
+                            :class="instSubTab === 'three_inst' ? (isDark ? 'bg-sky-600 text-white font-bold' : 'bg-claude-terracotta text-white font-bold shadow-sm') : (isDark ? 'bg-dark-card border-dark-border text-slate-400 hover:text-white' : 'bg-white border-claude-border text-claude-muted hover:text-claude-text')"
+                            class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all">
+                        🏛️ 三大法人籌碼與持股
+                    </button>
+                    <button @click="instSubTab = 'broker'; if(!brokerDates.length) loadBrokerTrend()"
+                            :class="instSubTab === 'broker' ? (isDark ? 'bg-purple-600 text-white font-bold' : 'bg-purple-600 text-white font-bold shadow-sm') : (isDark ? 'bg-dark-card border-dark-border text-slate-400 hover:text-white' : 'bg-white border-claude-border text-claude-muted hover:text-claude-text')"
+                            class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all">
+                        🏦 券商分點主力追蹤
+                    </button>
+                </div>
 
-                        <!-- Mini Stats Pills -->
-                        <div class="flex flex-wrap items-center gap-2 text-xs num-font">
-                            <span class="px-3 py-1.5 rounded-xl border font-bold"
-                                  :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400' : 'bg-claude-cardInner border-claude-border text-claude-terracotta'">
-                                📊 歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}
-                            </span>
-                            <span class="px-3 py-1.5 rounded-xl border font-bold"
-                                  :class="isDark ? 'bg-dark-cardInner border-dark-border text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'">
-                                📅 最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}
-                            </span>
-                        </div>
-                    </div>
+                <!-- SUB-TAB 1: 三大法人籌碼 (THREE INST) -->
+                <div v-if="instSubTab === 'three_inst'" class="space-y-6">
+                    <!-- Header Banner Card -->
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
+                         class="p-6 rounded-2xl border space-y-4">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                    <span>🏛️ 台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
+                                </h2>
+                                <p class="text-xs sm:text-sm mt-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                    追蹤全市場 <strong class="num-font font-black" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">512,000+ 筆</strong> 上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 官方 OpenAPI 自動更新。
+                                </p>
+                            </div>
 
-                    <!-- Filter & Sort Toolbar -->
-                    <div class="flex flex-wrap items-center gap-3 pt-2 border-t"
-                         :class="isDark ? 'border-dark-border' : 'border-claude-border'">
-                        
-                        <!-- Order By -->
-                        <div class="flex items-center space-x-1.5 text-xs">
-                            <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">排序依據:</span>
-                            <div class="inline-flex rounded-xl border p-0.5"
-                                 :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
-                                <button v-for="opt in [{id: 'total_net', label: '三大法人合計'}, {id: 'foreign_net', label: '外資淨買賣'}, {id: 'trust_net', label: '投信淨買賣'}, {id: 'dealer_net', label: '自營商'}]" 
-                                        :key="opt.id"
-                                        @click="instOrderBy = opt.id; loadInstitutionalFlows()"
-                                        :class="instOrderBy === opt.id ? (isDark ? 'bg-sky-600 text-white font-bold' : 'bg-claude-terracotta text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
-                                        class="px-2.5 py-1 rounded-lg transition-all text-xs">
-                                    {{ opt.label }}
-                                </button>
+                            <!-- Mini Stats Pills -->
+                            <div class="flex flex-wrap items-center gap-2 text-xs num-font">
+                                <span class="px-3 py-1.5 rounded-xl border font-bold"
+                                      :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400' : 'bg-claude-cardInner border-claude-border text-claude-terracotta'">
+                                    📊 歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}
+                                </span>
+                                <span class="px-3 py-1.5 rounded-xl border font-bold"
+                                      :class="isDark ? 'bg-dark-cardInner border-dark-border text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'">
+                                    📅 最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}
+                                </span>
                             </div>
                         </div>
 
-                        <!-- Direction -->
-                        <div class="flex items-center space-x-1.5 text-xs">
-                            <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">方向:</span>
-                            <div class="inline-flex rounded-xl border p-0.5"
-                                 :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
-                                <button @click="instSortDir = 'desc'; loadInstitutionalFlows()"
-                                        :class="instSortDir === 'desc' ? (isDark ? 'bg-emerald-600 text-white font-bold' : 'bg-emerald-600 text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
-                                        class="px-2.5 py-1 rounded-lg transition-all text-xs">
-                                    🔥 買超榜
-                                </button>
-                                <button @click="instSortDir = 'asc'; loadInstitutionalFlows()"
-                                        :class="instSortDir === 'asc' ? (isDark ? 'bg-rose-600 text-white font-bold' : 'bg-rose-600 text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
-                                        class="px-2.5 py-1 rounded-lg transition-all text-xs">
-                                    ❄️ 賣超榜
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Market -->
-                        <div class="flex items-center space-x-1.5 text-xs">
-                            <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">市場:</span>
-                            <select v-model="instMarket" @change="loadInstitutionalFlows()"
-                                    class="border rounded-xl px-3 py-1 text-xs font-bold focus:outline-none transition-all cursor-pointer"
-                                    :class="isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-white border-claude-border text-claude-text shadow-sm'">
-                                <option value="ALL">全部 (上市 + 上櫃)</option>
-                                <option value="TWSE">上市 (TWSE)</option>
-                                <option value="TPEX">上櫃 (TPEX)</option>
-                            </select>
-                        </div>
-
-                        <!-- Date Picker -->
-                        <div class="flex items-center space-x-1.5 text-xs">
-                            <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">歷史日期:</span>
-                            <select v-model="instSelectedDate" @change="loadInstitutionalFlows()"
-                                    class="border rounded-xl px-3 py-1 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer"
-                                    :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400' : 'bg-white border-claude-border text-claude-terracotta shadow-sm'">
-                                <option value="">最新出表 ({{ marketStats.latest_institutional_date || '最新' }})</option>
-                                <option v-for="d in availableDates" :key="d" :value="d">{{ d }}</option>
-                            </select>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Institutional Table Results -->
-                <div v-if="instLoading" class="text-center py-16 space-y-2">
-                    <div class="inline-block animate-spin text-2xl">⏳</div>
-                    <p class="text-xs font-bold num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">正在載入法人籌碼數據庫...</p>
-                </div>
-
-                <div v-else-if="institutionalFlows.length > 0" 
-                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
-                     class="p-5 rounded-2xl border overflow-x-auto space-y-3">
-                    
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
-                            <span>{{ instSortDir === 'desc' ? '🔥 三大法人淨買超排行榜' : '❄️ 三大法人淨賣超排行榜' }}</span>
-                            <span class="text-xs font-bold px-2 py-0.5 rounded-full border num-font"
-                                  :class="isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-claude-terracotta/10 text-claude-terracotta border-claude-terracotta/20'">
-                                TOP {{ institutionalFlows.length }}
-                            </span>
-                        </h3>
-                    </div>
-
-                    <table class="w-full text-left text-xs sm:text-sm">
-                        <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-claude-cardInner text-claude-text border-b border-claude-border'">
-                            <tr>
-                                <th class="p-3 font-bold num-font text-center w-12">#</th>
-                                <th class="p-3 font-bold">股票代號 / 名稱</th>
-                                <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
-                                <th class="p-3 font-bold text-right num-font">三大法人合計 (張)</th>
-                                <th class="p-3 font-bold text-center num-font">外資持股比率</th>
-                                <th class="p-3 font-bold text-center">市場</th>
-                                <th class="p-3 font-bold text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
-                            <tr v-for="(item, idx) in institutionalFlows" :key="item.ticker" 
-                                class="transition-colors hover:bg-slate-500/5">
-                                <td class="p-3 font-black num-font text-center opacity-60">{{ idx + 1 }}</td>
-                                <td class="p-3">
-                                    <div class="flex items-center space-x-2">
-                                        <button @click="searchTickerHistory(item.ticker)" 
-                                                class="font-black num-font hover:underline transition-all"
-                                                :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
-                                            {{ item.ticker }}
-                                        </button>
-                                        <span class="font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-700'">{{ item.name }}</span>
-                                    </div>
-                                </td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="item.foreign_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.foreign_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ item.foreign_net > 0 ? '+' : '' }}{{ Number(item.foreign_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="item.trust_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.trust_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ item.trust_net > 0 ? '+' : '' }}{{ Number(item.trust_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-bold"
-                                    :class="item.dealer_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.dealer_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
-                                    {{ item.dealer_net > 0 ? '+' : '' }}{{ Number(item.dealer_net).toLocaleString() }}
-                                </td>
-                                <td class="p-3 text-right num-font font-black">
-                                    <span class="px-2 py-0.5 rounded-md border text-xs"
-                                          :class="item.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-black') : (item.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200 font-black') : '')">
-                                        {{ item.total_net > 0 ? '+' : '' }}{{ Number(item.total_net).toLocaleString() }}
-                                    </span>
-                                </td>
-                                <td class="p-3 text-center num-font font-bold">
-                                    {{ item.foreign_ratio ? Number(item.foreign_ratio).toFixed(2) + '%' : '—' }}
-                                </td>
-                                <td class="p-3 text-center">
-                                    <span class="px-2 py-0.5 text-[11px] font-bold rounded-md border"
-                                          :class="item.market === 'TWSE' ? (isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-blue-50 text-blue-700 border-blue-200') : (isDark ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-purple-50 text-purple-700 border-purple-200')">
-                                        {{ item.market || 'TWSE' }}
-                                    </span>
-                                </td>
-                                <td class="p-3 text-center">
-                                    <button @click="searchTickerHistory(item.ticker)"
-                                            class="text-xs font-bold px-2 py-1 rounded-lg border transition-all"
-                                            :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-sky-400 border-dark-border' : 'bg-white hover:bg-claude-cardInner text-claude-terracotta border-claude-border shadow-sm'">
-                                        分析 ↗
+                        <!-- Filter & Sort Toolbar -->
+                        <div class="flex flex-wrap items-center gap-3 pt-2 border-t"
+                             :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                            
+                            <!-- Order By -->
+                            <div class="flex items-center space-x-1.5 text-xs">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">排序依據:</span>
+                                <div class="inline-flex rounded-xl border p-0.5"
+                                     :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
+                                    <button v-for="opt in [{id: 'total_net', label: '三大法人合計'}, {id: 'foreign_net', label: '外資淨買賣'}, {id: 'trust_net', label: '投信淨買賣'}, {id: 'dealer_net', label: '自營商'}]" 
+                                            :key="opt.id"
+                                            @click="instOrderBy = opt.id; loadInstitutionalFlows()"
+                                            :class="instOrderBy === opt.id ? (isDark ? 'bg-sky-600 text-white font-bold' : 'bg-claude-terracotta text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
+                                            class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                                        {{ opt.label }}
                                     </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Direction -->
+                            <div class="flex items-center space-x-1.5 text-xs">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">方向:</span>
+                                <div class="inline-flex rounded-xl border p-0.5"
+                                     :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
+                                    <button @click="instSortDir = 'desc'; loadInstitutionalFlows()"
+                                            :class="instSortDir === 'desc' ? (isDark ? 'bg-emerald-600 text-white font-bold' : 'bg-emerald-600 text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
+                                            class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                                        🔥 買超榜
+                                    </button>
+                                    <button @click="instSortDir = 'asc'; loadInstitutionalFlows()"
+                                            :class="instSortDir === 'asc' ? (isDark ? 'bg-rose-600 text-white font-bold' : 'bg-rose-600 text-white font-bold shadow-sm') : (isDark ? 'text-white/70 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
+                                            class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                                        ❄️ 賣超榜
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Market -->
+                            <div class="flex items-center space-x-1.5 text-xs">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">市場:</span>
+                                <select v-model="instMarket" @change="loadInstitutionalFlows()"
+                                        class="border rounded-xl px-3 py-1 text-xs font-bold focus:outline-none transition-all cursor-pointer"
+                                        :class="isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-white border-claude-border text-claude-text shadow-sm'">
+                                    <option value="ALL">全部 (上市 + 上櫃)</option>
+                                    <option value="TWSE">上市 (TWSE)</option>
+                                    <option value="TPEX">上櫃 (TPEX)</option>
+                                </select>
+                            </div>
+
+                            <!-- Date Picker -->
+                            <div class="flex items-center space-x-1.5 text-xs">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">歷史日期:</span>
+                                <select v-model="instSelectedDate" @change="loadInstitutionalFlows()"
+                                        class="border rounded-xl px-3 py-1 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer"
+                                        :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400' : 'bg-white border-claude-border text-claude-terracotta shadow-sm'">
+                                    <option value="">最新出表 ({{ marketStats.latest_institutional_date || '最新' }})</option>
+                                    <option v-for="d in availableDates" :key="d" :value="d">{{ d }}</option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Institutional Table Results -->
+                    <div v-if="instLoading" class="text-center py-16 space-y-2">
+                        <div class="inline-block animate-spin text-2xl">⏳</div>
+                        <p class="text-xs font-bold num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">正在載入法人籌碼數據庫...</p>
+                    </div>
+
+                    <div v-else-if="institutionalFlows.length > 0" 
+                         :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
+                         class="p-5 rounded-2xl border overflow-x-auto space-y-3">
+                        
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                <span>{{ instSortDir === 'desc' ? '🔥 三大法人淨買超排行榜' : '❄️ 三大法人淨賣超排行榜' }}</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full border num-font"
+                                      :class="isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-claude-terracotta/10 text-claude-terracotta border-claude-terracotta/20'">
+                                    TOP {{ institutionalFlows.length }}
+                                </span>
+                            </h3>
+                        </div>
+
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-claude-cardInner text-claude-text border-b border-claude-border'">
+                                <tr>
+                                    <th class="p-3 font-bold num-font text-center w-12">#</th>
+                                    <th class="p-3 font-bold">股票代號 / 名稱</th>
+                                    <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
+                                    <th class="p-3 font-bold text-right num-font">三大法人合計 (張)</th>
+                                    <th class="p-3 font-bold text-center num-font">外資持股比率</th>
+                                    <th class="p-3 font-bold text-center">市場</th>
+                                    <th class="p-3 font-bold text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
+                                <tr v-for="(item, idx) in institutionalFlows" :key="item.ticker" 
+                                    class="transition-colors hover:bg-slate-500/5">
+                                    <td class="p-3 font-black num-font text-center opacity-60">{{ idx + 1 }}</td>
+                                    <td class="p-3">
+                                        <div class="flex items-center space-x-2">
+                                            <button @click="searchTickerHistory(item.ticker)" 
+                                                    class="font-black num-font hover:underline transition-all"
+                                                    :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                                {{ item.ticker }}
+                                            </button>
+                                            <span class="font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-700'">{{ item.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="item.foreign_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.foreign_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ item.foreign_net > 0 ? '+' : '' }}{{ Number(item.foreign_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="item.trust_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.trust_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ item.trust_net > 0 ? '+' : '' }}{{ Number(item.trust_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-bold"
+                                        :class="item.dealer_net > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (item.dealer_net < 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : 'opacity-40')">
+                                        {{ item.dealer_net > 0 ? '+' : '' }}{{ Number(item.dealer_net).toLocaleString() }}
+                                    </td>
+                                    <td class="p-3 text-right num-font font-black">
+                                        <span class="px-2 py-0.5 rounded-md border text-xs"
+                                              :class="item.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-black') : (item.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200 font-black') : '')">
+                                            {{ item.total_net > 0 ? '+' : '' }}{{ Number(item.total_net).toLocaleString() }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-center num-font font-bold">
+                                        {{ item.foreign_ratio ? Number(item.foreign_ratio).toFixed(2) + '%' : '—' }}
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-md border"
+                                              :class="item.market === 'TWSE' ? (isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-blue-50 text-blue-700 border-blue-200') : (isDark ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-purple-50 text-purple-700 border-purple-200')">
+                                            {{ item.market || 'TWSE' }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <button @click="searchTickerHistory(item.ticker)"
+                                                class="text-xs font-bold px-2 py-1 rounded-lg border transition-all"
+                                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-sky-400 border-dark-border' : 'bg-white hover:bg-claude-cardInner text-claude-terracotta border-claude-border shadow-sm'">
+                                            分析 ↗
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-else class="text-center py-16 space-y-2">
+                        <p class="text-sm font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">查無符合條件之法人籌碼數據。</p>
+                    </div>
                 </div>
 
-                <div v-else class="text-center py-16 space-y-2">
-                    <p class="text-sm font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">查無符合條件之法人籌碼數據。</p>
+                <!-- SUB-TAB 2: 券商分點主力追蹤 (BROKER MAIN FORCE) -->
+                <div v-if="instSubTab === 'broker'" class="space-y-6">
+                    <!-- Broker Toolbar Card -->
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
+                         class="p-5 rounded-2xl border space-y-4">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                    <span>🏦 券商分點主力進出雷達</span>
+                                </h3>
+                                <p class="text-xs mt-0.5" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                    穿透個別券商分點（高盛、摩根士丹利、新加坡商瑞銀、元大台北、凱基台北）之多空建倉時間序列
+                                </p>
+                            </div>
+
+                            <!-- Search & Controls -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="flex items-center space-x-1">
+                                    <span class="text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">股票代號:</span>
+                                    <input type="text" v-model="brokerSearchTicker" @keyup.enter="loadBrokerTrend()"
+                                           placeholder="例如 2330"
+                                           class="w-24 sm:w-28 px-3 py-1.5 text-xs font-bold num-font rounded-xl border focus:outline-none transition-all"
+                                           :class="isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-white border-claude-border text-claude-text shadow-sm'">
+                                </div>
+                                <select v-model="brokerDays" @change="loadBrokerTrend()"
+                                        class="border rounded-xl px-3 py-1.5 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer"
+                                        :class="isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-white border-claude-border text-claude-text shadow-sm'">
+                                    <option :value="10">10 個交易日</option>
+                                    <option :value="20">20 個交易日</option>
+                                    <option :value="30">30 個交易日</option>
+                                    <option :value="60">60 個交易日</option>
+                                </select>
+                                <button @click="loadBrokerTrend()"
+                                        class="px-4 py-1.5 rounded-xl text-xs font-bold text-white transition-all shadow-sm"
+                                        :class="isDark ? 'bg-purple-600 hover:bg-purple-500' : 'bg-purple-600 hover:bg-purple-700'">
+                                    分析分點
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Broker Loading -->
+                    <div v-if="brokerLoading" class="text-center py-16 space-y-2">
+                        <div class="inline-block animate-spin text-2xl">⏳</div>
+                        <p class="text-xs font-bold num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">正在計算券商分點主力時序...</p>
+                    </div>
+
+                    <!-- Broker Trend Chart Card -->
+                    <div v-else-if="brokerSeries.length > 0" 
+                         :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
+                         class="p-5 rounded-2xl border space-y-4">
+                        
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                    <span>📈 <span class="num-font" :class="isDark ? 'text-purple-400' : 'text-purple-600'">{{ brokerSearchTicker.toUpperCase() }}</span> 目標券商累計買賣超趨勢</span>
+                                </h3>
+                                <p class="text-xs mt-0.5" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                    統計區間: {{ brokerSummary.start_date }} ~ {{ brokerSummary.end_date }} (共 {{ brokerSummary.days }} 天)
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Canvas -->
+                        <div class="w-full h-72 sm:h-96 relative pt-2">
+                            <canvas id="brokerChartCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Top 15 Buyers vs Top 15 Sellers Cards -->
+                    <div v-if="brokerSummary.top_buyers && brokerSummary.top_buyers.length > 0" 
+                         class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        
+                        <!-- Top Buyers -->
+                        <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
+                             class="p-5 rounded-2xl border space-y-3">
+                            <h4 class="text-sm font-black text-emerald-500 flex items-center space-x-2">
+                                <span>🔥 主力買超券商分點 TOP 15</span>
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead :class="isDark ? 'bg-dark-cardInner text-slate-300' : 'bg-claude-cardInner text-claude-text'">
+                                        <tr>
+                                            <th class="p-2.5 font-bold">券商分點</th>
+                                            <th class="p-2.5 font-bold text-right num-font">累計買進 (張)</th>
+                                            <th class="p-2.5 font-bold text-right num-font">累計賣出 (張)</th>
+                                            <th class="p-2.5 font-bold text-right num-font">淨買超 (張)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
+                                        <tr v-for="b in brokerSummary.top_buyers" :key="b.broker_name">
+                                            <td class="p-2.5 font-bold">{{ b.broker_name }}</td>
+                                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_buy.toLocaleString() }}</td>
+                                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_sell.toLocaleString() }}</td>
+                                            <td class="p-2.5 text-right font-black num-font text-emerald-400">+{{ b.total_net.toLocaleString() }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Top Sellers -->
+                        <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
+                             class="p-5 rounded-2xl border space-y-3">
+                            <h4 class="text-sm font-black text-rose-500 flex items-center space-x-2">
+                                <span>❄️ 主力賣超券商分點 TOP 15</span>
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead :class="isDark ? 'bg-dark-cardInner text-slate-300' : 'bg-claude-cardInner text-claude-text'">
+                                        <tr>
+                                            <th class="p-2.5 font-bold">券商分點</th>
+                                            <th class="p-2.5 font-bold text-right num-font">累計買進 (張)</th>
+                                            <th class="p-2.5 font-bold text-right num-font">累計賣出 (張)</th>
+                                            <th class="p-2.5 font-bold text-right num-font">淨賣超 (張)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
+                                        <tr v-for="b in brokerSummary.top_sellers" :key="b.broker_name">
+                                            <td class="p-2.5 font-bold">{{ b.broker_name }}</td>
+                                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_buy.toLocaleString() }}</td>
+                                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_sell.toLocaleString() }}</td>
+                                            <td class="p-2.5 text-right font-black num-font text-rose-400">{{ b.total_net.toLocaleString() }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div v-else-if="!brokerLoading" 
+                         :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
+                         class="text-center py-12 rounded-2xl border space-y-1">
+                        <div class="text-3xl">🔎</div>
+                        <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-claude-text'">查無 <strong>{{ brokerSearchTicker }}</strong> 的券商分點主力時序資料</div>
+                    </div>
                 </div>
+
+            </div>
 
             </div>
 
@@ -1158,6 +1317,7 @@ for p in picks:
                     loadError: '',
 
                     // Institutional Radar Data
+                    instSubTab: 'three_inst',
                     institutionalFlows: [],
                     instLoading: false,
                     instOrderBy: 'total_net',
@@ -1165,6 +1325,15 @@ for p in picks:
                     instMarket: 'ALL',
                     availableDates: [],
                     instSelectedDate: '',
+
+                    // Broker Radar Data
+                    brokerSearchTicker: '2330',
+                    brokerDays: 20,
+                    brokerLoading: false,
+                    brokerDates: [],
+                    brokerSeries: [],
+                    brokerSummary: {},
+                    brokerChartInstance: null,
 
                     // Ticker Explorer
                     searchTicker: '2330.TW',
@@ -1199,6 +1368,9 @@ for p in picks:
                     this.applyTheme();
                     if (this.tickerInstHistory && this.tickerInstHistory.length > 0) {
                         this.renderInstChart();
+                    }
+                    if (this.brokerSeries && this.brokerSeries.length > 0) {
+                        this.renderBrokerChart();
                     }
                 },
                 applyTheme() {
@@ -1488,6 +1660,145 @@ for p in picks:
                         });
                     });
                 },
+                async loadBrokerTrend() {
+                    if (!this.brokerSearchTicker.trim()) return;
+                    this.brokerLoading = true;
+                    try {
+                        const ticker = encodeURIComponent(this.brokerSearchTicker.trim().toUpperCase());
+                        
+                        // 1. 取得走勢時序
+                        const resTrend = await fetch(`/api/v1/market/broker/trend/${ticker}?days=${this.brokerDays}&top_n=8`);
+                        if (resTrend.ok) {
+                            const dataTrend = await resTrend.json();
+                            this.brokerDates = dataTrend.dates || [];
+                            this.brokerSeries = dataTrend.series || [];
+                        } else {
+                            this.brokerDates = [];
+                            this.brokerSeries = [];
+                        }
+
+                        // 2. 取得買賣分點摘要
+                        const resSummary = await fetch(`/api/v1/market/broker/summary/${ticker}?days=${this.brokerDays}`);
+                        if (resSummary.ok) {
+                            this.brokerSummary = await resSummary.json();
+                        } else {
+                            this.brokerSummary = {};
+                        }
+
+                        if (this.brokerSeries.length > 0) {
+                            this.renderBrokerChart();
+                        }
+                    } catch (e) {
+                        console.error("Failed to load broker trend", e);
+                    } finally {
+                        this.brokerLoading = false;
+                    }
+                },
+                renderBrokerChart() {
+                    this.$nextTick(() => {
+                        const canvas = document.getElementById('brokerChartCanvas');
+                        if (!canvas || !this.brokerSeries.length || !this.brokerDates.length) return;
+
+                        if (this.brokerChartInstance) {
+                            this.brokerChartInstance.destroy();
+                            this.brokerChartInstance = null;
+                        }
+
+                        const isDark = this.isDark;
+                        const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+                        const textColor = isDark ? '#94A3B8' : '#737067';
+
+                        // Multi-color palette for broker branches
+                        const palette = [
+                            '#38BDF8', // Sky Blue
+                            '#F43F5E', // Rose Red
+                            '#10B981', // Emerald
+                            '#F59E0B', // Amber
+                            '#A855F7', // Purple
+                            '#EC4899', // Pink
+                            '#06B6D4', // Cyan
+                            '#84CC16', // Lime
+                            '#6366F1', // Indigo
+                            '#F97316'  // Orange
+                        ];
+
+                        const datasets = this.brokerSeries.map((item, idx) => {
+                            const color = palette[idx % palette.length];
+                            return {
+                                label: item.broker_name,
+                                data: item.data,
+                                borderColor: color,
+                                backgroundColor: 'transparent',
+                                borderWidth: idx < 3 ? 2.5 : 1.8,
+                                tension: 0.3,
+                                pointRadius: this.brokerDates.length > 40 ? 0 : 2,
+                                pointHoverRadius: 5
+                            };
+                        });
+
+                        this.brokerChartInstance = new Chart(canvas, {
+                            type: 'line',
+                            data: {
+                                labels: this.brokerDates,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false
+                                },
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'bottom',
+                                        labels: {
+                                            color: textColor,
+                                            boxWidth: 10,
+                                            font: { family: 'Noto Sans TC', size: 11 }
+                                        }
+                                    },
+                                    tooltip: {
+                                        backgroundColor: isDark ? '#172236' : '#FFFFFF',
+                                        titleColor: isDark ? '#FFFFFF' : '#141413',
+                                        bodyColor: isDark ? '#F1F5F9' : '#141413',
+                                        borderColor: isDark ? '#334155' : '#E8E6DC',
+                                        borderWidth: 1,
+                                        padding: 10,
+                                        bodyFont: { family: 'JetBrains Mono' },
+                                        titleFont: { family: 'JetBrains Mono', weight: 'bold' },
+                                        callbacks: {
+                                            label: function(ctx) {
+                                                const val = ctx.parsed.y;
+                                                const sign = val > 0 ? '+' : '';
+                                                return ` ${ctx.dataset.label}: ${sign}${val.toLocaleString()} 張`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { color: gridColor },
+                                        ticks: {
+                                            color: textColor,
+                                            font: { family: 'JetBrains Mono', size: 10 },
+                                            maxTicksLimit: 8
+                                        }
+                                    },
+                                    y: {
+                                        grid: { color: gridColor },
+                                        ticks: {
+                                            color: textColor,
+                                            font: { family: 'JetBrains Mono', size: 10 },
+                                            callback: (v) => v.toLocaleString() + ' 張'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                },
                 searchTickerHistory(ticker) {
                     this.searchTicker = ticker;
                     this.activeTab = 'history';
@@ -1623,7 +1934,25 @@ for p in picks:
                             }
                         });
 
-                        console.log('✅ [Chrome WebMCP] Registered 6 tools to document.modelContext');
+                        // Tool 7: get_broker_trades_for_stock
+                        await modelCtx.registerTool({
+                            name: 'get_broker_trades_for_stock',
+                            description: '查詢特定股票（如 2330.TW, 2454.TW）各關鍵券商分點（高盛、摩根士丹利、元大台北等）主力買賣超明細與累計趨勢。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    ticker: { type: 'string', description: '股票代號（例如 2330.TW）' },
+                                    days: { type: 'integer', description: '統計天數，預設 20' }
+                                },
+                                required: ['ticker']
+                            },
+                            execute: async ({ ticker, days }) => {
+                                const res = await fetch(`/api/v1/market/broker/summary/${encodeURIComponent(ticker.toUpperCase())}?days=${days || 20}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        console.log('✅ [Chrome WebMCP] Registered 7 tools to document.modelContext');
                     } catch (e) {
                         console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
                     }

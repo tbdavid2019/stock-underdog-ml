@@ -29,13 +29,14 @@ logger = logging.getLogger("historical_import")
 def main():
     parser = argparse.ArgumentParser(description="台股與美股開源歷史數據庫回填工具")
     parser.add_argument("--flows", action="store_true", help="匯入三大法人歷史買賣超 (tw-institutional-stocker)")
+    parser.add_argument("--broker", action="store_true", help="匯入券商分點主力歷史進出 (broker_history.csv)")
     parser.add_argument("--klines", action="store_true", help="匯入核心權值股歷史日 K (tw_stocker)")
     parser.add_argument("--all", action="store_true", help="匯入全部歷史數據庫")
     parser.add_argument("--max-rows", type=int, default=None, help="限制匯入最大筆數 (測試用)")
 
     args = parser.parse_args()
 
-    if not (args.flows or args.klines or args.all):
+    if not (args.flows or args.broker or args.klines or args.all):
         args.all = True
 
     start_time = datetime.datetime.now()
@@ -47,21 +48,26 @@ def main():
         sys.exit(1)
 
     total_flows = 0
+    total_brokers = 0
     total_bars = 0
 
     if args.flows or args.all:
         logger.info("📊 正在匯入三大法人歷史時序數據...")
         total_flows = HistoricalImporter.import_institutional_flows(db_mgr=db_mgr, max_rows=args.max_rows)
 
+    if args.broker or args.all:
+        logger.info("🏦 正在匯入券商分點主力歷史數據...")
+        total_brokers = HistoricalImporter.import_broker_trades(db_mgr=db_mgr, max_rows=args.max_rows)
+
     if args.klines or args.all:
         logger.info("📈 正在匯入核心標的歷史日 K 棒數據...")
         total_bars = HistoricalImporter.import_benchmark_k_lines(db_mgr=db_mgr)
 
     elapsed = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(
-        f"🎉 歷史數據初始化回填完成！"
-        f"法人時序: {total_flows} 筆, 歷史日 K: {total_bars} 筆 (總耗時: {elapsed:.2f} 秒)"
-    )
+    logger.info(f"🎉 歷史數據回填完成！耗時: {elapsed:.2f} 秒")
+    logger.info(f"   • 三大法人時序筆數: {total_flows:,}")
+    logger.info(f"   • 券商分點主力筆數: {total_brokers:,}")
+    logger.info(f"   • 核心日 K 棒筆數:   {total_bars:,}")
 
 
 if __name__ == "__main__":

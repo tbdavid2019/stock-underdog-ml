@@ -234,7 +234,31 @@ def get_top_institutional_flows(
         return {"success": False, "error": str(e), "data": []}
 
 
+@mcp.tool(
+    name="get_broker_trades_for_stock",
+    description="查詢特定股票（如 '2330.TW', '2454.TW'）在過去 N 天內，各關鍵券商分點（外資外商分點與內資主力分點）之累計買賣超排行榜與統計摘要。"
+)
+def get_broker_trades_for_stock(
+    ticker: str,
+    days: int = 20
+) -> Dict[str, Any]:
+    """
+    Query broker branches top buyers and sellers for a ticker.
+    
+    Args:
+        ticker: 股票代號 (例如 '2330.TW' 或 '2330')
+        days: 統計天數 (預設: 20)
+    """
+    summary = db.get_broker_top_summary(ticker=ticker, limit_days=days)
+    return {
+        "success": True,
+        "ticker": ticker,
+        "days": days,
+        "data": summary
+    }
+
 
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()
+

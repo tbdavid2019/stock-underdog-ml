@@ -176,3 +176,59 @@ class HistoricalImporter:
                 logger.warning(f"⚠️ 匯入 {code} 歷史 K 棒失敗: {e}")
 
         return total_bars
+
+    BROKER_HISTORY_URL = "https://raw.githubusercontent.com/voidful/tw-institutional-stocker/main/data/broker/broker_history.csv"
+
+    @classmethod
+    def import_broker_trades(
+        cls,
+        db_mgr: Optional[DuckDBManager] = None,
+        max_rows: Optional[int] = None
+    ) -> int:
+        """
+        匯入券商分點主力歷史進出數據 (broker_history.csv)
+        """
+        mgr = db_mgr or DuckDBManager()
+        if not mgr.enabled:
+            logger.warning("DuckDB 未啟用，略過匯入")
+            return 0
+
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            logger.info("📥 正在下載並解析券商分點歷史數據 (broker_history.csv)...")
+            resp = requests.get(cls.BROKER_HISTORY_URL, headers=cls.HEADERS, timeout=60)
+            if resp.status_code != 200:
+                logger.warning(f"⚠️ 下載 broker_history.csv 失敗 (HTTP {resp.status_code})")
+                return 0
+
+            df = pd.read_csv(io.StringIO(resp.text))
+            if max_rows and len(df) > max_rows:
+                df = df.head(max_rows)
+
+            date_col = "trade_date" if "trade_date" in df.columns else ("full_date" if "full_date" in df.columns else "date")
+            df["date"] = pd.to_datetime(df[date_col], errors="coerce").dt.strftime("%Y-%m-%d")
+            df["raw_code"] = df["stock_code"].astype(str).str.strip()
+            df["ticker"] = df["raw_code"] + ".TW"
+            df["broker_name"] = df["broker_name"].astype(str).str.strip()
+            df["broker_id"] = df["broker_id"].astype(str).str.strip()
+            df["buy_vol"] = pd.to_numeric(df["buy_vol"], errors="coerce").fillna(0).astype(int)
+            df["sell_vol"] = pd.to_numeric(df["sell_vol"], errors="coerce").fillna(0).astype(int)
+            df["net_vol"] = pd.to_numeric(df["net_vol"], errors="coerce").fillna(0).astype(int)
+            df["pct"] = pd.to_numeric(df["pct"], errors="coerce").fillna(0.0).astype(float)
+            df["rank"] = pd.to_numeric(df["rank"], errors="coerce").fillna(0).astype(int)
+            df["side"] = df["side"].astype(str).str.strip()
+            df["created_at"] = now_str
+
+            records = df[[
+                "date", "ticker", "raw_code", "broker_name", "broker_id",
+                "buy_vol", "sell_vol", "net_vol", "pct", "rank", "side", "created_at"
+            ]].dropna(subset=["date", "raw_code"]).to_dict(orient="records")
+
+            inserted = mgr.save_broker_trades_batch(records)
+            logger.info(f"✅ 成功匯入券商分點主力資料: {inserted} 筆")
+            return inserted
+
+        except Exception as e:
+            logger.error(f"❌ 匯入券商分點歷史數據失敗: {e}", exc_info=True)
+            return 0
+

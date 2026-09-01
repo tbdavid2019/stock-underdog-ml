@@ -27,12 +27,34 @@ class TestMarketAPI(unittest.TestCase):
         data = resp.json()
         self.assertIsInstance(data, list)
 
-    def test_get_ticker_institutional_history(self):
-        resp = self.client.get("/api/v1/market/institutional/2330.TW?limit=5")
+    def test_get_available_institutional_dates(self):
+        resp = self.client.get("/api/v1/market/institutional/dates?limit=5")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIsInstance(data, list)
 
+    def test_get_ticker_broker_summary(self):
+        resp = self.client.get("/api/v1/market/broker/summary/2330.TW?days=20")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("top_buyers", data)
+        self.assertIn("top_sellers", data)
+
+    def test_get_ticker_broker_trades(self):
+        resp = self.client.get("/api/v1/market/broker/trades/2330.TW?limit=10")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIsInstance(data, list)
+
+    def test_get_ticker_broker_trend(self):
+        resp = self.client.get("/api/v1/market/broker/trend/2330.TW?days=30&top_n=5")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("ticker", data)
+        self.assertIn("dates", data)
+        self.assertIn("series", data)
+
 
 if __name__ == "__main__":
     unittest.main()
+

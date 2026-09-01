@@ -112,6 +112,22 @@ class DuckDBManager:
                     created_at VARCHAR
                 );
                 """)
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS tw_broker_trades (
+                    date VARCHAR,
+                    ticker VARCHAR,
+                    raw_code VARCHAR,
+                    broker_name VARCHAR,
+                    broker_id VARCHAR,
+                    buy_vol BIGINT,
+                    sell_vol BIGINT,
+                    net_vol BIGINT,
+                    pct DOUBLE,
+                    rank INTEGER,
+                    side VARCHAR,
+                    created_at VARCHAR
+                );
+                """)
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
@@ -776,5 +792,127 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 法人時序失敗: {e}")
             return pd.DataFrame()
+
+    def save_broker_trades_batch(self, records: List[Dict[str, Any]]) -> int:
+        """批次寫入券商分點進出資料 (tw_broker_trades)"""
+        if not self.enabled or not records:
+            return 0
+
+        df = pd.DataFrame(records)
+        expected_cols = [
+            "date", "ticker", "raw_code", "broker_name", "broker_id",
+            "buy_vol", "sell_vol", "net_vol", "pct", "rank", "side", "created_at"
+        ]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        try:
+            with self._get_connection() as con:
+                con.register("temp_broker_df", df[expected_cols])
+                con.execute("""
+                DELETE FROM tw_broker_trades
+                WHERE (date, raw_code, broker_id, side) IN (
+                    SELECT date, raw_code, broker_id, side FROM temp_broker_df
+                );
+                """)
+                con.execute("INSERT INTO tw_broker_trades SELECT * FROM temp_broker_df;")
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆券商分點資料至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_broker_trades 失敗: {e}", exc_info=True)
+            return 0
+
+    def get_broker_trades_for_ticker(self, ticker: str, limit: int = 100) -> pd.DataFrame:
+        """
+        取得特定標的最近的券商分點進出明細
+        """
+        if not self.enabled:
+            return pd.DataFrame()
+
+        clean_code = ticker.split(".")[0]
+        sql = """
+        SELECT 
+            date,
+            ticker,
+            raw_code,
+            broker_name,
+            broker_id,
+            buy_vol,
+            sell_vol,
+            net_vol,
+            pct,
+            rank,
+            side
+        FROM tw_broker_trades
+        WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+        ORDER BY date DESC, rank ASC
+        LIMIT ?;
+        """
+        try:
+            with self._get_connection() as con:
+                df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
+                return df
+        except Exception as e:
+            logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 券商分點失敗: {e}")
+            return pd.DataFrame()
+
+    def get_broker_top_summary(self, ticker: str, limit_days: int = 20) -> Dict[str, Any]:
+        """
+        取得特定標的在過去 N 個交易日中，累計買超與賣超最多的券商分點摘要
+        """
+        if not self.enabled:
+            return {"top_buyers": [], "top_sellers": []}
+
+        clean_code = ticker.split(".")[0]
+        try:
+            with self._get_connection() as con:
+                # 取得可用日期清單
+                dates_df = con.execute("""
+                    SELECT DISTINCT date 
+                    FROM tw_broker_trades 
+                    WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+                    ORDER BY date DESC 
+                    LIMIT ?;
+                """, [ticker, clean_code, f"{clean_code}.%", limit_days]).df()
+                
+                if dates_df.empty:
+                    return {"top_buyers": [], "top_sellers": []}
+
+                min_date = dates_df["date"].min()
+
+                sql = """
+                SELECT 
+                    broker_name,
+                    SUM(buy_vol) as total_buy,
+                    SUM(sell_vol) as total_sell,
+                    SUM(net_vol) as total_net,
+                    AVG(pct) as avg_pct,
+                    COUNT(DISTINCT date) as trade_days
+                FROM tw_broker_trades
+                WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?) AND date >= ?
+                GROUP BY broker_name
+                HAVING total_net != 0
+                ORDER BY total_net DESC;
+                """
+                df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", min_date]).df()
+                if df.empty:
+                    return {"top_buyers": [], "top_sellers": []}
+
+                top_buyers = df[df["total_net"] > 0].head(15).to_dict(orient="records")
+                top_sellers = df[df["total_net"] < 0].sort_values("total_net", ascending=True).head(15).to_dict(orient="records")
+
+                return {
+                    "ticker": ticker,
+                    "days": len(dates_df),
+                    "start_date": str(min_date),
+                    "end_date": str(dates_df["date"].max()),
+                    "top_buyers": top_buyers,
+                    "top_sellers": top_sellers
+                }
+        except Exception as e:
+            logger.warning(f"⚠️ 從 DuckDB 統計 {ticker} 券商主力摘要失敗: {e}")
+            return {"top_buyers": [], "top_sellers": []}
+
 
 

@@ -30,6 +30,7 @@ class InstitutionalFlowItem(BaseModel):
 class MarketStatsResponse(BaseModel):
     total_bars: int
     total_institutional_records: int
+    total_broker_records: int = 0
     total_predictions: int
     latest_market_date: Optional[str] = None
     latest_institutional_date: Optional[str] = None
@@ -38,12 +39,19 @@ class MarketStatsResponse(BaseModel):
 @router.get("/stats", response_model=MarketStatsResponse, summary="取得時序庫行情與法人籌碼整體統計")
 def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
     """
-    查詢 DuckDB 中台股全市場日 K 棒、三大法人歷史進出表與預測記錄之數據量。
+    查詢 DuckDB 中台股全市場日 K 棒、三大法人歷史進出表、券商分點主力與預測記錄之數據量。
     """
     try:
         with db._get_connection() as con:
             bars_cnt = con.execute("SELECT COUNT(*) FROM tw_daily_bars").fetchone()[0]
             inst_cnt = con.execute("SELECT COUNT(*) FROM tw_institutional_daily").fetchone()[0]
+            
+            # 檢查 tw_broker_trades 是否存在
+            broker_cnt = 0
+            has_broker = con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'tw_broker_trades'").fetchone()[0]
+            if has_broker:
+                broker_cnt = con.execute("SELECT COUNT(*) FROM tw_broker_trades").fetchone()[0]
+                
             pred_cnt = con.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
             
             latest_bar_date = con.execute("SELECT MAX(date) FROM tw_daily_bars").fetchone()[0]
@@ -52,6 +60,7 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             return MarketStatsResponse(
                 total_bars=bars_cnt,
                 total_institutional_records=inst_cnt,
+                total_broker_records=broker_cnt,
                 total_predictions=pred_cnt,
                 latest_market_date=str(latest_bar_date) if latest_bar_date else None,
                 latest_institutional_date=str(latest_inst_date) if latest_inst_date else None
@@ -154,4 +163,119 @@ def get_ticker_institutional_history(
     if df.empty:
         return []
     return df.to_dict(orient="records")
+
+
+@router.get("/broker/summary/{ticker}", summary="取得個股券商分點主力買賣超摘要")
+def get_ticker_broker_summary(
+    ticker: str,
+    days: int = Query(20, ge=1, le=120, description="統計天數區間"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    查詢特定標的在過去 N 個交易日內，買超前 15 名與賣超前 15 名之券商分點合計統計。
+    """
+    return db.get_broker_top_summary(ticker=ticker, limit_days=days)
+
+
+@router.get("/broker/trades/{ticker}", summary="取得個股近期券商分點明細")
+def get_ticker_broker_trades(
+    ticker: str,
+    limit: int = Query(60, ge=1, le=200, description="明細筆數"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    查詢特定標的最近的券商分點每日進出明細紀錄。
+    """
+    df = db.get_broker_trades_for_ticker(ticker=ticker, limit=limit)
+    if df.empty:
+        return []
+    return df.to_dict(orient="records")
+
+
+@router.get("/broker/trend/{ticker}", summary="取得個股目標券商分點累計買賣超趨勢時序")
+def get_ticker_broker_trend(
+    ticker: str,
+    days: int = Query(30, ge=5, le=120, description="時序天數"),
+    top_n: int = Query(8, ge=2, le=20, description="取買賣超最顯著之分點數量"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    計算特定標的各關鍵券商分點在歷史區間內的每日「累計買賣超 (張)」時間序列，用於繪製分點走勢圖。
+    """
+    clean_code = ticker.split(".")[0]
+    try:
+        with db._get_connection() as con:
+            # 1. 取得最近 N 天日期
+            dates_df = con.execute("""
+                SELECT DISTINCT date 
+                FROM tw_broker_trades 
+                WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+                ORDER BY date DESC 
+                LIMIT ?;
+            """, [ticker, clean_code, f"{clean_code}.%", days]).df()
+            
+            if dates_df.empty:
+                return {"ticker": ticker, "dates": [], "series": []}
+
+            dates = sorted(dates_df["date"].tolist())
+            min_date = dates[0]
+
+            # 2. 找出這段時間內絕對淨量最大的 Top N 券商分點
+            top_brokers_df = con.execute("""
+                SELECT broker_name, ABS(SUM(net_vol)) as abs_net
+                FROM tw_broker_trades
+                WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?) AND date >= ?
+                GROUP BY broker_name
+                ORDER BY abs_net DESC
+                LIMIT ?;
+            """, [ticker, clean_code, f"{clean_code}.%", min_date, top_n]).df()
+
+            if top_brokers_df.empty:
+                return {"ticker": ticker, "dates": dates, "series": []}
+
+            top_broker_names = top_brokers_df["broker_name"].tolist()
+
+            # 3. 取得所有相關明細
+            placeholders = ",".join(["?"] * len(top_broker_names))
+            sql = f"""
+                SELECT date, broker_name, net_vol
+                FROM tw_broker_trades
+                WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?) 
+                  AND date >= ?
+                  AND broker_name IN ({placeholders})
+                ORDER BY date ASC;
+            """
+            params = [ticker, clean_code, f"{clean_code}.%", min_date] + top_broker_names
+            trades_df = con.execute(sql, params).df()
+
+            # 4. 構建每個分點在各日期的累計淨量
+            series_result = []
+            for bname in top_broker_names:
+                b_df = trades_df[trades_df["broker_name"] == bname]
+                vol_map = dict(zip(b_df["date"], b_df["net_vol"]))
+                
+                cum = 0
+                cum_data = []
+                for d in dates:
+                    net = vol_map.get(d, 0)
+                    cum += net
+                    cum_data.append(cum)
+
+                series_result.append({
+                    "broker_name": bname,
+                    "final_net": cum,
+                    "data": cum_data
+                })
+
+            # 依最終累計淨量降冪排序
+            series_result.sort(key=lambda x: abs(x["final_net"]), reverse=True)
+
+            return {
+                "ticker": ticker,
+                "dates": dates,
+                "series": series_result
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"計算券商趨勢失敗: {e}")
+
 
