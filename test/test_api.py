@@ -69,10 +69,17 @@ class TestFastAPIService(unittest.TestCase):
             }
         ]
         cls.db.save_predictions_batch(sample_records)
+        
+        from api.routes.predictions import get_duckdb as get_duckdb_pred
+        from api.routes.stats import get_duckdb as get_duckdb_stats
+        app.dependency_overrides[get_duckdb_pred] = lambda: cls.db
+        app.dependency_overrides[get_duckdb_stats] = lambda: cls.db
+        
         cls.client = TestClient(app)
 
     @classmethod
     def tearDownClass(cls):
+        app.dependency_overrides.clear()
         if os.path.exists(cls.test_db_path):
             os.remove(cls.test_db_path)
 

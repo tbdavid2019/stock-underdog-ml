@@ -248,9 +248,21 @@ class DuckDBManager:
         """將 DataFrame 轉為乾淨的字典清單，將 NaN / NaT / inf 轉為 None"""
         if df.empty:
             return []
-        # 將所有型態的 NaN 統一轉為 Python None
-        cleaned = df.map(lambda x: None if pd.isna(x) else x)
-        return cleaned.to_dict(orient="records")
+        import math
+        records = []
+        for row in df.to_dict(orient="records"):
+            clean_row = {}
+            for k, v in row.items():
+                if v is None:
+                    clean_row[k] = None
+                elif isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    clean_row[k] = None
+                elif pd.isna(v) or str(v).lower() in ("nan", "none", "nat"):
+                    clean_row[k] = None
+                else:
+                    clean_row[k] = v
+            records.append(clean_row)
+        return records
 
     # =========================================================================
     # REST API & MCP 專用高吞吐量化分析查詢接口
