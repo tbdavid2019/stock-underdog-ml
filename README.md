@@ -39,7 +39,8 @@ AI 驅動的股票預測系統，使用 **LSTM** 預測下一個交易日的股�
 - ✅ **法人籌碼** - 投信連續買超與外資 5D/20D 累積買賣超
 - ✅ **3 級 LLM 備援** - OpenAI 相容端點支援 Gemini、DeepSeek、GPT-4o-mini
 - ✅ **多市場支持** - 台股 50、台股中型 100、S&P 500、SpaceX 太空概念
-- ✅ **Supabase 整合** - 雲端資料庫儲存與完整 JSON 安全檢查
+- ✅ **雙備份架構** - 雲端 Supabase + 本地 DuckDB 列式時序庫（`data/storage/stock_quant.duckdb`）
+- ✅ **容器化支援** - 現代化 Python 3.11 Slim Dockerfile 與 Docker Compose
 - ✅ **多通知管道** - Discord Rich Embed、Telegram HTML、Email Plain Text
 
 ### 資料來源與可靠性
@@ -47,6 +48,7 @@ AI 驅動的股票預測系統，使用 **LSTM** 預測下一個交易日的股�
 - 指數榜單優先使用 `answerbook.david888.com` 的 `TW0050`、`TW0051`、`SP500`、`nasdaq100` 與 `dowjones` API。
 - 每次執行會先抓取最新榜單；只有 API 抓取失敗時才使用既有快取，快取超過 90 天才改用內建 fallback。
 - S&P500 API 目前回傳完整榜單，但策略預設只分析前 110 名，以控制 LSTM 執行時間。
+- 雙儲存持久化：同時寫入 Supabase 雲端與 DuckDB 本地列式資料庫，並支援 `python scripts/export_supabase_to_duckdb.py` 隨時自 Supabase 全量導回本地備份。
 - Supabase 寫入前會檢查 JSON：非有限數字轉為 `null`，不可序列化資料會阻止該批寫入。
 
 ---
@@ -65,6 +67,10 @@ bash scripts/setup.sh
 python3.11 -m venv myenv
 source myenv/bin/activate
 pip install -r requirements.txt
+
+# 方法 C：使用 Docker 容器化執行
+docker compose build
+docker compose run --rm stock-ml python main.py
 ```
 
 ### 2. 設定
