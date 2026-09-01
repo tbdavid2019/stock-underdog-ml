@@ -923,7 +923,116 @@ for p in picks:
                             this.toastMessage = '';
                         }, 2500);
                     });
+                },
+                async registerChromeWebMCP() {
+                    // Google Chrome WebMCP Standard (document.modelContext / Chrome 149+)
+                    // https://developer.chrome.com/docs/ai/webmcp
+                    const modelCtx = window.document?.modelContext || window.navigator?.modelContext;
+                    if (!modelCtx || typeof modelCtx.registerTool !== 'function') {
+                        return;
+                    }
+                    try {
+                        // Tool 1: get_market_macro_regime
+                        await modelCtx.registerTool({
+                            name: 'get_market_macro_regime',
+                            description: '查詢最新美股宏觀風控狀態（SPY季線、VIX恐慌指數、SOX費半趨勢）與建議投資曝險比例。',
+                            inputSchema: { type: 'object', properties: {} },
+                            execute: async () => {
+                                const res = await fetch('/api/v1/macro/latest');
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 2: get_triple_resonance_stocks
+                        await modelCtx.registerTool({
+                            name: 'get_triple_resonance_stocks',
+                            description: '篩選三重共振強勢股（技術面均線 ∩ LSTM看漲 ∩ 法人籌碼鎖碼 ∩ 估值合理）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    index_name: { type: 'string', description: '指數名稱（台灣50、台灣中型100、SP500）' },
+                                    limit: { type: 'integer', description: '回傳最大筆數，預設 20' }
+                                }
+                            },
+                            execute: async ({ index_name, limit }) => {
+                                let url = `/api/v1/predictions/resonance?limit=${limit || 20}`;
+                                if (index_name) url += `&index_name=${encodeURIComponent(index_name)}`;
+                                const res = await fetch(url);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 3: get_xuantie_pullback_stocks
+                        await modelCtx.registerTool({
+                            name: 'get_xuantie_pullback_stocks',
+                            description: '查詢玄鐵重劍策略回調買點標的（回踩 MA60 季線或 MA120 半年線不破之波段買點）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    index_name: { type: 'string', description: '指數名稱' },
+                                    limit: { type: 'integer', description: '回傳筆數' }
+                                }
+                            },
+                            execute: async ({ index_name, limit }) => {
+                                let url = `/api/v1/predictions/xuantie?limit=${limit || 20}`;
+                                if (index_name) url += `&index_name=${encodeURIComponent(index_name)}`;
+                                const res = await fetch(url);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 4: get_lstm_top_predictions
+                        await modelCtx.registerTool({
+                            name: 'get_lstm_top_predictions',
+                            description: '取得 LSTM 深度學習下一交易日預測漲跌幅排行榜（看漲或看跌）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    direction: { type: 'string', enum: ['bullish', 'bearish'], description: 'bullish 看漲 / bearish 看跌' },
+                                    index_name: { type: 'string', description: '指數名稱' },
+                                    limit: { type: 'integer', description: '回傳筆數' }
+                                },
+                                required: ['direction']
+                            },
+                            execute: async ({ direction, index_name, limit }) => {
+                                const endpoint = direction === 'bearish' ? 'top-bearish' : 'top-bullish';
+                                let url = `/api/v1/predictions/lstm/${endpoint}?limit=${limit || 20}`;
+                                if (index_name) url += `&index_name=${encodeURIComponent(index_name)}`;
+                                const res = await fetch(url);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 5: get_stock_history
+                        await modelCtx.registerTool({
+                            name: 'get_stock_history',
+                            description: '查詢特定股票（如 2330.TW, NVDA）在 DuckDB 中的歷史時序預測軌跡與法人籌碼。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    ticker: { type: 'string', description: '股票代號（例如 2330.TW, NVDA）' },
+                                    limit: { type: 'integer', description: '回傳筆數，預設 30' }
+                                },
+                                required: ['ticker']
+                            },
+                            execute: async ({ ticker, limit }) => {
+                                const res = await fetch(`/api/v1/predictions/history/${encodeURIComponent(ticker.toUpperCase())}?limit=${limit || 30}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        console.log('✅ [Chrome WebMCP] Registered 5 tools to document.modelContext');
+                    } catch (e) {
+                        console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
+                    }
                 }
+            },
+            mounted() {
+                this.applyTheme();
+                this.loadMacro();
+                this.loadStats();
+                this.loadData();
+                this.registerChromeWebMCP();
             }
         }).mount('#app');
     </script>
