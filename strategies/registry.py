@@ -15,7 +15,7 @@ class StrategyRegistry:
     _registry: Dict[str, Type[BaseStrategy]] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str, category: Optional[str] = None):
         """Decorator to register a strategy class with a unique identifier"""
         def decorator(subclass: Type[BaseStrategy]):
             cls._registry[name.lower()] = subclass
