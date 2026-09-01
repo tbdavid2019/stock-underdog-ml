@@ -136,6 +136,9 @@ def get_llms_txt():
 ## Powered By
 技術提供: [david888.com](https://david888.com)
 """
+    return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
+
+
 @app.get("/.webmcp/bridge.js", response_class=PlainTextResponse, include_in_schema=False)
 def get_webmcp_bridge():
     """
