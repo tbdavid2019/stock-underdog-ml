@@ -16,7 +16,6 @@ permissions:
   packages: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "true"
   ACTIONS_RUNNER_FORCE_NODE24: "true"
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
@@ -46,7 +45,7 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          python -m unittest discover -s test -p 'test_*.py'
+          python -m unittest test/test_*.py
 
   # ============================================================================
   # 2. 多架構 Docker 構建與發布 (Multi-Arch: linux/amd64, linux/arm64)

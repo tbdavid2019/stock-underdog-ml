@@ -42,6 +42,8 @@
   - 驗證通過後自動熱更新 Docker 容器、修改 `requirements.txt`、自動 Git Commit/Push 並平滑重啟 API 服務；驗證失敗則自動回滾，確保排程高可用。
 - **單元測試極速化重構（Fast Mocking）**：
   - 對管線測試與 LLM 研報測試導入 Mock 防護，將全套 55 項單元測試執行時間由 7.6s 驟降至 **< 0.5s**，大幅提升 CI/CD 部署速度與穩定度。
+- **GitHub Actions CI/CD 升級 Node.js 24 執行期**：
+  - 移除已棄用的 Node.js 20 舊版強制旗標，全面升級支援 GitHub Actions 最新 Node.js 24 執行環境（`ACTIONS_RUNNER_FORCE_NODE24`），消除過期警報。
 
 ### Fixed
 
