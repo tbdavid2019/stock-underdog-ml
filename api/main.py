@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from api.routes import predictions, macro, stats
+from api.routes import predictions, macro, stats, market
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 
@@ -21,7 +21,7 @@ app = FastAPI(
     * 🤖 **LSTM 深度學習**：下一交易日價格預測與漲跌幅排行榜
     * ⭐ **多維共振篩選**：技術 ∩ 籌碼 ∩ ML ∩ 估值 之 `🏆三重共振` / `土洋合買`
     * 🌐 **美股宏觀門檻**：S&P 500 / VIX / 費城半導體 即時曝險評估
-    * 🦆 **DuckDB 引擎**：支援 44,000+ 歷史時序數據零拷貝秒級查詢
+    * 🦆 **DuckDB 引擎**：支援 560,000+ 歷史時序與籌碼數據零拷貝秒級查詢
     """,
     version="2.2.0",
     docs_url="/docs",
@@ -49,6 +49,7 @@ app.add_middleware(
 app.include_router(predictions.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
+app.include_router(market.router, prefix="/api/v1")
 
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:
@@ -99,7 +100,8 @@ def get_webmcp_manifest():
             "get_xuantie_pullback_stocks",
             "get_lstm_top_predictions",
             "get_stock_history",
-            "get_latest_market_snapshot"
+            "get_latest_market_snapshot",
+            "get_top_institutional_flows"
         ]
     })
 

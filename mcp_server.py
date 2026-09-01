@@ -177,6 +177,64 @@ def get_latest_market_snapshot(
     }
 
 
+@mcp.tool(
+    name="get_top_institutional_flows",
+    description="查詢台股三大法人（外資、投信、自營商）淨買超或淨賣超排行榜與持股時序。"
+)
+def get_top_institutional_flows(
+    order_by: str = "total_net",
+    sort_dir: str = "desc",
+    market: str = "ALL",
+    limit: int = 20
+) -> Dict[str, Any]:
+    """
+    Query top institutional net buyers/sellers from DuckDB.
+    
+    Args:
+        order_by: 排序欄位 ('total_net', 'foreign_net', 'trust_net', 'dealer_net')
+        sort_dir: 排序方向 ('desc' 買超榜, 'asc' 賣超榜)
+        market: 市場篩選 ('ALL', 'TWSE', 'TPEX')
+        limit: 回傳數量 (預設: 20)
+    """
+    valid_cols = {"total_net", "foreign_net", "trust_net", "dealer_net"}
+    if order_by not in valid_cols:
+        order_by = "total_net"
+    sort_order = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+    try:
+        with db._get_connection() as con:
+            max_date = con.execute("SELECT MAX(date) FROM tw_institutional_daily").fetchone()[0]
+            if not max_date:
+                return {"success": True, "count": 0, "data": []}
+            
+            where_clauses = ["date = ?"]
+            params = [str(max_date)]
+            if market.upper() in ["TWSE", "TPEX"]:
+                where_clauses.append("market = ?")
+                params.append(market.upper())
+            
+            where_sql = " AND ".join(where_clauses)
+            sql = f"""
+            SELECT date, ticker, raw_code, name, foreign_net, trust_net, dealer_net, total_net, foreign_ratio, market
+            FROM tw_institutional_daily
+            WHERE {where_sql}
+            ORDER BY {order_by} {sort_order}
+            LIMIT ?;
+            """
+            params.append(limit)
+            df = con.execute(sql, params).df()
+            records = df.to_dict(orient="records")
+            return {
+                "success": True,
+                "date": str(max_date),
+                "count": len(records),
+                "data": records
+            }
+    except Exception as e:
+        return {"success": False, "error": str(e), "data": []}
+
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

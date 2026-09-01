@@ -80,7 +80,16 @@ else
     log "🐍 使用本機 Python 環境執行 ($PYTHON_EXEC)..."
 fi
 
-# Step 1: 先執行回測（驗證昨日預測）
+# Step 0: 執行台股全市場日 K 棒官方 OpenAPI 批量同步至 DuckDB
+log ""
+log "[0/3] 執行台股全市場官方 OpenAPI 批量同步至 DuckDB (TWSE & TPEX)..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+fi
+
+# Step 1: 執行回測（驗證昨日預測）
 log ""
 log "[1/3] 執行回測驗證..."
 if [ "$RUNNER" = "docker" ]; then
