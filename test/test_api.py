@@ -140,6 +140,52 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("888 Stock Quant", resp.text)
 
+    def test_homepage_has_complete_social_and_search_metadata(self):
+        html = self.client.get("/").text
+        expected_fragments = [
+            '<meta name="description"',
+            '<meta property="og:description"',
+            '<meta property="og:image"',
+            '<meta property="og:url" content="https://stockdata.david888.com/"',
+            '<meta name="twitter:card" content="summary_large_image"',
+            '<meta name="twitter:description"',
+            '<meta name="twitter:image"',
+            '<link rel="canonical" href="https://stockdata.david888.com/"',
+            '<link rel="apple-touch-icon"',
+            '<link rel="icon" type="image/png" sizes="32x32"',
+            '<link rel="icon" type="image/svg+xml"',
+            '<link rel="manifest" href="/site.webmanifest"',
+            '<script type="application/ld+json">',
+            '<meta name="theme-color"',
+        ]
+        for fragment in expected_fragments:
+            self.assertIn(fragment, html)
+
+    def test_homepage_social_assets_are_served(self):
+        assets = {
+            "/favicon.svg": "image/svg+xml",
+            "/favicon-32x32.png": "image/png",
+            "/apple-touch-icon.png": "image/png",
+            "/og-image.png": "image/png",
+            "/site.webmanifest": "application/manifest+json",
+        }
+        for path, content_type in assets.items():
+            resp = self.client.get(path)
+            self.assertEqual(resp.status_code, 200, path)
+            self.assertTrue(resp.headers["content-type"].startswith(content_type), path)
+            self.assertGreater(len(resp.content), 0, path)
+
+    def test_resolves_company_name_before_history_query(self):
+        resp = self.client.get("/api/v1/predictions/resolve/特斯拉")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["ticker"], "TSLA")
+
+    def test_unknown_history_query_does_not_return_records(self):
+        resp = self.client.get("/api/v1/predictions/history/這不是股票")
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn("查無法辨識", resp.json()["detail"])
+
     def test_ai_plugin_manifest(self):
         resp = self.client.get("/.well-known/ai-plugin.json")
         self.assertEqual(resp.status_code, 200)

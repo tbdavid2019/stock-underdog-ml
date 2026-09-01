@@ -4,7 +4,7 @@ api/routes/predictions.py - Stock Predictions & Multi-Strategy Quantitative Endp
 
 from typing import Optional, List
 from fastapi import APIRouter, Query, HTTPException, Depends
-from api.schemas import PredictionResponse, StockPredictionItem
+from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
 from data.duckdb_manager import DuckDBManager
 
 router = APIRouter(prefix="/predictions", tags=["Predictions & Quant Signals"])
@@ -105,7 +105,20 @@ def get_ticker_history(
     """
     取得指定股票代號（如 2330.TW、AAPL）的時間序列歷史預測與實際走勢軌跡，便於回測與可視化。
     """
-    records = db.get_ticker_history(ticker=ticker.strip(), limit=limit)
+    resolved = db.resolve_ticker(ticker)
+    if not resolved:
+        raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{ticker}")
+
+    records = db.get_ticker_history(ticker=resolved["ticker"], limit=limit)
     if not records:
-        raise HTTPException(status_code=404, detail=f"查無標的 {ticker} 之歷史預測記錄")
+        raise HTTPException(status_code=404, detail=f"查無標的 {resolved['ticker']} 之歷史預測記錄")
     return PredictionResponse(count=len(records), data=records)
+
+
+@router.get("/resolve/{query}", response_model=TickerResolutionResponse, summary="解析股票代號或公司名稱")
+def resolve_stock_ticker(query: str, db: DuckDBManager = Depends(get_duckdb)):
+    """將股票代號、英文名稱或中文公司名稱解析為可查詢的標準代號。"""
+    resolved = db.resolve_ticker(query)
+    if not resolved:
+        raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{query}")
+    return resolved

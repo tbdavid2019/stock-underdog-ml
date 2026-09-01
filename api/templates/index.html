@@ -4,6 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>888 Stock Quant | 專業級多維量化決策平台</title>
+    <meta name="description" content="888 Stock Quant 提供台美股技術面、LSTM 次日預測、法人籌碼與多維量化決策分析。">
+    <meta name="theme-color" content="#D97757">
+    <meta name="application-name" content="888 Stock Quant">
+    <link rel="canonical" href="https://stockdata.david888.com/">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="888 Stock Quant">
+    <meta property="og:locale" content="zh_TW">
+    <meta property="og:title" content="888 Stock Quant | 專業級多維量化決策平台">
+    <meta property="og:description" content="台美股技術面、LSTM 次日預測、法人籌碼與多維量化決策分析平台。">
+    <meta property="og:url" content="https://stockdata.david888.com/">
+    <meta property="og:image" content="https://stockdata.david888.com/og-image.png">
+    <meta property="og:image:alt" content="888 Stock Quant 多維量化決策平台">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@david888">
+    <meta name="twitter:title" content="888 Stock Quant | 專業級多維量化決策平台">
+    <meta name="twitter:description" content="台美股技術面、LSTM 次日預測、法人籌碼與多維量化決策分析平台。">
+    <meta name="twitter:image" content="https://stockdata.david888.com/og-image.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "888 Stock Quant",
+      "url": "https://stockdata.david888.com/",
+      "description": "台美股技術面、LSTM 次日預測、法人籌碼與多維量化決策分析平台。",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web"
+    }
+    </script>
 
     <!-- LLM & WebMCP Discovery Standards (Cloudflare & Chrome WebMCP Spec) -->
     <link rel="alternate" type="text/markdown" title="LLM Summary" href="/llms.txt">
@@ -889,7 +927,7 @@
                         <span>🔍 個股時間序列量化預測查詢</span>
                     </h2>
                     <p class="text-xs sm:text-sm" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
-                        輸入股票代號（例如台股 <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2330.TW</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2454.TW</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2059.TW</code> 或美股 <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">NVDA</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">AAPL</code>）檢索 DuckDB 中的歷史時序預測軌跡、均線支撐與法人動向。
+                        輸入股票代號或公司名稱（例如 <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2330.TW</code>、<code class="font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">台積電</code>、<code class="font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">特斯拉</code>、<code class="font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">聯電</code>）檢索歷史量化預測軌跡、均線支撐與法人動向；無法辨識或無資料時會明確提示。
                     </p>
                     
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 max-w-lg pt-1">
@@ -929,7 +967,7 @@
                     
                     <div class="flex items-center justify-between">
                         <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-claude-text'">
-                            <span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ searchTicker.toUpperCase() }}</span> 歷史量化紀錄 (共 {{ historyRecords.length }} 筆)
+                            <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 歷史量化紀錄 (共 {{ historyRecords.length }} 筆)
                         </h3>
                     </div>
 
@@ -980,7 +1018,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
-                                <span>📈 <span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ searchTicker.toUpperCase() }}</span> 三大法人累計買賣超趨勢折線圖</span>
+                                <span>📈 <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 三大法人累計買賣超趨勢折線圖</span>
                             </h3>
                             <p class="text-xs mt-0.5" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                                 追蹤最近 {{ tickerInstHistory.length }} 個交易日法人主力波段建倉與出貨曲線
@@ -1056,6 +1094,13 @@
                         </table>
                     </div>
 
+                </div>
+
+                <div v-else-if="hasSearched && historyError"
+                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'"
+                     class="text-center py-12 rounded-2xl border space-y-1">
+                    <div class="text-3xl">⚠️</div>
+                    <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-claude-text'">{{ historyError }}</div>
                 </div>
 
                 <div v-else-if="hasSearched && historyRecords.length === 0" 
@@ -1340,6 +1385,10 @@ for p in picks:
                     tickerInstHistory: [],
                     tickerInstLoading: false,
                     hasSearched: false,
+                    resolvedTicker: '',
+                    resolvedName: '',
+                    historyError: '',
+                    historyRequestId: 0,
 
                     // Toast
                     toastMessage: '',
@@ -1497,13 +1546,42 @@ for p in picks:
                     }
                 },
                 async loadHistory() {
-                    if (!this.searchTicker.trim()) return;
+                    const query = this.searchTicker.trim();
+                    if (!query) return;
+                    const requestId = ++this.historyRequestId;
                     this.historyLoading = true;
                     this.hasSearched = true;
+                    this.historyError = '';
+                    this.historyRecords = [];
+                    this.tickerInstHistory = [];
+                    this.resolvedTicker = '';
+                    this.resolvedName = '';
+                    if (this.chartInstance) {
+                        this.chartInstance.destroy();
+                        this.chartInstance = null;
+                    }
                     try {
-                        const ticker = encodeURIComponent(this.searchTicker.trim().toUpperCase());
+                        // Resolve names/aliases first so every following request
+                        // uses the same canonical ticker and cannot reuse old rows.
+                        const resolveRes = await fetch(`/api/v1/predictions/resolve/${encodeURIComponent(query)}`);
+                        if (!resolveRes.ok) {
+                            const detail = await resolveRes.json().catch(() => ({}));
+                            if (resolveRes.status === 404) {
+                                this.historyError = detail.detail || `查無法辨識的股票或公司名稱：${query}`;
+                                return;
+                            }
+                            throw new Error(`HTTP ${resolveRes.status}`);
+                        }
+                        const resolution = await resolveRes.json();
+                        if (requestId !== this.historyRequestId) return;
+                        this.resolvedTicker = resolution.ticker;
+                        this.resolvedName = resolution.name || '';
+                        this.searchTicker = resolution.ticker;
+                        const ticker = encodeURIComponent(resolution.ticker);
+
                         // 1. 載入量化策略預測歷史
                         const resPred = await fetch(`/api/v1/predictions/history/${ticker}?limit=40`);
+                        if (requestId !== this.historyRequestId) return;
                         if (resPred.ok) {
                             const data = await resPred.json();
                             if (data.success) {
@@ -1512,6 +1590,7 @@ for p in picks:
                         }
                         // 2. 載入三大法人歷史時序
                         const resInst = await fetch(`/api/v1/market/institutional/${ticker}?limit=60`);
+                        if (requestId !== this.historyRequestId) return;
                         if (resInst.ok) {
                             const dataInst = await resInst.json();
                             if (Array.isArray(dataInst)) {
@@ -1524,9 +1603,13 @@ for p in picks:
                             this.tickerInstHistory = [];
                         }
                     } catch (e) {
+                        if (requestId !== this.historyRequestId) return;
+                        this.historyError = '查詢服務暫時無法使用，請稍後再試。';
                         console.error("Failed to load ticker history", e);
                     } finally {
-                        this.historyLoading = false;
+                        if (requestId === this.historyRequestId) {
+                            this.historyLoading = false;
+                        }
                     }
                 },
                 renderInstChart() {

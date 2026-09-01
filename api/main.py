@@ -6,7 +6,7 @@ import os
 import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
 from api.routes import predictions, macro, stats, market
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
@@ -50,6 +50,38 @@ app.include_router(predictions.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
+
+STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+
+def _static_asset(filename: str) -> FileResponse:
+    """Serve a small public branding asset used by crawlers and home screens."""
+    return FileResponse(os.path.join(STATIC_ASSET_DIR, filename))
+
+
+@app.api_route("/favicon.svg", methods=["GET", "HEAD"], include_in_schema=False)
+def favicon_svg():
+    return _static_asset("favicon.svg")
+
+
+@app.api_route("/favicon-32x32.png", methods=["GET", "HEAD"], include_in_schema=False)
+def favicon_png():
+    return _static_asset("favicon-32x32.png")
+
+
+@app.api_route("/apple-touch-icon.png", methods=["GET", "HEAD"], include_in_schema=False)
+def apple_touch_icon():
+    return _static_asset("apple-touch-icon.png")
+
+
+@app.api_route("/og-image.png", methods=["GET", "HEAD"], include_in_schema=False)
+def og_image():
+    return _static_asset("og-image.png")
+
+
+@app.api_route("/site.webmanifest", methods=["GET", "HEAD"], include_in_schema=False)
+def site_webmanifest():
+    return _static_asset("site.webmanifest")
 
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:

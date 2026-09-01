@@ -45,6 +45,14 @@ class PredictionResponse(BaseModel):
     data: List[StockPredictionItem] = Field(default_factory=list, description="預測結果清單")
 
 
+class TickerResolutionResponse(BaseModel):
+    success: bool = True
+    query: str
+    ticker: str
+    name: Optional[str] = None
+    matched_by: str
+
+
 class MacroRegimeResponse(BaseModel):
     success: bool = True
     regime_name: str = Field(..., description="宏觀環境 (全面多頭, 多頭回調, 避險防禦, 極度恐慌)")

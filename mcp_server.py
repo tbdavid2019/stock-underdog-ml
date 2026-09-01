@@ -142,12 +142,26 @@ def get_stock_history(
         ticker: 股票代號 (如 '2330.TW', 'AAPL')
         limit: 歷史天數/筆數 (預設: 30)
     """
-    records = db.get_ticker_history(ticker=ticker.strip(), limit=limit)
+    requested_ticker = ticker.strip()
+    resolved = db.resolve_ticker(requested_ticker)
+    if not resolved:
+        return {
+            "success": False,
+            "ticker": requested_ticker,
+            "count": 0,
+            "data": [],
+            "error": f"查無法辨識的股票或公司名稱：{requested_ticker}"
+        }
+
+    records = db.get_ticker_history(ticker=resolved["ticker"], limit=limit)
     return {
-        "success": True,
-        "ticker": ticker.strip(),
+        "success": bool(records),
+        "query": requested_ticker,
+        "ticker": resolved["ticker"],
+        "name": resolved.get("name"),
         "count": len(records),
-        "data": records
+        "data": records,
+        "error": None if records else f"查無標的 {resolved['ticker']} 之歷史預測記錄"
     }
 
 
@@ -261,4 +275,3 @@ def get_broker_trades_for_stock(
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()
-

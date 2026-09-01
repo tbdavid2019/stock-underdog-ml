@@ -5,6 +5,7 @@ data/duckdb_manager.py - 本地 DuckDB 量化時序資料庫管理器 (Local Duc
 """
 
 import os
+import re
 import logging
 import datetime
 from typing import Dict, List, Optional, Any
@@ -13,6 +14,7 @@ import duckdb
 
 from core.config import config
 from data.macro import MacroState
+from data.ticker_resolver import clean_query, normalize_ticker, resolve_alias
 
 logger = logging.getLogger("stock_app.duckdb")
 
@@ -625,6 +627,50 @@ class DuckDBManager:
         df = self.query(sql, [ticker, limit])
         return self._clean_df_records(df)
 
+    def resolve_ticker(self, value: str) -> Optional[Dict[str, Any]]:
+        """Resolve a ticker or company name using explicit aliases and local metadata."""
+        query = clean_query(value)
+        if not query:
+            return None
+
+        alias_ticker = resolve_alias(query)
+        normalized = alias_ticker or normalize_ticker(query)
+        lookup_values = [query, normalized]
+
+        if self.enabled:
+            try:
+                with self._get_connection() as con:
+                    row = con.execute(
+                        """
+                        SELECT ticker, name
+                        FROM (
+                            SELECT ticker, raw_code, name, date FROM tw_daily_bars
+                            UNION ALL
+                            SELECT ticker, raw_code, name, date FROM tw_institutional_daily
+                        ) metadata
+                        WHERE lower(trim(name)) = lower(trim(?))
+                           OR lower(trim(ticker)) = lower(trim(?))
+                           OR lower(trim(ticker)) = lower(trim(?))
+                           OR lower(trim(raw_code)) = lower(trim(?))
+                        ORDER BY date DESC NULLS LAST
+                        LIMIT 1
+                        """,
+                        [query, query, normalized, query],
+                    ).fetchone()
+                if row and row[0]:
+                    return {"query": query, "ticker": str(row[0]).upper(), "name": row[1], "matched_by": "database"}
+            except Exception as exc:
+                logger.warning("股票名稱解析略過本機 metadata 查詢: %s", exc)
+
+        if alias_ticker:
+            return {"query": query, "ticker": alias_ticker, "name": None, "matched_by": "alias"}
+
+        # Ticker-shaped input is accepted, but its history endpoint still
+        # requires actual records before returning any quantitative data.
+        if re.fullmatch(r"[A-Z][A-Z0-9.-]{0,9}", normalized) or re.fullmatch(r"\d{4,6}\.(TW|TWO)", normalized):
+            return {"query": query, "ticker": normalized, "name": None, "matched_by": "ticker"}
+        return None
+
     def get_db_stats(self) -> Dict[str, Any]:
         """取得 DuckDB 全局時序庫統計資訊 (已排除內部路徑與測試資料)"""
         try:
@@ -913,6 +959,3 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 統計 {ticker} 券商主力摘要失敗: {e}")
             return {"top_buyers": [], "top_sellers": []}
-
-
-

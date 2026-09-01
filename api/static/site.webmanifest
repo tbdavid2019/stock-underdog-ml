@@ -1,0 +1,22 @@
+{
+  "name": "888 Stock Quant",
+  "short_name": "888 Stock Quant",
+  "description": "多維量化決策平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9F5",
+  "theme_color": "#D97757",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

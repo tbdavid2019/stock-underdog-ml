@@ -93,7 +93,7 @@ graph TD
 啟動後直接瀏覽 `http://localhost:8088/` 或 `http://10.9.0.99:8088/`：
 * **宏觀風控看板**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態與建議曝險比例。
 * **策略即時切換**：快速瀏覽 🏆 三重共振焦點股、玄鐵 MA60/120 回調買點、LSTM 看漲/看跌榜。
-* **個股歷史查詢**：輸入股票代號（如 `2330.TW`、`NVDA`）檢索 DuckDB 中的歷史量化預測與技術軌跡。
+* **個股歷史查詢**：可輸入股票代號或公司名稱（如 `2330.TW`、`NVDA`、`特斯拉`、`聯華電子`）；系統會先解析為標準代號，查無法辨識或查無資料時明確提示，不會沿用上一筆結果。
 * **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼。
 
 ### 2. 🤖 Model Context Protocol (MCP) 原生工具伺服器
@@ -130,6 +130,7 @@ graph TD
 | `/api/v1/predictions/lstm/top-bullish` | `GET` | 查詢 **LSTM 預測漲幅 TOP N** 短線看漲榜 |
 | `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
 | `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
+| `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
 | `/api/v1/macro/latest` | `GET` | 即時取得美股三大指標（SPY / VIX / SOX）宏觀風控狀態與建議曝險 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 
@@ -275,6 +276,8 @@ stock-underdog-ml/
 * **📄 LLM Context 協議**: `https://stockdata.david888.com/llms.txt` & `/llms-full.txt`
 * **🌉 Cloudflare WebMCP Bridge**: `https://stockdata.david888.com/.webmcp/bridge.js`
 * **📘 Swagger API 文件**: `https://stockdata.david888.com/docs`
+
+首頁也提供標準 SEO 與社群分享資源：`/favicon.svg`、`/favicon-32x32.png`、`/apple-touch-icon.png`、`/og-image.png` 與 `/site.webmanifest`。
 
 ---
 

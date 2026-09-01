@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">888 Stock Quant</title>
+  <desc id="desc">多維量化決策平台</desc>
+  <rect width="1200" height="630" fill="#FAF9F5"/>
+  <circle cx="1030" cy="-20" r="300" fill="#F4F2EB"/>
+  <circle cx="1100" cy="570" r="230" fill="#E8E6DC" opacity=".7"/>
+  <rect x="90" y="145" width="116" height="116" rx="27" fill="#D97757"/>
+  <path d="M121 226l20-25 20 10 31-56 19 12" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="250" y="220" fill="#141413" font-family="Arial, sans-serif" font-size="68" font-weight="800">888 Stock Quant</text>
+  <text x="254" y="290" fill="#737067" font-family="Arial, sans-serif" font-size="30">多維量化決策平台</text>
+  <rect x="254" y="350" width="360" height="6" rx="3" fill="#D97757"/>
+  <text x="254" y="414" fill="#141413" font-family="Arial, sans-serif" font-size="27">技術面 · LSTM 預測 · 法人籌碼</text>
+  <text x="254" y="462" fill="#737067" font-family="Arial, sans-serif" font-size="23">Stockdata.david888.com</text>
+</svg>
