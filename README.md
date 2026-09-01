@@ -40,7 +40,8 @@ AI 驅動的股票預測系統，使用 **LSTM** 預測下一個交易日的股�
 - ✅ **3 級 LLM 備援** - OpenAI 相容端點支援 Gemini、DeepSeek、GPT-4o-mini
 - ✅ **多市場支持** - 台股 50、台股中型 100、S&P 500、SpaceX 太空概念
 - ✅ **雙備份架構** - 雲端 Supabase + 本地 DuckDB 列式時序庫（`data/storage/stock_quant.duckdb`）
-- ✅ **容器化支援** - 現代化 Python 3.11 Slim Dockerfile 與 Docker Compose
+- ✅ **FastAPI & MCP 支援** - 內建高效能 REST API（Port 8000）與 Swagger 互動文檔，支援 AI Agent / MCP
+- ✅ **多架構容器與 CI/CD** - 現代化 Python 3.12 Slim、GitHub Actions 自動構建 x64 & ARM64 映像
 - ✅ **多通知管道** - Discord Rich Embed、Telegram HTML、Email Plain Text
 
 ### 資料來源與可靠性
