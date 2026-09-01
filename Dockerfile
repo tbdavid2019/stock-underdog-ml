@@ -1,36 +1,44 @@
-# ==========================================
-# Stock Prediction & Multi-Strategy ML Pipeline
-# Modern Production Dockerfile (Python 3.11 Slim)
-# ==========================================
-FROM python:3.11-slim
+# ==============================================================================
+# Stock Prediction & Multi-Strategy Quantitative Platform
+# Production-Grade Multi-Service Dockerfile (Python 3.12 Slim)
+# ==============================================================================
+FROM python:3.12-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     TZ=Asia/Taipei \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# 安裝系統必要編譯、網路與時區工具
+# 1. 安裝系統基礎工具 (時區、GCC 編譯、Cron 排程器、Git、Curl)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
     tzdata \
+    cron \
+    ca-certificates \
     && ln -fs /usr/share/zoneinfo/Asia/Taipei /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# 升級 pip 並安裝 Python 依賴
+# 2. 安裝 Python 依賴
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
 
-# 複製應用程式原始碼
+# 3. 複製應用程式原始碼
 COPY . .
 
-# 建立日誌、快取與 DuckDB 本地儲存目錄
-RUN mkdir -p logs cache data/storage data/cache models
+# 4. 建立持久化目錄與腳本權限
+RUN mkdir -p logs cache data/storage data/cache models && \
+    chmod +x docker/entrypoint.sh 2>/dev/null || true
 
-# 預設啟動命令
-CMD ["python", "main.py"]
+# 5. 設定 Entrypoint
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+
+# 預設執行主程序日報
+CMD ["main"]

@@ -1,0 +1,12 @@
+# ==============================================================================
+# Stock Quantitative Analysis Container Cron Schedule (Asia/Taipei Timezone)
+# ==============================================================================
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+PYTHONPATH=/app
+
+# 1. 台股盤後法人結算定盤日報 (週一至週五 下午 15:30)
+30 15 * * 1-5 cd /app && python main.py >> /app/logs/cron_daily.log 2>&1
+
+# 2. 美股隔夜收盤結算日報 (週二至週六 早上 06:30)
+30 6 * * 2-6 cd /app && python main.py >> /app/logs/cron_daily.log 2>&1

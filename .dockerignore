@@ -1,4 +1,4 @@
-# Python
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,33 +8,34 @@ __pycache__/
 venv/
 ENV/
 env/
+.pytest_cache/
 
-# Git
+# Version Control
 .git/
 .gitignore
 
-# IDE
+# IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+.DS_Store
 
-# Logs
+# Local runtime logs & dynamic caches
 logs/*.log
+cache/*.pkl
+cache/*.json
+data/cache/*.json
+data/cache/*.pkl
+data/storage/*.duckdb
 
-# Cache
-*.cache
-
-# Environment
+# Local env secrets
 .env
+.env.*
+!.env.example
 
-# Documentation
-*.md
-!README.md
-
-# Test files
-test/
-
-# Scripts that aren't needed in container
-scripts/
+# Temporary / Scratch
+tmp/
+temp/
+scratch/
 elder/

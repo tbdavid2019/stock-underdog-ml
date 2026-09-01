@@ -1,23 +1,55 @@
+# ==============================================================================
+# Stock Prediction & Multi-Strategy Quantitative System
+# Docker Compose Multi-Service Architecture
+# ==============================================================================
 version: '3.8'
 
+# 通用服務模板
+x-stock-service: &default-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+  volumes:
+    # 唯讀環境變數
+    - ./.env:/app/.env:ro
+    # 應用程式日誌
+    - ./logs:/app/logs
+    # 行情快取與法人籌碼快取
+    - ./cache:/app/cache
+    - ./data/cache:/app/data/cache
+    # 本地 DuckDB 列式時序庫持久化目錄
+    - ./data/storage:/app/data/storage
+  environment:
+    - TZ=Asia/Taipei
+    - PYTHONUNBUFFERED=1
+    - TF_CPP_MIN_LOG_LEVEL=2
+
 services:
+  # 1. 預設執行服務 (單次執行全量日報)
+  # 使用方式: docker compose run --rm stock-ml
   stock-ml:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: stock-underdog-ml
-    volumes:
-      # 掛載環境變數配置 (唯讀)
-      - ./.env:/app/.env:ro
-      # 掛載日誌目錄
-      - ./logs:/app/logs
-      # 掛載行情快取目錄
-      - ./cache:/app/cache
-      - ./data/cache:/app/data/cache
-      # 掛載本地 DuckDB 時序資料庫儲存目錄 (持久化備份)
-      - ./data/storage:/app/data/storage
-    environment:
-      - TZ=Asia/Taipei
-      - PYTHONUNBUFFERED=1
+    <<: *default-service
+    container_name: stock-underdog-ml-runner
+    command: ["main"]
+
+  # 2. 自動排程服務 (常駐後台，依照 Asia/Taipei 時區定時自動執行)
+  # 使用方式: docker compose up -d stock-ml-cron
+  stock-ml-cron:
+    <<: *default-service
+    container_name: stock-underdog-ml-cron
     restart: unless-stopped
-    command: python main.py
+    command: ["cron"]
+
+  # 3. Supabase ➔ DuckDB 全量資料庫同步遷移服務
+  # 使用方式: docker compose run --rm stock-ml-sync
+  stock-ml-sync:
+    <<: *default-service
+    container_name: stock-underdog-ml-sync
+    command: ["sync"]
+
+  # 4. 容器內單元測試服務
+  # 使用方式: docker compose run --rm stock-ml-test
+  stock-ml-test:
+    <<: *default-service
+    container_name: stock-underdog-ml-test
+    command: ["test"]

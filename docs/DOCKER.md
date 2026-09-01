@@ -1,146 +1,93 @@
-# Docker 使用說明
+# 🐳 Docker 現代化部署與容器化指南 (Python 3.12)
 
-## 建立映像
+本專案提供基於 **Python 3.12 Slim** 之生產級多服務容器化架構，支援即時分析執行、常駐定時排程、Supabase/DuckDB 數據同步與容器內自動化測試。
 
-```bash
-docker build -t stock-underdog-ml .
-```
+---
 
-或使用 docker-compose：
+## 🚀 快速上手
 
-```bash
-docker-compose build
-```
+### 1. 建立映像檔 (Build Image)
 
-## 執行
-
-### 方式 1：使用 docker run
-```bash main
-docker run --rm \
-  -v $(pwd)/.env:/app/.env:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/cache:/app/cache \
-  stock-underdog-ml
-```
-
-# 執行 backtest
-```
-docker run --rm \
-  -v $(pwd)/.env:/app/.env:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/cache:/app/cache \
-  stock-underdog-ml \
-  python backtest/backtest.py
-
-```
-
-# 自由bash互動
-```
-docker run --rm -it \
-  -v $(pwd)/.env:/app/.env:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/cache:/app/cache \
-  stock-underdog-ml bash
-```
-
-### 方式 2：使用 docker-compose
+使用現代 Docker Compose v2 指令：
 
 ```bash
-# 前台執行
-docker-compose up
-
-# 背景執行
-docker-compose up -d
-
-# 查看日誌
-docker-compose logs -f
-
-# 停止
-docker-compose down
+docker compose build
 ```
 
-## 定期執行（使用 cron）
+---
 
-在主機上設定 cron job：
+## 🛠️ 服務指令總覽
+
+本專案在 `docker-compose.yml` 中配置了 4 大獨立服務：
+
+### 1. 單次執行全市場分析日報 (`stock-ml`)
+
+執行台股 50、台股中型 100 與 美股 S&P 500（含 SpaceX 概念股）之完整量化策略運算，並自動寫入 Supabase、本地 DuckDB 與發送推播：
 
 ```bash
-# 編輯 crontab
-crontab -e
-
-# 每天早上 8:00 執行
-0 8 * * * cd /home/david/stock-underdog-ml && docker-compose run --rm stock-ml python main.py >> logs/cron.log 2>&1
+docker compose run --rm stock-ml
 ```
 
-## 進入容器除錯
+### 2. 常駐後台定時排程服務 (`stock-ml-cron`)
+
+啟動容器內建之 Linux Cron 守護進程（依據 `Asia/Taipei` 台北時間自動於開盤後/美股盤後定時執行，無需依賴宿主機 crontab）：
 
 ```bash
-# 使用 docker-compose
-docker-compose run --rm stock-ml bash
+# 背景啟動排程容器
+docker compose up -d stock-ml-cron
 
-# 或使用 docker
-docker run --rm -it \
-  -v $(pwd)/.env:/app/.env:ro \
-  stock-underdog-ml bash
+# 查看排程日誌
+docker compose logs -f stock-ml-cron
+
+# 停止排程容器
+docker compose stop stock-ml-cron
 ```
 
-## 更新代碼後重新建立
+> **內建排程規則 (`docker/crontab`)**：
+> - **15:30 (週一至週五)**：台股盤後法人籌碼結算定盤日報
+> - **06:30 (週二至週六)**：美股隔夜收盤結算日報
+
+### 3. Supabase ➔ DuckDB 全量數據導回 (`stock-ml-sync`)
+
+一鍵將 Supabase 雲端現有之全部歷史預測數據分頁同步至本地 DuckDB：
 
 ```bash
-docker-compose build --no-cache
+docker compose run --rm stock-ml-sync
 ```
 
-## 注意事項
+### 4. 容器內執行全套單元測試 (`stock-ml-test`)
 
-1. 確保 `.env` 檔案存在並包含所有必要的配置
-2. `logs/` 和 `cache/` 目錄會自動建立
-3. 使用 Python 3.11 避免 Python 3.13 的相容性問題
-
-## CPU 指令集相容性說明
-
-### 哪些套件需要 AVX 指令集？
-
-**需要 AVX/AVX2 指令集（較新 CPU）：**
-- `tensorflow` - 標準版本使用 AVX、AVX2、FMA 等進階指令
-- `tensorflow` 2.5+ 版本強制要求 AVX
-
-**不需要 AVX（可在舊 CPU 運行）：**
-- `tensorflow-cpu` - CPU 版本，相容性較好
-- `torch` (PyTorch) - 一般不強制要求 AVX
-- `numpy`, `pandas`, `scikit-learn` - 基礎科學計算套件
-
-### 如何選擇版本？
-
-#### 方案 1：舊 CPU 或虛擬機（無 AVX 支援）
-使用 `tensorflow-cpu`（目前 Dockerfile 設定）：
-
-```dockerfile
-# Dockerfile 第 14-18 行
-RUN pip install --no-cache-dir \
-    python-dotenv requests urllib3 yfinance \
-    torch torchvision \
-    tensorflow-cpu keras tf-keras prophet supabase
-```
-
-#### 方案 2：新 CPU 支援 AVX（效能較好）
-使用標準 `tensorflow`：
-
-```dockerfile
-# 將 tensorflow-cpu 改為 tensorflow
-RUN pip install --no-cache-dir \
-    python-dotenv requests urllib3 yfinance \
-    torch torchvision \
-    tensorflow keras tf-keras prophet supabase
-```
-
-### 如何檢查 CPU 是否支援 AVX？
+在乾淨的容器環境內執行 44 項量化單元測試：
 
 ```bash
-# Linux 檢查
-lscpu | grep avx
-
-# 或
-cat /proc/cpuinfo | grep avx
+docker compose run --rm stock-ml-test
 ```
 
-有輸出 = 支援 AVX，可使用標準 `tensorflow`  
-無輸出 = 不支援，必須使用 `tensorflow-cpu`
+### 5. 進入容器互動偵錯 (Interactive Shell)
+
+```bash
+docker compose run --rm stock-ml bash
+```
+
+---
+
+## 📂 磁碟掛載與資料持久化
+
+在 `docker-compose.yml` 中已配置以下目錄掛載，確保資料與日誌持久化至宿主機：
+
+| 宿主機路徑 | 容器內路徑 | 說明 |
+| :--- | :--- | :--- |
+| `./.env` | `/app/.env:ro` | 環境變數配置檔（唯讀掛載） |
+| `./data/storage` | `/app/data/storage` | **DuckDB 本地時序庫檔案 (`stock_quant.duckdb`)** |
+| `./data/cache` | `/app/data/cache` | 證交所三大法人每日快取 JSON |
+| `./cache` | `/app/cache` | 指數成分股與行情 Pickle 快取 |
+| `./logs` | `/app/logs` | 應用程式與 Cron 排程日誌 |
+
+---
+
+## ❓ 為什麼選擇 Python 3.12 而非 3.11 或 3.13？
+
+1. **極致效能與穩定性**：Python 3.12 相比 3.11 在直譯器效能、記憶體管理與錯誤回溯上有顯著提升。
+2. **機器學習二進位輪子（Wheels）相容性最佳**：
+   - 目前 `TensorFlow 2.16+`、`PyTorch 2.3+`、`DuckDB`、`NumPy 2.x`、`Pandas` 皆官方原生支援 Python 3.12。
+   - Python 3.13 目前部分 C-extension 與 TensorFlow 官方尚未釋出全量正式 Wheels，因此 **Python 3.12 是當前兼具最新特性與 100% 穩定性的黃金版本**。
