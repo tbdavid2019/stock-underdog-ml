@@ -15,6 +15,7 @@ Integrating these components into our modular strategy engine and composite eval
 - **Strategy Registry Expansion (`stock-strategy-engine`)**: Register `SectorRotationStrategy` and `InstitutionalFlowStrategy` into the standard strategy registry.
 - **Composite Evaluator Upgrade (`composite-evaluation`)**: Combine Technical + LSTM + Institutional signals into "Triple Resonance" tags (`三重共振`), with macro exposure weighting.
 - **Pipeline & Storage Enriched (`pipeline-orchestrator`)**: Include macro regime status and institutional accumulation in Telegram/Discord/Email notifications and Supabase database columns (`macro_regime`, `trust_net_5d`, `foreign_net_5d`).
+- **AI Narrative Commentary with 3-Tier Fallback (`llm-narrative-summary`)**: Generate concise, professional daily market commentary with Primary ➔ Fallback 1 ➔ Fallback 2 ➔ Template fallback resiliency.
 
 ## Capabilities
 
@@ -22,6 +23,7 @@ Integrating these components into our modular strategy engine and composite eval
 - `macro-regime-filter`: Monitors US benchmark indices (SPY, VIX, SOX) to classify macro market regime and dynamically set portfolio exposure levels (0.0 to 1.0).
 - `sector-rotation-strategy`: Evaluates capital flow momentum across 7 industry sectors to identify and rank top-3 performing sectors and constituents.
 - `institutional-flow-analysis`: Ingests and calculates Taiwan market institutional investor (Foreign, Investment Trust, Dealer) net accumulation and holding ratio momentum.
+- `llm-narrative-summary`: Provides natural language market commentary and stock analysis using OpenAI-compatible endpoints with configurable 3-tier fallback (Primary, Fallback 1, Fallback 2, Template).
 
 ### Modified Capabilities
 - `stock-strategy-engine`: Extends the strategy registry to support macro-conditioned and institutional-flow-based strategies.

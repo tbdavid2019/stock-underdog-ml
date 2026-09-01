@@ -23,7 +23,13 @@
 - [ ] 5.1 Update `evaluators/composite_evaluator.py` to aggregate technical, ML, and institutional signals with macro exposure multipliers; verify scoring logic with unit test `test/test_composite_evaluator.py`.
 - [ ] 5.2 Add `三重共振` (Triple Resonance), `土洋合買`, `投信連買`, and `宏觀風控` badges to `evaluators/formatter.py`; verify console and notification report formatting.
 
-## 6. Sinks Integration & End-to-End Verification
+## 6. 3-Tier Fallback LLM Narrative Generator
 
-- [ ] 6.1 Update Supabase persistence in `database.py` to include optional columns (`macro_regime`, `trust_net_5d`, `foreign_net_5d`) with `json_safety.py` sanitization; verify database insert.
-- [ ] 6.2 Execute full end-to-end multi-index analysis locally and verify complete report output, notifications formatting, and Supabase data integrity.
+- [ ] 6.1 Implement `evaluators/ai_narrative.py` supporting Primary, Fallback 1, and Fallback 2 OpenAI-compatible endpoints with configurable `base_url`, `model`, and `api_key`; verify fallback cascade with unit test `test/test_ai_narrative.py`.
+- [ ] 6.2 Implement deterministic template-based fallback when all LLM endpoints fail or when LLM is disabled; verify template output with unit test.
+- [ ] 6.3 Integrate AI commentary into `evaluators/formatter.py` for Telegram, Discord, and Email report outputs; verify message format.
+
+## 7. Sinks Integration & End-to-End Verification
+
+- [ ] 7.1 Update Supabase persistence in `database.py` to include optional columns (`macro_regime`, `trust_net_5d`, `foreign_net_5d`) with `json_safety.py` sanitization; verify database insert.
+- [ ] 7.2 Execute full end-to-end multi-index analysis locally and verify complete report output, notifications formatting, and Supabase data integrity.

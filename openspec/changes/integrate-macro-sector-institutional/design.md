@@ -41,6 +41,15 @@ Building upon the modular architecture established in `stock-underdog-ml` (see `
   - `土洋合買`: Foreign 5D net > 0 AND Trust 5D net > 0.
   - `投信連買`: Trust consecutive net buying >= 3 days.
 
+### 5. OpenAI-Compatible 3-Tier Fallback LLM Client
+- **Choice**: Implement `evaluators/ai_narrative.py` using standard HTTP POST requests to `/chat/completions`.
+- **Slot Architecture**: Supports 3 configurable endpoints:
+  1. `LLM_PRIMARY_*` (e.g. Gemini 2.5 Flash via Google OpenAI API)
+  2. `LLM_FALLBACK1_*` (e.g. DeepSeek-V3)
+  3. `LLM_FALLBACK2_*` (e.g. OpenAI GPT-4o-mini / Local Gateway)
+- **Universal Fallback**: If all slots fail or no API key is provided, the system falls back to a deterministic rule-based Python summary template.
+- **Payload Safety**: Ground-truth quantitative numbers are passed in system prompt with strict instructions: "Do not invent numbers; synthesize narrative strictly from provided metrics."
+
 ## Risks / Trade-offs
 
 - **[Risk: TWSE/TPEX Endpoint Rate Limiting or Schema Changes]** → Mitigation: Implement 2-second polite rate limiting, JSON schema validation, and persistent daily cache under `data/cache/institutional_*.json`.
