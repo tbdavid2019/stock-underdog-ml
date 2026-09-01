@@ -374,7 +374,7 @@ class DuckDBManager:
             batch_date = str(latest_ts)[:10]
 
         if batch_only:
-            where_clauses.append("timestamp >= (?::TIMESTAMP - INTERVAL 24 HOUR)")
+            where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (TRY_CAST(? AS TIMESTAMP) - INTERVAL 24 HOUR)")
             params.append(latest_ts)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"

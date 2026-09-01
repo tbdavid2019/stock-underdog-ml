@@ -134,12 +134,17 @@ class PipelineOrchestrator:
         
         # 3.1 構造相容舊版結構字典，並附帶多維標籤與法人籌碼
         candidates_map = {}
-        for c in report.candidates:
-            candidates_map[c.ticker] = {
-                "tags": c.tags,
-                "composite_score": c.composite_score,
-                "signals": c.signals
-            }
+        for s in getattr(report, "ranked_stocks", []):
+            t = s.get("ticker") if isinstance(s, dict) else getattr(s, "ticker", None)
+            if t:
+                tags = s.get("tags", []) if isinstance(s, dict) else getattr(s, "tags", [])
+                score = s.get("composite_score", 0.0) if isinstance(s, dict) else getattr(s, "composite_score", 0.0)
+                signals = s.get("signals", []) if isinstance(s, dict) else getattr(s, "signals", [])
+                candidates_map[t] = {
+                    "tags": tags,
+                    "composite_score": score,
+                    "signals": signals
+                }
         
         inst_summaries = {}
         for t, ctx in stock_contexts.items():
