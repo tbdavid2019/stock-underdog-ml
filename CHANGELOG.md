@@ -6,6 +6,21 @@
 
 ---
 
+## [Unreleased] - 2026-09-01
+
+### 🚀 新增與重大升級 (Features & Enhancements)
+- **全面升級開源授權為 GNU AGPL-3.0 (`LICENSE` & `README.md`)**：
+  - 符合強 Copyleft 網路服務條款，保護量化策略與深度學習引擎之開源完整性。
+- **台股全市場官方 OpenAPI 批量日 K 抓取器 (`data/twse_daily_fetcher.py`)**：
+  - 整合台灣證券交易所 (TWSE) 與櫃檯買賣中心 (TPEX) 官方 OpenAPI，單次請求 1~2 秒內抓取全市場 1,800+ 檔上市櫃股票當日開高低收、成交量與成交金額。
+- **DuckDB 列式時序庫全市場資料表 (`tw_daily_bars`) 與 yfinance 零延遲備援**：
+  - 在 `DuckDBManager` 新增 `tw_daily_bars` 資料表與冪等覆蓋 Upsert 機制。
+  - `data/fetcher.py` 整合自動 Fallback：當 yfinance 發生限流或中斷時，自動透明降級讀取 DuckDB 本地歷史資料庫。
+- **每日收盤台股全市場自動同步排程 (`.github/workflows/tw_stock_daily_sync.yml`)**：
+  - 於台灣時間週一至週五 15:30 (UTC 07:30) 自動執行全市場行情同步與 DuckDB Artifact 保存。
+- **籌碼與美股研究評估 (`tw-institutional-stocker` & `us_fddk`)**：
+  - 完成法人籌碼持股推估模型與美股 20 年凍結宏觀 Regime 框架深度架構評估。
+
 ## [2.2.0] - 2026-09-01
 
 ### Added

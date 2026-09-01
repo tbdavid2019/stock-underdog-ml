@@ -4,7 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.0+-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org/)
 [![Docker Multi-Arch](https://img.shields.io/badge/Docker-x64%20%7C%20ARM64-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
 現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **FastAPI REST / MCP 服務**。
 
@@ -298,4 +298,4 @@ stock-underdog-ml/
 
 ## 📄 授權條款 (License)
 
-本專案採用 [MIT License](LICENSE) 授權。
+本專案採用 [GNU AGPL-3.0 License](LICENSE) 授權。

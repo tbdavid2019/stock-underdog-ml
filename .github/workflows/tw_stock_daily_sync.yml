@@ -1,0 +1,48 @@
+name: 📈 TW Stock Daily Market Sync (TWSE/TPEX)
+
+on:
+  schedule:
+    # 台灣時間週一至週五 15:30 (UTC 07:30) 執行收盤全市場數據同步
+    - cron: '30 7 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: tw-stock-market-sync
+  cancel-in-progress: true
+
+jobs:
+  sync-tw-market:
+    name: 📊 Sync TWSE & TPEX Market to DuckDB
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🧪 Run TWSE Fetcher Unit Tests
+        run: |
+          pytest test/test_twse_fetcher.py -v
+
+      - name: 🌐 Run Full Market Sync (TWSE & TPEX -> DuckDB)
+        run: |
+          python scripts/sync_twse_market.py
+
+      - name: 📦 Upload DuckDB Market Data Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tw-stock-duckdb-market
+          path: data/storage/stock_quant.duckdb
+          retention-days: 7

@@ -17,6 +17,27 @@
 - **初始化流程整理**：移除首頁 Vue 應用重複的 `mounted()` 定義，保留 WebMCP 註冊與資料載入在同一個初始化流程中。
 - **頁尾文案聚焦產品**：移除頁尾對 DuckDB 與深度學習實作的宣傳句，保留品牌與技術提供者資訊。
 
+## [Unreleased] - 2026-09-01
+
+### 🚀 新增與重大升級 (Features & Enhancements)
+- **全面升級開源授權為 GNU AGPL-3.0 (`LICENSE` & `README.md`)**：
+  - 符合強 Copyleft 網路服務條款，保護量化策略與深度學習引擎之開源完整性。
+- **台股全市場官方 OpenAPI 批量日 K 抓取器 (`data/twse_daily_fetcher.py`)**：
+  - 整合台灣證券交易所 (TWSE) 與櫃檯買賣中心 (TPEX) 官方 OpenAPI，單次請求 1~2 秒內抓取全市場 1,800+ 檔上市櫃股票當日開高低收、成交量與成交金額。
+- **DuckDB 列式時序庫全市場資料表 (`tw_daily_bars`) 與 yfinance 零延遲備援**：
+  - 在 `DuckDBManager` 新增 `tw_daily_bars` 資料表與冪等覆蓋 Upsert 機制。
+  - `data/fetcher.py` 整合自動 Fallback：當 yfinance 發生限流或中斷時，自動透明降級讀取 DuckDB 本地歷史資料庫。
+- **每日收盤台股全市場自動同步排程 (`.github/workflows/tw_stock_daily_sync.yml`)**：
+  - 於台灣時間週一至週五 15:30 (UTC 07:30) 自動執行全市場行情同步與 DuckDB Artifact 保存。
+- **籌碼與美股研究評估 (`tw-institutional-stocker` & `us_fddk`)**：
+  - 完成法人籌碼持股推估模型與美股 20 年凍結宏觀 Regime 框架深度架構評估。
+- **888 Stock Quant 品牌重塑與文案淨化**：
+  - 全面統一平台名稱為 **`888 Stock Quant`**，移除全站、API 說明與 Agent / MCP 規格文件中所有「AI」字眼，回歸硬核多維量化決策與工程架構。
+- **Anthropic Claude 官方美學（Normal Mode）**：
+  - 淺色模式全面導入 Anthropic Claude 官方暖色調視覺設計（暖羊皮紙白底色 `#FAF9F5`、陶土珊瑚紅焦點色 `#D97757`、暖灰柔和邊框 `#E8E6DC`、炭黑高對比文字 `#141413`）。
+- **JetBrains Mono 數據字體排版與層次重構**：
+  - 全局中文字體採用標準平滑無襯線字體（`Noto Sans TC`），將 `JetBrains Mono`（`.num-font`）精準作用於所有股票代號、現價、目標價、漲跌潛力%、PE/PB 與時間戳記。
+
 ## [2.2.0] - 2026-09-01
 
 ### Added

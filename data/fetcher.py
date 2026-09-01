@@ -200,7 +200,12 @@ class StockFetcher:
             data = t.history(period=period, auto_adjust=True)
 
             if data.empty:
-                logger.warning(f"⚠️ {ticker} 獲取數據為空 (Empty)")
+                logger.warning(f"⚠️ {ticker} yfinance 獲取數據為空，嘗試從本地 DuckDB 備援讀取...")
+                from data.duckdb_manager import DuckDBManager
+                db_data = DuckDBManager().get_daily_bars_for_ticker(ticker)
+                if not db_data.empty:
+                    logger.info(f"🔄 成功從 DuckDB 備援載入 {ticker} 歷史日 K ({len(db_data)} 筆)")
+                    return add_base_indicators(db_data)
                 return pd.DataFrame()
 
             # Handle MultiIndex columns if present
@@ -219,7 +224,15 @@ class StockFetcher:
             return add_base_indicators(data)
 
         except Exception as e:
-            logger.error(f"❌ 下載 {ticker} 行情時發生錯誤: {e}")
+            logger.error(f"❌ 下載 {ticker} 行情時發生錯誤: {e}，嘗試從本地 DuckDB 備援讀取...")
+            try:
+                from data.duckdb_manager import DuckDBManager
+                db_data = DuckDBManager().get_daily_bars_for_ticker(ticker)
+                if not db_data.empty:
+                    logger.info(f"🔄 成功從 DuckDB 備援載入 {ticker} 歷史日 K ({len(db_data)} 筆)")
+                    return add_base_indicators(db_data)
+            except Exception as db_e:
+                logger.debug(f"DuckDB fallback error: {db_e}")
             return pd.DataFrame()
 
     @classmethod

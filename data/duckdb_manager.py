@@ -78,6 +78,23 @@ class DuckDBManager:
                     timestamp VARCHAR
                 );
                 """)
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS tw_daily_bars (
+                    date VARCHAR,
+                    ticker VARCHAR,
+                    raw_code VARCHAR,
+                    name VARCHAR,
+                    open DOUBLE,
+                    high DOUBLE,
+                    low DOUBLE,
+                    close DOUBLE,
+                    volume BIGINT,
+                    trade_value DOUBLE,
+                    transaction_count BIGINT,
+                    market VARCHAR,
+                    created_at VARCHAR
+                );
+                """)
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
@@ -610,3 +627,71 @@ class DuckDBManager:
         except Exception:
             pass
         return None
+
+    def save_daily_bars_batch(self, records: List[Dict[str, Any]]) -> int:
+        """
+        批次寫入台股全市場日 K 棒數據，並自動去重 (Upsert on date + ticker)
+        """
+        if not self.enabled or not records:
+            return 0
+
+        df = pd.DataFrame(records)
+        expected_cols = [
+            "date", "ticker", "raw_code", "name",
+            "open", "high", "low", "close", "volume",
+            "trade_value", "transaction_count", "market", "created_at"
+        ]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        try:
+            with self._get_connection() as con:
+                con.register("temp_daily_bars_df", df[expected_cols])
+                # 先刪除當日相同代碼之重複資料以支援冪等覆蓋 (Upsert)
+                con.execute("""
+                DELETE FROM tw_daily_bars
+                WHERE (date, ticker) IN (
+                    SELECT date, ticker FROM temp_daily_bars_df
+                );
+                """)
+                con.execute("INSERT INTO tw_daily_bars SELECT * FROM temp_daily_bars_df;")
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆全市場日 K 棒至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_daily_bars 失敗: {e}", exc_info=True)
+            return 0
+
+    def get_daily_bars_for_ticker(self, ticker: str, limit: int = 120) -> pd.DataFrame:
+        """
+        從 DuckDB 讀取特定個股的歷史日 K 棒數據，格式對齊 yfinance OHLCV
+        """
+        if not self.enabled:
+            return pd.DataFrame()
+
+        clean_code = ticker.split(".")[0]
+        sql = """
+        SELECT 
+            date AS Date,
+            open AS Open,
+            high AS High,
+            low AS Low,
+            close AS Close,
+            volume AS Volume
+        FROM tw_daily_bars
+        WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+          AND close > 0
+        ORDER BY date ASC
+        LIMIT ?;
+        """
+        try:
+            with self._get_connection() as con:
+                df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
+                if not df.empty:
+                    df["Date"] = pd.to_datetime(df["Date"])
+                    df.set_index("Date", inplace=True)
+                return df
+        except Exception as e:
+            logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 日 K 失敗: {e}")
+            return pd.DataFrame()
+
