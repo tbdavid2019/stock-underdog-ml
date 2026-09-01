@@ -11,7 +11,12 @@ mkdir -p /app/logs /app/cache /app/data/storage /app/data/cache /app/models
 
 # 模式派發
 case "$1" in
-  main|daily|"")
+  main|daily)
+    echo "🚀 [Docker] 啟動股票多維量化分析主程序 (main.py)..."
+    shift || true
+    exec python main.py "$@"
+    ;;
+  "")
     echo "🚀 [Docker] 啟動股票多維量化分析主程序 (main.py)..."
     exec python main.py
     ;;

@@ -48,9 +48,27 @@ else
     ENV_NAME="system default"
 fi
 
+# 解析目標市場參數 (預設 all)
+RAW_ARG="${1:-all}"
+case "$RAW_ARG" in
+    tw|--tw|--market=tw)
+        TARGET_MARKET="tw"
+        MARKET_DESC="🇹🇼 台股開盤前指南 (盤前 08:00)"
+        ;;
+    us|--us|--market=us)
+        TARGET_MARKET="us"
+        MARKET_DESC="🇺🇸 美股開盤前指南 (盤前 20:30)"
+        ;;
+    *)
+        TARGET_MARKET="all"
+        MARKET_DESC="🌐 全市場開盤前指南"
+        ;;
+esac
+
 log "=========================================="
-log "🚀 股票雙軌策略系統"
+log "🚀 股票量化多策略開盤前決策系統"
 log "開始時間: $(date)"
+log "目標市場: $MARKET_DESC ($TARGET_MARKET)"
 log "執行環境: $ENV_NAME"
 log "Python 路徑: $PYTHON_EXEC"
 log "日誌檔案: $LOG_FILE"
@@ -82,11 +100,15 @@ fi
 
 # Step 0: 執行台股全市場日 K 棒官方 OpenAPI 批量同步至 DuckDB
 log ""
-log "[0/3] 執行台股全市場官方 OpenAPI 批量同步至 DuckDB (TWSE & TPEX)..."
-if [ "$RUNNER" = "docker" ]; then
-    docker compose run --rm stock-ml python scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+if [ "$TARGET_MARKET" = "us" ]; then
+    log "[0/3] ℹ️ 目標為美股市場，略過台股 OpenAPI 同步"
 else
-    $PYTHON_EXEC scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+    log "[0/3] 執行台股全市場官方 OpenAPI 批量同步至 DuckDB (TWSE & TPEX)..."
+    if [ "$RUNNER" = "docker" ]; then
+        docker compose run --rm stock-ml python scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+    else
+        $PYTHON_EXEC scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+    fi
 fi
 
 # Step 1: 執行回測（驗證昨日預測）
@@ -107,11 +129,11 @@ fi
 
 # Step 2: 執行雙軌量化策略分析
 log ""
-log "[2/3] 執行多維量化策略分析 (宏觀 + LSTM + 玄鐵重劍 + 板塊輪動 + 法人籌碼)..."
+log "[2/3] 執行多維量化策略分析 ($MARKET_DESC)..."
 if [ "$RUNNER" = "docker" ]; then
-    docker compose run --rm stock-ml 2>&1 | tee -a "$LOG_FILE"
+    docker compose run --rm stock-ml python main.py --market "$TARGET_MARKET" 2>&1 | tee -a "$LOG_FILE"
 else
-    $PYTHON_EXEC main.py 2>&1 | tee -a "$LOG_FILE"
+    $PYTHON_EXEC main.py --market "$TARGET_MARKET" 2>&1 | tee -a "$LOG_FILE"
 fi
 PREDICT_EXIT=${PIPESTATUS[0]}
 
@@ -136,4 +158,5 @@ log "結束時間: $(date)"
 log "=========================================="
 
 # 顯示結果摘要
-tail -100 "$LOG_FILE" | grep -E "(符合條件|預測完成|雙重符合|✅ 雙軌策略分析完成)"
+tail -100 "$LOG_FILE" | grep -E "(符合條件|預測完成|雙重符合|✅ 雙軌策略分析完成|✅ 量化策略分析全數完成)"
+

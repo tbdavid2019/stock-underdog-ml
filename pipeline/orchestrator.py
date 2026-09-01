@@ -215,10 +215,13 @@ class PipelineOrchestrator:
         indices: Optional[Dict[str, List[str]]] = None,
         period: str = "6mo",
         persist_db: bool = True,
-        send_notify: bool = True
+        send_notify: bool = True,
+        market: str = "all",
+        index_names: Optional[List[str]] = None
     ) -> Dict[str, EvaluationReport]:
         """
         Execute analysis across all major supported stock indices with pre-flight Macro check.
+        Supports market segmentation (tw/us/all) and specific index selection.
         """
         # ============= Pre-flight Stage: US Macro Regime Gate =============
         logger.info("🌍 [Pre-flight] 評估美股宏觀環境與全球風控門檻...")
@@ -226,11 +229,33 @@ class PipelineOrchestrator:
         logger.info(f"   • 當前市場狀態: {macro_state.regime_name} (建議曝險: {int(macro_state.exposure*100)}%)\n")
 
         if indices is None:
-            indices = {
-                "台灣50": StockFetcher.get_tw0050_stocks(),
-                "台灣中型100": StockFetcher.get_tw0051_stocks(),
-                "SP500": StockFetcher.get_sp500_stocks()
-            }
+            if index_names:
+                indices = {}
+                for name in index_names:
+                    norm_name = name.strip()
+                    if norm_name in ("台灣50", "TW0050", "0050"):
+                        indices["台灣50"] = StockFetcher.get_tw0050_stocks()
+                    elif norm_name in ("台灣中型100", "TW0051", "0051"):
+                        indices["台灣中型100"] = StockFetcher.get_tw0051_stocks()
+                    elif norm_name in ("SP500", "S&P500", "sp500"):
+                        indices["SP500"] = StockFetcher.get_sp500_stocks()
+                    else:
+                        logger.warning(f"⚠️ 未知指數名稱: {norm_name}，略過")
+            elif market.lower() in ("tw", "taiwan"):
+                indices = {
+                    "台灣50": StockFetcher.get_tw0050_stocks(),
+                    "台灣中型100": StockFetcher.get_tw0051_stocks()
+                }
+            elif market.lower() in ("us", "usa", "sp500"):
+                indices = {
+                    "SP500": StockFetcher.get_sp500_stocks()
+                }
+            else:
+                indices = {
+                    "台灣50": StockFetcher.get_tw0050_stocks(),
+                    "台灣中型100": StockFetcher.get_tw0051_stocks(),
+                    "SP500": StockFetcher.get_sp500_stocks()
+                }
 
         all_reports = {}
         for index_name, stock_list in indices.items():

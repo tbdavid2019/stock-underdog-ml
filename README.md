@@ -183,13 +183,16 @@ source venv/bin/activate
 # 安裝依賴
 pip install -r requirements.txt
 
-# 1. 執行全量多維量化分析 (台灣50 + 台灣中型100 + S&P500)
-python main.py
+# 1. 執行開盤前多維量化分析指南
+python main.py                     # 全市場 (台灣50 + 台灣中型100 + S&P500)
+python main.py --market tw         # 🇹🇼 台股開盤前指南 (08:00 執行，台灣50 + 台灣中型100)
+python main.py --market us         # 🇺🇸 美股開盤前指南 (20:30 執行，S&P 500)
+python main.py --dry-run           # 乾跑模式 (不寫入 DB 且不發送推播)
 
-# 2. 啟動 FastAPI REST 服務 (Port 8000)
+# 2. 啟動 FastAPI REST 服務 (Port 8088)
 python api/main.py
 
-# 3. 執行全套單元測試 (50 項測試)
+# 3. 執行全套單元測試
 python -m unittest discover -s test -p 'test_*.py'
 
 # 4. 從 Supabase 全量導出歷史資料至 DuckDB
@@ -206,14 +209,15 @@ python scripts/export_supabase_to_duckdb.py
 # 1. 一鍵拉取/構建 Docker 映像
 docker compose pull # 或 docker compose build
 
-# 2. 啟動 FastAPI REST 服務 (常駐背景: http://localhost:8000/docs)
+# 2. 啟動 FastAPI REST 服務 (常駐背景: http://localhost:8088)
 docker compose up -d stock-ml-api
 
-# 3. 啟動 24H 定時排程容器 (依台北時間盤後與美股收盤自動出報表)
+# 3. 啟動 24H 定時排程容器 (依台北時間台股盤前 08:00 與美股盤前 20:30 自動產出買進指南)
 docker compose up -d stock-ml-cron
 
-# 4. 手動單次執行全量日報
-docker compose run --rm stock-ml
+# 4. 手動單次執行指定市場盤前指南
+docker compose run --rm stock-ml main --market tw
+docker compose run --rm stock-ml main --market us
 
 # 5. 容器內執行 Supabase ➔ DuckDB 資料同步
 docker compose run --rm stock-ml-sync

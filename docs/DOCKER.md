@@ -26,17 +26,24 @@ docker compose build
 
 本專案在 `docker-compose.yml` 中配置了 4 大獨立服務：
 
-### 1. 單次執行全市場分析日報 (`stock-ml`)
+### 1. 單次執行市場開盤前買進指南 (`stock-ml`)
 
-執行台股 50、台股中型 100 與 美股 S&P 500（含 SpaceX 概念股）之完整量化策略運算，並自動寫入 Supabase、本地 DuckDB 與發送推播：
+執行台股 50、台股中型 100 或 美股 S&P 500 之完整量化策略運算，並自動寫入 Supabase、本地 DuckDB 與發送推播：
 
 ```bash
+# 全市場 (TW + US)
 docker compose run --rm stock-ml
+
+# 🇹🇼 台股開盤前指南 (台灣50 + 台灣中型100)
+docker compose run --rm stock-ml main --market tw
+
+# 🇺🇸 美股開盤前指南 (S&P 500)
+docker compose run --rm stock-ml main --market us
 ```
 
 ### 2. 常駐後台定時排程服務 (`stock-ml-cron`)
 
-啟動容器內建之 Linux Cron 守護進程（依據 `Asia/Taipei` 台北時間自動於開盤後/美股盤後定時執行，無需依賴宿主機 crontab）：
+啟動容器內建之 Linux Cron 守護進程（依據 `Asia/Taipei` 台北時間自動於台股盤前 08:00 與美股盤前 20:30 定時執行買進指南，無需依賴宿主機 crontab）：
 
 ```bash
 # 背景啟動排程容器
@@ -50,8 +57,8 @@ docker compose stop stock-ml-cron
 ```
 
 > **內建排程規則 (`docker/crontab`)**：
-> - **15:30 (週一至週五)**：台股盤後法人籌碼結算定盤日報
-> - **06:30 (週二至週六)**：美股隔夜收盤結算日報
+> - **08:00 (週一至週五)**：🇹🇼 台股開盤前買進決策指南 (`--market tw`)
+> - **20:30 (週一至週五)**：🇺🇸 美股開盤前買進決策指南 (`--market us`)
 
 ### 3. Supabase ➔ DuckDB 全量數據導回 (`stock-ml-sync`)
 

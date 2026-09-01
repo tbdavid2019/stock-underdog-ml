@@ -82,6 +82,9 @@ nohup.out
 *.sqlite
 *.sqlite3
 *.db
+*.duckdb
+data/storage/
+data/cache/
 
 # ==========================================
 # Cache and Temporary Data
