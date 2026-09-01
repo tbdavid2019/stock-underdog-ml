@@ -409,7 +409,7 @@
                         <!-- Card Footer -->
                         <div class="pt-2.5 border-t flex items-center justify-between text-xs"
                              :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
-                            <span class="num-font">時效: {{ item.age_hours !== undefined ? item.age_hours + 'h 前' : '最新' }}</span>
+                            <span class="num-font">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
                             <button @click="searchTickerHistory(item.ticker)" 
                                     class="text-sky-500 hover:text-sky-400 font-bold flex items-center space-x-1 transition-all">
                                 <span>歷史軌跡 ↗</span>
@@ -784,8 +784,8 @@ for p in picks:
                         const res = await fetch('/api/v1/macro/latest');
                         if (res.ok) {
                             const data = await res.json();
-                            if (data.success && data.data) {
-                                this.macro = data.data;
+                            if (data.success) {
+                                this.macro = data.data || data;
                             }
                         }
                     } catch (e) {
