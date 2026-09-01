@@ -53,6 +53,12 @@ app.include_router(stats.router, prefix="/api/v1")
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:
     from mcp_server import mcp as mcp_instance
+    from mcp.server.transport_security import TransportSecuritySettings
+    mcp_instance.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+        allowed_hosts=["*"],
+        allowed_origins=["*"]
+    )
     mcp_app = mcp_instance.sse_app()
     app.mount("/mcp", mcp_app)
 except Exception as e:
@@ -60,7 +66,7 @@ except Exception as e:
     logging.getLogger("stock_app.api").warning(f"⚠️ WebMCP SSE 掛載略過: {e}")
 
 
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse, include_in_schema=False)
 def root():
     """
     量化決策平台首頁：提供即時操盤儀表板與 Agent / MCP 對接指南。
@@ -73,6 +79,7 @@ def root():
 
 
 @app.get("/.well-known/mcp.json", include_in_schema=False)
+@app.get("/mcp.json", include_in_schema=False)
 def get_webmcp_manifest():
     """
     WebMCP Remote Discovery Manifest
@@ -95,6 +102,41 @@ def get_webmcp_manifest():
             "get_latest_market_snapshot"
         ]
     })
+
+
+@app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
+@app.get("/llms-full.txt", response_class=PlainTextResponse, include_in_schema=False)
+def get_llms_txt():
+    """
+    LLM Context & System Summary (https://llmstxt.org Standard)
+    """
+    content = """# 888 Stock Quant Platform
+
+> 專業級台美股深度學習與多維量化交易決策平台。
+
+## Overview
+888 Stock Quant 整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、三大法人籌碼鎖碼與 DuckDB 高效時序資料庫，提供即時量化選股與操盤指引。
+
+## Agent & MCP Connectivity
+- **WebMCP SSE Stream**: `/mcp/sse` (FastMCP Server-Sent Events bidirectional RPC)
+- **WebMCP Manifest**: `/.well-known/mcp.json` & `/mcp.json`
+- **Agent Skill Spec**: `/skill` (4-step quantitative trading workflow)
+- **OpenAPI 3.1 Spec**: `/openapi.json`
+- **Plugin Manifest**: `/.well-known/ai-plugin.json`
+- **Swagger Docs**: `/docs`
+
+## Core Quantitative Tools
+- `get_market_macro_regime`: 取得 S&P500 / VIX / SOX 即時宏觀風控狀態與建議投資曝險比例。
+- `get_triple_resonance_stocks`: 篩選三重共振（技術面 ∩ LSTM ∩ 籌碼 ∩ 估值）強勢標的。
+- `get_xuantie_pullback_stocks`: 查詢 MA60/120 季線/半年線波段回調買點。
+- `get_lstm_top_predictions`: 查詢 LSTM 深度學習下一交易日預測漲跌幅排行。
+- `get_stock_history`: 查詢個股於 DuckDB 中的歷史時序預測軌跡與法人籌碼。
+- `get_latest_market_snapshot`: 取得市場即時全景摘要與資料庫統計。
+
+## Powered By
+技術提供: [david888.com](https://david888.com)
+"""
+    return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
 
 
 @app.get("/.well-known/ai-plugin.json", include_in_schema=False)

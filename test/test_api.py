@@ -160,6 +160,25 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(data["transport"], "sse")
         self.assertIn("get_market_macro_regime", data["tools"])
 
+        # Test alias /mcp.json
+        resp_alias = self.client.get("/mcp.json")
+        self.assertEqual(resp_alias.status_code, 200)
+        self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
+
+    def test_llms_txt_endpoints(self):
+        resp1 = self.client.get("/llms.txt")
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIn("888 Stock Quant", resp1.text)
+        self.assertIn("/mcp/sse", resp1.text)
+
+        resp2 = self.client.get("/llms-full.txt")
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("888 Stock Quant", resp2.text)
+
+    def test_root_head_method(self):
+        resp = self.client.head("/")
+        self.assertEqual(resp.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()
