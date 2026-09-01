@@ -136,7 +136,7 @@ class HistoricalImporter:
                 if not date_col:
                     continue
 
-                df["date"] = pd.to_datetime(df[date_col]).dt.strftime("%Y-%m-%d")
+                df["date"] = pd.to_datetime(df[date_col], utc=True).dt.strftime("%Y-%m-%d")
                 
                 # 若為日內 5分K，聚合為日 K 棒
                 agg_dict = {
