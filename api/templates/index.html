@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>888 Stock Quant | 專業級多維量化決策平台</title>
 
-    <!-- Google Fonts: JetBrains Mono for Numbers & Tickers -->
+    <!-- Google Fonts: JetBrains Mono for Numbers & Noto Sans TC for Chinese -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -22,28 +22,31 @@
                         mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
                     },
                     colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#075985',
+                        // Claude Official Brand Colors
+                        claude: {
+                            bg: '#FAF9F5',
+                            card: '#FFFFFF',
+                            cardInner: '#F4F2EB',
+                            border: '#E8E6DC',
+                            borderDark: '#D4D0C5',
+                            text: '#141413',
+                            muted: '#737067',
+                            terracotta: '#D97757',
+                            terracottaHover: '#C86645',
+                            blue: '#6A9BCC',
+                            sage: '#4D7C0F',
                         },
+                        // Dark Mode Obsidian Colors
                         dark: {
-                            bg: '#0b0f17',
-                            card: '#121a29',
+                            bg: '#0B0F17',
+                            card: '#121A29',
                             cardInner: '#172236',
-                            border: '#1e293b',
+                            border: '#1E293B',
                             borderLight: '#334155',
-                            textMuted: '#94a3b8',
-                        },
-                        light: {
-                            bg: '#f8fafc',
-                            card: '#ffffff',
-                            cardInner: '#f1f5f9',
-                            border: '#e2e8f0',
-                            borderDark: '#cbd5e1',
-                            textMuted: '#64748b',
+                            text: '#F1F5F9',
+                            muted: '#94A3B8',
+                            accent: '#38BDF8',
+                            accentHover: '#0EA5E9',
                         }
                     }
                 }
@@ -55,12 +58,12 @@
     <style>
         [v-cloak] { display: none; }
         html.dark {
-            background-color: #0b0f17;
-            color: #f1f5f9;
+            background-color: #0B0F17;
+            color: #F1F5F9;
         }
         html:not(.dark) {
-            background-color: #f8fafc;
-            color: #0f172a;
+            background-color: #FAF9F5;
+            color: #141413;
         }
         .num-font {
             font-family: "JetBrains Mono", monospace;
@@ -75,65 +78,71 @@
     </style>
 </head>
 <body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200"
-      :class="isDark ? 'bg-dark-bg text-slate-100' : 'bg-light-bg text-slate-900'">
+      :class="isDark ? 'bg-dark-bg text-dark-text' : 'bg-claude-bg text-claude-text'">
 
     <div id="app" v-cloak class="flex-1 flex flex-col">
 
         <!-- ================= TOP NAVIGATION BAR ================= -->
         <header class="sticky top-0 z-50 border-b transition-colors duration-200"
-                :class="isDark ? 'bg-dark-card/90 backdrop-blur-md border-dark-border' : 'bg-white/90 backdrop-blur-md border-light-border shadow-sm'">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                :class="isDark ? 'bg-dark-card/90 backdrop-blur-md border-dark-border' : 'bg-[#FAF9F5]/90 backdrop-blur-md border-claude-border shadow-sm'">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
                 
-                <!-- Brand Title -->
-                <div class="flex items-center space-x-3 cursor-pointer select-none" @click="activeTab = 'dashboard'">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-sky-600/20 text-white font-black text-xl">
+                <!-- Brand Title (Single Line, Never Wraps) -->
+                <div class="flex items-center space-x-3 cursor-pointer select-none shrink-0" @click="activeTab = 'dashboard'">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white font-black text-xl transition-all"
+                         :class="isDark ? 'bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-700 shadow-sky-600/20' : 'bg-gradient-to-tr from-[#D97757] to-[#C86645] shadow-[#D97757]/25'">
                         📈
                     </div>
-                    <div>
+                    <div class="flex flex-col">
                         <div class="flex items-center space-x-2">
-                            <span class="text-lg font-black tracking-tight num-font"
-                                  :class="isDark ? 'text-white' : 'text-slate-900'">
+                            <span class="text-base sm:text-lg font-black tracking-tight num-font whitespace-nowrap"
+                                  :class="isDark ? 'text-white' : 'text-claude-text'">
                                 888 Stock Quant
                             </span>
-                            <span class="px-2 py-0.5 text-[11px] font-bold num-font rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                            <span class="px-2 py-0.5 text-[11px] font-bold num-font rounded-full border whitespace-nowrap"
+                                  :class="isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-claude-terracotta/10 text-claude-terracotta border-claude-terracotta/20'">
                                 v2.2.0
                             </span>
                         </div>
-                        <p class="text-[11px] font-medium leading-none mt-0.5" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                        <p class="text-[11px] font-medium leading-none mt-0.5 whitespace-nowrap" 
+                           :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                             多維量化交易決策平台
                         </p>
                     </div>
                 </div>
 
-                <!-- Global Macro Pill (Hidden on Mobile) -->
-                <div class="hidden lg:flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full border text-xs font-medium"
-                     :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300' : 'bg-light-cardInner border-light-border text-slate-700'">
-                    <span class="w-2.5 h-2.5 rounded-full animate-pulse" 
-                          :class="macro.exposure >= 0.8 ? 'bg-emerald-500' : 'bg-amber-500'"></span>
-                    <span :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">大盤:</span>
+                <!-- Global Macro Pill (Hidden on Narrow Screens) -->
+                <div class="hidden xl:flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0"
+                     :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300' : 'bg-claude-cardInner border-claude-border text-claude-text'">
+                    <span class="w-2 h-2 rounded-full animate-pulse" 
+                          :class="macro.exposure >= 0.8 ? (isDark ? 'bg-emerald-500' : 'bg-emerald-600') : 'bg-amber-500'"></span>
+                    <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">大盤:</span>
                     <span class="font-bold">{{ macro.regime_name || '評估中...' }}</span>
-                    <span class="text-slate-400">|</span>
-                    <span :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">建議曝險:</span>
-                    <span class="font-black num-font text-sky-500 text-sm">{{ (macro.exposure * 100) || 85 }}%</span>
+                    <span class="opacity-40">|</span>
+                    <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">建議曝險:</span>
+                    <span class="font-black num-font text-sm"
+                          :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                        {{ (macro.exposure * 100) || 85 }}%
+                    </span>
                 </div>
 
                 <!-- Navigation Tabs & Theme Toggle -->
-                <div class="flex items-center space-x-2 sm:space-x-3">
+                <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
                     <nav class="flex items-center space-x-1 p-1 rounded-xl border"
-                         :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-light-cardInner border-light-border'">
+                         :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
                         <button @click="activeTab = 'dashboard'" 
-                                :class="activeTab === 'dashboard' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-700 shadow-sm') : (isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1">
+                                :class="activeTab === 'dashboard' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>📊 操盤看板</span>
                         </button>
                         <button @click="activeTab = 'history'" 
-                                :class="activeTab === 'history' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-700 shadow-sm') : (isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1">
+                                :class="activeTab === 'history' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🔍 個股歷史</span>
                         </button>
                         <button @click="activeTab = 'agent_hub'" 
-                                :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-700 shadow-sm') : (isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1">
+                                :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-slate-300 hover:text-white' : 'text-claude-muted hover:text-claude-text')"
+                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🤖 Agent / MCP</span>
                         </button>
                     </nav>
@@ -141,16 +150,16 @@
                     <!-- Dark / Light Mode Switcher -->
                     <button @click="toggleTheme()" 
                             class="p-2 rounded-xl border transition-all text-base flex items-center justify-center"
-                            :class="isDark ? 'bg-dark-cardInner border-dark-border text-amber-400 hover:bg-dark-border' : 'bg-white border-light-border text-slate-700 hover:bg-slate-100 shadow-sm'"
-                            :title="isDark ? '切換為淺色模式' : '切換為深色模式'">
+                            :class="isDark ? 'bg-dark-cardInner border-dark-border text-amber-400 hover:bg-dark-border' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'"
+                            :title="isDark ? '切換為 Claude 淺色模式' : '切換為黑曜石深色模式'">
                         <span v-if="isDark">☀️</span>
                         <span v-else>🌙</span>
                     </button>
 
                     <!-- API Docs Link -->
                     <a href="/docs" target="_blank" 
-                       class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all hidden md:flex items-center space-x-1"
-                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white' : 'bg-white border-light-border text-slate-700 hover:bg-slate-100 shadow-sm'">
+                       class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all hidden md:flex items-center space-x-1 whitespace-nowrap"
+                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'">
                         <span>API 文檔 ↗</span>
                     </a>
                 </div>
@@ -169,105 +178,113 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     
                     <!-- Market Regime -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border flex flex-col justify-between space-y-3">
-                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                             <span>美股宏觀環境</span>
                             <span class="text-base">🌍</span>
                         </div>
-                        <div class="text-lg font-black tracking-tight truncate" :class="isDark ? 'text-white' : 'text-slate-900'">
-                            {{ macro.regime_name || '評估中...' }}
+                        <div class="text-lg font-black tracking-tight truncate" :class="isDark ? 'text-white' : 'text-claude-text'">
+                            {{ macro.regime_name || '🌱 多頭回調 (Bull Pullback)' }}
                         </div>
-                        <div class="pt-2 border-t flex items-center justify-between text-xs" :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                        <div class="pt-2 border-t flex items-center justify-between text-xs" 
+                             :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>建議曝險:</span>
-                            <span class="text-sm font-black num-font text-sky-500">{{ (macro.exposure * 100) || 85 }}%</span>
+                            <span class="text-sm font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                {{ (macro.exposure * 100) || 85 }}%
+                            </span>
                         </div>
                     </div>
 
                     <!-- VIX Card -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border flex flex-col justify-between space-y-3">
-                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                             <span>VIX 恐慌指數</span>
                             <span class="text-base">⚡</span>
                         </div>
-                        <div class="text-2xl font-black num-font" :class="macro.vix > 20 ? 'text-amber-500' : 'text-emerald-500'">
+                        <div class="text-2xl font-black num-font" 
+                             :class="macro.vix > 20 ? 'text-amber-500' : (isDark ? 'text-emerald-400' : 'text-emerald-600')">
                             {{ macro.vix ? Number(macro.vix).toFixed(1) : '14.9' }}
                         </div>
-                        <div class="pt-2 border-t text-xs flex items-center space-x-1.5" :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                        <div class="pt-2 border-t text-xs flex items-center space-x-1.5" 
+                             :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span class="w-2 h-2 rounded-full" :class="macro.vix > 20 ? 'bg-amber-500' : 'bg-emerald-500'"></span>
                             <span class="truncate">{{ macro.vix < 20 ? '低恐慌 (市場情緒穩定)' : '情緒波動偏高，注意風控' }}</span>
                         </div>
                     </div>
 
                     <!-- Benchmarks (SPY / SOX) -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border flex flex-col justify-between space-y-3">
-                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                             <span>標普 / 費半均線狀態</span>
                             <span class="text-base">📊</span>
                         </div>
                         <div class="space-y-1 text-xs font-bold">
                             <div class="flex items-center justify-between">
-                                <span :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">SPY 標普:</span>
-                                <span :class="macro.spy_above_ma60 ? 'text-emerald-500' : 'text-rose-500'">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">SPY 標普:</span>
+                                <span :class="macro.spy_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : 'text-rose-500'">
                                     {{ macro.spy_above_ma60 ? '站穩 MA60 ✓' : '跌破季線 ✗' }}
                                 </span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">SOX 費半:</span>
-                                <span :class="macro.sox_above_ma60 ? 'text-emerald-500' : 'text-amber-500'">
+                                <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">SOX 費半:</span>
+                                <span :class="macro.sox_above_ma60 ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-amber-400' : 'text-amber-700')">
                                     {{ macro.sox_above_ma60 ? '站穩季線 ✓' : '破季線 (科技半倉)' }}
                                 </span>
                             </div>
                         </div>
-                        <div class="pt-2 border-t text-xs flex items-center justify-between" :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                        <div class="pt-2 border-t text-xs flex items-center justify-between" 
+                             :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>科技股上限:</span>
-                            <span class="num-font font-bold text-sky-500">{{ macro.tech_exposure_cap ? (macro.tech_exposure_cap * 100) + '%' : '100%' }}</span>
+                            <span class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                {{ macro.tech_exposure_cap ? (macro.tech_exposure_cap * 100) + '%' : '100%' }}
+                            </span>
                         </div>
                     </div>
 
                     <!-- DuckDB In-Memory Engine Stats -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border flex flex-col justify-between space-y-3">
-                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                        <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                             <span>DuckDB 時序資料庫</span>
                             <span class="text-base">🦆</span>
                         </div>
-                        <div class="text-2xl font-black num-font text-sky-500">
-                            {{ stats.total_records ? Number(stats.total_records).toLocaleString() : '44,146' }}
-                            <span class="text-xs font-normal" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">筆</span>
+                        <div class="text-2xl font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                            {{ stats.total_records ? Number(stats.total_records).toLocaleString() : '44,154' }}
+                            <span class="text-xs font-normal" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">筆</span>
                         </div>
-                        <div class="pt-2 border-t flex items-center justify-between text-xs" :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                        <div class="pt-2 border-t flex items-center justify-between text-xs" 
+                             :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>標的: {{ stats.distinct_tickers || '294' }} 檔</span>
-                            <span class="num-font text-emerald-500 font-bold">● 極速 &lt; 3ms</span>
+                            <span class="num-font font-bold" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">● 極速 &lt; 3ms</span>
                         </div>
                     </div>
 
                 </div>
 
                 <!-- 2. Strategy Filter Bar & Market Selector -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                      class="p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     
                     <!-- Strategy Buttons -->
                     <div class="flex items-center space-x-2 overflow-x-auto pb-1 lg:pb-0">
                         <button v-for="strat in strategyOptions" :key="strat.id"
                                 @click="selectedStrategy = strat.id; loadData()"
-                                :class="selectedStrategy === strat.id ? 'bg-sky-600 text-white shadow-sm font-bold' : (isDark ? 'bg-dark-cardInner text-slate-300 hover:bg-dark-border hover:text-white' : 'bg-light-cardInner text-slate-700 hover:bg-slate-200')"
-                                class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 border"
-                                :class="selectedStrategy === strat.id ? 'border-sky-500' : (isDark ? 'border-dark-border' : 'border-light-border')">
+                                :class="selectedStrategy === strat.id ? (isDark ? 'bg-sky-600 text-white border-sky-500 font-bold shadow-sm' : 'bg-claude-terracotta text-white border-claude-terracotta font-bold shadow-sm') : (isDark ? 'bg-dark-cardInner text-slate-300 border-dark-border hover:bg-dark-border hover:text-white' : 'bg-claude-cardInner text-claude-text border-claude-border hover:bg-white')"
+                                class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 border">
                             <span>{{ strat.icon }}</span>
                             <span>{{ strat.label }}</span>
                         </button>
                     </div>
 
                     <!-- Market Index Dropdown & Refresh -->
-                    <div class="flex items-center space-x-2.5 self-end lg:self-auto">
-                        <span class="text-xs font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">市場:</span>
+                    <div class="flex items-center space-x-2.5 self-end lg:self-auto shrink-0">
+                        <span class="text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">市場:</span>
                         <select v-model="selectedIndex" @change="loadData()" 
-                                class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all font-sans"
-                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-white' : 'bg-white border-light-border text-slate-800 shadow-sm'">
+                                class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-2 focus:outline-none transition-all font-sans"
+                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-white focus:ring-2 focus:ring-sky-500' : 'bg-white border-claude-border text-claude-text focus:ring-2 focus:ring-claude-terracotta shadow-sm'">
                             <option value="">🌐 全部市場 (All)</option>
                             <option value="台灣50">🇹🇼 台灣50 (TW0050)</option>
                             <option value="台灣中型100">🇹🇼 台灣中型100 (TW0051)</option>
@@ -277,7 +294,7 @@
 
                         <button @click="loadData()" 
                                 class="p-2 rounded-xl border transition-all text-xs font-bold flex items-center justify-center"
-                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:bg-dark-border hover:text-white' : 'bg-white border-light-border text-slate-700 hover:bg-slate-100 shadow-sm'"
+                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:bg-dark-border hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'"
                                 title="重新整理">
                             🔄
                         </button>
@@ -286,31 +303,31 @@
                 </div>
 
                 <!-- Batch Header & Count Indicator -->
-                <div class="flex items-center justify-between text-xs px-1" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                <div class="flex items-center justify-between text-xs px-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                     <div class="flex items-center space-x-3">
-                        <span>日報批次: <strong class="num-font text-sky-500 font-bold">{{ batchDate || '最新' }}</strong></span>
+                        <span>日報批次: <strong class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ batchDate || '最新' }}</strong></span>
                         <span v-if="batchTimestamp" class="num-font">時間: {{ batchTimestamp }}</span>
                     </div>
-                    <div>共篩選出 <strong class="num-font text-sky-500 font-bold">{{ records.length }}</strong> 檔標的</div>
+                    <div>共篩選出 <strong class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ records.length }}</strong> 檔標的</div>
                 </div>
 
                 <!-- 3. Stock Cards Grid -->
                 <div v-if="loading" class="text-center py-20 space-y-2">
                     <div class="inline-block animate-spin text-3xl">⚡</div>
-                    <p class="text-sm font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">正在讀取 DuckDB 最新量化數據...</p>
+                    <p class="text-sm font-medium" :class="isDark ? 'text-slate-300' : 'text-claude-muted'">正在讀取 DuckDB 最新量化數據...</p>
                 </div>
 
                 <div v-else-if="records.length === 0" 
-                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                      class="text-center py-16 rounded-2xl border space-y-2">
                     <div class="text-4xl">🎯</div>
-                    <div class="text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">當前篩選條件下無符合標的</div>
-                    <p class="text-xs" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">請嘗試切換其他策略或選擇全部市場</p>
+                    <div class="text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-claude-text'">當前篩選條件下無符合標的</div>
+                    <p class="text-xs" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">請嘗試切換其他策略或選擇全部市場</p>
                 </div>
 
                 <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     <div v-for="item in records" :key="item.ticker + item.model_name" 
-                         :class="isDark ? 'bg-dark-card border-dark-border hover:border-sky-500/50' : 'bg-white border-light-border hover:border-sky-500 shadow-sm'"
+                         :class="isDark ? 'bg-dark-card border-dark-border hover:border-sky-500/50' : 'bg-claude-card border-claude-border hover:border-claude-terracotta/70 shadow-sm'"
                          class="p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4">
                         
                         <!-- Top Header: Ticker, Market Index & Potential % -->
@@ -318,22 +335,22 @@
                             <div class="flex items-start justify-between">
                                 <div>
                                     <div class="flex items-center space-x-2.5">
-                                        <span class="text-xl font-black num-font tracking-wide" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                        <span class="text-xl font-black num-font tracking-wide" :class="isDark ? 'text-white' : 'text-claude-text'">
                                             {{ item.ticker }}
                                         </span>
                                         <span class="px-2 py-0.5 text-[11px] font-medium rounded-md border font-sans"
-                                              :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'">
+                                              :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300' : 'bg-claude-cardInner border-claude-border text-claude-muted'">
                                             {{ item.index_name }}
                                         </span>
                                     </div>
-                                    <div class="text-xs font-medium mt-1" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
-                                        策略: <strong :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ item.strategy_type || item.model_name }}</strong>
+                                    <div class="text-xs font-medium mt-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                        策略: <strong :class="isDark ? 'text-slate-200' : 'text-claude-text'">{{ item.strategy_type || item.model_name }}</strong>
                                     </div>
                                 </div>
 
                                 <!-- Potential Badge -->
                                 <div v-if="item.potential !== null && item.potential !== undefined" 
-                                     :class="item.potential >= 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200') : (isDark ? 'bg-rose-950/80 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-700 border-rose-200')"
+                                     :class="item.potential >= 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-300') : (isDark ? 'bg-rose-950/80 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-300')"
                                      class="px-2.5 py-1 rounded-xl text-xs font-black num-font border flex items-center space-x-1 shadow-sm">
                                     <span>{{ item.potential >= 0 ? '▲' : '▼' }}</span>
                                     <span>{{ item.potential > 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%</span>
@@ -342,17 +359,17 @@
 
                             <!-- Price Grid -->
                             <div class="mt-3 p-3 rounded-xl border grid grid-cols-2 gap-2"
-                                 :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-light-cardInner border-light-border'">
+                                 :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
                                 <div>
-                                    <div class="text-[11px] font-bold" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">當前現價</div>
-                                    <div class="text-base font-black num-font" :class="isDark ? 'text-slate-100' : 'text-slate-900'">
+                                    <div class="text-[11px] font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">當前現價</div>
+                                    <div class="text-base font-black num-font" :class="isDark ? 'text-slate-100' : 'text-claude-text'">
                                         ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
                                     </div>
                                 </div>
 
                                 <div v-if="item.predicted_price">
-                                    <div class="text-[11px] font-bold text-sky-500">預測目標價</div>
-                                    <div class="text-base font-black num-font text-sky-500">
+                                    <div class="text-[11px] font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">預測目標價</div>
+                                    <div class="text-base font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
                                         ${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
                                     </div>
                                 </div>
@@ -370,11 +387,11 @@
                             
                             <!-- Valuation Row -->
                             <div class="flex items-center justify-between pb-1.5 border-b"
-                                 :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                                 :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                                 <span class="font-medium">估值指標:</span>
-                                <span class="num-font font-semibold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                    PE: <span class="text-sky-500 font-bold">{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}</span> | 
-                                    PB: <span class="text-sky-500 font-bold">{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
+                                <span class="num-font font-semibold" :class="isDark ? 'text-slate-200' : 'text-claude-text'">
+                                    PE: <span class="font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}</span> | 
+                                    PB: <span class="font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                                     <span v-if="item.ev_ebitda" class="hidden sm:inline"> | EV: {{ Number(item.ev_ebitda).toFixed(1) }}</span>
                                 </span>
                             </div>
@@ -382,15 +399,15 @@
                             <!-- Chips Row -->
                             <div v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" 
                                  class="flex items-center justify-between pb-1.5 border-b"
-                                 :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                                 :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                                 <span class="font-medium">法人籌碼 (5日):</span>
                                 <span class="num-font font-semibold text-xs">
                                     <span v-if="item.trust_net_5d !== null" 
-                                          :class="item.trust_net_5d > 0 ? 'text-emerald-500 font-bold' : (isDark ? 'text-slate-400' : 'text-slate-500')">
+                                          :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (isDark ? 'text-slate-400' : 'text-claude-muted')">
                                         投信 {{ item.trust_net_5d > 0 ? '+' : '' }}{{ Number(item.trust_net_5d).toLocaleString() }}張
                                     </span>
                                     <span v-if="item.foreign_net_5d !== null" class="ml-2"
-                                          :class="item.foreign_net_5d > 0 ? 'text-emerald-500 font-bold' : (isDark ? 'text-slate-400' : 'text-slate-500')">
+                                          :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (isDark ? 'text-slate-400' : 'text-claude-muted')">
                                         外資 {{ item.foreign_net_5d > 0 ? '+' : '' }}{{ Number(item.foreign_net_5d).toLocaleString() }}張
                                     </span>
                                 </span>
@@ -399,7 +416,7 @@
                             <!-- Tags Pills -->
                             <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
                                 <span v-for="tag in parseTags(item.tags)" :key="tag"
-                                      :class="tag.includes('三重共振') ? (isDark ? 'bg-amber-950/80 text-amber-300 border-amber-800' : 'bg-amber-100 text-amber-900 border-amber-300') : (tag.includes('土洋合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-100 text-emerald-900 border-emerald-300') : (isDark ? 'bg-dark-cardInner text-sky-300 border-dark-border' : 'bg-sky-50 text-sky-800 border-sky-200'))"
+                                      :class="tag.includes('三重共振') ? (isDark ? 'bg-amber-950/80 text-amber-300 border-amber-800' : 'bg-amber-100 text-amber-900 border-amber-300 font-bold') : (tag.includes('土洋合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-100 text-emerald-900 border-emerald-300') : (isDark ? 'bg-dark-cardInner text-sky-300 border-dark-border' : 'bg-claude-cardInner text-claude-text border-claude-border'))"
                                       class="px-2 py-0.5 text-[11px] font-medium rounded-md border font-sans">
                                     {{ tag }}
                                 </span>
@@ -408,10 +425,11 @@
 
                         <!-- Card Footer -->
                         <div class="pt-2.5 border-t flex items-center justify-between text-xs"
-                             :class="isDark ? 'border-dark-border text-dark-textMuted' : 'border-light-border text-light-textMuted'">
+                             :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span class="num-font">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
                             <button @click="searchTickerHistory(item.ticker)" 
-                                    class="text-sky-500 hover:text-sky-400 font-bold flex items-center space-x-1 transition-all">
+                                    class="font-bold flex items-center space-x-1 transition-all"
+                                    :class="isDark ? 'text-sky-400 hover:text-sky-300' : 'text-claude-terracotta hover:text-claude-terracottaHover'">
                                 <span>歷史軌跡 ↗</span>
                             </button>
                         </div>
@@ -426,33 +444,34 @@
             <div v-if="activeTab === 'history'" class="space-y-6">
                 
                 <!-- Search Box Card -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                      class="p-6 rounded-2xl border space-y-4">
-                    <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                         <span>🔍 個股時間序列量化預測查詢</span>
                     </h2>
-                    <p class="text-xs sm:text-sm" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
-                        輸入股票代號（例如台股 <code class="num-font font-bold text-sky-500">2330.TW</code>, <code class="num-font font-bold text-sky-500">2454.TW</code>, <code class="num-font font-bold text-sky-500">2059.TW</code> 或美股 <code class="num-font font-bold text-sky-500">NVDA</code>, <code class="num-font font-bold text-sky-500">AAPL</code>）檢索 DuckDB 中的歷史時序預測軌跡、均線支撐與法人動向。
+                    <p class="text-xs sm:text-sm" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                        輸入股票代號（例如台股 <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2330.TW</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2454.TW</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">2059.TW</code> 或美股 <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">NVDA</code>, <code class="num-font font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">AAPL</code>）檢索 DuckDB 中的歷史時序預測軌跡、均線支撐與法人動向。
                     </p>
                     
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 max-w-lg pt-1">
                         <input v-model="searchTicker" @keyup.enter="loadHistory()" 
                                type="text" placeholder="輸入股票代號 (如 2330.TW)..."
-                               class="flex-1 border rounded-xl px-4 py-2.5 text-sm num-font font-bold uppercase focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
-                               :class="isDark ? 'bg-dark-cardInner border-dark-border text-white placeholder-slate-500' : 'bg-white border-light-border text-slate-900 placeholder-slate-400 shadow-sm'">
+                               class="flex-1 border rounded-xl px-4 py-2.5 text-sm num-font font-bold uppercase focus:outline-none transition-all"
+                               :class="isDark ? 'bg-dark-cardInner border-dark-border text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500' : 'bg-white border-claude-border text-claude-text placeholder-slate-400 focus:ring-2 focus:ring-claude-terracotta shadow-sm'">
                         <button @click="loadHistory()" 
-                                class="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center">
+                                class="px-6 py-2.5 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
+                                :class="isDark ? 'bg-sky-600 hover:bg-sky-500' : 'bg-claude-terracotta hover:bg-claude-terracottaHover'">
                             查詢歷史
                         </button>
                     </div>
 
                     <!-- Quick Search Pills -->
                     <div class="flex items-center space-x-2 pt-1 text-xs">
-                        <span :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">熱門速查:</span>
+                        <span :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">熱門速查:</span>
                         <button v-for="t in ['2330.TW', '2454.TW', '2059.TW', '2301.TW', 'DXYZ', 'RKLB', 'NVDA']" :key="t"
                                 @click="searchTicker = t; loadHistory()"
                                 class="px-2.5 py-0.5 rounded-lg border num-font font-bold transition-all text-xs"
-                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:bg-dark-border' : 'bg-slate-100 border-slate-200 text-sky-700 hover:bg-slate-200'">
+                                :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:bg-dark-border' : 'bg-claude-cardInner border-claude-border text-claude-text hover:bg-white'">
                             {{ t }}
                         </button>
                     </div>
@@ -461,21 +480,21 @@
                 <!-- History Table Results -->
                 <div v-if="historyLoading" class="text-center py-16 space-y-2">
                     <div class="inline-block animate-spin text-2xl">⏳</div>
-                    <p class="text-xs font-bold num-font" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">正在檢索歷史時序軌跡...</p>
+                    <p class="text-xs font-bold num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">正在檢索歷史時序軌跡...</p>
                 </div>
 
                 <div v-else-if="historyRecords.length > 0" 
-                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                      class="p-5 rounded-2xl border overflow-x-auto space-y-3">
                     
                     <div class="flex items-center justify-between">
-                        <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
-                            <span class="num-font text-sky-500">{{ searchTicker.toUpperCase() }}</span> 歷史量化紀錄 (共 {{ historyRecords.length }} 筆)
+                        <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-claude-text'">
+                            <span class="num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ searchTicker.toUpperCase() }}</span> 歷史量化紀錄 (共 {{ historyRecords.length }} 筆)
                         </h3>
                     </div>
 
                     <table class="w-full text-left text-xs sm:text-sm">
-                        <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-light-cardInner text-slate-700 border-b border-light-border'">
+                        <thead :class="isDark ? 'bg-dark-cardInner text-slate-300 border-b border-dark-border' : 'bg-claude-cardInner text-claude-text border-b border-claude-border'">
                             <tr>
                                 <th class="p-3 font-bold num-font">時間戳記</th>
                                 <th class="p-3 font-bold">策略模型</th>
@@ -487,16 +506,16 @@
                                 <th class="p-3 font-bold">三大法人籌碼</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-light-border text-slate-700'">
+                        <tbody class="divide-y" :class="isDark ? 'divide-dark-border text-slate-200' : 'divide-claude-border text-claude-text'">
                             <tr v-for="row in historyRecords" :key="row.timestamp + row.strategy_type" 
-                                :class="isDark ? 'hover:bg-dark-cardInner' : 'hover:bg-slate-50'" class="transition-all">
-                                <td class="p-3 num-font text-xs" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                                :class="isDark ? 'hover:bg-dark-cardInner' : 'hover:bg-claude-cardInner'" class="transition-all">
+                                <td class="p-3 num-font text-xs" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                                     {{ row.timestamp ? row.timestamp.replace('T', ' ').substring(0, 19) : '-' }}
                                 </td>
                                 <td class="p-3 font-bold">{{ row.strategy_type || row.model_name }}</td>
                                 <td class="p-3 font-black num-font">${{ Number(row.current_price).toFixed(2) }}</td>
-                                <td class="p-3 font-black num-font text-sky-500">{{ row.predicted_price ? '$' + Number(row.predicted_price).toFixed(2) : '-' }}</td>
-                                <td class="p-3 font-black num-font" :class="row.potential > 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                <td class="p-3 font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">{{ row.predicted_price ? '$' + Number(row.predicted_price).toFixed(2) : '-' }}</td>
+                                <td class="p-3 font-black num-font" :class="row.potential > 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : 'text-rose-500'">
                                     {{ row.potential !== null ? (row.potential > 0 ? '+' : '') + Number(row.potential).toFixed(2) + '%' : '-' }}
                                 </td>
                                 <td class="p-3 text-amber-500 font-bold">{{ row.pullback_type || (row.ma60 ? 'MA60: $' + Number(row.ma60).toFixed(1) : '-') }}</td>
@@ -514,10 +533,10 @@
                 </div>
 
                 <div v-else-if="hasSearched" 
-                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                      class="text-center py-12 rounded-2xl border space-y-1">
                     <div class="text-3xl">🔎</div>
-                    <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ searchTicker }}</strong> 的歷史時序資料</div>
+                    <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-claude-text'">查無 <strong>{{ searchTicker }}</strong> 的歷史時序資料</div>
                 </div>
 
             </div>
@@ -527,12 +546,12 @@
             <div v-if="activeTab === 'agent_hub'" class="space-y-6">
                 
                 <!-- Hub Header Banner -->
-                <div :class="isDark ? 'bg-dark-card border-dark-border border-l-4 border-sky-500' : 'bg-white border-light-border border-l-4 border-sky-500 shadow-sm'" 
+                <div :class="isDark ? 'bg-dark-card border-dark-border border-l-4 border-sky-500' : 'bg-claude-card border-claude-border border-l-4 border-claude-terracotta shadow-sm'" 
                      class="p-6 rounded-2xl border space-y-2">
-                    <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                         <span>🤖 Agent & MCP 協議對接中心</span>
                     </h2>
-                    <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                    <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-claude-muted'">
                         本量化引擎原生支援 <strong>Anthropic Model Context Protocol (MCP)</strong>、<strong>WebMCP</strong> 以及標準 <strong>OpenAPI 3.1 規範</strong>。<br>
                         Claude Desktop、Cursor、Antigravity、Open-WebUI、LangChain 等任何代理系統皆可直接將本平台掛載為量化決策工具。
                     </p>
@@ -542,11 +561,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
                     <!-- 1. Claude Desktop MCP Config -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between">
-                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                                     <span class="text-lg">🟣</span>
                                     <span>Claude Desktop 設定 (MCP)</span>
                                 </h3>
@@ -554,12 +573,12 @@
                                     stdio
                                 </span>
                             </div>
-                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                                 將以下配置直接加入你的 <code class="num-font font-bold">claude_desktop_config.json</code>：
                             </p>
                             
                             <pre class="mt-3 p-3 rounded-xl text-xs num-font overflow-x-auto border"
-                                 :class="isDark ? 'bg-slate-950 border-dark-border text-sky-300' : 'bg-slate-900 border-slate-800 text-sky-400'"><code>{
+                                 :class="isDark ? 'bg-slate-950 border-dark-border text-sky-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-amber-300'"><code>{
   "mcpServers": {
     "stock-quant": {
       "command": "python",
@@ -573,30 +592,31 @@
 
                         <button @click="copyText(claudeMcpConfig, 'Claude Desktop 配置已複製！')" 
                                 class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-2"
-                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'">
+                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-claude-cardInner hover:bg-white text-claude-text border-claude-border'">
                             <span>📋 一鍵複製 Claude MCP 設定</span>
                         </button>
                     </div>
 
                     <!-- 2. Agent Skill (SKILL.md) -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between">
-                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                                     <span class="text-lg">⚡</span>
                                     <span>Agent Skill 規範檔 (SKILL.md)</span>
                                 </h3>
-                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold"
+                                      :class="isDark ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30' : 'bg-claude-terracotta/10 text-claude-terracotta border border-claude-terracotta/30'">
                                     Skill Spec
                                 </span>
                             </div>
-                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                                 包含標準 4 步操盤工作流、選股指標規則與停損防守邏輯：
                             </p>
                             
                             <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
-                                 :class="isDark ? 'bg-slate-950 border-dark-border text-slate-300' : 'bg-slate-900 border-slate-800 text-slate-200'">
+                                 :class="isDark ? 'bg-slate-950 border-dark-border text-slate-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-stone-200'">
                                 <div>📁 本地路徑: <code>skills/stock-quant/SKILL.md</code></div>
                                 <div>🛠️ 工具數量: <code>6 大原生量化 MCP 函數</code></div>
                                 <div>🏆 因子支援: <code>三重共振 / 玄鐵均線 / 法人連買</code></div>
@@ -604,30 +624,31 @@
                         </div>
 
                         <a href="/skill" target="_blank"
-                           class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold text-center transition-all shadow-sm">
+                           class="w-full py-2.5 text-white rounded-xl text-xs font-bold text-center transition-all shadow-sm"
+                           :class="isDark ? 'bg-sky-600 hover:bg-sky-500' : 'bg-claude-terracotta hover:bg-claude-terracottaHover'">
                             📖 線上檢視 SKILL.md 完整規格
                         </a>
                     </div>
 
                     <!-- 3. WebMCP & OpenAPI Spec -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between">
-                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                                     <span class="text-lg">🌐</span>
                                     <span>WebMCP / OpenAPI 端點</span>
                                 </h3>
-                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                     OpenAPI 3.1
                                 </span>
                             </div>
-                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-textMuted' : 'text-light-textMuted'">
+                            <p class="text-xs mt-2" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
                                 供 Web 代理程式、GPT Actions 或外部自動化系統調用：
                             </p>
                             
                             <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
-                                 :class="isDark ? 'bg-slate-950 border-dark-border text-sky-400' : 'bg-slate-900 border-slate-800 text-sky-300'">
+                                 :class="isDark ? 'bg-slate-950 border-dark-border text-sky-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-amber-300'">
                                 <div class="flex items-center justify-between">
                                     <span>OpenAPI 3.1:</span>
                                     <a href="/openapi.json" target="_blank" class="hover:underline">/openapi.json ↗</a>
@@ -645,27 +666,27 @@
 
                         <button @click="copyText('http://10.9.0.99:8088/openapi.json', 'OpenAPI URL 已複製！')" 
                                 class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-2"
-                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'">
+                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-claude-cardInner hover:bg-white text-claude-text border-claude-border'">
                             <span>📋 複製 OpenAPI URL</span>
                         </button>
                     </div>
 
                     <!-- 4. Python Query Snippet -->
-                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-white border-light-border shadow-sm'" 
+                    <div :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'" 
                          class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between">
-                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-claude-text'">
                                     <span class="text-lg">💻</span>
                                     <span>Python 快速調用範例</span>
                                 </h3>
-                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                <span class="text-[11px] px-2 py-0.5 rounded-lg num-font font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                                     Python 3
                                 </span>
                             </div>
                             
                             <pre class="mt-3 p-3 rounded-xl text-xs num-font overflow-x-auto border"
-                                 :class="isDark ? 'bg-slate-950 border-dark-border text-emerald-400' : 'bg-slate-900 border-slate-800 text-emerald-300'"><code>import requests
+                                 :class="isDark ? 'bg-slate-950 border-dark-border text-emerald-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-emerald-300'"><code>import requests
 
 # 取得 🏆 三重共振焦點推薦標的
 res = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")
@@ -676,7 +697,7 @@ for p in picks:
 
                         <button @click="copyText(pythonSnippet, 'Python 代碼範例已複製！')" 
                                 class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-2"
-                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'">
+                                :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-claude-cardInner hover:bg-white text-claude-text border-claude-border'">
                             <span>📋 複製 Python 腳本</span>
                         </button>
                     </div>
@@ -689,21 +710,38 @@ for p in picks:
 
         <!-- ================= FOOTER ================= -->
         <footer class="border-t py-6 text-xs transition-colors duration-200"
-                :class="isDark ? 'bg-dark-card border-dark-border text-dark-textMuted' : 'bg-white border-light-border text-light-textMuted'">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div class="font-sans">© 2026 888 Stock Quant. 驅動於 DuckDB 列式引擎與深度學習.</div>
+                :class="isDark ? 'bg-dark-card border-dark-border text-dark-muted' : 'bg-claude-bg border-claude-border text-claude-muted'">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                
+                <!-- Left Copyright -->
+                <div class="font-sans flex items-center space-x-2">
+                    <span>© 2026 888 Stock Quant. 驅動於 DuckDB 列式引擎與深度學習.</span>
+                </div>
+
+                <!-- Center/Right: david888.com Tech Provider Pill -->
+                <div class="flex items-center space-x-2">
+                    <a href="https://david888.com" target="_blank"
+                       class="px-3 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5"
+                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:text-white hover:border-sky-500' : 'bg-white border-claude-border text-claude-terracotta hover:bg-claude-cardInner shadow-sm'">
+                        <span>⚡</span>
+                        <span>技術提供 <strong class="underline decoration-dotted font-black num-font">david888.com</strong> ↗</span>
+                    </a>
+                </div>
+
+                <!-- Right Links -->
                 <div class="flex items-center space-x-5 num-font">
-                    <a href="/docs" target="_blank" class="hover:text-sky-500 transition-all font-bold">Swagger UI</a>
-                    <a href="/redoc" target="_blank" class="hover:text-sky-500 transition-all font-bold">ReDoc</a>
-                    <a href="/skill" target="_blank" class="hover:text-sky-500 transition-all font-bold">SKILL.md</a>
-                    <a href="/.well-known/ai-plugin.json" target="_blank" class="hover:text-sky-500 transition-all font-bold">Plugin</a>
+                    <a href="/docs" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">Swagger UI</a>
+                    <a href="/redoc" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">ReDoc</a>
+                    <a href="/skill" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">SKILL.md</a>
+                    <a href="/.well-known/ai-plugin.json" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">Plugin</a>
                 </div>
             </div>
         </footer>
 
         <!-- Toast Notification Pop-up -->
         <div v-if="toastMessage" 
-             class="fixed bottom-6 right-6 px-4 py-2.5 bg-sky-600 text-white text-xs font-bold rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 animate-bounce">
+             class="fixed bottom-6 right-6 px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 animate-bounce"
+             :class="isDark ? 'bg-sky-600' : 'bg-claude-terracotta'">
             <span>✓</span>
             <span>{{ toastMessage }}</span>
         </div>
@@ -716,7 +754,7 @@ for p in picks:
 
         createApp({
             data() {
-                const savedTheme = localStorage.getItem('theme') || 'dark';
+                const savedTheme = localStorage.getItem('theme') || 'light';
                 return {
                     isDark: savedTheme === 'dark',
                     activeTab: 'dashboard',
