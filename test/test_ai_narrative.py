@@ -38,9 +38,12 @@ class TestAINarrativeEngine(unittest.TestCase):
             "lstm_results": [],
             "overlap_results": []
         }
-        res = engine.generate_narrative("台灣中型100", macro, sample_report)
-        self.assertTrue(len(res) > 20)
-        print("Engine Generated Output:\n", res)
+        # 使用 mock 確保單元測試在 0.001 秒內極速完成且不受外網波動影響
+        from unittest.mock import patch
+        with patch.object(engine, '_call_openai_compatible', return_value="台灣中型100多頭回調格局，建議維持85%曝險，採取防禦觀望策略。"):
+            res = engine.generate_narrative("台灣中型100", macro, sample_report)
+            self.assertTrue(len(res) > 20)
+            self.assertIn("台灣中型100", res)
 
 
 if __name__ == "__main__":

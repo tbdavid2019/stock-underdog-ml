@@ -10,9 +10,13 @@ from strategies.base import StrategyResult
 
 class TestPipelineOrchestrator(unittest.TestCase):
 
+    @patch("pipeline.orchestrator.MacroRegimeAnalyzer.evaluate_macro_regime")
     @patch("pipeline.orchestrator.StockFetcher.get_stock_data_batch")
     @patch("pipeline.orchestrator.FundamentalProvider.get_fundamentals_batch")
-    def test_run_index_analysis_mocked(self, mock_get_funds, mock_get_stocks):
+    def test_run_index_analysis_mocked(self, mock_get_funds, mock_get_stocks, mock_macro):
+        from data.macro import MacroState
+        mock_macro.return_value = MacroState(regime_name="全面多頭 (Strong Bull)", exposure=1.0, vix=14.5)
+        
         # Mock stock data
         df = pd.DataFrame({"Close": [100.0] * 80, "MA60": [95.0] * 80})
         mock_get_stocks.return_value = {"2330.TW": df}

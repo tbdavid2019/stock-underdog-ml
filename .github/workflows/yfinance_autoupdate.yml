@@ -1,0 +1,43 @@
+name: yfinance Auto-Update & CI/CD Verification
+
+on:
+  schedule:
+    # 每天 UTC 05:00 (台灣時間 13:00，台股收盤前 0.5hr 檢查)
+    - cron: '0 5 * * 1-5'
+  workflow_dispatch: # 支援手動一鍵觸發
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Core Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run yfinance Update & Compatibility Pipeline
+        run: |
+          python scripts/check_yfinance_update.py --no-commit
+
+      - name: Commit & Push if Updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n $(git status -s requirements.txt) ]]; then
+            git add requirements.txt
+            git commit -m "chore(deps): auto-update yfinance to latest PyPI release [skip ci]"
+            git push origin main
+          else
+            echo "yfinance is already up to date."
+          fi

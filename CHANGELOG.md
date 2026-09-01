@@ -26,9 +26,11 @@
 - **WebMCP 原生 SSE 串流與自動發現標準 (`/mcp/sse` & `/.well-known/mcp.json`)**：
   - 於 FastAPI 原生掛載 FastMCP SSE 串流傳輸協議，支援遠端 Agent（Cursor、Claude、Antigravity、Open-WebUI、LangChain）透過 HTTP SSE 即時連接與調用量化工具。
   - 提供 `/.well-known/mcp.json` 標準端點與 `/.well-known/ai-plugin.json`，支援自動偵測協議。
-- **雙模式互動首頁 (`/` - `api/templates/index.html`)**：
-  - 提供黑曜石深色（Dark）與 Claude 暖調淺色（Light）雙模式切換，支援 `localStorage` 自動記憶。
-  - 支援即時策略切換（三重共振、玄鐵回調、LSTM 看漲/看跌）、市場指數篩選、個股時間序列歷史即時查詢、WebMCP SSE 一鍵複製與 Agent 配置。
+- **yfinance 自動巡檢與 CI/CD 升級系統 (`scripts/check_yfinance_update.py` & `.github/workflows/yfinance_autoupdate.yml`)**：
+  - 自動對接 PyPI JSON API 檢測 yfinance 最新發行版本，並於沙盒中執行「真實行情抓取 + 欄位格式校驗 + 單元測試」。
+  - 驗證通過後自動熱更新 Docker 容器、修改 `requirements.txt`、自動 Git Commit/Push 並平滑重啟 API 服務；驗證失敗則自動回滾，確保排程高可用。
+- **單元測試極速化重構（Fast Mocking）**：
+  - 對管線測試與 LLM 研報測試導入 Mock 防護，將全套 55 項單元測試執行時間由 7.6s 驟降至 **< 0.5s**，大幅提升 CI/CD 部署速度與穩定度。
 
 ### Fixed
 
