@@ -10,6 +10,7 @@ import json
 import requests
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
+import pandas as pd
 
 from core.config import config
 from data.macro import MacroState
