@@ -147,9 +147,9 @@ class PipelineOrchestrator:
                 }
         
         inst_summaries = {}
-        for t, ctx in contexts.items():
-            if ctx.institutional_summary:
-                inst_summaries[t] = ctx.institutional_summary.to_dict()
+        for r in strategy_outputs.get("institutional", []):
+            if r.metadata:
+                inst_summaries[r.ticker] = r.metadata
 
         report_dict = {
             "xuantie_results": report.xuantie_results,
