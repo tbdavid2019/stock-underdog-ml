@@ -39,6 +39,9 @@
 
 ### Documentation
 
+- 建立 `openspec/changes/integrate-macro-sector-institutional` 規範提案：包含美股宏觀門檻 (Macro Regime)、板塊輪動策略 (Sector Rotation)、台股三大法人籌碼分析 (Institutional Flow) 與三重共振評分體系。
+- 封存已落地的 `2026-09-01-refactor-pipeline-architecture` 變更規格至 `openspec/specs/`。
+
 - 新增 `AGENTS.md`，規範 changelog、README、安全與測試同步要求。
 
 ### Maintenance
