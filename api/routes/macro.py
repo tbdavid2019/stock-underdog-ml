@@ -16,13 +16,12 @@ def get_latest_macro():
     """
     即時評估美股三大核心指標（S&P 500、VIX 恐慌指數、SOX 費城半導體），回傳當前全球環境與建議倉位比例。
     """
-    analyzer = MacroRegimeAnalyzer()
-    state = analyzer.evaluate()
+    state = MacroRegimeAnalyzer.evaluate_us_market()
     
     return MacroRegimeResponse(
         regime_name=state.regime_name,
         exposure=state.exposure,
-        vix=state.vix_value,
+        vix=state.vix,
         spy_above_ma60=state.spy_above_ma60,
         sox_above_ma60=state.sox_above_ma60,
         warnings=state.warnings,
