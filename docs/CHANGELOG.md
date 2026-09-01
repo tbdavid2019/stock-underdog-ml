@@ -6,6 +6,32 @@
 
 ---
 
+## [2.2.0] - 2026-09-01
+
+### Added
+
+- **美股宏觀風控門檻 (`data.macro.MacroRegimeAnalyzer`)**：
+  - 於 Stage 1 Pre-flight 監控美股指標（`SPY`、`^VIX`、`^SOX`）。
+  - 動態評估全球市場狀態（全面多頭、多頭回調、避險防禦、極度恐慌熔斷）並動態調節建議投資曝險比例（0.0 ~ 1.0）。
+  - 費城半導體（SOX）破季線時自動限制科技股部位上限（30% ~ 50%）。
+- **台股三大法人籌碼分析器 (`data.institutional.InstitutionalProvider`)**：
+  - 整合 TWSE 官方 T86 / MI_QFIIS 與 TPEX 買賣超數據，並支援本機 JSON 快取與自動容錯。
+  - 自動計算 5日/20日 外資、投信累計買賣超（張數），以及投信連續買超天數（Streak）。
+- **7 大板塊資金輪動策略 (`strategies.sector_rotation.SectorRotationStrategy`)**：
+  - 追蹤半導體、AI伺服器/電子、金融、重電、航運、傳產、生技/太空等 7 大板塊 10D/15D/20D 加權動量資金流，挑選前 3 大強勢板塊領頭個股。
+- **三大法人籌碼策略 (`strategies.institutional.InstitutionalStrategy`)**：
+  - 自動篩選投信連續買超 3 日以上（投信連買）或外資與投信同步 5 日買超（土洋合買）個股。
+- **三重共振綜合評估與標籤 (`evaluators.composite_evaluator.CompositeEvaluator`)**：
+  - 升級支援「技術買點 ∩ LSTM看漲 ∩ 投信/外資主力大買」之 `🏆三重共振`、`土洋合買`、`投信連買`、`主流板塊` 標籤與宏觀曝險折扣權重。
+- **3 級 Fallback LLM 研報解讀引擎 (`evaluators.ai_narrative.AINarrativeEngine`)**：
+  - 支援 Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板（Template）四級容錯機制。
+  - 採用標準 OpenAI 相容協定，支援 Google Gemini 2.5 Flash、DeepSeek-V3、OpenAI GPT-4o-mini 或自建 Gateway。
+  - 嚴格 Prompt 約束禁止捏造數據，純基於量化確定數據生成 100~150 字白話操盤解讀。
+- **多平台推播訊息升級 (`notifier_dual.py`)**：
+  - Telegram、Discord、Email 報告全面整合美股宏觀卡片、AI 操盤解讀與三重共振標籤。
+
+---
+
 ## [2.1.0] - 2026-09-01
 
 ### Added
