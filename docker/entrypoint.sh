@@ -24,8 +24,9 @@ case "$1" in
     exec python backtest/backtest.py "${@:2}"
     ;;
   api|server)
-    echo "🌐 [Docker] 啟動 FastAPI 高效能量化 REST 服務 (0.0.0.0:8000)..."
-    exec uvicorn api.main:app --host 0.0.0.0 --port 8000
+    PORT="${API_PORT:-8088}"
+    echo "🌐 [Docker] 啟動 FastAPI 高效能量化 REST 服務 (0.0.0.0:${PORT})..."
+    exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT}"
     ;;
   test)
     echo "🧪 [Docker] 執行全套單元測試 (unittest)..."

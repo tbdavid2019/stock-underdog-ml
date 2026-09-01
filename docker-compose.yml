@@ -62,5 +62,10 @@ services:
     container_name: stock-underdog-ml-api
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8088:8088"
+    environment:
+      - TZ=Asia/Taipei
+      - PYTHONUNBUFFERED=1
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - API_PORT=8088
     command: ["api"]
