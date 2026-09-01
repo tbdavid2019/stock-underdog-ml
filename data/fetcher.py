@@ -116,7 +116,13 @@ class StockFetcher:
     @classmethod
     def get_sp500_stocks(cls, limit: int = 110) -> List[str]:
         stocks, _ = cls._fetch_index_with_cache_fallback("SP500", config.api.SP500_URL, "SP500", limit=limit)
-        return [s.replace("BRK.B", "BRK-B") for s in stocks]
+        stocks = [s.replace("BRK.B", "BRK-B") for s in stocks]
+        # 強制加入 SpaceX 與太空概念股 (SPCX, DXYZ, ASTS, RKLB)
+        extra_space_stocks = ["SPCX", "DXYZ", "ASTS", "RKLB"]
+        for st in extra_space_stocks:
+            if st not in stocks:
+                stocks.append(st)
+        return stocks
 
     @classmethod
     def get_nasdaq_stocks(cls) -> List[str]:
@@ -140,11 +146,17 @@ class StockFetcher:
     def get_index_name_map(cls, index_name: str) -> Dict[str, str]:
         index_map = {
             "台灣50": ("TW0050", config.api.TW0050_URL, "TW0050", ".TW"),
-            "台灣中型100": ("TW0051", config.api.TW0051_URL, "TW0051", ".TW")
+            "台灣中型100": ("TW0051", config.api.TW0051_URL, "TW0051", ".TW"),
+            "SP500": ("SP500", config.api.SP500_URL, "SP500", "")
         }
         if index_name in index_map:
             key, url, jkey, sfx = index_map[index_name]
             _, name_map = cls._fetch_index_with_cache_fallback(key, url, jkey, suffix=sfx)
+            if index_name == "SP500":
+                name_map.setdefault("SPCX", "SpaceX (SPCX)")
+                name_map.setdefault("DXYZ", "Destiny Tech100 / SpaceX (DXYZ)")
+                name_map.setdefault("ASTS", "AST SpaceMobile (ASTS)")
+                name_map.setdefault("RKLB", "Rocket Lab (RKLB)")
             return name_map
         return {}
 
