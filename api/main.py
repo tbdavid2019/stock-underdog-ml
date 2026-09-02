@@ -161,36 +161,98 @@ def get_webmcp_manifest():
 
 
 @app.api_route("/llms.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
-@app.api_route("/llms-full.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
 def get_llms_txt():
     """
-    LLM Context & System Summary (https://llmstxt.org Standard)
+    LLM Context & System Summary (Conforming to https://llmstxt.org Standard)
     """
     content = """# 888 Stock Quant Platform
 
-> 專業級台美股深度學習與多維量化交易決策平台。
+> 專業級台美股多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、三大法人籌碼鎖碼與 2md 繁中公司簡介與即時新聞。
 
-## Overview
-888 Stock Quant 整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、三大法人籌碼鎖碼與 DuckDB 高效時序資料庫，提供即時量化選股與操盤指引。
+888 Stock Quant 遵循 [llmstxt.org](https://llmstxt.org/) 規範，為大語言模型 (LLM)、AI Agents、Claude Desktop 與自動化投資系統提供標準化、結構化的量化訊號與資料字典。
 
-## Agent & MCP Connectivity
-- **WebMCP SSE Stream**: `/mcp/sse` (FastMCP Server-Sent Events bidirectional RPC)
-- **WebMCP Manifest**: `/.well-known/mcp.json` & `/mcp.json`
-- **Agent Skill Spec**: `/skill` (4-step quantitative trading workflow)
-- **OpenAPI 3.1 Spec**: `/openapi.json`
-- **Plugin Manifest**: `/.well-known/ai-plugin.json`
-- **Swagger Docs**: `/docs`
+## Quantitative Strategy Endpoints
 
-## Core Quantitative Tools
-- `get_market_macro_regime`: 取得 S&P500 / VIX / SOX 即時宏觀風控狀態與建議投資曝險比例。
-- `get_triple_resonance_stocks`: 篩選三重共振（技術面 ∩ LSTM ∩ 籌碼 ∩ 估值）強勢標的。
-- `get_xuantie_pullback_stocks`: 查詢 MA60/120 季線/半年線波段回調買點。
-- `get_lstm_top_predictions`: 查詢 LSTM 深度學習下一交易日預測漲跌幅排行。
-- `get_stock_history`: 查詢個股於 DuckDB 中的歷史時序預測軌跡與法人籌碼。
-- `get_latest_market_snapshot`: 取得市場即時全景摘要與資料庫統計。
+- [Triple Resonance Recommendations](/api/v1/predictions/resonance): 取得多策略共振焦點推薦（技術面均線 ∩ LSTM看漲 ∩ 籌碼鎖碼 ∩ 估值合理）
+- [Xuantie Heavy Sword Pullback](/api/v1/predictions/xuantie): 查詢玄鐵重劍策略 MA60/120 均線趨勢回調技術買點
+- [LSTM Bullish Top Picks](/api/v1/predictions/lstm/top-bullish): 查詢 LSTM 深度學習下一交易日預測漲幅排行
+- [LSTM Bearish Top Picks](/api/v1/predictions/lstm/top-bearish): 查詢 LSTM 深度學習下一交易日預測跌幅排行
+- [Market Macro Risk Regime](/api/v1/macro/latest): 查詢台股加權指數/美股S&P500、VIX恐慌指數、費城半導體趨勢與建議投資曝險比例
+- [Institutional Fund Flows](/api/v1/market/institutional/top): 查詢外資、投信、自營商三大法人買賣超與籌碼集中度排行
+- [Company Profile & Live News](/api/v1/market/company-profile): 整合 2md 提取個股繁體中文公司簡介、核心業務與最新新聞
+- [Batch Company Profiles](/api/v1/market/company-profiles/batch): 並發非同步批次預載多支股票之公司營運摘要
+- [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡與法人籌碼
+
+## Agent & Developer Discovery Standards
+
+- [WebMCP SSE Stream](/mcp/sse): FastMCP Server-Sent Events bidirectional RPC stream
+- [OpenAPI 3.1 Specification](/openapi.json): Full REST API schema in standard OpenAPI 3.1 JSON format
+- [WebMCP Manifest](/.well-known/mcp.json): Model Context Protocol (MCP) server discovery manifest
+- [OpenAI Plugin Manifest](/.well-known/ai-plugin.json): Standard ChatGPT / GPT Actions plugin specification
+- [Agent Trading Skill](/skill): 4-step quantitative trading workflow markdown skill specification
+- [Interactive Swagger UI](/docs): Live API testing and interactive documentation
+- [Alternative MCP Manifest](/mcp.json): WebMCP discovery alias
+
+## Optional & Full Documentation
+
+- [Full LLM Context](/llms-full.txt): Complete system specification, strategy mathematical formulation, DuckDB data dictionary, and multi-asset quant architecture
+- [GitHub Repository](https://github.com/tbdavid2019/stock-underdog-ml): Open source repository and automated CI/CD pipelines
 
 ## Powered By
-技術提供: [david888.com](https://david888.com)
+技術提供: [david888.com](https://david888.com) | Specification: [llmstxt.org](https://llmstxt.org)
+"""
+    return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
+
+
+@app.api_route("/llms-full.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
+def get_llms_full_txt():
+    """
+    LLM Full Context & Architecture Spec (Conforming to https://llmstxt.org Standard)
+    """
+    content = """# 888 Stock Quant Platform - Full System Specification
+
+> 專業級台美股深度學習與多維量化決策平台全量架構規格與資料模型。
+
+## 1. System Architecture & Core Philosophy
+888 Stock Quant 定位為「**盤前買進決策指南 (Pre-Market Buy Guide)**」與「**純股市時序資料庫**」，每天於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動運算完成並推播決策。
+
+### Core Pillars:
+1. **宏觀門檻與大盤風控 (Macro & Market Regime)**:
+   - 🇹🇼 台股市場：加權指數 (`^TWII`) 站穩 MA60/MA20 + 費城半導體 (`^SOX`) + VIX 國際連動。
+   - 🇺🇸 美股市場：S&P 500 (`SPY`) 站穩 MA60 + VIX 恐慌指數 + 費城半導體動態風控。
+2. **波段策略 - 玄鐵重劍 (Xuantie Technical Pullback)**:
+   - 篩選長線多頭排列（MA60/MA120 斜率向上）、中期回調至季線/半年線支撐帶（價格在 MA60/120 之 ±3% 內）之技術性買點。
+3. **短線預測 - LSTM 深度學習 (LSTM Next-Day Forecast)**:
+   - 基於 PyTorch LSTM 雙層架構，輸入過去 60 日 OHLCV 與技術指標，預測次日價格與漲跌幅度排行。
+4. **籌碼策略 - 三大法人鎖碼 (Institutional Accumulation)**:
+   - 分析外資、投信、自營商連續買超天數、買超佔比與股本集中度，篩選「土洋合買」主力加碼標的。
+5. **多維交集 - 🏆 三重共振 (Triple Resonance)**:
+   - 技術面買點 ∩ LSTM 看漲 ∩ 法人鎖碼 ∩ 估值合理 (PE < 25 / PB < 3.5) 之高勝率焦點標的。
+6. **2md 繁中公司簡介與即時新聞 (2md Company Profile & News)**:
+   - 整合 2md.aiurl.tw / 2md.glsoft.ai / create360.ai，實時提取公司全名、主要營運業務、董事長、市值與最新新聞頭條。
+
+## 2. DuckDB Time-Series Data Tables
+平台使用高效能 DuckDB (零拷貝 Columnar 時序儲存)：
+- `tw_daily_bars`: 台股上市櫃全市場日 K 線 (`date`, `ticker`, `raw_code`, `name`, `open`, `high`, `low`, `close`, `volume`)。
+- `tw_institutional_daily`: 三大法人每日買賣超明細 (`date`, `ticker`, `foreign_net`, `trust_net`, `dealer_net`, `total_net`, `foreign_ratio`)。
+- `tw_broker_trades`: 券商分點主力進出追蹤。
+- `predictions`: 歷史預測與多維策略訊號快照。
+
+## 3. REST API Endpoint Reference
+- `GET /api/v1/macro/latest?market=tw|us`: 大盤風控與建議曝險比例。
+- `GET /api/v1/predictions/resonance?index_name=台灣50|台灣中型100|SP500&limit=60`: 三重共振標的。
+- `GET /api/v1/predictions/xuantie?index_name=...&limit=60`: 玄鐵重劍波段買點。
+- `GET /api/v1/predictions/lstm/top-bullish?index_name=...&limit=60`: LSTM 次日看漲排行。
+- `GET /api/v1/predictions/lstm/top-bearish?index_name=...&limit=60`: LSTM 次日看跌排行。
+- `GET /api/v1/market/institutional/top?order_by=total_net|trust_net|foreign_net&market=ALL|TWSE|TPEX&limit=30`: 法人買賣超排行。
+- `GET /api/v1/market/company-profile?ticker=9945.TW`: 取得單一個股 2md 繁中公司簡介與即時新聞。
+- `POST /api/v1/market/company-profiles/batch`: 並發批次預載多支股票之公司營運摘要。
+- `GET /api/v1/predictions/history/{ticker}?limit=30`: 查詢個股歷史預測軌跡與法人籌碼。
+
+## 4. WebMCP / Chrome WebMCP Standard
+本系統符合 Google Chrome WebMCP 標準，前端頁面於 `window.document.modelContext` 自動註冊 8 組量化工具，並支援 `/mcp/sse` Server-Sent Events 雙向 RPC 串流。
+
+Specification Conformance: https://llmstxt.org/
 """
     return PlainTextResponse(content=content, media_type="text/markdown; charset=utf-8")
 

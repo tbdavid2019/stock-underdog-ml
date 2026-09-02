@@ -8,6 +8,12 @@
 
 ## [Unreleased] - 2026-09-02
 
+### 📄 全面支援 llmstxt.org 規範 (`/llms.txt` & `/llms-full.txt`)
+- **遵循 Jeremy Howard [llmstxt.org](https://llmstxt.org/) 標準規範**：
+  - 重構 `/llms.txt` 與 `/llms-full.txt`，提供乾淨、結構化之 Markdown 摘要、策略端點清單與全量系統規格。
+  - 前端頂部導覽列新增 `📄 llms.txt ↗` 快捷入口，頁尾新增直接鏈結。
+  - 在 `Agent / MCP Hub` 分頁新增專屬「📄 llms.txt / llms-full.txt」對接卡片，支援一鍵複製 URL 與直接檢視，供 LLM 系統提示詞、AI 爬蟲與 Agent 快速獲取即時量化模型定義。
+
 ### 🌐 2md 繁體中文公司簡介與即時新聞浮動卡片 (2md Company Profile & News Hover)
 - **整合 2md URL to Markdown 與 Search 服務** (`https://2md.aiurl.tw`, `https://2md.glsoft.ai`, `https://create360.ai`)：
   - 新增 `data/company_profile.py` (`CompanyProfileService`)，支援自 2md 與 Yahoo 股市實時提取個股之繁體中文公司名稱、核心營運業務、產業別、董事長、市值及最新即時新聞動態。
