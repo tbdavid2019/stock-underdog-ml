@@ -65,23 +65,31 @@ class CompanyProfileService:
             "source": "2md"
         }
 
-        # 3. 嘗試透過 2md Web Reader 抓取 Yahoo 股市基本資料
-        try:
-            cls._fetch_profile_from_2md(profile_data, is_tw)
-        except Exception as e:
-            logger.warning(f"⚠️ [2md Profile] 抓取 {ticker} 基本資料異常 ({e})，嘗試搜尋備援...")
-
-        # 4. 嘗試透過 2md 搜尋抓取最新即時新聞
-        try:
-            cls._fetch_news_from_2md(profile_data, is_tw)
-        except Exception as e:
-            logger.warning(f"⚠️ [2md News] 搜尋 {ticker} 即時新聞異常 ({e})")
-
-        # 5. 若 2md 未取得足夠簡介，使用 yfinance 終極備援
-        if not profile_data.get("business_summary") or profile_data["business_summary"] == "":
+        # 3. 美股標的 (US Tickers) 優先執行極速 yfinance 解析 (約 200ms)
+        if not is_tw:
             cls._fallback_yfinance(profile_data, ticker)
+            try:
+                cls._fetch_news_from_2md(profile_data, is_tw=False)
+            except Exception as e:
+                logger.debug(f"2md US news search skipped: {e}")
+        else:
+            # 4. 台股標的 (TW Tickers) 嘗試透過 2md Web Reader 抓取 Yahoo 股市基本資料
+            try:
+                cls._fetch_profile_from_2md(profile_data, is_tw=True)
+            except Exception as e:
+                logger.debug(f"2md TW profile reader skipped: {e}")
 
-        # 6. 寫入快取
+            # 嘗試透過 2md 搜尋抓取即時新聞
+            try:
+                cls._fetch_news_from_2md(profile_data, is_tw=True)
+            except Exception as e:
+                logger.debug(f"2md TW news search skipped: {e}")
+
+            # 若未取得足夠簡介，使用 yfinance 備援
+            if not profile_data.get("business_summary"):
+                cls._fallback_yfinance(profile_data, ticker)
+
+        # 5. 寫入快取
         cls._CACHE[ticker] = (now, profile_data)
         return profile_data
 
@@ -178,13 +186,16 @@ class CompanyProfileService:
         """利用 2md Live Search 抓取即時新聞與業務概述"""
         ticker = profile["ticker"]
         name = profile.get("name") or ticker
-        query = f"{ticker} {name} 公司簡介 營運 最新新聞"
+        if is_tw:
+            query = f"{ticker} {name} 公司簡介 營運 最新新聞"
+        else:
+            query = f"{ticker} {name} stock latest news"
 
         text = ""
         for host in cls.FALLBACK_2MD_HOSTS:
             try:
                 search_url = f"{host.rstrip('/')}/s/{urllib.parse.quote(query)}"
-                resp = requests.get(search_url, timeout=5)
+                resp = requests.get(search_url, timeout=3)
                 if resp.status_code == 200:
                     resp.encoding = "utf-8"
                     if len(resp.text) > 20:
@@ -223,17 +234,23 @@ class CompanyProfileService:
 
     @classmethod
     def _fallback_yfinance(cls, profile: Dict[str, Any], ticker: str):
-        """使用 yfinance 作為最後備援"""
+        """使用 yfinance 作為快速解析或最後備援"""
         try:
             import yfinance as yf
             t = yf.Ticker(ticker)
             info = t.info or {}
             if not profile.get("name") or profile["name"] == profile["raw_code"]:
                 profile["name"] = info.get("shortName") or info.get("longName") or profile["raw_code"]
-            if profile.get("industry") == "綜合產業" and info.get("industry"):
-                profile["industry"] = info.get("industry")
+            if profile.get("industry") == "綜合產業" and (info.get("industry") or info.get("sector")):
+                profile["industry"] = info.get("industry") or info.get("sector")
             if not profile.get("business_summary") and info.get("longBusinessSummary"):
                 profile["business_summary"] = info.get("longBusinessSummary")[:300]
+            if not profile.get("market_cap") and info.get("marketCap"):
+                mc = info["marketCap"]
+                if mc >= 1_000_000_000:
+                    profile["market_cap"] = f"${mc/1_000_000_000:.1f}B"
+                elif mc > 0:
+                    profile["market_cap"] = f"${mc/1_000_000:.0f}M"
         except Exception as e:
             logger.debug(f"yfinance profile fallback failed: {e}")
 

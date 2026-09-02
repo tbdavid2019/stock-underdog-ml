@@ -48,9 +48,7 @@
     <link rel="alternate" type="text/markdown" title="LLM Full Context" href="/llms-full.txt">
     <link rel="alternate" type="application/json" title="WebMCP Manifest" href="/.well-known/mcp.json">
     <link rel="alternate" type="application/json" title="Plugin Manifest" href="/.well-known/ai-plugin.json">
-    <link rel="mcp" href="/mcp/sse">
     <link rel="service-doc" href="/docs">
-    <script type="module" src="/.webmcp/bridge.js" data-packs="stock-quant-engine" data-mcp-url="/mcp/sse"></script>
 
     <!-- Google Fonts: JetBrains Mono for Numbers & Noto Sans TC for Chinese -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1254,14 +1252,14 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
-                            <button @click="copyText('http://10.9.0.99:8088/mcp/sse', 'WebMCP SSE URL 已複製！')" 
-                                    class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
-                                    :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-emerald-400 border-dark-border' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
+                            <button @click="copyText(window.location.origin + '/mcp/sse', 'WebMCP SSE URL 已複製！')" 
+                                     class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                                     :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-emerald-400 border-dark-border' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
                                 <span>⚡ 複製 WebMCP SSE</span>
                             </button>
-                            <button @click="copyText('http://10.9.0.99:8088/openapi.json', 'OpenAPI URL 已複製！')" 
-                                    class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
-                                    :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-claude-cardInner hover:bg-white text-claude-text border-claude-border'">
+                            <button @click="copyText(window.location.origin + '/openapi.json', 'OpenAPI URL 已複製！')" 
+                                     class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                                     :class="isDark ? 'bg-dark-cardInner hover:bg-dark-border text-white border-dark-border' : 'bg-claude-cardInner hover:bg-white text-claude-text border-claude-border'">
                                 <span>📋 複製 OpenAPI</span>
                             </button>
                         </div>
@@ -1285,7 +1283,7 @@
                                  :class="isDark ? 'bg-slate-950 border-dark-border text-emerald-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-emerald-300'"><code>import requests
 
 # 取得 🏆 三重共振焦點推薦標的
-res = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")
+res = requests.get(f"{window.location.origin}/api/v1/predictions/resonance")
 picks = res.json().get("data", [])
 for p in picks:
     print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")</code></pre>
@@ -2198,8 +2196,19 @@ for p in picks:
                     }
                 },
                 async fetchCompanyProfile(ticker) {
+                    const abortController = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        abortController.abort();
+                        if (this.hoverLoading && this.hoverData?.ticker === ticker) {
+                            this.hoverLoading = false;
+                        }
+                    }, 4000);
+
                     try {
-                        const res = await fetch(`/api/v1/market/company-profile?ticker=${encodeURIComponent(ticker)}`);
+                        const res = await fetch(`/api/v1/market/company-profile?ticker=${encodeURIComponent(ticker)}`, {
+                            signal: abortController.signal
+                        });
+                        clearTimeout(timeoutId);
                         if (res.ok) {
                             const data = await res.json();
                             if (data && data.ticker) {
@@ -2210,8 +2219,9 @@ for p in picks:
                             }
                         }
                     } catch (e) {
-                        console.debug("Failed to fetch company profile for", ticker, e);
+                        console.debug("Company profile fetch:", e.name === 'AbortError' ? 'timeout fallback' : e);
                     } finally {
+                        clearTimeout(timeoutId);
                         if (this.hoverData?.ticker === ticker) {
                             this.hoverLoading = false;
                         }
