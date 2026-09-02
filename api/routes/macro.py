@@ -2,6 +2,7 @@
 api/routes/macro.py - Global Macro Regime & Risk Exposure Endpoints
 """
 
+from typing import Optional
 from fastapi import APIRouter, Depends
 from api.schemas import MacroRegimeResponse
 from data.macro import MacroRegimeAnalyzer
