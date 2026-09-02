@@ -278,6 +278,31 @@ def get_broker_trades_for_stock(
     }
 
 
+@mcp.tool(
+    name="get_company_profile",
+    description="透過 2md.aiurl.tw 與 Yahoo 股市實時查詢股票（如 9945.TW, 2330.TW, AAPL）之繁體中文公司簡介、核心營運業務、產業別、市值與最新即時新聞。"
+)
+def get_company_profile(
+    ticker: str
+) -> Dict[str, Any]:
+    """
+    Fetch company profile, business operations, and recent news using 2md.aiurl.tw.
+    """
+    from data.company_profile import CompanyProfileService
+    profile = CompanyProfileService.get_company_profile(ticker, db=db)
+    return {
+        "success": True,
+        "ticker": profile["ticker"],
+        "name": profile["name"],
+        "industry": profile.get("industry", "綜合產業"),
+        "business_summary": profile.get("business_summary", ""),
+        "chairman": profile.get("chairman", ""),
+        "market_cap": profile.get("market_cap", ""),
+        "recent_news": profile.get("recent_news", []),
+        "links": profile.get("links", {})
+    }
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

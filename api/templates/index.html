@@ -168,7 +168,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
                 
                 <!-- Brand Title (Single Line, Never Wraps) -->
-                <div class="flex items-center space-x-3 cursor-pointer select-none shrink-0" @click="activeTab = 'dashboard'">
+                <div class="flex items-center space-x-3 cursor-pointer select-none shrink-0" @click="setTab('dashboard')">
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white font-black text-xl transition-all"
                          :class="isDark ? 'bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-700 shadow-sky-600/20' : 'bg-gradient-to-tr from-[#D97757] to-[#C86645] shadow-[#D97757]/25'">
                         📈
@@ -210,27 +210,36 @@
                 <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
                     <nav class="flex items-center space-x-1 p-1 rounded-xl border"
                          :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
-                        <button @click="activeTab = 'dashboard'" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
+                        <button @click="setTab('dashboard')" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
                                 :class="activeTab === 'dashboard' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>📊 操盤看板</span>
                         </button>
-                        <button @click="activeTab = 'institutional'; loadInstitutionalFlows()" :aria-current="activeTab === 'institutional' ? 'page' : undefined"
+                        <button @click="setTab('institutional')" :aria-current="activeTab === 'institutional' ? 'page' : undefined"
                                 :class="activeTab === 'institutional' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🏛️ 法人籌碼</span>
                         </button>
-                        <button @click="activeTab = 'history'" :aria-current="activeTab === 'history' ? 'page' : undefined"
+                        <button @click="setTab('history')" :aria-current="activeTab === 'history' ? 'page' : undefined"
                                 :class="activeTab === 'history' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🔍 個股歷史</span>
                         </button>
-                        <button @click="activeTab = 'agent_hub'" :aria-current="activeTab === 'agent_hub' ? 'page' : undefined"
+                        <button @click="setTab('agent_hub')" :aria-current="activeTab === 'agent_hub' ? 'page' : undefined"
                                 :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🤖 Agent / MCP</span>
                         </button>
                     </nav>
+
+                    <!-- Share URL Button -->
+                    <button @click="copyShareLink()"
+                            class="px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1 whitespace-nowrap shadow-sm"
+                            :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:bg-dark-border' : 'bg-white border-claude-border text-claude-terracotta hover:bg-claude-cardInner'"
+                            title="複製目前頁面完整分享連結" aria-label="分享連結">
+                        <span>🔗</span>
+                        <span class="hidden sm:inline">分享</span>
+                    </button>
 
                     <!-- Dark / Light Mode Switcher -->
                     <button @click="toggleTheme()" 
@@ -376,7 +385,7 @@
                     <!-- Strategy Buttons -->
                     <div class="flex items-center space-x-2 overflow-x-auto pb-1 lg:pb-0">
                         <button v-for="strat in strategyOptions" :key="strat.id"
-                                @click="selectedStrategy = strat.id; loadData()"
+                                @click="setStrategy(strat.id)"
                                 :aria-pressed="selectedStrategy === strat.id"
                                 :class="selectedStrategy === strat.id ? (isDark ? 'bg-sky-600 text-white border-sky-500 font-bold shadow-sm' : 'bg-claude-terracotta text-white border-claude-terracotta font-bold shadow-sm') : (isDark ? 'bg-dark-cardInner text-white border-dark-border hover:bg-dark-border' : 'bg-claude-cardInner text-claude-text border-claude-border hover:bg-white')"
                                 class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1.5 border">
@@ -388,7 +397,7 @@
                     <!-- Market Index Dropdown & Refresh -->
                     <div class="flex items-center space-x-2.5 self-end lg:self-auto shrink-0">
                         <span class="text-xs font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">市場:</span>
-                        <select v-model="selectedIndex" @change="loadData()" 
+                        <select v-model="selectedIndex" @change="setIndex()" 
                                 class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-2 focus:outline-none transition-all font-sans"
                                 :class="isDark ? 'bg-dark-cardInner border-dark-border text-white focus:ring-2 focus:ring-sky-500' : 'bg-white border-claude-border text-claude-text focus:ring-2 focus:ring-claude-terracotta shadow-sm'">
                             <option value="">🌐 全部市場 (All)</option>
@@ -468,7 +477,12 @@
                             <div class="flex items-start justify-between">
                                 <div>
                                     <div class="flex items-center space-x-2.5">
-                                        <span class="text-xl font-black num-font tracking-wide" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                        <span class="text-xl font-black num-font tracking-wide cursor-pointer hover:underline transition-colors" 
+                                              :class="isDark ? 'text-white hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'"
+                                              @mouseenter="showCompanyHover($event, item.ticker)"
+                                              @mouseleave="hideCompanyHover()"
+                                              @click="searchTickerHistory(item.ticker)"
+                                              :title="'滑鼠停留查看 ' + item.ticker + ' 公司介紹與即時新聞'">
                                             {{ item.ticker }}
                                         </span>
                                         <span class="px-2 py-0.5 text-[11px] font-medium rounded-md border font-sans"
@@ -1320,6 +1334,98 @@ for p in picks:
             </div>
         </footer>
 
+        <!-- ================= FLOATING COMPANY PROFILE HOVER CARD (2MD POWERED) ================= -->
+        <div v-if="hoverVisible"
+             class="fixed z-50 pointer-events-auto transition-all duration-150 shadow-2xl rounded-2xl border p-4 max-w-sm w-96 backdrop-blur-xl"
+             :style="{ top: hoverPos.top + 'px', left: hoverPos.left + 'px' }"
+             @mouseenter="clearHoverTimeout()"
+             @mouseleave="hideCompanyHover(true)"
+             :class="isDark ? 'bg-dark-card/95 border-dark-border text-dark-text shadow-black/80' : 'bg-white/95 border-claude-border text-claude-text shadow-2xl'">
+            
+            <!-- Loading Skeleton -->
+            <div v-if="hoverLoading" class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="skeleton h-6 w-36 rounded-lg"></div>
+                    <div class="skeleton h-4 w-16 rounded-md"></div>
+                </div>
+                <div class="skeleton h-14 w-full rounded-xl"></div>
+                <div class="skeleton h-8 w-full rounded-lg"></div>
+            </div>
+
+            <!-- Loaded Content -->
+            <div v-else-if="hoverData && hoverData.ticker" class="space-y-3">
+                <!-- Header -->
+                <div class="flex items-start justify-between gap-2 border-b pb-2.5" :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                {{ hoverData.ticker }}
+                            </span>
+                            <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                {{ hoverData.name }}
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md border font-sans"
+                                  :class="isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-claude-terracotta/10 text-claude-terracotta border-claude-terracotta/20'">
+                                {{ hoverData.industry || '綜合產業' }}
+                            </span>
+                            <span v-if="hoverData.market_cap" class="text-[11px] font-mono" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                市值: {{ hoverData.market_cap }}
+                            </span>
+                            <span v-if="hoverData.chairman" class="text-[11px]" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                董座: {{ hoverData.chairman }}
+                            </span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded border text-emerald-500 border-emerald-500/30 bg-emerald-500/10 whitespace-nowrap shrink-0 font-mono">
+                        ⚡ 2md
+                    </span>
+                </div>
+
+                <!-- Business Overview -->
+                <div>
+                    <div class="text-[11px] font-bold mb-1 flex items-center space-x-1" :class="isDark ? 'text-slate-300' : 'text-claude-text'">
+                        <span>🏢 主要業務與營運</span>
+                    </div>
+                    <p class="text-xs leading-relaxed line-clamp-3" :class="isDark ? 'text-slate-300' : 'text-claude-text/90'">
+                        {{ hoverData.business_summary || '暫無詳細業務描述' }}
+                    </p>
+                </div>
+
+                <!-- Recent News (if any) -->
+                <div v-if="hoverData.recent_news && hoverData.recent_news.length > 0" class="pt-2 border-t" :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                    <div class="text-[11px] font-bold mb-1 flex items-center space-x-1" :class="isDark ? 'text-slate-300' : 'text-claude-text'">
+                        <span>📰 即時最新動態</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <a v-for="(news, nidx) in hoverData.recent_news.slice(0, 2)" :key="nidx"
+                           :href="news.url" target="_blank"
+                           class="block p-1.5 rounded-lg border text-[11px] leading-tight transition-all truncate hover:underline"
+                           :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-300 hover:bg-dark-border' : 'bg-claude-cardInner border-claude-border text-claude-terracotta hover:bg-white'">
+                            • {{ news.title }}
+                        </a>
+                    </div>
+                </div>
+
+                <!-- External Link Buttons -->
+                <div class="pt-2 border-t flex items-center justify-between gap-1.5 text-[11px] font-bold" :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                    <a v-if="hoverData.links?.yahoo" :href="hoverData.links.yahoo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1"
+                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner'">
+                        Yahoo ↗
+                    </a>
+                    <a v-if="hoverData.links?.goodinfo" :href="hoverData.links.goodinfo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1"
+                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner'">
+                        Goodinfo ↗
+                    </a>
+                    <button @click="searchTickerHistory(hoverData.ticker); hideCompanyHover(true)" class="px-2 py-1 rounded-md border transition-all text-center flex-1 text-white"
+                            :class="isDark ? 'bg-sky-600 hover:bg-sky-500 border-sky-500' : 'bg-claude-terracotta hover:bg-claude-terracottaHover border-claude-terracotta'">
+                        時序軌跡
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast Notification Pop-up -->
         <div v-if="toastMessage" 
              class="fixed bottom-6 right-6 px-4 py-2.5 text-white text-xs font-bold rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter"
@@ -1392,6 +1498,14 @@ for p in picks:
 
                     // Toast
                     toastMessage: '',
+
+                    // Company Profile Hover Card (2md Powered)
+                    hoverVisible: false,
+                    hoverData: null,
+                    hoverLoading: false,
+                    hoverPos: { top: 0, left: 0 },
+                    hoverTimeout: null,
+                    companyProfileCache: {},
 
                     // Snippets
                     claudeMcpConfig: JSON.stringify({
@@ -1883,7 +1997,225 @@ for p in picks:
                 searchTickerHistory(ticker) {
                     this.searchTicker = ticker;
                     this.activeTab = 'history';
+                    this.updateUrl();
                     this.loadHistory();
+                },
+                setTab(tab) {
+                    this.activeTab = tab;
+                    this.updateUrl();
+                    if (tab === 'institutional') {
+                        if (this.instSubTab === 'three_inst') {
+                            this.loadInstitutionalFlows();
+                        } else {
+                            this.loadBrokerTrend();
+                        }
+                    } else if (tab === 'dashboard') {
+                        this.loadData();
+                    } else if (tab === 'history') {
+                        if (this.searchTicker && !this.historyRecords.length) {
+                            this.loadHistory();
+                        }
+                    }
+                },
+                setStrategy(stratId) {
+                    this.selectedStrategy = stratId;
+                    this.updateUrl();
+                    this.loadData();
+                },
+                setIndex() {
+                    this.updateUrl();
+                    this.loadData();
+                },
+                updateUrl(replace = false) {
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.activeTab && this.activeTab !== 'dashboard') {
+                            params.set('tab', this.activeTab);
+                        }
+                        if (this.activeTab === 'dashboard') {
+                            if (this.selectedStrategy && this.selectedStrategy !== 'resonance') {
+                                params.set('strategy', this.selectedStrategy);
+                            }
+                            if (this.selectedIndex) {
+                                params.set('index', this.selectedIndex);
+                            }
+                        } else if (this.activeTab === 'institutional') {
+                            if (this.instSubTab && this.instSubTab !== 'three_inst') {
+                                params.set('sub', this.instSubTab);
+                            }
+                            if (this.instMarket && this.instMarket !== 'ALL') {
+                                params.set('market', this.instMarket);
+                            }
+                            if (this.instOrderBy && this.instOrderBy !== 'total_net') {
+                                params.set('order', this.instOrderBy);
+                            }
+                            if (this.instSelectedDate) {
+                                params.set('date', this.instSelectedDate);
+                            }
+                            if (this.instSubTab === 'broker' && this.brokerSearchTicker) {
+                                params.set('broker_ticker', this.brokerSearchTicker);
+                            }
+                        } else if (this.activeTab === 'history') {
+                            if (this.searchTicker) {
+                                params.set('ticker', this.searchTicker);
+                            }
+                        }
+                        const queryStr = params.toString();
+                        const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
+                        if (window.location.search !== (queryStr ? `?${queryStr}` : '')) {
+                            if (replace) {
+                                window.history.replaceState({ tab: this.activeTab }, '', newUrl);
+                            } else {
+                                window.history.pushState({ tab: this.activeTab }, '', newUrl);
+                            }
+                        }
+                    } catch (e) {
+                        console.debug("History pushState error:", e);
+                    }
+                },
+                parseUrlParams() {
+                    try {
+                        const params = new URLSearchParams(window.location.search);
+                        const tab = params.get('tab');
+                        if (tab && ['dashboard', 'institutional', 'history', 'agent_hub'].includes(tab)) {
+                            this.activeTab = tab;
+                        }
+                        const strat = params.get('strategy');
+                        if (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'latest'].includes(strat)) {
+                            this.selectedStrategy = strat;
+                        }
+                        const idx = params.get('index');
+                        if (idx !== null) {
+                            this.selectedIndex = idx;
+                        }
+                        const sub = params.get('sub');
+                        if (sub && ['three_inst', 'broker'].includes(sub)) {
+                            this.instSubTab = sub;
+                        }
+                        const mkt = params.get('market');
+                        if (mkt) {
+                            this.instMarket = mkt;
+                        }
+                        const order = params.get('order');
+                        if (order) {
+                            this.instOrderBy = order;
+                        }
+                        const dt = params.get('date');
+                        if (dt) {
+                            this.instSelectedDate = dt;
+                        }
+                        const brokerTicker = params.get('broker_ticker');
+                        if (brokerTicker) {
+                            this.brokerSearchTicker = brokerTicker;
+                        }
+                        const ticker = params.get('ticker');
+                        if (ticker) {
+                            this.searchTicker = ticker;
+                        }
+                    } catch (e) {
+                        console.debug("Parse URL params error:", e);
+                    }
+                },
+                syncStateFromUrl() {
+                    this.parseUrlParams();
+                    if (this.activeTab === 'dashboard') {
+                        this.loadData();
+                    } else if (this.activeTab === 'institutional') {
+                        if (this.instSubTab === 'three_inst') {
+                            this.loadInstitutionalFlows();
+                        } else {
+                            this.loadBrokerTrend();
+                        }
+                    } else if (this.activeTab === 'history') {
+                        if (this.searchTicker) {
+                            this.loadHistory();
+                        }
+                    }
+                },
+                copyShareLink() {
+                    this.updateUrl(true);
+                    const fullUrl = window.location.href;
+                    this.copyText(fullUrl, '已複製目前頁面專屬分享連結！');
+                },
+
+                // --- Company Profile Hover Popover (2md Powered) ---
+                showCompanyHover(event, ticker) {
+                    if (!ticker) return;
+                    if (this.hoverTimeout) {
+                        clearTimeout(this.hoverTimeout);
+                        this.hoverTimeout = null;
+                    }
+
+                    // Calculate popover position
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const popoverWidth = 384;
+                    const popoverHeight = 280;
+                    
+                    let left = rect.left;
+                    if (left + popoverWidth > window.innerWidth - 20) {
+                        left = window.innerWidth - popoverWidth - 20;
+                    }
+                    if (left < 10) left = 10;
+
+                    let top = rect.bottom + 8;
+                    if (top + popoverHeight > window.innerHeight - 20) {
+                        top = rect.top - popoverHeight - 8;
+                    }
+                    if (top < 10) top = 10;
+
+                    this.hoverPos = { top: Math.round(top), left: Math.round(left) };
+                    this.hoverVisible = true;
+
+                    // Check cache
+                    if (this.companyProfileCache[ticker]) {
+                        this.hoverData = this.companyProfileCache[ticker];
+                        this.hoverLoading = false;
+                        return;
+                    }
+
+                    this.hoverLoading = true;
+                    this.hoverData = { ticker: ticker, name: ticker, industry: '載入中...', business_summary: '正在連線 2md 即時爬取公司基本資料與新聞...', recent_news: [] };
+
+                    this.fetchCompanyProfile(ticker);
+                },
+                hideCompanyHover(immediate = false) {
+                    if (immediate) {
+                        this.hoverVisible = false;
+                        if (this.hoverTimeout) {
+                            clearTimeout(this.hoverTimeout);
+                            this.hoverTimeout = null;
+                        }
+                        return;
+                    }
+                    this.hoverTimeout = setTimeout(() => {
+                        this.hoverVisible = false;
+                    }, 250);
+                },
+                clearHoverTimeout() {
+                    if (this.hoverTimeout) {
+                        clearTimeout(this.hoverTimeout);
+                        this.hoverTimeout = null;
+                    }
+                },
+                async fetchCompanyProfile(ticker) {
+                    try {
+                        const res = await fetch(`/api/v1/market/company-profile?ticker=${encodeURIComponent(ticker)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && data.ticker) {
+                                this.companyProfileCache[ticker] = data;
+                                if (this.hoverVisible && (this.hoverData?.ticker === ticker || !this.hoverData)) {
+                                    this.hoverData = data;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.debug("Failed to fetch company profile for", ticker, e);
+                    } finally {
+                        if (this.hoverData?.ticker === ticker) {
+                            this.hoverLoading = false;
+                        }
+                    }
                 },
                 parseTags(tags) {
                     if (!tags) return [];
@@ -2033,7 +2365,24 @@ for p in picks:
                             }
                         });
 
-                        console.log('✅ [Chrome WebMCP] Registered 7 tools to document.modelContext');
+                        // Tool 8: get_company_profile
+                        await modelCtx.registerTool({
+                            name: 'get_company_profile',
+                            description: '透過 2md.aiurl.tw 查詢特定股票之繁體中文公司簡介、核心營運業務與最新新聞。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    ticker: { type: 'string', description: '股票代號（例如 9945.TW, 2330.TW, AAPL）' }
+                                },
+                                required: ['ticker']
+                            },
+                            execute: async ({ ticker }) => {
+                                const res = await fetch(`/api/v1/market/company-profile?ticker=${encodeURIComponent(ticker)}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        console.log('✅ [Chrome WebMCP] Registered 8 tools to document.modelContext');
                     } catch (e) {
                         console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
                     }
@@ -2041,11 +2390,32 @@ for p in picks:
             },
             mounted() {
                 this.applyTheme();
+                this.parseUrlParams();
                 this.loadMacro();
                 this.loadStats();
                 this.loadMarketStats();
                 this.loadAvailableDates();
-                this.loadData();
+                
+                // Load active tab data according to URL query parameters
+                if (this.activeTab === 'institutional') {
+                    if (this.instSubTab === 'three_inst') {
+                        this.loadInstitutionalFlows();
+                    } else {
+                        this.loadBrokerTrend();
+                    }
+                } else if (this.activeTab === 'history') {
+                    if (this.searchTicker) {
+                        this.loadHistory();
+                    }
+                } else {
+                    this.loadData();
+                }
+
+                // Listen to Browser Back / Forward buttons (上一頁 / 下一頁)
+                window.addEventListener('popstate', () => {
+                    this.syncStateFromUrl();
+                });
+
                 this.registerChromeWebMCP();
             }
         }).mount('#app');

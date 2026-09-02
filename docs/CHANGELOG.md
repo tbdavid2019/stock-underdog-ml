@@ -17,7 +17,22 @@
 - **初始化流程整理**：移除首頁 Vue 應用重複的 `mounted()` 定義，保留 WebMCP 註冊與資料載入在同一個初始化流程中。
 - **頁尾文案聚焦產品**：移除頁尾對 DuckDB 與深度學習實作的宣傳句，保留品牌與技術提供者資訊。
 
-## [Unreleased] - 2026-09-01
+## [Unreleased] - 2026-09-02
+
+### 🌐 2md 繁體中文公司簡介與即時新聞浮動卡片 (2md Company Profile & News Hover)
+- **整合 2md URL to Markdown 與 Search 服務** (`https://2md.aiurl.tw`, `https://2md.glsoft.ai`, `https://create360.ai`)：
+  - 新增 `data/company_profile.py` (`CompanyProfileService`)，支援自 2md 與 Yahoo 股市實時提取個股之繁體中文公司名稱、核心營運業務、產業別、董事長、市值及最新即時新聞動態。
+  - 後端內建 LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
+  - 新增 REST API 端點 `GET /api/v1/market/company-profile` (`/api/v1/market/company-profile/{ticker}`)。
+  - 新增 MCP 工具 `get_company_profile`，供 AI Agent、Claude Desktop、WebMCP 呼叫。
+  - 前端 UI (`api/templates/index.html`) 於所有股票代號（如 `9945.TW`、`2330.TW`、`AAPL`）支援滑鼠 Hover 即時彈出精美 Claude 質感公司介紹浮動卡片，附帶即時新聞與外部行情（Yahoo / Goodinfo / TradingView / 時序軌跡）捷徑。
+
+### 🧭 前端狀態網址同步與瀏覽器導航支援 (URL State & Browser History Management)
+- **完整支援網址狀態同步、分享連結與上一頁/下一頁 (Browser History PushState & Share)**：
+  - 於 Vue 3 SPA 前端導入 HTML5 `history.pushState` / `replaceState` 與 `popstate` 監聽。
+  - 所有操作（分頁切換 `tab`、策略選擇 `strategy`、市場篩選 `index`、法人籌碼子分頁 `sub`、排序 `order`、日期 `date`、個股搜尋 `ticker`、券商代號 `broker_ticker`）皆即時雙向同步至 URL 查詢參數。
+  - 使用者可直接使用瀏覽器「上一頁」與「下一頁」返回歷史狀態。
+  - 頂部導覽列新增「🔗 分享」按鈕，一鍵複製目前所選之策略、市場與個股專屬 Deep Link，便於直接分享與精準跳轉。
 
 ### ⏰ 排程與時效性重大修正 (Pre-Market Execution Alignment)
 - **修正為開盤前買進決策指南 (Pre-Market Buy Guide)**：

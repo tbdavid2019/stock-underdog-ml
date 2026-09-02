@@ -279,3 +279,53 @@ def get_ticker_broker_trend(
         raise HTTPException(status_code=500, detail=f"計算券商趨勢失敗: {e}")
 
 
+class CompanyProfileResponse(BaseModel):
+    success: bool = True
+    ticker: str
+    raw_code: str
+    name: str
+    industry: Optional[str] = "綜合產業"
+    business_summary: Optional[str] = ""
+    chairman: Optional[str] = ""
+    market_cap: Optional[str] = ""
+    established: Optional[str] = ""
+    recent_news: List[Dict[str, str]] = []
+    links: Dict[str, str] = {}
+    source: str = "2md"
+
+
+@router.get("/company-profile/{ticker}", response_model=CompanyProfileResponse, summary="取得個股公司簡介與即時新聞 (2md / Yahoo)")
+@router.get("/company-profile", response_model=CompanyProfileResponse, summary="取得個股公司簡介與即時新聞 (2md / Yahoo)")
+def get_company_profile_endpoint(
+    ticker: Optional[str] = None,
+    query: Optional[str] = Query(None, description="股票代號或名稱，如 9945.TW, 2330, 台積電, AAPL"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    透過 2md.aiurl.tw 與 Yahoo 股市實時提取公司繁體中文簡介、核心營運業務與最新新聞。
+    """
+    from data.company_profile import CompanyProfileService
+    target = ticker or query
+    if not target:
+        raise HTTPException(status_code=400, detail="請提供股票代號或名稱")
+
+    try:
+        profile = CompanyProfileService.get_company_profile(target, db=db)
+        return CompanyProfileResponse(
+            success=True,
+            ticker=profile["ticker"],
+            raw_code=profile["raw_code"],
+            name=profile["name"],
+            industry=profile.get("industry", "綜合產業"),
+            business_summary=profile.get("business_summary", ""),
+            chairman=profile.get("chairman", ""),
+            market_cap=profile.get("market_cap", ""),
+            established=profile.get("established", ""),
+            recent_news=profile.get("recent_news", []),
+            links=profile.get("links", {}),
+            source=profile.get("source", "2md")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"取得公司資訊失敗: {e}")
+
+
