@@ -270,3 +270,52 @@ class CompanyProfileService:
                 "finviz": f"https://finviz.com/quote.ashx?t={ticker}",
                 "tradingview": f"https://www.tradingview.com/symbols/{ticker}/"
             }
+
+    @classmethod
+    def get_company_profiles_batch(cls, tickers: List[str], db: Optional[DuckDBManager] = None) -> Dict[str, Dict[str, Any]]:
+        """
+        並發批次取得多支股票之公司簡介與即時新聞
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        results = {}
+        unique_tickers = list(dict.fromkeys([t.strip() for t in tickers if t and t.strip()]))
+        if not unique_tickers:
+            return results
+
+        # 優先回傳已在快取者
+        missing = []
+        now = time.time()
+        for t in unique_tickers:
+            norm = normalize_ticker(t).upper()
+            if norm in cls._CACHE and (now - cls._CACHE[norm][0] < cls.CACHE_TTL):
+                results[norm] = cls._CACHE[norm][1]
+            else:
+                missing.append(norm)
+
+        if not missing:
+            return results
+
+        # 並發非同步獲取缺失的資料
+        workers = min(12, len(missing))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_ticker = {
+                executor.submit(cls.get_company_profile, t, db): t
+                for t in missing
+            }
+            for future in as_completed(future_to_ticker):
+                t = future_to_ticker[future]
+                try:
+                    res = future.result()
+                    results[res["ticker"]] = res
+                except Exception as e:
+                    logger.debug(f"Batch fetch error for {t}: {e}")
+
+        return results
+
+    @classmethod
+    def warmup_cache(cls, tickers: List[str], db: Optional[DuckDBManager] = None):
+        """背景預熱快取"""
+        import threading
+        t = threading.Thread(target=cls.get_company_profiles_batch, args=(tickers, db), daemon=True)
+        t.start()

@@ -11,8 +11,9 @@
 ### 🌐 2md 繁體中文公司簡介與即時新聞浮動卡片 (2md Company Profile & News Hover)
 - **整合 2md URL to Markdown 與 Search 服務** (`https://2md.aiurl.tw`, `https://2md.glsoft.ai`, `https://create360.ai`)：
   - 新增 `data/company_profile.py` (`CompanyProfileService`)，支援自 2md 與 Yahoo 股市實時提取個股之繁體中文公司名稱、核心營運業務、產業別、董事長、市值及最新即時新聞動態。
-  - 後端內建 LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
-  - 新增 REST API 端點 `GET /api/v1/market/company-profile` (`/api/v1/market/company-profile/{ticker}`)。
+  - **🚀 背景自動非同步預載 (Background Auto-Prefetch)**：前端於載入量化訊號看板或法人籌碼時，自動並發排程請求 `/api/v1/market/company-profiles/batch`，在使用者懸停前即已完成背景預熱，達成「滑鼠移過去 0 毫秒瞬間彈出」之極致流暢體驗。
+  - 後端內建多執行緒並發批次擷取、LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
+  - 新增 REST API 端點 `GET /api/v1/market/company-profile` 與 `POST /api/v1/market/company-profiles/batch`。
   - 新增 MCP 工具 `get_company_profile`，供 AI Agent、Claude Desktop、WebMCP 呼叫。
   - 前端 UI (`api/templates/index.html`) 於所有股票代號（如 `9945.TW`、`2330.TW`、`AAPL`）支援滑鼠 Hover 即時彈出精美 Claude 質感公司介紹浮動卡片，附帶即時新聞與外部行情（Yahoo / Goodinfo / TradingView / 時序軌跡）捷徑。
 

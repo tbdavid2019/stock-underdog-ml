@@ -88,6 +88,26 @@ URL Source: https://tw.stock.yahoo.com/quote/9945.TW/profile
         self.assertEqual(data["ticker"], "2330.TW")
         self.assertEqual(data["name"], "台積電")
 
+    def test_batch_company_profiles_endpoint(self):
+        from fastapi.testclient import TestClient
+        from api.main import app
+        client = TestClient(app)
+        CompanyProfileService._CACHE["2330.TW"] = (9999999999, {
+            "ticker": "2330.TW",
+            "raw_code": "2330",
+            "name": "台積電",
+            "industry": "半導體",
+            "business_summary": "全球領先的晶圓代工製造商",
+            "recent_news": [],
+            "links": {}
+        })
+        resp = client.post("/api/v1/market/company-profiles/batch", json={"tickers": ["2330.TW"]})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["count"], 1)
+        self.assertIn("2330.TW", data["data"])
+
 
 if __name__ == "__main__":
     unittest.main()

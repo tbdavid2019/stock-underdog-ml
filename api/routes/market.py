@@ -329,3 +329,40 @@ def get_company_profile_endpoint(
         raise HTTPException(status_code=500, detail=f"取得公司資訊失敗: {e}")
 
 
+class BatchCompanyProfilesRequest(BaseModel):
+    tickers: List[str]
+
+
+@router.post("/company-profiles/batch", summary="並發批次取得多支股票之公司簡介與即時新聞")
+@router.get("/company-profiles", summary="並發批次取得多支股票之公司簡介與即時新聞")
+def get_company_profiles_batch_endpoint(
+    tickers: Optional[str] = Query(None, description="逗號分隔的股票代號，如 2330.TW,9945.TW,MDT,NEM"),
+    payload: Optional[BatchCompanyProfilesRequest] = None,
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    並發非同步取得多支股票之公司簡介、營運摘要與最新新聞，專為前端背景預載設計。
+    """
+    from data.company_profile import CompanyProfileService
+    ticker_list = []
+    if payload and payload.tickers:
+        ticker_list.extend(payload.tickers)
+    if tickers:
+        ticker_list.extend([t.strip() for t in tickers.split(",") if t.strip()])
+
+    if not ticker_list:
+        raise HTTPException(status_code=400, detail="請提供 tickers 列表")
+
+    # 限制批次上限 80 支
+    ticker_list = ticker_list[:80]
+    try:
+        results = CompanyProfileService.get_company_profiles_batch(ticker_list, db=db)
+        return {
+            "success": True,
+            "count": len(results),
+            "data": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批次取得公司資訊失敗: {e}")
+
+

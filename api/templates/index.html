@@ -1504,6 +1504,7 @@ for p in picks:
                     hoverPos: { top: 0, left: 0 },
                     hoverTimeout: null,
                     companyProfileCache: {},
+                    prefetchSet: new Set(),
 
                     // Snippets
                     claudeMcpConfig: JSON.stringify({
@@ -1517,7 +1518,7 @@ for p in picks:
                         }
                     }, null, 2),
 
-                    pythonSnippet: `import requests\n\n# 取得 🏆 三重共振焦點推薦標的\nres = requests.get("http://10.9.0.99:8088/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
+                    pythonSnippet: `import requests\n\n# 取得 🏆 三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
                 }
             },
             methods: {
@@ -1606,6 +1607,7 @@ for p in picks:
                             } else if (Array.isArray(data)) {
                                 this.institutionalFlows = data;
                             }
+                            this.prefetchVisibleProfiles(this.institutionalFlows.map(i => i.ticker));
                         }
                     } catch (e) {
                         console.error("Failed to load institutional flows", e);
@@ -1641,6 +1643,7 @@ for p in picks:
                             throw new Error('API returned an unsuccessful response');
                         }
                         this.records = data.data || [];
+                        this.prefetchVisibleProfiles(this.records.map(r => r.ticker));
                         const firstRecord = this.records[0] || {};
                         this.batchDate = data.batch_date || firstRecord.analysis_date || '';
                         const timestamp = data.latest_batch_timestamp || firstRecord.data_as_of || firstRecord.timestamp || '';
@@ -2225,6 +2228,44 @@ for p in picks:
                         if (this.hoverData?.ticker === ticker) {
                             this.hoverLoading = false;
                         }
+                    }
+                },
+                prefetchVisibleProfiles(tickers) {
+                    if (!tickers || !Array.isArray(tickers) || tickers.length === 0) return;
+                    const pending = tickers
+                        .map(t => String(t || '').trim())
+                        .filter(t => t && !this.companyProfileCache[t] && !this.prefetchSet.has(t));
+                    
+                    if (pending.length === 0) return;
+                    
+                    // 標記為背景抓取中，避免重複請求
+                    pending.forEach(t => this.prefetchSet.add(t));
+
+                    // 分批（每批 20 支）發送背景批次請求
+                    const chunkSize = 20;
+                    for (let i = 0; i < pending.length; i += chunkSize) {
+                        const chunk = pending.slice(i, i + chunkSize);
+                        setTimeout(() => {
+                            fetch('/api/v1/market/company-profiles/batch', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tickers: chunk })
+                            })
+                            .then(res => res.json())
+                            .then(res => {
+                                if (res && res.success && res.data) {
+                                    Object.entries(res.data).forEach(([ticker, prof]) => {
+                                        this.companyProfileCache[ticker] = prof;
+                                        // 若使用者剛好正在 hover 此標的，立即更新
+                                        if (this.hoverVisible && this.hoverData?.ticker === ticker) {
+                                            this.hoverData = prof;
+                                            this.hoverLoading = false;
+                                        }
+                                    });
+                                }
+                            })
+                            .catch(e => console.debug("Prefetch batch skipped:", e));
+                        }, (i / chunkSize) * 300);
                     }
                 },
                 parseTags(tags) {
