@@ -45,6 +45,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 支援反向代理 HTTPS 標頭轉發 (避免 307 重定向至 http)
+try:
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+except Exception:
+    pass
+
 # 掛載業務路由
 app.include_router(predictions.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
@@ -93,10 +100,25 @@ try:
         allowed_origins=["*"]
     )
     mcp_app = mcp_instance.sse_app()
-    app.mount("/mcp", mcp_app)
+    app.mount("/mcp/sse", mcp_app)
 except Exception as e:
     import logging
     logging.getLogger("stock_app.api").warning(f"⚠️ WebMCP SSE 掛載略過: {e}")
+
+
+@app.api_route("/mcp", methods=["GET", "POST", "HEAD"], include_in_schema=False)
+@app.api_route("/mcp/", methods=["GET", "POST", "HEAD"], include_in_schema=False)
+def mcp_root_endpoint():
+    """回應 WebMCP Interceptor / 瀏覽器擴充套件探測，消除 307 重定向"""
+    return JSONResponse({
+        "name": "stock-quant-engine",
+        "status": "active",
+        "transport": "sse",
+        "endpoints": {
+            "sse": "/mcp/sse",
+            "manifest": "/.well-known/mcp.json"
+        }
+    })
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse, include_in_schema=False)
