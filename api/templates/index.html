@@ -2214,7 +2214,7 @@ for p in picks:
                         if (this.hoverLoading && this.hoverData?.ticker === ticker) {
                             this.hoverLoading = false;
                         }
-                    }, 4000);
+                    }, 6500);
 
                     try {
                         const res = await fetch(`/api/v1/market/company-profile?ticker=${encodeURIComponent(ticker)}`, {
@@ -2231,7 +2231,7 @@ for p in picks:
                             }
                         }
                     } catch (e) {
-                        console.debug("Company profile fetch:", e.name === 'AbortError' ? 'timeout fallback' : e);
+                        // Silent abort/timeout fallback
                     } finally {
                         clearTimeout(timeoutId);
                         if (this.hoverData?.ticker === ticker) {

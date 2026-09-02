@@ -65,29 +65,29 @@ class CompanyProfileService:
             "source": "2md"
         }
 
-        # 3. 美股標的 (US Tickers) 優先執行極速 yfinance 解析 (約 200ms)
-        if not is_tw:
+        # 3. 並發非同步獲取基本資料與新聞（美股與台股分流）
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            if not is_tw:
+                f_prof = executor.submit(cls._fallback_yfinance, profile_data, ticker)
+                f_news = executor.submit(cls._fetch_news_from_2md, profile_data, False)
+            else:
+                f_prof = executor.submit(cls._fetch_profile_from_2md, profile_data, True)
+                f_news = executor.submit(cls._fetch_news_from_2md, profile_data, True)
+            
+            # 最多等待 2.5 秒
+            try:
+                f_prof.result(timeout=2.5)
+            except Exception as e:
+                logger.debug(f"Profile fetch task ended: {e}")
+            try:
+                f_news.result(timeout=2.5)
+            except Exception as e:
+                logger.debug(f"News fetch task ended: {e}")
+
+        # 4. 若未取得足夠簡介，使用 yfinance 終極快速備援
+        if not profile_data.get("business_summary"):
             cls._fallback_yfinance(profile_data, ticker)
-            try:
-                cls._fetch_news_from_2md(profile_data, is_tw=False)
-            except Exception as e:
-                logger.debug(f"2md US news search skipped: {e}")
-        else:
-            # 4. 台股標的 (TW Tickers) 嘗試透過 2md Web Reader 抓取 Yahoo 股市基本資料
-            try:
-                cls._fetch_profile_from_2md(profile_data, is_tw=True)
-            except Exception as e:
-                logger.debug(f"2md TW profile reader skipped: {e}")
-
-            # 嘗試透過 2md 搜尋抓取即時新聞
-            try:
-                cls._fetch_news_from_2md(profile_data, is_tw=True)
-            except Exception as e:
-                logger.debug(f"2md TW news search skipped: {e}")
-
-            # 若未取得足夠簡介，使用 yfinance 備援
-            if not profile_data.get("business_summary"):
-                cls._fallback_yfinance(profile_data, ticker)
 
         # 5. 寫入快取
         cls._CACHE[ticker] = (now, profile_data)
@@ -129,7 +129,7 @@ class CompanyProfileService:
         for host in cls.FALLBACK_2MD_HOSTS:
             try:
                 reader_url = f"{host.rstrip('/')}/{target_url}"
-                resp = requests.get(reader_url, timeout=6)
+                resp = requests.get(reader_url, timeout=2.0)
                 if resp.status_code == 200:
                     resp.encoding = "utf-8"
                     if len(resp.text) > 20:
@@ -195,7 +195,7 @@ class CompanyProfileService:
         for host in cls.FALLBACK_2MD_HOSTS:
             try:
                 search_url = f"{host.rstrip('/')}/s/{urllib.parse.quote(query)}"
-                resp = requests.get(search_url, timeout=3)
+                resp = requests.get(search_url, timeout=2.0)
                 if resp.status_code == 200:
                     resp.encoding = "utf-8"
                     if len(resp.text) > 20:
