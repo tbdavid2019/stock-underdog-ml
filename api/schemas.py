@@ -55,11 +55,13 @@ class TickerResolutionResponse(BaseModel):
 
 class MacroRegimeResponse(BaseModel):
     success: bool = True
-    regime_name: str = Field(..., description="宏觀環境 (全面多頭, 多頭回調, 避險防禦, 極度恐慌)")
+    market: Optional[str] = Field("US", description="所屬市場 (TW 或 US)")
+    regime_name: str = Field(..., description="大盤/宏觀環境 (全面多頭, 多頭回調, 避險防禦, 極度恐慌)")
     exposure: float = Field(..., description="建議投資曝險比例 (0.0 ~ 1.0)")
     vix: Optional[float] = Field(None, description="VIX 恐慌指數")
     spy_above_ma60: Optional[bool] = Field(None, description="S&P500 是否站穩季線")
     sox_above_ma60: Optional[bool] = Field(None, description="費城半導體是否站穩季線")
+    twii_above_ma60: Optional[bool] = Field(None, description="台灣加權指數是否站穩季線")
     warnings: List[str] = Field(default_factory=list, description="風控警示清單")
     timestamp: Optional[str] = None
 

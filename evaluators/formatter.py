@@ -41,11 +41,19 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     logger.info(f"📊 投資建議報告 - {index_name}")
     logger.info(f"{'='*100}\n")
 
-    # ====== 頂層 1: 美股宏觀風控 ======
+    # ====== 頂層 1: 大盤與宏觀風控 ======
     if macro:
-        logger.info("🌍 【美股宏觀環境與風控門檻】")
-        logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
-        logger.info(f"   • 關鍵指標: VIX={macro.vix:.1f} | SPY={'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX={'站穩MA60' if macro.sox_above_ma60 else '破季線'}")
+        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
+        if is_tw:
+            logger.info("🇹🇼 【台股大盤與籌碼風向】")
+            logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
+            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
+            sox_str = '費半站穩季線' if macro.sox_above_ma60 else '費半破季線'
+            logger.info(f"   • 關鍵指標: 加權指數={twii_str} | 國際連動={sox_str} (VIX={macro.vix:.1f})")
+        else:
+            logger.info("🇺🇸 【美股宏觀環境與風控門檻】")
+            logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
+            logger.info(f"   • 關鍵指標: VIX={macro.vix:.1f} | SPY={'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX={'站穩MA60' if macro.sox_above_ma60 else '破季線'}")
         if macro.warnings:
             for w in macro.warnings:
                 logger.info(f"   • ⚠️  {w}")

@@ -27,10 +27,13 @@
   - **🔧 yfinance 自動巡檢**：排程調整為 **週一至週五 早上 07:30 (台灣時間 / UTC 23:30)**，於台股盤前排程前自動完成環境與 API 巡檢。
 
 ### 🚀 新增與重大升級 (Features & Enhancements)
-- **命令列支援目標市場與指數分流 (`main.py` & `pipeline/orchestrator.py`)**：
-  - 新增 `--market / -m` 參數（`tw`、`us`、`all`），支援單獨執行台股（台灣50 + 台灣中型100）或美股（SP500），大幅縮短盤前運算與推播等待時間。
-  - 新增 `--index / -i` 參數指定特定指數（例如 `--index 台灣50 SP500`）。
-  - 新增 `--dry-run`、`--no-db`、`--no-notify`、`--period` 等靈活運作旗標。
+- **台美股大盤風控與語意解讀分流 (Market-Aware Macro & Narrative Separation)**：
+  - 修正原先台股日報（台灣50 / 台灣中型100）直接套用美股恐慌指數與美股宏觀語意之問題。
+  - 於 `data/macro.py` 新增 `evaluate_tw_market`，抓取台股加權指數 (`^TWII`) 判斷大盤趨勢（站穩 MA60/MA20），並以費半 (`^SOX`) 及 VIX 作為國際連動風控指標。
+  - 於推播通知 (`notifier_dual.py`)、終端報告 (`formatter.py`) 及 AI 解讀 (`ai_narrative.py`) 依目標市場自動切換：
+    - **🇹🇼 台股市場**：呈現「🇹🇼 台股大盤與風控」（加權指數、國際連動、法人籌碼），AI 解讀以台股大盤走勢與籌碼為主視角。
+    - **🇺🇸 美股市場**：呈現「🇺🇸 美股宏觀風控」（S&P 500、VIX 恐慌指數、費城半導體）。
+  - REST API `/api/v1/macro/latest` 與 MCP Tool `get_market_macro_regime` 支援 `market=tw` 與 `market=us` 參數路由。
 - **每日自動化 Shell 腳本支援分流派發 (`run_daily.sh`)**：
   - 支援 `run_daily.sh tw`（台股盤前專用，含 TWSE 全市場日 K 同步）與 `run_daily.sh us`（美股盤前專用，略過台股同步加速執行）。
 - **Docker 容器排程與 Entrypoint 同步更新 (`docker/crontab` & `docker/entrypoint.sh`)**：

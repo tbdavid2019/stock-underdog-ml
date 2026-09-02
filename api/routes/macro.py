@@ -11,19 +11,23 @@ import datetime
 router = APIRouter(prefix="/macro", tags=["Macro Regime & Risk Gate"])
 
 
-@router.get("/latest", response_model=MacroRegimeResponse, summary="取得當前美股宏觀風控狀態與建議曝險")
-def get_latest_macro():
+@router.get("/latest", response_model=MacroRegimeResponse, summary="取得當前大盤/宏觀風控狀態與建議曝險")
+def get_latest_macro(market: str = "us", index_name: Optional[str] = None):
     """
-    即時評估美股三大核心指標（S&P 500、VIX 恐慌指數、SOX 費城半導體），回傳當前全球環境與建議倉位比例。
+    即時評估台股或美股大盤核心指標，回傳當前市場情境與建議倉位比例。
+    支援 market=tw (加權指數/費半連動) 或 market=us (S&P500/VIX/費半)。
     """
-    state = MacroRegimeAnalyzer.evaluate_us_market()
+    target = index_name or market
+    state = MacroRegimeAnalyzer.evaluate_market(target)
     
     return MacroRegimeResponse(
+        market=state.market,
         regime_name=state.regime_name,
         exposure=state.exposure,
         vix=state.vix,
         spy_above_ma60=state.spy_above_ma60,
         sox_above_ma60=state.sox_above_ma60,
+        twii_above_ma60=state.twii_above_ma60,
         warnings=state.warnings,
         timestamp=datetime.datetime.now().isoformat()
     )

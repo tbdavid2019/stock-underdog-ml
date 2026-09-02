@@ -44,11 +44,20 @@ def format_dual_strategy_message(
     telegram_msg += f"⏰ {calculation_time}\n"
     telegram_msg += f"📊 指數: <b>{index_name}</b>\n\n"
     
-    # 宏觀風控
+    is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
+
+    # 大盤 / 宏觀風控
     if macro:
-        telegram_msg += f"<b>🌍 美股宏觀風控</b>\n"
-        telegram_msg += f"• 狀態: <b>{macro.regime_name}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
-        telegram_msg += f"• VIX: {macro.vix:.1f} | SPY: {'站穩MA60' if macro.spy_above_ma60 else '破季線'}\n\n"
+        if is_tw:
+            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
+            sox_str = '費半站穩季線' if macro.sox_above_ma60 else '費半破季線'
+            telegram_msg += f"<b>🇹🇼 台股大盤與風控</b>\n"
+            telegram_msg += f"• 大盤狀態: <b>{macro.regime_name}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
+            telegram_msg += f"• 加權指數: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
+        else:
+            telegram_msg += f"<b>🇺🇸 美股宏觀風控</b>\n"
+            telegram_msg += f"• 狀態: <b>{macro.regime_name}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
+            telegram_msg += f"• VIX: {macro.vix:.1f} | SPY: {'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX: {'站穩MA60' if macro.sox_above_ma60 else '破季線'}\n\n"
 
     # AI 操盤總評
     if summary_text:
@@ -103,7 +112,12 @@ def format_dual_strategy_message(
     discord_msg += f"📊 指數: **{index_name}**\n\n"
 
     if macro:
-        discord_msg += f"**🌍 美股宏觀風控**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {'站穩MA60' if macro.spy_above_ma60 else '破季線'}\n"
+        if is_tw:
+            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
+            sox_str = '費半站穩季線' if macro.sox_above_ma60 else '費半破季線'
+            discord_msg += f"**🇹🇼 台股大盤與風控**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX: {macro.vix:.1f})\n"
+        else:
+            discord_msg += f"**🇺🇸 美股宏觀風控**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX: {'站穩MA60' if macro.sox_above_ma60 else '破季線'}\n"
     if summary_text:
         discord_msg += f"**🧠 AI 操盤解讀**:\n> {summary_text.replace(chr(10), chr(10)+'> ')}\n\n"
     
@@ -151,7 +165,12 @@ def format_dual_strategy_message(
     email_body += f"運算時間: {calculation_time}\n"
     email_body += f"指數: {index_name}\n\n"
     if macro:
-        email_body += f"美股宏觀風控: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f}\n\n"
+        if is_tw:
+            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
+            sox_str = '費半站穩季線' if macro.sox_above_ma60 else '費半破季線'
+            email_body += f"🇹🇼 台股大盤與風控: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
+        else:
+            email_body += f"🇺🇸 美股宏觀風控: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX: {'站穩MA60' if macro.sox_above_ma60 else '破季線'}\n\n"
     if summary_text:
         email_body += f"AI 操盤解讀:\n{summary_text}\n\n"
     email_body += "=" * 60 + "\n\n"

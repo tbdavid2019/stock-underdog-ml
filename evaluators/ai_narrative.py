@@ -134,14 +134,35 @@ class AINarrativeEngine:
         report_data: Dict[str, Any]
     ) -> str:
         """構造傳入 LLM 的數據文本"""
-        macro_info = "宏觀環境數據缺失"
-        if macro_state:
-            macro_info = (
-                f"宏觀環境: {macro_state.regime_name}, 建議曝險: {int(macro_state.exposure*100)}%, "
-                f"VIX恐慌指數: {macro_state.vix:.1f}, "
-                f"SPY趨勢: {'站穩MA60' if macro_state.spy_above_ma60 else '跌破MA60'}, "
-                f"SOX費半: {'站穩MA60' if macro_state.sox_above_ma60 else '破季線'}"
-            )
+        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
+        
+        if is_tw:
+            market_type = "🇹🇼 台灣股市 (TWSE/TPEX)"
+            if macro_state:
+                twii_status = "站穩MA60季線" if getattr(macro_state, "twii_above_ma60", True) else "跌破MA60季線"
+                sox_status = "站穩季線" if macro_state.sox_above_ma60 else "破季線"
+                macro_info = (
+                    f"台股大盤狀態: {macro_state.regime_name}\n"
+                    f"建議曝險比例: {int(macro_state.exposure*100)}%\n"
+                    f"加權指數 (^TWII): {twii_status}\n"
+                    f"國際美股連動: 費城半導體{sox_status}, 國際VIX恐慌指數 {macro_state.vix:.1f}"
+                )
+            else:
+                macro_info = "台股大盤數據缺失"
+        else:
+            market_type = "🇺🇸 美國股市 (US Markets)"
+            if macro_state:
+                spy_status = "站穩MA60" if macro_state.spy_above_ma60 else "跌破MA60"
+                sox_status = "站穩MA60" if macro_state.sox_above_ma60 else "破季線"
+                macro_info = (
+                    f"美股宏觀狀態: {macro_state.regime_name}\n"
+                    f"建議曝險比例: {int(macro_state.exposure*100)}%\n"
+                    f"VIX 恐慌指數: {macro_state.vix:.1f}\n"
+                    f"S&P 500 (SPY): {spy_status}\n"
+                    f"費城半導體 (SOX): {sox_status}"
+                )
+            else:
+                macro_info = "美股宏觀環境數據缺失"
 
         overlap_raw = report_data.get("overlap_results")
         if isinstance(overlap_raw, pd.DataFrame):
@@ -168,15 +189,18 @@ class AINarrativeEngine:
         lstm_predictions = len(lstm_raw) if lstm_raw is not None else 0
 
         prompt = f"""
-分析指數: {index_name}
+目標市場: {market_type} - {index_name}
+【市場大盤與風控背景】
 {macro_info}
-量化數據概況:
+
+【量化數據概況】
 - 技術買點 (玄鐵重劍符合): {xuantie_hits} 支
 - LSTM 短線預測完成: {lstm_predictions} 支
-- ⭐ 重點交集/三重共振推薦標的:
+- ⭐ 重點交集/多維共振推薦標的:
 {chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙重/三重共振股票，建議維持防禦觀望'}
 
-請針對以上數據，以簡潔有力、專業客觀的語氣給出操盤總評（100~150字）。
+請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。
 """
         return prompt.strip()
 
@@ -187,6 +211,9 @@ class AINarrativeEngine:
         report_data: Dict[str, Any]
     ) -> str:
         """規則式純文字模板生成 (零依賴終極備援)"""
+        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
+        market_label = "台股大盤" if is_tw else "美股宏觀環境"
+
         overlap_raw = report_data.get("overlap_results")
         if isinstance(overlap_raw, pd.DataFrame):
             overlap_list = overlap_raw.to_dict(orient="records") if not overlap_raw.empty else []
@@ -204,12 +231,12 @@ class AINarrativeEngine:
             raw_tags = overlap_list[0].get("tags", [])
             tags_str = "、".join(raw_tags[:3]) if isinstance(raw_tags, list) else str(raw_tags)
             return (
-                f"【量化操盤觀點】當前美股宏觀環境處於「{regime_str}」，整體建議曝險為 {exposure_str}。"
+                f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，整體建議曝險為 {exposure_str}。"
                 f"今日 {index_name} 優先聚焦 {top_stock}（預期潛力 {top_pot:+.2f}%），"
                 f"符合 {tags_str or '多維共振'} 等條件，建議順應大盤水位分批佈局。"
             )
         else:
             return (
-                f"【量化操盤觀點】當前美股宏觀環境處於「{regime_str}」，建議曝險比例維持 {exposure_str}。"
+                f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，建議曝險比例維持 {exposure_str}。"
                 f"今日 {index_name} 無雙重或三重共振之重點交集標的，短線操作宜保持耐心，控制倉位。"
             )

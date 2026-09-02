@@ -79,7 +79,7 @@ class PipelineOrchestrator:
 
         # ============= Stage 1: Batch I/O Prefetching =============
         if macro_state is None:
-            macro_state = MacroRegimeAnalyzer.evaluate_us_market(period=period)
+            macro_state = MacroRegimeAnalyzer.evaluate_market(index_name, period=period)
 
         logger.info("🌐 [Stage 1/4] 並發預載行情數據與基本面指標...")
         
@@ -223,11 +223,6 @@ class PipelineOrchestrator:
         Execute analysis across all major supported stock indices with pre-flight Macro check.
         Supports market segmentation (tw/us/all) and specific index selection.
         """
-        # ============= Pre-flight Stage: US Macro Regime Gate =============
-        logger.info("🌍 [Pre-flight] 評估美股宏觀環境與全球風控門檻...")
-        macro_state = MacroRegimeAnalyzer.evaluate_us_market(period=period)
-        logger.info(f"   • 當前市場狀態: {macro_state.regime_name} (建議曝險: {int(macro_state.exposure*100)}%)\n")
-
         if indices is None:
             if index_names:
                 indices = {}
@@ -257,16 +252,33 @@ class PipelineOrchestrator:
                     "SP500": StockFetcher.get_sp500_stocks()
                 }
 
+        # ============= Pre-flight Stage: Market Regime Gates =============
+        tw_indices_present = any(name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") for name in indices.keys())
+        us_indices_present = any(name in ("SP500", "S&P500", "sp500") for name in indices.keys())
+
+        macro_states_map = {}
+        if tw_indices_present:
+            logger.info("🇹🇼 [Pre-flight] 評估台股大盤環境與籌碼/國際風控門檻...")
+            macro_states_map["TW"] = MacroRegimeAnalyzer.evaluate_tw_market(period=period)
+            logger.info(f"   • 台股大盤狀態: {macro_states_map['TW'].regime_name} (建議曝險: {int(macro_states_map['TW'].exposure*100)}%)\n")
+
+        if us_indices_present:
+            logger.info("🇺🇸 [Pre-flight] 評估美股宏觀環境與全球風控門檻...")
+            macro_states_map["US"] = MacroRegimeAnalyzer.evaluate_us_market(period=period)
+            logger.info(f"   • 美股市場狀態: {macro_states_map['US'].regime_name} (建議曝險: {int(macro_states_map['US'].exposure*100)}%)\n")
+
         all_reports = {}
         for index_name, stock_list in indices.items():
             if not stock_list:
                 logger.warning(f"⚠️ 指數 {index_name} 成分股為空，跳過")
                 continue
+            is_tw = index_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051")
+            target_macro = macro_states_map.get("TW" if is_tw else "US") or MacroRegimeAnalyzer.evaluate_market(index_name, period=period)
             rep = self.run_index_analysis(
                 index_name, 
                 stock_list, 
                 period=period, 
-                macro_state=macro_state,
+                macro_state=target_macro,
                 persist_db=persist_db, 
                 send_notify=send_notify
             )

@@ -37,11 +37,13 @@ class TestCLIMarketFiltering(unittest.TestCase):
     @patch("data.fetcher.StockFetcher.get_tw0051_stocks", return_value=["2603.TW"])
     @patch("data.fetcher.StockFetcher.get_sp500_stocks", return_value=["AAPL"])
     @patch("data.macro.MacroRegimeAnalyzer.evaluate_us_market")
-    def test_orchestrator_market_segmentation(self, mock_macro, mock_sp500, mock_tw51, mock_tw50):
+    @patch("data.macro.MacroRegimeAnalyzer.evaluate_tw_market")
+    def test_orchestrator_market_segmentation(self, mock_macro_tw, mock_macro_us, mock_sp500, mock_tw51, mock_tw50):
         mock_macro_state = MagicMock()
         mock_macro_state.regime_name = "全面多頭 (Strong Bull)"
         mock_macro_state.exposure = 1.0
-        mock_macro.return_value = mock_macro_state
+        mock_macro_tw.return_value = mock_macro_state
+        mock_macro_us.return_value = mock_macro_state
 
         orchestrator = PipelineOrchestrator(enabled_strategies=["xuantie"])
         orchestrator.run_index_analysis = MagicMock(return_value=MagicMock())

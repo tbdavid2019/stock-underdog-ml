@@ -29,20 +29,26 @@ db = DuckDBManager()
 
 @mcp.tool(
     name="get_market_macro_regime",
-    description="即時評估全球與美股宏觀市場風控狀態（監控 S&P 500、VIX 恐慌指數、SOX 費城半導體），取得當前市場情境（全面多頭/多頭回調/避險防禦/極度恐慌）與建議投資曝險比例（0.0 ~ 1.0）。"
+    description="即時評估台股大盤或美股宏觀市場風控狀態（台股加權指數、S&P 500、VIX 恐慌指數、SOX 費城半導體），取得當前市場情境（全面多頭/多頭回調/避險防禦/極度恐慌）與建議投資曝險比例（0.0 ~ 1.0）。"
 )
-def get_market_macro_regime() -> Dict[str, Any]:
+def get_market_macro_regime(
+    market: str = "us",
+    index_name: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Query current global macroeconomic risk status and exposure level.
+    Query current macroeconomic and market regime status and exposure level for TW or US market.
     """
-    state = MacroRegimeAnalyzer.evaluate_us_market()
+    target = index_name or market
+    state = MacroRegimeAnalyzer.evaluate_market(target)
     return {
         "success": True,
+        "market": state.market,
         "regime_name": state.regime_name,
         "exposure": state.exposure,
         "vix": state.vix,
         "spy_above_ma60": state.spy_above_ma60,
         "sox_above_ma60": state.sox_above_ma60,
+        "twii_above_ma60": state.twii_above_ma60,
         "tech_exposure_cap": state.tech_exposure_cap,
         "warnings": state.warnings,
         "summary": state.summary
