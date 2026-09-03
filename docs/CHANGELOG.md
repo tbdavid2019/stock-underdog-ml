@@ -19,6 +19,14 @@
 
 ## [Unreleased] - 2026-09-02
 
+### 🐳 Docker Hub 官方預建多架構映像檔與部署文件完善 (Docker Hub Multi-Arch Deployment Docs)
+- **更新 `README.md`、`docs/DOCKER.md` 與 `docker-compose.yml`**：
+  - 正式宣傳並標明 Docker Hub 官方多架構映像檔：`tbdavid2019/stock-underdog-ml:latest`（支援 `linux/amd64` 與 `linux/arm64` 雙架構）。
+  - 將 `docker-compose.yml` 預設映像檔調整為 Docker Hub，使外部使用者直接執行 `docker compose pull` 免除 GHCR 憑證授權困擾。
+  - 詳述推薦直接拉取預建映像檔之優勢（避免本地構建大型 PyTorch / TF / DuckDB 套件耗時 15~20 分鐘及編譯失敗）。
+  - 提供無需 Clone 專案即可單行啟動 Web & API 服務的 `docker run` 快速指引。
+  - 於 `README.md` 頂部新增 Docker Hub 官方徽章。
+
 ### 📄 全面支援 llmstxt.org 規範與頁尾開發者專區 (`/llms.txt` & Footer Hub)
 - **遵循 Jeremy Howard [llmstxt.org](https://llmstxt.org/) 標準規範**：
   - 重構 `/llms.txt` 與 `/llms-full.txt`，提供乾淨、結構化之 Markdown 摘要、策略端點清單與全量系統規格。

@@ -4,17 +4,40 @@
 
 ---
 
-## 🚀 快速上手
+## 🚀 快速上手 (Quick Start)
 
-### 1. 直接拉取多架構預建映像檔 (x64 / ARM64)
+### 1. 官方多架構預建映像檔 (Docker Hub & GHCR)
 
-GitHub Actions 會在每次代碼推送時自動構建支援 **x86_64 (Intel/AMD)** 與 **ARM64 (Apple Silicon M系列 / Raspberry Pi / Ampere)** 的雙架構映像檔並發布至 GitHub Container Registry (GHCR)：
+GitHub Actions CI/CD 會在每次推送到 `main` 分支時，自動構建支援 **x86_64 (Intel/AMD)** 與 **ARM64 (Apple Silicon M系列 / Raspberry Pi / Ampere)** 的多架構優化映像檔，並同步推播發布至 **Docker Hub** 與 **GitHub Container Registry (GHCR)**：
+
+* **Docker Hub 主位址**：`tbdavid2019/stock-underdog-ml:latest`
+* **GHCR 備援位址**：`ghcr.io/tbdavid2019/stock-underdog-ml:latest`
 
 ```bash
+# 推薦：直接從 Docker Hub 拉取最新多架構映像檔（免本地耗時 15+ 分鐘編譯）
+docker pull tbdavid2019/stock-underdog-ml:latest
+
+# 或使用 docker-compose 一鍵拉取所有服務相依映像檔
 docker compose pull
 ```
 
-### 2. 或於本地自行構建映像檔 (Local Build)
+### 2. 單行指令直接啟動（無需 Clone 原始碼專案）
+
+若只需運行 FastAPI REST API 與 Web 前端操盤看板：
+
+```bash
+docker run -d \
+  -p 8088:8088 \
+  --name stock-ml-api \
+  --restart unless-stopped \
+  -v $(pwd)/data/storage:/app/data/storage \
+  -v $(pwd)/logs:/app/logs \
+  tbdavid2019/stock-underdog-ml:latest
+```
+
+### 3. 本地客製化構建 (Local Build，僅限二次開發)
+
+若您修改了底層 Python C 延伸模組或 Dockerfile，才需要在本地從原始碼自行構建：
 
 ```bash
 docker compose build

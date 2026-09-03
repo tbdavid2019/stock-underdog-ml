@@ -6,7 +6,7 @@ version: '3.8'
 
 # 通用服務模板
 x-stock-service: &default-service
-  image: ghcr.io/tbdavid2019/stock-underdog-ml:latest
+  image: tbdavid2019/stock-underdog-ml:latest
   build:
     context: .
     dockerfile: Dockerfile

@@ -4,6 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.0+-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org/)
 [![Docker Multi-Arch](https://img.shields.io/badge/Docker-x64%20%7C%20ARM64-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
 現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **FastAPI REST / MCP 服務**。
@@ -224,13 +225,27 @@ python scripts/export_supabase_to_duckdb.py
 
 ### 3. 執行方式 B：Docker 容器化模式（推薦無人值守生產部署）
 
-本專案支援 **x86_64 與 ARM64 雙架構**，並提供完整的多服務配置：
+本專案提供預先構建完成之 **Docker Hub 官方多架構映像檔**，支援 **`linux/amd64` (Intel/AMD x64)** 與 **`linux/arm64` (Apple Silicon M系列 / ARM 伺服器)** 雙架構。
 
+> 💡 **為什麼強烈推薦使用預建映像檔？**
+> 本專案整合 PyTorch、TensorFlow、DuckDB 等大型科學計算與深度學習依賴庫，若在本地自行從原始碼構建 (`docker build`) 通常需耗時 10~20 分鐘以上，且極易因本機記憶體不足或編譯工具差異中斷。
+> 官方 GitHub Actions CI/CD 會在每次更新時自動完成雙架構優化編譯與全量單元測試，發布至 Docker Hub，**直接 `docker pull` 數十秒內即可完成部署！**
+
+#### 🐳 A. 直接拉取 Docker Hub 官方映像檔
 ```bash
-# 1. 一鍵拉取/構建 Docker 映像
-docker compose pull # 或 docker compose build
+# 1. 直接拉取 Docker Hub 最新多架構映像檔 (強烈推薦，免本地編譯)
+docker pull tbdavid2019/stock-underdog-ml:latest
 
-# 2. 啟動 FastAPI REST 服務 (常駐背景: http://localhost:8088)
+# (備援鏡像) 或使用 GitHub Container Registry (GHCR)
+docker pull ghcr.io/tbdavid2019/stock-underdog-ml:latest
+```
+
+#### 🚀 B. 使用 Docker Compose 一鍵啟動 (推薦)
+```bash
+# 1. 一鍵拉取 Docker Hub 預建映像檔 (免本地 Build)
+docker compose pull
+
+# 2. 啟動 FastAPI REST & Web UI 服務 (常駐背景: http://localhost:8088)
 docker compose up -d stock-ml-api
 
 # 3. 啟動 24H 定時排程容器 (依台北時間台股盤前 08:00 與美股盤前 20:30 自動產出買進指南)
@@ -243,8 +258,19 @@ docker compose run --rm stock-ml main --market us
 # 5. 容器內執行 Supabase ➔ DuckDB 資料同步
 docker compose run --rm stock-ml-sync
 
-# 6. 容器內執行全套 50 項單元測試
+# 6. 容器內執行全套單元測試
 docker compose run --rm stock-ml-test
+```
+
+#### ⚡ C. 單行命令直接啟動（無需 Clone 原始碼專案）
+```bash
+docker run -d \
+  -p 8088:8088 \
+  --name stock-ml-api \
+  --restart unless-stopped \
+  -v $(pwd)/data/storage:/app/data/storage \
+  -v $(pwd)/logs:/app/logs \
+  tbdavid2019/stock-underdog-ml:latest
 ```
 
 ---
