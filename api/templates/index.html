@@ -232,11 +232,6 @@
                                 class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
                             <span>🔍 個股歷史</span>
                         </button>
-                        <button @click="setTab('agent_hub')" :aria-current="activeTab === 'agent_hub' ? 'page' : undefined"
-                                :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white shadow-sm' : 'bg-claude-terracotta text-white shadow-sm font-bold') : (isDark ? 'text-white/80 hover:text-white' : 'text-claude-text/70 hover:text-claude-text')"
-                                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center space-x-1">
-                            <span>🤖 Agent / MCP</span>
-                        </button>
                     </nav>
 
                     <!-- Share URL Button -->
@@ -257,19 +252,6 @@
                         <span v-if="isDark">☀️</span>
                         <span v-else>🌙</span>
                     </button>
-
-                    <!-- API Docs & llms.txt Links -->
-                    <a href="/llms.txt" target="_blank" 
-                       class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all hidden sm:flex items-center space-x-1 whitespace-nowrap"
-                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-emerald-400 hover:text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm'"
-                       title="LLM Context Standard (https://llmstxt.org)">
-                        <span>📄 llms.txt ↗</span>
-                    </a>
-                    <a href="/docs" target="_blank" 
-                       class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all hidden md:flex items-center space-x-1 whitespace-nowrap"
-                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'">
-                        <span>API 文檔 ↗</span>
-                    </a>
                 </div>
 
             </div>
@@ -1368,31 +1350,47 @@ for p in picks:
         <!-- ================= FOOTER ================= -->
         <footer class="border-t py-6 text-xs transition-colors duration-200"
                 :class="isDark ? 'bg-dark-card border-dark-border text-dark-muted' : 'bg-claude-bg border-claude-border text-claude-muted'">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
                 
-                <!-- Left Copyright -->
-                <div class="font-sans flex items-center space-x-2">
-                    <span>© 2026 888 Stock Quant.</span>
-                </div>
-
-                <!-- Center/Right: david888.com Tech Provider Pill -->
-                <div class="flex items-center space-x-2">
+                <!-- Left: Copyright & Tech Provider Pill -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="font-sans">© 2026 888 Stock Quant.</span>
                     <a href="https://david888.com" target="_blank"
-                       class="px-3 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5"
+                       class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5"
                        :class="isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:text-white hover:border-sky-500' : 'bg-white border-claude-border text-claude-terracotta hover:bg-claude-cardInner shadow-sm'">
                         <span>⚡</span>
                         <span>技術提供 <strong class="underline decoration-dotted font-black num-font">david888.com</strong> ↗</span>
                     </a>
                 </div>
 
-                <!-- Right Links -->
-                <div class="flex items-center space-x-5 num-font">
-                    <a href="/llms.txt" target="_blank" class="hover:underline transition-all font-bold text-emerald-500 hover:text-emerald-400">llms.txt</a>
-                    <a href="/docs" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">Swagger UI</a>
-                    <a href="/redoc" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">ReDoc</a>
-                    <a href="/skill" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">SKILL.md</a>
-                    <a href="/.well-known/ai-plugin.json" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">Plugin</a>
+                <!-- Right: Unified Agent, MCP & llms.txt Developer Center -->
+                <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                    <!-- Agent / MCP Hub Button -->
+                    <button @click="setTab('agent_hub'); window.scrollTo({top: 0, behavior: 'smooth'})"
+                            class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                            :class="activeTab === 'agent_hub' ? (isDark ? 'bg-sky-600 text-white border-sky-500' : 'bg-claude-terracotta text-white border-claude-terracotta') : (isDark ? 'bg-dark-cardInner border-dark-border text-sky-400 hover:text-white hover:border-sky-500' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner')"
+                            title="切換至 AI Agent 與 MCP 工具中心">
+                        <span>🤖</span>
+                        <span>Agent / MCP Hub</span>
+                    </button>
+
+                    <!-- llms.txt Standard Badge -->
+                    <a href="/llms.txt" target="_blank"
+                       class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
+                       :class="isDark ? 'bg-dark-cardInner border-dark-border text-emerald-400 hover:text-emerald-300 hover:border-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'"
+                       title="LLM Context Standard (https://llmstxt.org)">
+                        <span>📄</span>
+                        <span>llms.txt ↗</span>
+                    </a>
+
+                    <!-- API Docs / Endpoints -->
+                    <div class="flex items-center space-x-3 num-font pl-1">
+                        <a href="/docs" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">Swagger UI</a>
+                        <a href="/redoc" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">ReDoc</a>
+                        <a href="/skill" target="_blank" class="hover:underline transition-all font-bold" :class="isDark ? 'text-slate-300 hover:text-sky-400' : 'text-claude-text hover:text-claude-terracotta'">SKILL.md</a>
+                    </div>
                 </div>
+
             </div>
         </footer>
 

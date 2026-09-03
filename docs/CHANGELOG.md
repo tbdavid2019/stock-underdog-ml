@@ -19,17 +19,25 @@
 
 ## [Unreleased] - 2026-09-02
 
-### 📄 全面支援 llmstxt.org 規範 (`/llms.txt` & `/llms-full.txt`)
+### 📄 全面支援 llmstxt.org 規範與頁尾開發者專區 (`/llms.txt` & Footer Hub)
 - **遵循 Jeremy Howard [llmstxt.org](https://llmstxt.org/) 標準規範**：
   - 重構 `/llms.txt` 與 `/llms-full.txt`，提供乾淨、結構化之 Markdown 摘要、策略端點清單與全量系統規格。
-  - 前端頂部導覽列新增 `📄 llms.txt ↗` 快捷入口，頁尾新增直接鏈結。
+  - **🧹 頂部導覽列極簡化**：移除頂部右上角多餘的 `llms.txt`、`API 文檔` 及導覽列的 `Agent / MCP` 按鈕，專注呈現「操盤看板」、「法人籌碼」與「個股歷史」，視覺更加俐落清爽。
+  - **⚓ 統一收攏至頁尾 (Footer Developer Hub)**：在頁尾統一設置開發者與 AI 專區，整合 `🤖 Agent / MCP Hub`（點擊平滑切換分頁）、`📄 llms.txt ↗` 標準鏈結、Swagger UI、ReDoc 與 SKILL.md。
   - 在 `Agent / MCP Hub` 分頁新增專屬「📄 llms.txt / llms-full.txt」對接卡片，支援一鍵複製 URL 與直接檢視，供 LLM 系統提示詞、AI 爬蟲與 Agent 快速獲取即時量化模型定義。
 
 ### 🌐 2md 繁體中文公司簡介與即時新聞浮動卡片 (2md Company Profile & News Hover)
 - **整合 2md URL to Markdown 與 Search 服務** (`https://2md.aiurl.tw`, `https://2md.glsoft.ai`, `https://create360.ai`)：
   - 新增 `data/company_profile.py` (`CompanyProfileService`)，支援自 2md 與 Yahoo 股市實時提取個股之繁體中文公司名稱、核心營運業務、產業別、董事長、市值及最新即時新聞動態。
+  - **🚀 2md 官方原生微批次抓取 (Native Multi-URL Batch Crawl)**：批次抓取全面改接 2md 原生 `POST /v1/batch` 端點，以每批 2~3 支微批次單一 HTTP 請求並發取回多個 Yahoo Profile Markdown，大幅降低連線開銷與握手延遲。
+  - **🛡️ 防崩潰全域並發信號量 (`Semaphore=2`)**：加入全域信號量節流，限制同時發往 2md 的爬蟲請求上限為 2 組，徹底避免瞬間觸發幾十個 Headless Chromium 渲染導致伺服器 OOM 當機。
+  - **⏱️ 超時放寬至 25 秒給予充足渲染空間 (Realistic 25s Batch Timeout)**：
+    - 單頁渲染超時調增至 10.0 秒，批次超時大幅放寬至 **25.0 秒**，給予 Chromium 充分動態渲染時間，避免過早斷線。
+  - **🔄 完整三級 Fallback 容災輪詢 (Full 3-Tier Fallback Resilience)**：
+    - 無論單筆或批次抓取，遇超時或異常時完整保留 `2md.aiurl.tw` ➔ `2md.glsoft.ai` ➔ `create360.ai` 之多級自動容災切換，確保後手永遠可用。
+    - **由全域 Semaphore(2) 在源頭鎖死並發量**：即使前兩台異常、請求切換至第三台 GCP 機器，同時間也嚴格限制最多 2 個 Chromium 任務，徹底杜絕 20+ 連線暴衝引發的 OOM。
   - **🚀 背景自動非同步預載 (Background Auto-Prefetch)**：前端於載入量化訊號看板或法人籌碼時，自動並發排程請求 `/api/v1/market/company-profiles/batch`，在使用者懸停前即已完成背景預熱，達成「滑鼠移過去 0 毫秒瞬間彈出」之極致流暢體驗。
-  - 後端內建多執行緒並發批次擷取、LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
+  - 後端內建 LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
   - 新增 REST API 端點 `GET /api/v1/market/company-profile` 與 `POST /api/v1/market/company-profiles/batch`。
   - 新增 MCP 工具 `get_company_profile`，供 AI Agent、Claude Desktop、WebMCP 呼叫。
   - 前端 UI (`api/templates/index.html`) 於所有股票代號（如 `9945.TW`、`2330.TW`、`AAPL`）支援滑鼠 Hover 即時彈出精美 Claude 質感公司介紹浮動卡片，附帶即時新聞與外部行情（Yahoo / Goodinfo / TradingView / 時序軌跡）捷徑。

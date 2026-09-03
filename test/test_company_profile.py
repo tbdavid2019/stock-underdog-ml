@@ -108,6 +108,116 @@ URL Source: https://tw.stock.yahoo.com/quote/9945.TW/profile
         self.assertEqual(data["count"], 1)
         self.assertIn("2330.TW", data["data"])
 
+    @patch("requests.post")
+    def test_fetch_batch_from_2md_success(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "code": 200,
+            "status": 20000,
+            "data": {
+                "data": [
+                    {
+                        "url": "https://tw.stock.yahoo.com/quote/2330.TW/profile",
+                        "content": "公司名稱\n台積電\n產業類別\n半導體\n董事長\n魏哲家\n主要經營業務\n晶圓代工"
+                    },
+                    {
+                        "url": "https://tw.stock.yahoo.com/quote/2303.TW/profile",
+                        "content": "公司名稱\n聯電\n產業類別\n半導體\n董事長\n洪嘉聰\n主要經營業務\n晶圓製造"
+                    }
+                ]
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        urls = [
+            "https://tw.stock.yahoo.com/quote/2330.TW/profile",
+            "https://tw.stock.yahoo.com/quote/2303.TW/profile"
+        ]
+        items = CompanyProfileService._fetch_batch_from_2md(urls)
+        self.assertEqual(len(items), 2)
+        self.assertIn("台積電", items[0]["content"])
+        self.assertIn("聯電", items[1]["content"])
+
+    @patch("requests.post")
+    def test_fetch_batch_from_2md_fallback_on_first_host_connection_error(self, mock_post):
+        import requests
+        resp_success = MagicMock()
+        resp_success.status_code = 200
+        resp_success.json.return_value = {
+            "code": 200,
+            "data": {
+                "data": [
+                    {
+                        "url": "https://tw.stock.yahoo.com/quote/2330.TW/profile",
+                        "content": "公司名稱\n台積電\n主要經營業務\n晶圓代工"
+                    }
+                ]
+            }
+        }
+        # First host raises ConnectionError (server down), second host succeeds
+        mock_post.side_effect = [
+            requests.exceptions.ConnectionError("Connection refused"),
+            resp_success
+        ]
+
+        items = CompanyProfileService._fetch_batch_from_2md(["https://tw.stock.yahoo.com/quote/2330.TW/profile"])
+        self.assertEqual(len(items), 1)
+        self.assertIn("台積電", items[0]["content"])
+        # Verified mock_post was called twice (first host aiurl.tw -> fallback host glsoft.ai)
+        self.assertEqual(mock_post.call_count, 2)
+
+    @patch("requests.post")
+    def test_fetch_batch_from_2md_fallback_on_timeout(self, mock_post):
+        import requests
+        resp_success = MagicMock()
+        resp_success.status_code = 200
+        resp_success.json.return_value = {
+            "code": 200,
+            "data": {
+                "data": [
+                    {
+                        "url": "https://tw.stock.yahoo.com/quote/2330.TW/profile",
+                        "content": "公司名稱\n台積電\n主要經營業務\n晶圓代工"
+                    }
+                ]
+            }
+        }
+        # First host raises Timeout, second host succeeds
+        mock_post.side_effect = [
+            requests.exceptions.Timeout("Read timeout"),
+            resp_success
+        ]
+
+        items = CompanyProfileService._fetch_batch_from_2md(["https://tw.stock.yahoo.com/quote/2330.TW/profile"])
+        self.assertEqual(len(items), 1)
+        self.assertIn("台積電", items[0]["content"])
+        self.assertEqual(mock_post.call_count, 2)
+
+    @patch("data.company_profile.CompanyProfileService._fetch_batch_from_2md")
+    def test_get_company_profiles_batch_uses_native_batch(self, mock_batch):
+        CompanyProfileService._CACHE.clear()
+        mock_batch.return_value = [
+            {
+                "url": "https://tw.stock.yahoo.com/quote/2330.TW/profile",
+                "content": "公司名稱\n台積電\n產業類別\n半導體\n董事長\n魏哲家\n市值 (百萬)\n61848702.45\n主要經營業務\n積體電路製造"
+            },
+            {
+                "url": "https://tw.stock.yahoo.com/quote/2303.TW/profile",
+                "content": "公司名稱\n聯電\n產業類別\n半導體\n董事長\n洪嘉聰\n市值 (百萬)\n650000.00\n主要經營業務\n晶圓製造代工"
+            }
+        ]
+
+        results = CompanyProfileService.get_company_profiles_batch(["2330.TW", "2303.TW"])
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results["2330.TW"]["name"], "台積電")
+        self.assertEqual(results["2330.TW"]["chairman"], "魏哲家")
+        self.assertIn("積體電路製造", results["2330.TW"]["business_summary"])
+        self.assertEqual(results["2303.TW"]["name"], "聯電")
+        self.assertEqual(results["2303.TW"]["chairman"], "洪嘉聰")
+        self.assertIn("晶圓製造代工", results["2303.TW"]["business_summary"])
+        self.assertEqual(mock_batch.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
