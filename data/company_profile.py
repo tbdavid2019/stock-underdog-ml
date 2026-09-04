@@ -6,8 +6,11 @@ data/company_profile.py - 公司簡介與即時新聞提取服務 (支援 2md �
 支援 2md 原生批次 (POST /v1/batch)、全域信號量節流、超時延長與 DuckDB 股票名稱解析。
 """
 
+import os
 import re
+import json
 import time
+import datetime
 import logging
 import threading
 import urllib.parse
@@ -24,7 +27,7 @@ logger = logging.getLogger("stock_app.company_profile")
 
 
 class CompanyProfileService:
-    """公司簡介與即時新聞服務 (支援 2md 原生批次、多級 Fallback 與並發節流)"""
+    """公司簡介與即時新聞服務 (支援 2md 原生批次、多級 Fallback、20天磁碟持久化快取與並發節流)"""
 
     FALLBACK_2MD_HOSTS = [
         "https://2md.aiurl.tw",
@@ -41,23 +44,96 @@ class CompanyProfileService:
     TIMEOUT_BATCH = 25.0     # 2MD 原生微批次 (2~3 支) 充足安全超時 (避免過早判定失敗)
     TASK_WAIT_TIMEOUT = 12.0 # 外層執行緒等待上限
 
-    # In-memory cache: ticker -> (timestamp, data_dict)
+    # 磁碟持久化目錄與效期 (20 天持久化，常見霸榜公司無需每次重查 2MD)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    CACHE_DIR = os.path.join(BASE_DIR, "cache", "company_profiles")
+    CACHE_TTL = 86400 * 20  # 20 天快取 (20 days)
+
+    # L1 In-memory cache: ticker -> (timestamp, data_dict)
     _CACHE: Dict[str, tuple] = {}
-    CACHE_TTL = 3600 * 6  # 6 小時快取
 
     @classmethod
-    def get_company_profile(cls, ticker_raw: str, db: Optional[Any] = None) -> Dict[str, Any]:
-        """
-        取得公司名稱、簡介、主要業務與最新新聞 (單一標的)
-        """
-        ticker = normalize_ticker(ticker_raw).upper()
+    def _get_cache_filepath(cls, ticker: str) -> str:
+        """取得特定股票代碼之持久化磁碟快取檔案路徑"""
+        safe_name = ticker.replace("/", "_").replace("\\", "_").replace(":", "_").upper()
+        return os.path.join(cls.CACHE_DIR, f"{safe_name}.json")
+
+    @classmethod
+    def _read_cache(cls, ticker: str) -> Optional[Dict[str, Any]]:
+        """讀取兩層快取 (L1 記憶體 -> L2 磁碟持久化)，效期 20 天"""
         now = time.time()
 
-        # 1. 檢查快取
+        # 1. 檢查 L1 記憶體快取 (0ms 即時返回)
         if ticker in cls._CACHE:
             ts, cached_data = cls._CACHE[ticker]
             if now - ts < cls.CACHE_TTL:
                 return cached_data
+
+        # 2. 檢查 L2 磁碟持久化快取 (微秒級，重啟後依舊生效)
+        filepath = cls._get_cache_filepath(ticker)
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    payload = json.load(f)
+                cached_at = payload.get("cached_at", 0)
+                profile = payload.get("profile")
+                if profile and (now - cached_at < cls.CACHE_TTL):
+                    # 回填至 L1 記憶體快取，加速後續訪問
+                    cls._CACHE[ticker] = (cached_at, profile)
+                    logger.debug(f"📦 磁碟快取命中 (20天): {ticker}")
+                    return profile
+            except Exception as e:
+                logger.debug(f"讀取公司磁碟快取失敗 {ticker}: {e}")
+
+        return None
+
+    @classmethod
+    def _write_cache(cls, ticker: str, profile_data: Dict[str, Any]):
+        """寫入兩層快取 (L1 記憶體 + L2 磁碟持久化)，效期 20 天"""
+        now = time.time()
+
+        # 1. 寫入 L1 記憶體快取
+        cls._CACHE[ticker] = (now, profile_data)
+
+        # 2. 判斷是否有實質內容（避免將暫時性網路中斷的空內容快取 20 天）
+        has_content = bool(
+            profile_data.get("business_summary") or
+            (profile_data.get("industry") and profile_data.get("industry") != "綜合產業") or
+            profile_data.get("chairman") or
+            profile_data.get("market_cap")
+        )
+        if not has_content:
+            return
+
+        # 3. 寫入 L2 磁碟持久化快取 (原子寫入避免並發衝突)
+        try:
+            os.makedirs(cls.CACHE_DIR, exist_ok=True)
+            filepath = cls._get_cache_filepath(ticker)
+            tmp_path = f"{filepath}.tmp.{threading.get_ident()}"
+            payload = {
+                "ticker": ticker,
+                "cached_at": now,
+                "cached_date": datetime.datetime.fromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S"),
+                "profile": profile_data
+            }
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, filepath)
+            logger.debug(f"💾 公司資料已持久化至磁碟 (20天): {ticker}")
+        except Exception as e:
+            logger.warning(f"寫入公司磁碟快取失敗 {ticker}: {e}")
+
+    @classmethod
+    def get_company_profile(cls, ticker_raw: str, db: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        取得公司名稱、簡介、主要業務與最新新聞 (單一標的，優先命中 20 天持久化快取)
+        """
+        ticker = normalize_ticker(ticker_raw).upper()
+
+        # 1. 檢查快取 (L1 記憶體 -> L2 磁碟 20天)
+        cached = cls._read_cache(ticker)
+        if cached:
+            return cached
 
         # 2. 解析公司基本名稱
         stock_name = cls._resolve_stock_name(ticker, db)
@@ -102,8 +178,8 @@ class CompanyProfileService:
         if not profile_data.get("business_summary"):
             cls._fallback_yfinance(profile_data, ticker)
 
-        # 5. 寫入快取
-        cls._CACHE[ticker] = (now, profile_data)
+        # 5. 寫入兩層快取 (L1 記憶體 + L2 磁碟持久化 20 天)
+        cls._write_cache(ticker, profile_data)
         return profile_data
 
     @classmethod
@@ -373,13 +449,13 @@ class CompanyProfileService:
         if not unique_tickers:
             return results
 
-        # 1. 優先回傳已在快取者
+        # 1. 優先回傳已在快取者 (L1 記憶體 -> L2 磁碟持久化，20天)
         missing = []
-        now = time.time()
         for t in unique_tickers:
             norm = normalize_ticker(t).upper()
-            if norm in cls._CACHE and (now - cls._CACHE[norm][0] < cls.CACHE_TTL):
-                results[norm] = cls._CACHE[norm][1]
+            cached = cls._read_cache(norm)
+            if cached:
+                results[norm] = cached
             else:
                 missing.append(norm)
 
@@ -435,8 +511,8 @@ class CompanyProfileService:
             prof = profiles_to_fetch[norm]
             if not prof.get("business_summary"):
                 cls._fallback_yfinance(prof, norm)
-            # 寫入快取與回傳結果
-            cls._CACHE[norm] = (now, prof)
+            # 寫入兩層快取 (L1 記憶體 + L2 磁碟持久化 20 天) 與回傳結果
+            cls._write_cache(norm, prof)
             results[norm] = prof
 
         return results

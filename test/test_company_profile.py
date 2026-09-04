@@ -2,12 +2,24 @@
 test/test_company_profile.py - Test CompanyProfileService and fallback mechanisms
 """
 
+import os
+import shutil
 import unittest
 from unittest.mock import patch, MagicMock
 from data.company_profile import CompanyProfileService
 
 
 class TestCompanyProfile(unittest.TestCase):
+    def setUp(self):
+        CompanyProfileService._CACHE.clear()
+        if os.path.exists(CompanyProfileService.CACHE_DIR):
+            shutil.rmtree(CompanyProfileService.CACHE_DIR, ignore_errors=True)
+
+    def tearDown(self):
+        CompanyProfileService._CACHE.clear()
+        if os.path.exists(CompanyProfileService.CACHE_DIR):
+            shutil.rmtree(CompanyProfileService.CACHE_DIR, ignore_errors=True)
+
     @patch("data.company_profile.CompanyProfileService._fetch_profile_from_2md")
     @patch("data.company_profile.CompanyProfileService._fetch_news_from_2md")
     def test_normalize_and_resolve_aliases(self, mock_news, mock_profile):
@@ -32,6 +44,41 @@ class TestCompanyProfile(unittest.TestCase):
         res = CompanyProfileService.get_company_profile("9945.TW")
         self.assertEqual(res["name"], "潤泰新")
         self.assertEqual(res["industry"], "建材營造")
+
+    def test_20_day_persistent_disk_cache(self):
+        import os
+        # 1. 驗證快取效期設為 20 天 (20 * 86400 秒)
+        self.assertEqual(CompanyProfileService.CACHE_TTL, 86400 * 20)
+
+        # 2. 寫入磁碟快取
+        test_ticker = "2330.TW"
+        fake_profile = {
+            "ticker": test_ticker,
+            "raw_code": "2330",
+            "name": "台積電",
+            "industry": "半導體業",
+            "business_summary": "依客戶需求客製製造晶圓代工與先進封裝",
+            "chairman": "魏哲家",
+            "market_cap": "$61.8T",
+            "recent_news": [],
+            "links": {}
+        }
+        CompanyProfileService._write_cache(test_ticker, fake_profile)
+
+        # 3. 驗證磁碟檔案確實產生
+        cache_file = CompanyProfileService._get_cache_filepath(test_ticker)
+        self.assertTrue(os.path.exists(cache_file))
+
+        # 4. 清空 L1 記憶體快取 (模擬服務重啟)
+        CompanyProfileService._CACHE.clear()
+        self.assertNotIn(test_ticker, CompanyProfileService._CACHE)
+
+        # 5. 再次讀取：驗證微秒級從磁碟命中，並自動回填 L1 快取，無需發出任何網路請求
+        restored = CompanyProfileService._read_cache(test_ticker)
+        self.assertIsNotNone(restored)
+        self.assertEqual(restored["name"], "台積電")
+        self.assertEqual(restored["chairman"], "魏哲家")
+        self.assertIn(test_ticker, CompanyProfileService._CACHE)
 
     @patch("requests.get")
     def test_fetch_from_2md_parsing(self, mock_get):

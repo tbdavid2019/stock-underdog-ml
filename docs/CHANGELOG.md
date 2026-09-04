@@ -44,7 +44,9 @@
   - **🔄 完整三級 Fallback 容災輪詢 (Full 3-Tier Fallback Resilience)**：
     - 無論單筆或批次抓取，遇超時或異常時完整保留 `2md.aiurl.tw` ➔ `2md.glsoft.ai` ➔ `create360.ai` 之多級自動容災切換，確保後手永遠可用。
     - **由全域 Semaphore(2) 在源頭鎖死並發量**：即使前兩台異常、請求切換至第三台 GCP 機器，同時間也嚴格限制最多 2 個 Chromium 任務，徹底杜絕 20+ 連線暴衝引發的 OOM。
-  - **🚀 背景自動非同步預載 (Background Auto-Prefetch)**：前端於載入量化訊號看板或法人籌碼時，自動並發排程請求 `/api/v1/market/company-profiles/batch`，在使用者懸停前即已完成背景預熱，達成「滑鼠移過去 0 毫秒瞬間彈出」之極致流暢體驗。
+  - **💾 20 天磁碟持久化兩層快取 (L1 Memory + L2 Disk 20-Day Persistence)**：
+    - 快取效期由 6 小時全面調增至 **20 天 (86,400 × 20 秒)**，滿足常用霸榜標的免頻繁爬蟲之需求。
+    - 導入 L1 記憶體 + L2 磁碟原子持久化 (`./cache/company_profiles/{ticker}.json`)，即使 Docker 容器重建或服務重啟，微秒級自動命中磁碟並回填記憶體，徹底免除每次 hover 重複向 2md 抓取資料之延遲與連線消耗。
   - 後端內建 LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
   - 新增 REST API 端點 `GET /api/v1/market/company-profile` 與 `POST /api/v1/market/company-profiles/batch`。
   - 新增 MCP 工具 `get_company_profile`，供 AI Agent、Claude Desktop、WebMCP 呼叫。
