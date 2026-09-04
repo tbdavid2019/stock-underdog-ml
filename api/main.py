@@ -155,7 +155,9 @@ def get_webmcp_manifest():
             "get_lstm_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
-            "get_top_institutional_flows"
+            "get_top_institutional_flows",
+            "get_fed_rate_monitor",
+            "get_us_earnings_calendar"
         ]
     })
 
@@ -311,6 +313,22 @@ def get_webmcp_bridge():
             execute: async (args) => {
                 return JSON.stringify(await (await fetch('/api/v1/predictions/history/' + encodeURIComponent(args.ticker.toUpperCase()) + '?limit=' + (args?.limit || 30))).json());
             }
+        },
+        {
+            name: 'get_fed_rate_monitor',
+            description: '透過 2MD 查詢 Investing.com FedWatch 聯準會利率決策機率與 FOMC 倒數',
+            inputSchema: { type: 'object', properties: { force_refresh: { type: 'boolean' } } },
+            execute: async (args) => {
+                return JSON.stringify(await (await fetch('/api/v1/macro/investing/fed-rate?force_refresh=' + (args?.force_refresh ? 'true' : 'false'))).json());
+            }
+        },
+        {
+            name: 'get_us_earnings_calendar',
+            description: '透過 2MD 查詢 Investing.com 美股重量級財報行事曆（EPS、營收預估）',
+            inputSchema: { type: 'object', properties: { force_refresh: { type: 'boolean' } } },
+            execute: async (args) => {
+                return JSON.stringify(await (await fetch('/api/v1/macro/investing/earnings-calendar?force_refresh=' + (args?.force_refresh ? 'true' : 'false'))).json());
+            }
         }
     ];
 
@@ -321,7 +339,7 @@ def get_webmcp_bridge():
             console.warn('[WebMCP] registerTool error:', e);
         }
     }
-    console.log('[WebMCP] Cloudflare WebMCP Bridge initialized with 5 tools.');
+    console.log('[WebMCP] Cloudflare WebMCP Bridge initialized with 7 tools.');
 })();
 """
     return PlainTextResponse(content=js_content, media_type="application/javascript; charset=utf-8")

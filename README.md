@@ -48,9 +48,10 @@ graph TD
 
 ## 🎯 核心功能與策略矩陣
 
-### 1. 🌐 美股宏觀風控門檻 (Macro Regime Gate)
-* 每日預檢美股三大指標：**S&P 500 (`SPY`)**、**VIX 恐慌指數 (`^VIX`)** 與 **費城半導體 (`^SOX`)**。
-* 動態識別 4 種市場情境：`全面多頭` (100% 曝險)、`多頭回調` (85% 曝險)、`避險防禦` (30~50% 曝險) 與 `極度恐慌` (0% 空倉)。
+### 1. 🌐 宏觀風控門檻與總經日曆 (Macro Regime Gate & Investing Calendar)
+* 每日預檢大盤指標：**S&P 500 (`SPY`)**、**VIX 恐慌指數 (`^VIX`)**、**費城半導體 (`^SOX`)** 與 **台灣加權 (`^TWII`)**。
+* 動態識別市場情境：`全面多頭` (100% 曝險)、`多頭回調` (85% 曝險)、`避險防禦` (30~50% 曝險) 與 `極度恐慌` (0% 空倉)。
+* 透過 2MD 整合 **Investing.com** 實時數據：**CME FedWatch** 聯準會降息機率、**美股重量級財報行事曆**、**關鍵大宗商品（黃金、原油、期銅）** 以及 **全球重磅總經行事曆（CPI、非農 NFP）**。
 * 當費半跌破季線時，自動觸發科技股部位上限保護。
 
 ### 2. 🗡️ 玄鐵重劍策略 (XuanTie Trend Pullback)
@@ -153,7 +154,11 @@ graph TD
 | `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
 | `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
 | `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
-| `/api/v1/macro/latest` | `GET` | 即時取得美股三大指標（SPY / VIX / SOX）宏觀風控狀態與建議曝險 |
+| `/api/v1/macro/latest` | `GET` | 即時取得台美股大盤宏觀風控狀態、建議曝險、FedWatch 降息機率與總經催化劑 |
+| `/api/v1/macro/investing/summary` | `GET` | Investing.com 一站式總經數據（FedWatch、美股財報、大宗商品、行事曆） |
+| `/api/v1/macro/investing/fed-rate` | `GET` | CME FedWatch 聯準會降息機率分布表與 FOMC 倒數 |
+| `/api/v1/macro/investing/earnings-calendar` | `GET` | 美股重量級企業財報行事曆（EPS、營收預估、市值規模） |
+| `/api/v1/macro/investing/commodities` | `GET` | 關鍵大宗商品（黃金、銅博士、WTI 原油）即時行情與週期漲跌 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 
 ---

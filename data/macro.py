@@ -35,6 +35,11 @@ class MacroState:
     tech_exposure_cap: float = 1.0  # 科技股曝險上限
     warnings: List[str] = field(default_factory=list)
     summary: str = ""
+    fed_rate: Optional[Dict[str, Any]] = None
+    commodities: Optional[Dict[str, Any]] = None
+    earnings_calendar: List[Dict[str, Any]] = field(default_factory=list)
+    economic_calendar: List[Dict[str, Any]] = field(default_factory=list)
+    catalyst_alerts: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -48,6 +53,11 @@ class MacroState:
             "tech_exposure_cap": round(self.tech_exposure_cap, 2),
             "warnings": self.warnings,
             "summary": self.summary,
+            "fed_rate": self.fed_rate,
+            "commodities": self.commodities,
+            "earnings_calendar": self.earnings_calendar,
+            "economic_calendar": self.economic_calendar,
+            "catalyst_alerts": self.catalyst_alerts,
         }
 
 
@@ -156,6 +166,7 @@ class MacroRegimeAnalyzer:
                 f"國際連動: 費半{'站穩MA60' if state.sox_above_ma60 else '破季線'} (VIX {state.vix:.1f})"
             ]
             state.summary = " | ".join(summary_parts)
+            cls._enrich_with_investing(state)
             logger.info(f"✅ 台股大盤風控評估完成: {state.summary}")
 
         except Exception as e:
@@ -274,6 +285,7 @@ class MacroRegimeAnalyzer:
                 f"SOX: {'站穩MA60' if state.sox_above_ma60 else '破季線'}"
             ]
             state.summary = " | ".join(summary_parts)
+            cls._enrich_with_investing(state)
             logger.info(f"✅ 美股宏觀評估完成: {state.summary}")
 
         except Exception as e:
@@ -281,6 +293,35 @@ class MacroRegimeAnalyzer:
             state.summary = f"宏觀計算異常 ({e})，採用中性 100% 曝險"
 
         return state
+
+    @classmethod
+    def _enrich_with_investing(cls, state: MacroState):
+        """以 Investing.com 宏觀數據與行事曆豐富風控指標 (優雅降級)"""
+        try:
+            from data.investing_service import InvestingService
+            inv_summary = InvestingService.get_investing_macro_summary()
+            state.fed_rate = inv_summary.get("fed_rate")
+            state.commodities = inv_summary.get("commodities")
+            state.earnings_calendar = inv_summary.get("earnings_calendar", [])
+            state.economic_calendar = inv_summary.get("economic_calendar", [])
+            state.catalyst_alerts = inv_summary.get("catalyst_alerts", [])
+
+            # 若有今日/明日重磅催化劑事件 (如 CPI / FOMC)，自動加入風控警示
+            if state.catalyst_alerts:
+                for alert in state.catalyst_alerts[:2]:
+                    if alert not in state.warnings:
+                        state.warnings.append(alert)
+
+            # 若有聯準會利率預期，自動於摘要標註
+            if state.fed_rate and state.fed_rate.get("highest_prob_rate"):
+                rate_str = state.fed_rate["highest_prob_rate"]
+                prob_str = state.fed_rate.get("highest_probability", "")
+                date_str = state.fed_rate.get("meeting_date", "")
+                fed_note = f"FOMC ({date_str}) 預期利率 {rate_str} ({prob_str})"
+                if fed_note not in state.summary:
+                    state.summary += f" | {fed_note}"
+        except Exception as e:
+            logger.debug(f"InvestingService enrichment skipped: {e}")
 
     @staticmethod
     def _extract_close_series(data: pd.DataFrame, ticker: str) -> Optional[pd.Series]:

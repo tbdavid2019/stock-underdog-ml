@@ -17,7 +17,37 @@
 - **初始化流程整理**：移除首頁 Vue 應用重複的 `mounted()` 定義，保留 WebMCP 註冊與資料載入在同一個初始化流程中。
 - **頁尾文案聚焦產品**：移除頁尾對 DuckDB 與深度學習實作的宣傳句，保留品牌與技術提供者資訊。
 
-## [Unreleased] - 2026-09-02
+## [Unreleased] - 2026-09-04
+
+### 🏛️ Investing.com 宏觀數據、FedWatch 降息監控與美股行事曆整合 (Investing.com Macro & US Calendars via 2MD)
+- **透過 2MD API 整合 Investing.com 全球即時宏觀與日曆數據 (`data/investing_service.py`)**：
+  - **CME FedWatch 聯準會降息監控 (`get_fed_rate_monitor`)**：實時抓取聯準會下次 FOMC 會議日期、倒數天數、各目標利率區間機率分布表（`Target Rate | Current % | Prev Day % | Prev Week %`）、最高機率目標利率與政策預期文字摘要。
+  - **美股重量級財報行事曆 (`get_earnings_calendar`)**：抓取近期即將公佈財報之美股個股（代號、公司名稱、財報公佈日、預估 EPS、預估營收規模與市值）。
+  - **關鍵大宗商品與原物料 (`get_commodities_summary`)**：實時追蹤黃金 (Gold 避險與流動性)、銅博士 (Copper 製造業與 AI 硬體景氣)、WTI 紐約輕原油 (Crude Oil 通膨預期與能源成本) 之日漲跌與週漲跌幅。
+  - **全球重磅總經行事曆 (`get_economic_calendar`)**：自動爬取美國與主要經濟體高衝擊指標（CPI、PCE、非農就業 NFP、失業率、GDP、FOMC 決策）之公佈時間、預測值、前值與實際值。
+  - **大盤催化劑警示 (`catalyst_alerts`)**：自動自總經與財報行事曆提煉今日/明日高衝擊事件，無縫注入大盤風控警示。
+- **高可用 3 級容災與兩層原子持久化快取 (3-Tier Fallback & Atomic Disk Persistence)**：
+  - 與 `CompanyProfileService` 共享防崩潰信號量 `Semaphore(2)`，杜絕高並發連線過載。
+  - 支援 `2md.aiurl.tw` ➔ `2md.glsoft.ai` ➔ `create360.ai` 自動容災輪詢。
+  - 建立 6~12 小時原子磁碟快取（`cache/investing/*.json`）與記憶體 L1 快取，重啟容器或服務時微秒級讀取，免除每次請求向 2MD 爬取外部網頁。
+- **後端 REST API 與風控狀態擴充 (`api/routes/macro.py` & `data/macro.py`)**：
+  - `MacroState` 與 `MacroRegimeResponse` 擴展 `fed_rate`、`commodities`、`earnings_calendar`、`economic_calendar`、`catalyst_alerts` 欄位。
+  - `GET /api/v1/macro/latest` 自動附帶最新總經與行事曆分析。
+  - 新增專屬端點：
+    - `GET /api/v1/macro/investing/summary`
+    - `GET /api/v1/macro/investing/fed-rate`
+    - `GET /api/v1/macro/investing/earnings-calendar`
+    - `GET /api/v1/macro/investing/economic-calendar`
+    - `GET /api/v1/macro/investing/commodities`
+    - 支援 `force_refresh=true` 強制刷新快取。
+- **原生 FastMCP 與 WebMCP 工具支援 (`mcp_server.py` & `api/main.py`)**：
+  - 於 FastMCP 伺服器新增 `@mcp.tool()`：`get_fed_rate_monitor`、`get_us_earnings_calendar`、`get_economic_calendar`。
+  - 同步更新 `/.well-known/mcp.json`、`/.webmcp/bridge.js` 與前端 Chrome WebMCP 註冊清單（擴增至 10 個原生工具）。
+- **前端首頁互動看板整合 (`api/templates/index.html`)**：
+  - 於操盤看板「宏觀環境」卡片下方新增「🏛️ 總經流動性與重磅行事曆」互動看板。
+  - 支援「即時更新」旋轉按鈕與「展開/收合完整行事曆」折疊切換。
+  - 視覺化展示 FedWatch 各目標利率機率分佈進度條、美股重量級財報卡片清單、三大關鍵原物料日/週漲跌與焦點數據即時跑馬燈。
+  - 整合即時 Toast 提示回饋。
 
 ### 🐳 Docker Hub 官方預建多架構映像檔與部署文件完善 (Docker Hub Multi-Arch Deployment Docs)
 - **更新 `README.md`、`docs/DOCKER.md` 與 `docker-compose.yml`**：

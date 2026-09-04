@@ -158,4 +158,5 @@ docker-compose.override.yml
 *_personal.py
 *_local.py
 !test/
+.impeccable/
 

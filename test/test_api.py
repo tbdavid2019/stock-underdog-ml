@@ -205,11 +205,59 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(data["name"], "stock-quant-engine")
         self.assertEqual(data["transport"], "sse")
         self.assertIn("get_market_macro_regime", data["tools"])
+        self.assertIn("get_fed_rate_monitor", data["tools"])
+        self.assertIn("get_us_earnings_calendar", data["tools"])
 
         # Test alias /mcp.json
         resp_alias = self.client.get("/mcp.json")
         self.assertEqual(resp_alias.status_code, 200)
         self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
+
+    def test_macro_investing_endpoints(self):
+        from unittest.mock import patch
+        with patch("data.investing_service.InvestingService.get_investing_macro_summary") as mock_summary, \
+             patch("data.investing_service.InvestingService.get_fed_rate_monitor") as mock_fed, \
+             patch("data.investing_service.InvestingService.get_earnings_calendar") as mock_earn, \
+             patch("data.investing_service.InvestingService.get_economic_calendar") as mock_econ, \
+             patch("data.investing_service.InvestingService.get_commodities_summary") as mock_comm:
+            
+            mock_summary.return_value = {
+                "fed_rate": {"highest_prob_rate": "3.75 - 4.00"},
+                "commodities": {"gold": {"name": "Gold"}},
+                "earnings_calendar": [{"ticker": "COST"}],
+                "economic_calendar": [{"event": "NFP"}],
+                "catalyst_alerts": ["Alert 1"]
+            }
+            mock_fed.return_value = {"meeting_date": "Sep 16, 2026", "highest_prob_rate": "3.75 - 4.00"}
+            mock_earn.return_value = [{"ticker": "COST"}]
+            mock_econ.return_value = [{"event": "NFP"}]
+            mock_comm.return_value = {"gold": {"name": "Gold"}}
+
+            # Summary
+            resp = self.client.get("/api/v1/macro/investing/summary")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json()["success"])
+            self.assertEqual(resp.json()["data"]["fed_rate"]["highest_prob_rate"], "3.75 - 4.00")
+
+            # Fed rate
+            resp = self.client.get("/api/v1/macro/investing/fed-rate")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json()["success"])
+
+            # Earnings calendar
+            resp = self.client.get("/api/v1/macro/investing/earnings-calendar")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json()["success"])
+
+            # Economic calendar
+            resp = self.client.get("/api/v1/macro/investing/economic-calendar")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json()["success"])
+
+            # Commodities
+            resp = self.client.get("/api/v1/macro/investing/commodities")
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json()["success"])
 
     def test_llms_txt_endpoints(self):
         resp1 = self.client.get("/llms.txt")

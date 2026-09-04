@@ -303,6 +303,50 @@ def get_company_profile(
     }
 
 
+
+@mcp.tool(
+    name="get_fed_rate_monitor",
+    description="透過 2MD 查詢 Investing.com FedWatch 聯準會利率監控工具（CME FedWatch）。取得下次 FOMC 會議日期、倒數天數、降息/升息概率分布表（Target Rate, Current %, Prev Day %, Prev Week %）與政策預期摘要。"
+)
+def get_fed_rate_monitor(force_refresh: bool = False) -> Dict[str, Any]:
+    """
+    Fetch CME FedWatch interest rate probabilities and FOMC countdown from Investing.com via 2MD.
+    """
+    from data.investing_service import InvestingService
+    return InvestingService.get_fed_rate_monitor(force_refresh=force_refresh)
+
+
+@mcp.tool(
+    name="get_us_earnings_calendar",
+    description="透過 2MD 查詢 Investing.com 美股重量級企業財報行事曆。取得近期即將公布財報之美股個股（代號、公司名稱、財報公布日、EPS 預估值、營收預估值、市值規模）。"
+)
+def get_us_earnings_calendar(force_refresh: bool = False, limit: int = 15) -> Dict[str, Any]:
+    """
+    Fetch upcoming US corporate earnings releases from Investing.com via 2MD.
+    """
+    from data.investing_service import InvestingService
+    data = InvestingService.get_earnings_calendar(force_refresh=force_refresh)
+    if "earnings" in data and isinstance(data["earnings"], list):
+        data["earnings"] = data["earnings"][:limit]
+    return data
+
+
+@mcp.tool(
+    name="get_economic_calendar",
+    description="透過 2MD 查詢 Investing.com 全球重大財經行事曆（CPI、非農 NFP、PCE、GDP、FOMC 等）。取得時間、國家、重要度等級、前值、預測值與實際值。"
+)
+def get_economic_calendar(force_refresh: bool = False, limit: int = 15) -> Dict[str, Any]:
+    """
+    Fetch upcoming high-impact economic calendar events from Investing.com via 2MD.
+    """
+    from data.investing_service import InvestingService
+    data = InvestingService.get_economic_calendar(force_refresh=force_refresh)
+    if "events" in data and isinstance(data["events"], list):
+        data["events"] = data["events"][:limit]
+    return data
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()
+

@@ -63,6 +63,11 @@ class MacroRegimeResponse(BaseModel):
     sox_above_ma60: Optional[bool] = Field(None, description="費城半導體是否站穩季線")
     twii_above_ma60: Optional[bool] = Field(None, description="台灣加權指數是否站穩季線")
     warnings: List[str] = Field(default_factory=list, description="風控警示清單")
+    fed_rate: Optional[Dict[str, Any]] = Field(None, description="聯準會降息機率 (Investing.com CME FedWatch)")
+    commodities: Optional[Dict[str, Any]] = Field(None, description="關鍵大宗商品 (黃金、銅博士、原油)")
+    earnings_calendar: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="美股重量級財報行事曆")
+    economic_calendar: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="重磅總經行事曆")
+    catalyst_alerts: List[str] = Field(default_factory=list, description="催化劑事件預警")
     timestamp: Optional[str] = None
 
 

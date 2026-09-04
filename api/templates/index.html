@@ -367,10 +367,203 @@
                         <div class="pt-2 border-t flex items-center justify-between text-xs" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>標的: {{ stats.distinct_tickers !== null && stats.distinct_tickers !== undefined ? stats.distinct_tickers : '—' }} 檔</span>
-                            <span class="num-font font-bold" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">● 可追溯</span>
+                    </div>
+
+                </div>
+
+                <!-- 1.1 Macro Catalysts, FedWatch & US Calendars (Investing.com via 2MD) -->
+                <div v-if="macro.fed_rate || (macro.catalyst_alerts && macro.catalyst_alerts.length) || (macro.earnings_calendar && macro.earnings_calendar.length) || macro.commodities"
+                     class="rounded-2xl border p-4 space-y-3 transition-all"
+                     :class="isDark ? 'bg-dark-card border-dark-border' : 'bg-claude-card border-claude-border shadow-sm'">
+                    
+                    <!-- Header Bar -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b"
+                         :class="isDark ? 'border-dark-border' : 'border-claude-border'">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="text-lg">🏛️</span>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="text-sm font-black tracking-tight" :class="isDark ? 'text-white' : 'text-claude-text'">
+                                        總經流動性與重磅行事曆
+                                    </h3>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                                          :class="isDark ? 'bg-sky-950/80 text-sky-400 border border-sky-800/60' : 'bg-orange-50 text-claude-terracotta border border-orange-200'">
+                                        Investing.com via 2MD
+                                    </span>
+                                </div>
+                                <p class="text-xs" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                    CME FedWatch 聯準會利率預期 · 美股財報行事曆 · 原油/黃金/期銅 · 總經催化劑
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center space-x-2 self-end sm:self-auto">
+                            <button @click="refreshMacro()" :disabled="macroRefreshing"
+                                    class="px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                                    :class="isDark ? 'bg-dark-cardInner border-dark-border text-slate-300 hover:text-white hover:bg-dark-border' : 'bg-white border-claude-border text-claude-text hover:bg-claude-cardInner shadow-sm'"
+                                    title="強制刷新 Investing.com 宏觀數據">
+                                <span :class="{'animate-spin inline-block': macroRefreshing}">🔄</span>
+                                <span class="hidden sm:inline">{{ macroRefreshing ? '更新中...' : '即時更新' }}</span>
+                            </button>
+                            <button @click="showMacroDetails = !showMacroDetails"
+                                    class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                                    :class="isDark ? 'bg-sky-600/30 text-sky-300 border-sky-500/50 hover:bg-sky-600/50' : 'bg-orange-100 text-claude-terracotta border-orange-200 hover:bg-orange-200'">
+                                <span>{{ showMacroDetails ? '收合日曆 ▲' : '展開完整行事曆 ▼' }}</span>
+                            </button>
                         </div>
                     </div>
 
+                    <!-- Catalyst Alerts Pills -->
+                    <div v-if="macro.catalyst_alerts && macro.catalyst_alerts.length" class="flex flex-wrap gap-2 pt-1">
+                        <div v-for="(alert, idx) in macro.catalyst_alerts" :key="idx"
+                             class="text-xs px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
+                             :class="isDark ? 'bg-dark-cardInner border-dark-border text-amber-300' : 'bg-amber-50/80 border-amber-200 text-amber-900'">
+                            <span>{{ alert }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Grid (Collapsible) -->
+                    <div v-show="showMacroDetails" class="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
+                        
+                        <!-- Panel 1: FedWatch Rate Monitor -->
+                        <div class="p-4 rounded-xl border space-y-3"
+                             :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-white border-claude-border'">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-base">🎯</span>
+                                    <span class="text-xs font-black" :class="isDark ? 'text-white' : 'text-claude-text'">FedWatch 降息監控</span>
+                                </div>
+                                <span v-if="macro.fed_rate && macro.fed_rate.meeting_date" class="text-[11px] font-bold num-font"
+                                      :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                    {{ macro.fed_rate.meeting_date }}
+                                </span>
+                            </div>
+
+                            <div v-if="macro.fed_rate" class="space-y-2">
+                                <div class="p-2.5 rounded-lg border text-xs"
+                                     :class="isDark ? 'bg-dark-card border-dark-border/60 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'">
+                                    <div class="font-bold mb-1" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">
+                                        {{ macro.fed_rate.summary || 'FOMC 利率預期' }}
+                                    </div>
+                                    <div v-if="macro.fed_rate.countdown" class="text-[11px]" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                        會議倒數: <span class="font-bold">{{ macro.fed_rate.countdown }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Probability Bars -->
+                                <div class="space-y-1.5 pt-1">
+                                    <div v-for="rate in (macro.fed_rate.target_rates || []).slice(0, 4)" :key="rate.rate_range"
+                                         class="text-xs space-y-0.5">
+                                        <div class="flex justify-between items-center text-[11px] font-medium">
+                                            <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">目標利率 {{ rate.rate_range }}%</span>
+                                            <span class="font-bold num-font" :class="rate.probability_value >= 30 ? (isDark ? 'text-sky-400' : 'text-claude-terracotta') : (isDark ? 'text-dark-muted' : 'text-claude-muted')">
+                                                {{ rate.current_probability }}
+                                                <span class="font-normal text-[10px] opacity-75">(前日 {{ rate.previous_day }})</span>
+                                            </span>
+                                        </div>
+                                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                                            <div class="h-1.5 rounded-full transition-all duration-500"
+                                                 :class="rate.probability_value >= 50 ? (isDark ? 'bg-sky-500' : 'bg-claude-terracotta') : (rate.probability_value >= 25 ? 'bg-amber-500' : 'bg-slate-400')"
+                                                 :style="{ width: Math.min(100, Math.max(2, rate.probability_value || 0)) + '%' }"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="text-xs text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
+                        </div>
+
+                        <!-- Panel 2: US Earnings Calendar -->
+                        <div class="p-4 rounded-xl border space-y-3"
+                             :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-white border-claude-border'">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-base">📅</span>
+                                    <span class="text-xs font-black" :class="isDark ? 'text-white' : 'text-claude-text'">美股重量級財報日曆</span>
+                                </div>
+                                <span class="text-[11px] font-bold num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                    {{ (macro.earnings_calendar || []).length }} 檔發布
+                                </span>
+                            </div>
+
+                            <div v-if="macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                <div v-for="(earn, eIdx) in macro.earnings_calendar.slice(0, 8)" :key="eIdx"
+                                     class="p-2 rounded-lg border text-xs flex items-center justify-between"
+                                     :class="isDark ? 'bg-dark-card border-dark-border/60 hover:border-sky-500/50' : 'bg-slate-50 border-slate-200 hover:border-orange-300'">
+                                    <div class="space-y-0.5 truncate mr-2">
+                                        <div class="flex items-center space-x-1.5">
+                                            <span class="font-black num-font text-xs" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                                {{ earn.ticker }}
+                                            </span>
+                                            <span class="text-[11px] font-medium truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                                {{ earn.name }}
+                                            </span>
+                                        </div>
+                                        <div class="text-[10px]" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                            {{ earn.date }} {{ earn.time || '' }}
+                                        </div>
+                                    </div>
+                                    <div class="text-right shrink-0 text-[11px]">
+                                        <div class="font-bold num-font" :class="isDark ? 'text-slate-200' : 'text-slate-700'">
+                                            預估 EPS: <span :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">{{ earn.eps_forecast || '—' }}</span>
+                                        </div>
+                                        <div class="text-[10px] num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                            營收: {{ earn.revenue_forecast || '—' }} | 市值: {{ earn.market_cap || '—' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無重大美股財報公佈</div>
+                        </div>
+
+                        <!-- Panel 3: Commodities & Economic Events -->
+                        <div class="p-4 rounded-xl border space-y-3"
+                             :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-white border-claude-border'">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-base">🛢️</span>
+                                    <span class="text-xs font-black" :class="isDark ? 'text-white' : 'text-claude-text'">關鍵大宗商品 & 總經事件</span>
+                                </div>
+                                <span class="text-[11px] font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">通膨與流動性</span>
+                            </div>
+
+                            <!-- Commodities -->
+                            <div v-if="macro.commodities" class="space-y-1.5">
+                                <div v-for="(item, cKey) in macro.commodities" :key="cKey"
+                                     class="p-2 rounded-lg border text-xs flex items-center justify-between"
+                                     :class="isDark ? 'bg-dark-card border-dark-border/60' : 'bg-slate-50 border-slate-200'">
+                                    <div>
+                                        <div class="font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ item.name }}</div>
+                                        <div class="text-[10px]" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">{{ item.indicator }}</div>
+                                    </div>
+                                    <div class="text-right space-y-0.5">
+                                        <div class="font-bold num-font text-xs"
+                                             :class="item.daily_change && item.daily_change.startsWith('-') ? 'text-rose-500' : (isDark ? 'text-emerald-400' : 'text-emerald-600')">
+                                            日 {{ item.daily_change || '—' }}
+                                        </div>
+                                        <div class="text-[10px] num-font" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
+                                            週 {{ item.weekly_change || '—' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Next High-Impact Economic Event -->
+                            <div v-if="macro.economic_calendar && macro.economic_calendar.length" class="pt-1 border-t"
+                                 :class="isDark ? 'border-dark-border/60' : 'border-slate-200'">
+                                <div class="text-[11px] font-bold mb-1" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">即將到來焦點數據:</div>
+                                <div class="space-y-1 max-h-24 overflow-y-auto">
+                                    <div v-for="(evt, evIdx) in macro.economic_calendar.slice(0, 3)" :key="evIdx"
+                                         class="text-[10px] flex items-center justify-between py-0.5"
+                                         :class="evt.is_high_impact ? (isDark ? 'text-amber-400 font-bold' : 'text-amber-700 font-bold') : (isDark ? 'text-slate-400' : 'text-slate-600')">
+                                        <span class="truncate mr-1">[{{ evt.country }}] {{ evt.event }}</span>
+                                        <span class="shrink-0 num-font">{{ evt.time }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
                 <!-- 2. Strategy Filter Bar & Market Selector -->
@@ -1516,6 +1709,8 @@ for p in picks:
                         { id: 'latest', label: '📋 最新全量批次', icon: '📦' }
                     ],
                     macro: {},
+                    showMacroDetails: true,
+                    macroRefreshing: false,
                     stats: {},
                     marketStats: {},
                     records: [],
@@ -1613,6 +1808,33 @@ for p in picks:
                         }
                     } catch (e) {
                         console.error("Failed to load macro", e);
+                    }
+                },
+                async refreshMacro() {
+                    this.macroRefreshing = true;
+                    try {
+                        const res = await fetch('/api/v1/macro/investing/summary?force_refresh=true');
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success && data.data) {
+                                this.macro = {
+                                    ...this.macro,
+                                    fed_rate: data.data.fed_rate,
+                                    earnings_calendar: data.data.earnings_calendar,
+                                    commodities: data.data.commodities,
+                                    economic_calendar: data.data.economic_calendar,
+                                    catalyst_alerts: data.data.catalyst_alerts
+                                };
+                                this.showToast('✅ 總經與行事曆已即時同步！');
+                            }
+                        } else {
+                            this.showToast('⚠️ 更新失敗，請稍後再試');
+                        }
+                    } catch (e) {
+                        console.error("Failed to refresh macro", e);
+                        this.showToast('❌ 更新發生錯誤');
+                    } finally {
+                        this.macroRefreshing = false;
                     }
                 },
                 async loadStats() {
@@ -2335,12 +2557,15 @@ for p in picks:
                     if (Array.isArray(tags)) return tags;
                     return String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
                 },
+                showToast(msg) {
+                    this.toastMessage = msg || '';
+                    setTimeout(() => {
+                        this.toastMessage = '';
+                    }, 2500);
+                },
                 copyText(text, msg) {
                     navigator.clipboard.writeText(text).then(() => {
-                        this.toastMessage = msg || '已複製到剪貼簿！';
-                        setTimeout(() => {
-                            this.toastMessage = '';
-                        }, 2500);
+                        this.showToast(msg || '已複製到剪貼簿！');
                     });
                 },
                 async registerChromeWebMCP() {
@@ -2495,7 +2720,44 @@ for p in picks:
                             }
                         });
 
-                        console.log('✅ [Chrome WebMCP] Registered 8 tools to document.modelContext');
+                        // Tool 9: get_fed_rate_monitor
+                        await modelCtx.registerTool({
+                            name: 'get_fed_rate_monitor',
+                            description: '透過 2MD 查詢 Investing.com FedWatch 聯準會利率決策機率分布表與 FOMC 倒數。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    force_refresh: { type: 'boolean', description: '是否強制刷新快取' }
+                                }
+                            },
+                            execute: async ({ force_refresh }) => {
+                                const res = await fetch(`/api/v1/macro/investing/fed-rate?force_refresh=${!!force_refresh}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 10: get_us_earnings_calendar
+                        await modelCtx.registerTool({
+                            name: 'get_us_earnings_calendar',
+                            description: '透過 2MD 查詢 Investing.com 美股近期重量級財報行事曆（個股代號、EPS、營收預估、市值規模）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    force_refresh: { type: 'boolean', description: '是否強制刷新快取' },
+                                    limit: { type: 'integer', description: '回傳筆數' }
+                                }
+                            },
+                            execute: async ({ force_refresh, limit }) => {
+                                const res = await fetch(`/api/v1/macro/investing/earnings-calendar?force_refresh=${!!force_refresh}`);
+                                const data = await res.json();
+                                if (data && Array.isArray(data.data) && limit) {
+                                    data.data = data.data.slice(0, limit);
+                                }
+                                return JSON.stringify(data);
+                            }
+                        });
+
+                        console.log('✅ [Chrome WebMCP] Registered 10 tools to document.modelContext');
                     } catch (e) {
                         console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
                     }
