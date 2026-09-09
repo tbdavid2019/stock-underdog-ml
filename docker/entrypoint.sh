@@ -9,16 +9,17 @@ set -e
 # 確保必要運行目錄存在
 mkdir -p /app/logs /app/cache /app/data/storage /app/data/cache /app/models
 
-# 模式派發
+# 模式派發 (預設啟動 API 伺服器，避免常駐容器在未指定命令時進入批次日報重啟死循環)
 case "$1" in
+  api|server|"")
+    PORT="${API_PORT:-8088}"
+    echo "🌐 [Docker] 啟動 FastAPI 高效能量化 REST 服務 (0.0.0.0:${PORT})..."
+    exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT}"
+    ;;
   main|daily)
     echo "🚀 [Docker] 啟動股票多維量化分析主程序 (main.py)..."
     shift || true
     exec python main.py "$@"
-    ;;
-  "")
-    echo "🚀 [Docker] 啟動股票多維量化分析主程序 (main.py)..."
-    exec python main.py
     ;;
   sync)
     echo "📥 [Docker] 執行 Supabase ➔ DuckDB 全量數據同步 (export_supabase_to_duckdb.py)..."
@@ -27,11 +28,6 @@ case "$1" in
   backtest)
     echo "📈 [Docker] 啟動量化回測系統 (backtest.py)..."
     exec python backtest/backtest.py "${@:2}"
-    ;;
-  api|server)
-    PORT="${API_PORT:-8088}"
-    echo "🌐 [Docker] 啟動 FastAPI 高效能量化 REST 服務 (0.0.0.0:${PORT})..."
-    exec uvicorn api.main:app --host 0.0.0.0 --port "${PORT}"
     ;;
   test)
     echo "🧪 [Docker] 執行全套單元測試 (unittest)..."

@@ -40,5 +40,5 @@ RUN mkdir -p logs cache data/storage data/cache models && \
 # 5. 設定 Entrypoint
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
-# 預設執行主程序日報
-CMD ["main"]
+# 預設啟動 FastAPI REST / MCP 服務 (防範常駐容器未指定指令時誤入批次日報重啟死循環)
+CMD ["api"]

@@ -8,6 +8,12 @@
 
 ## [2.3.0] - 2026-09-09
 
+### Fixed
+- **🛡️ 容器預設命令安全加固與防死循環機制 (Docker Container Default Safety)**：
+  - 將 Dockerfile 預設 `CMD` 由 `["main"]` 切換為 `["api"]`，避免常駐容器在手動運行、更新重啟或未指定命令時誤入全量批次分析。
+  - `docker/entrypoint.sh` 入口派發腳本將空參數 `""` 安全導向 `api`（Uvicorn REST 伺服器），杜絕因批次退出配合 `restart: unless-stopped` 引發的無限重啟推播死循環。
+  - 移除 `docker-compose.yml` 廢棄的 `version: '3.8'` 屬性，消除現代 Compose 解析警告。
+
 ### Added
 - **🔮 Google Research TimesFM (Time Series Foundation Model) 策略整合**：
   - 新增 `models/timesfm_model.py`：單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論與 P10/P50/P90 分位數風險區間計算。
