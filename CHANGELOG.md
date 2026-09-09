@@ -26,6 +26,8 @@
   - 完整支援 URL 參數同步 (`?strategy=timesfm_bullish`) 與瀏覽器上一頁/下一頁返回。
 - **推播報表整合 (`notifier_dual.py`)**：
   - 於 Telegram (HTML)、Discord (Markdown) 與 Email 日報中新增 **Google TimesFM 時序大模型** 預測段落，展示 5 日目標價、潛在漲幅百分比與盈虧比 (Risk/Reward Ratio)。
+- **官方文件完整更新 (`README.md`)**：
+  - 全面更新專案說明文件：補充 TimesFM 策略架構、`--market auto` 白天/夜間智慧分流防浪費機制、Web 看板 TimesFM 篩選切換、以及 Docker Compose 本地權重快取掛載說明。
 
 ### 🔮 Google Research TimesFM 時序大模型策略整合 (Google TimesFM Integration)
 - **Zero-Shot 預訓練時序大模型與分位數風控 (`models/timesfm_model.py` & `strategies/timesfm.py`)**：
