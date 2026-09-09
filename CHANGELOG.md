@@ -13,6 +13,7 @@
   - 將 Dockerfile 預設 `CMD` 由 `["main"]` 切換為 `["api"]`，避免常駐容器在手動運行、更新重啟或未指定命令時誤入全量批次分析。
   - `docker/entrypoint.sh` 入口派發腳本將空參數 `""` 安全導向 `api`（Uvicorn REST 伺服器），杜絕因批次退出配合 `restart: unless-stopped` 引發的無限重啟推播死循環。
   - 移除 `docker-compose.yml` 廢棄的 `version: '3.8'` 屬性，消除現代 Compose 解析警告。
+  - 於 `docker-compose.yml` 掛載宿主機 Hugging Face 快取目錄（`${HOME}/.cache/huggingface:/root/.cache/huggingface`），使容器能即時共享本機 TimesFM 預訓練模型權重，免除重複下載。
 
 ### ⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)
 - **智慧時段分流 (`main.py` & `run_daily.sh`)**：

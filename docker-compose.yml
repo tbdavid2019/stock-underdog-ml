@@ -35,6 +35,8 @@ x-stock-service: &default-service
     - ./data/cache:/app/data/cache
     # 本地 DuckDB 列式時序庫持久化目錄
     - ./data/storage:/app/data/storage
+    # Hugging Face 預訓練模型快取 (供 TimesFM 等大模型直接讀取，免重複下載)
+    - ${HOME:-/home/david}/.cache/huggingface:/root/.cache/huggingface
   environment:
     - TZ=Asia/Taipei
     - PYTHONUNBUFFERED=1
