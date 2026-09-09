@@ -93,13 +93,15 @@ graph TD
   ```
 
 ### 9. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
-本系統核心定位為**「開盤前的進場買進指南（Pre-Market Buy Guide）」**，所有計算與數據抓取均嚴格在市場開盤前完成：
+本系統核心定位為**「開盤前的進場買進指南（Pre-Market Buy Guide）」**，所有計算與數據抓取均嚴格在市場開盤前完成，並透過 `--market auto` 實施智慧時段防護（白天專注台股、夜間專注美股，非手動指定全市場時杜絕資源浪費）：
 
-* **🇹🇼 台股開盤前指南 (每日 08:00 執行 / UTC 00:00)**：
+* **🇹🇼 台股開盤前指南 (每日 08:00 執行 / UTC 00:00，時段 05:00~13:30 派發)**：
   - 於台股 08:30 試撮與 09:00 開盤前完成運算與推播。
   - 自動同步前一交易日台股全市場收盤行情、三大法人盤後結算籌碼以及昨夜美股收盤連動。
-* **🇺🇸 美股開盤前指南 (每日 20:30 執行 / UTC 12:30)**：
-  - 於美股 21:30 (夏令) / 22:30 (冬令) 開盤前 1 小時產出 S&P 500 多維量化決策。
+  - 夜間時段嚴格停止台股運算，避免重複消耗 CPU 與記憶體資源。
+* **🇺🇸 美股開盤前指南 (每日 20:30 執行 / UTC 12:30，時段 13:30~05:00 派發)**：
+  - 於美股 21:30 (夏令) / 22:30 (冬令) 開盤前 1 小時產出 S&P 500 多維量化決策與 Google TimesFM 預測。
+  - 白天時段嚴格停止美股重複運算。
 * **🔧 yfinance 自動巡檢 (每日 07:30 執行 / UTC 23:30)**：
   - 於台股盤前排程前自動檢測 PyPI 最新版本並驗證 API 相容性。
 
@@ -122,7 +124,7 @@ graph TD
 ### 1. 📊 現代化量化操盤首頁 (Web Dashboard)
 啟動後直接瀏覽 `http://localhost:8088/` 或 `http://10.9.0.99:8088/`：
 * **宏觀風控看板**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態與建議曝險比例。
-* **策略即時切換**：快速瀏覽 🏆 三重共振焦點股、玄鐵 MA60/120 回調買點、LSTM 看漲/看跌榜。
+* **策略即時切換**：快速瀏覽 🏆 三重共振焦點股、玄鐵 MA60/120 回調買點、LSTM 看漲/看跌榜、🔮 TimesFM 預測 TOP 看漲榜與 🛡️ TimesFM 避險榜。
 * **個股歷史查詢**：可輸入股票代號或公司名稱（如 `2330.TW`、`NVDA`、`特斯拉`、`聯華電子`）；系統會先解析為標準代號，查無法辨識或查無資料時明確提示，不會沿用上一筆結果。
 * **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼。
 
@@ -220,9 +222,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 1. 執行開盤前多維量化分析指南
-python main.py                     # 全市場 (台灣50 + 台灣中型100 + S&P500)
+python main.py                     # 智慧判定 (預設 auto: 白天 05:00~13:30 跑台股；夜間 13:30~05:00 跑美股)
 python main.py --market tw         # 🇹🇼 台股開盤前指南 (08:00 執行，台灣50 + 台灣中型100)
 python main.py --market us         # 🇺🇸 美股開盤前指南 (20:30 執行，S&P 500)
+python main.py --market all        # 🌐 全市場手動指定 (台灣50 + 台灣中型100 + S&P 500)
 python main.py --dry-run           # 乾跑模式 (不寫入 DB 且不發送推播)
 
 # 2. 啟動 FastAPI REST 服務 (Port 8088)
@@ -266,8 +269,9 @@ docker compose up -d stock-ml-api
 docker compose up -d stock-ml-cron
 
 # 4. 手動單次執行指定市場盤前指南
-docker compose run --rm stock-ml main --market tw
-docker compose run --rm stock-ml main --market us
+docker compose run --rm stock-ml python main.py --market auto  # 依時段智慧派發台股或美股 (預設)
+docker compose run --rm stock-ml python main.py --market tw    # 🇹🇼 強制執行台股
+docker compose run --rm stock-ml python main.py --market us    # 🇺🇸 強制執行美股
 
 # 5. 容器內執行 Supabase ➔ DuckDB 資料同步
 docker compose run --rm stock-ml-sync
@@ -307,28 +311,33 @@ stock-underdog-ml/
 │   ├── fundamentals.py         # PE/PB/EV/EBITDA 基本面抓取
 │   ├── institutional.py        # TWSE/TPEX 三大法人籌碼分析器
 │   └── macro.py                # 美股宏觀風控分析器 (SPY/VIX/SOX)
+├── models/                     # 機器學習與時序大模型封裝
+│   ├── lstm.py                 # LSTM 深度學習架構與訓練/推論管線
+│   └── timesfm_model.py        # Google TimesFM 2.5 預訓練模型載入與分位數風險評估
 ├── strategies/                 # 插件式量化策略註冊中心
 │   ├── base.py                 # BaseStrategy 抽象基底類別
 │   ├── registry.py             # 策略自動發現與註冊中心
 │   ├── xuantie.py              # 玄鐵重劍均線趨勢回調策略
 │   ├── lstm.py                 # LSTM 深度學習價格預測策略
+│   ├── timesfm.py              # Google TimesFM 時序大模型預測策略 (P10/50/90 盈虧比)
 │   ├── sector_rotation.py      # 7 大板塊資金輪動策略
 │   └── institutional.py        # 三大法人連買與土洋合買策略
 ├── evaluators/                 # 綜合評價與研報引擎
-│   ├── composite_evaluator.py  # 多策略動態評分與三重共振標籤
+│   ├── composite_evaluator.py  # 多策略動態評分與四重/三重共振標籤
 │   ├── ai_narrative.py         # 3 級 Fallback LLM 操盤解讀引擎
 │   └── formatter.py            # 美化終端機與推播日報排版工具
 ├── pipeline/                   # 分層管線排程器
 │   └── orchestrator.py         # 4-Stage 量化管線執行調度器
 ├── docker/                     # 容器化腳本與排程
-│   ├── entrypoint.sh           # 多模式啟動入口
+│   ├── entrypoint.sh           # 多模式啟動入口 (預設安全導向 api)
 │   └── crontab                 # 台北時區定時排程定義
 ├── scripts/                    # 遷移與維護腳本
-│   └── export_supabase_to_duckdb.py # Supabase ➔ DuckDB 全量遷移工具
-├── test/                       # 自動化測試套件 (50+ 項單元測試)
-├── Dockerfile                  # 生產級 Python 3.12 Slim 映像
-├── docker-compose.yml          # 多服務 Docker 堆疊定義
-└── main.py                     # CLI 主程序入口
+│   ├── export_supabase_to_duckdb.py # Supabase ➔ DuckDB 全量遷移工具
+│   └── sync_twse_market.py     # TWSE / TPEX 官方 OpenAPI 全市場日 K 棒批量同步
+├── test/                       # 自動化測試套件 (104 項全量單元測試)
+├── Dockerfile                  # 生產級 Python 3.12 Slim 映像 (CMD api)
+├── docker-compose.yml          # 多服務 Docker 堆疊定義 (Hugging Face 權重快取掛載)
+└── main.py                     # CLI 主程序入口 (--market auto 智慧時段判定)
 ```
 
 ---
