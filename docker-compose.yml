@@ -18,6 +18,7 @@ x-stock-service: &default-service
     - ./core:/app/core
     - ./data:/app/data
     - ./evaluators:/app/evaluators
+    - ./models:/app/models
     - ./strategies:/app/strategies
     - ./pipeline:/app/pipeline
     - ./docker:/app/docker
