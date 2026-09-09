@@ -6,6 +6,22 @@
 
 ---
 
+## [2.3.0] - 2026-09-09
+
+### Added
+- **🔮 Google Research TimesFM (Time Series Foundation Model) 策略整合**：
+  - 新增 `models/timesfm_model.py`：單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論與 P10/P50/P90 分位數風險區間計算。
+  - 新增 `strategies/timesfm.py`：標準化繼承 `BaseStrategy`，透過 `@register_strategy("timesfm")` 掛載至策略工廠，覆寫 `evaluate_batch` 進行零延遲矩陣推論，輸出 `TimesFM看漲`、`TimesFM強`、`高盈虧比`、`TimesFM看跌` 標籤與真實盈虧比 (Risk/Reward Ratio)。
+  - 綜合評估引擎升級 (`evaluators/composite_evaluator.py`)：
+    - 新增 `🔮雙ML共振` 標籤（當 LSTM 看漲 ∩ TimesFM 看漲，形成微觀記憶與宏觀大模型雙重驗證）。
+    - 新增 `👑四重共振` 標籤（同時符合玄鐵技術買點 ∩ 法人籌碼鎖碼 ∩ LSTM 看漲 ∩ TimesFM 看漲）。
+  - DuckDB 與 Supabase 持久化：支援寫入與查詢 `TimesFM` 策略紀錄。
+  - FastAPI REST 端點與 MCP 原生工具：
+    - `GET /api/v1/predictions/timesfm/top-bullish`
+    - `GET /api/v1/predictions/timesfm/top-bearish`
+    - MCP Tool `get_timesfm_top_predictions`
+  - 新增單元測試 `test/test_timesfm_strategy.py`。
+
 ## [2.2.1] - 2026-09-01
 
 ### Changed

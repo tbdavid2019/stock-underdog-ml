@@ -6,6 +6,17 @@
 
 ---
 
+## [2.3.0] - 2026-09-09
+
+### 🔮 Google Research TimesFM 時序大模型策略整合 (Google TimesFM Integration)
+- **Zero-Shot 預訓練時序大模型與分位數風控 (`models/timesfm_model.py` & `strategies/timesfm.py`)**：
+  - 單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論。
+  - 輸出 1~5 日目標價與 10%~90% 分位數風險區間，計算真實盈虧比 (Risk/Reward Ratio)。
+  - 標準化繼承 `BaseStrategy`，透過 `@register_strategy("timesfm")` 掛載至策略工廠。
+  - 綜合評估引擎升級：新增 `🔮雙ML共振`（LSTM 看漲 ∩ TimesFM 看漲）與 `👑四重共振`（玄鐵 ∩ 法人 ∩ LSTM ∩ TimesFM）標籤。
+  - 新增 REST API 端點 `/api/v1/predictions/timesfm/top-bullish` 與 `/api/v1/predictions/timesfm/top-bearish`。
+  - 新增 MCP 工具 `get_timesfm_top_predictions`。
+
 ## [Unreleased] - 2026-09-02
 
 ### 📄 全面支援 llmstxt.org 規範 (`/llms.txt` & `/llms-full.txt`)

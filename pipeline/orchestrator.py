@@ -20,6 +20,10 @@ import strategies.xuantie
 import strategies.lstm
 import strategies.sector_rotation
 import strategies.institutional
+try:
+    import strategies.timesfm
+except Exception as e:
+    pass
 
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
 from evaluators.ai_narrative import AINarrativeEngine
@@ -117,6 +121,8 @@ class PipelineOrchestrator:
                 strat_key = "sector_rotation"
             elif "籌碼" in strat.name or strat.name == "institutional":
                 strat_key = "institutional"
+            elif "TimesFM" in strat.name or strat.name.lower() == "timesfm":
+                strat_key = "timesfm"
 
             logger.info(f"   ▶ 正在執行策略: {strat.name} ({strat.category})...")
             results = strat.evaluate_batch(contexts)
@@ -157,6 +163,7 @@ class PipelineOrchestrator:
         report_dict = {
             "xuantie_results": report.xuantie_results,
             "lstm_results": report.lstm_results,
+            "timesfm_results": getattr(report, "timesfm_results", []),
             "overlap_results": report.overlap_results,
             "macro_state": macro_state,
             "candidates_map": candidates_map,

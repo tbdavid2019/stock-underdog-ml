@@ -256,6 +256,38 @@ class DuckDBManager:
                 "tags": tags_str
             })
 
+        # 2.5 TimesFM 預測結果
+        timesfm_results = results.get("timesfm_results", [])
+        for r in timesfm_results:
+            t = r["ticker"]
+            cand = candidates_map.get(t, {})
+            inst = inst_summaries.get(t, {})
+            cand_tags = cand.get("tags")
+            default_tfm_tag = "TimesFM看漲" if float(r["potential"]) > 0 else "TimesFM看跌"
+            tags_str = " | ".join(cand_tags) if cand_tags else default_tfm_tag
+
+            all_data.append({
+                "index_name": index_name,
+                "model_name": "TimesFM",
+                "strategy_type": "TimesFM預測",
+                "ticker": t,
+                "current_price": float(r["current_price"]),
+                "predicted_price": float(r["predicted_price"]),
+                "potential": float(r["potential"]),
+                "ma5": None, "ma10": None, "ma60": None, "ma120": None, "ma250": None,
+                "pullback_type": None,
+                "pe": float(r.get("pe")) if r.get("pe") and not pd.isna(r.get("pe")) else None,
+                "pb": float(r.get("pb")) if r.get("pb") and not pd.isna(r.get("pb")) else None,
+                "forward_pe": float(r.get("forward_pe")) if r.get("forward_pe") and not pd.isna(r.get("forward_pe")) else None,
+                "ev_ebitda": float(r.get("ev_ebitda")) if r.get("ev_ebitda") and not pd.isna(r.get("ev_ebitda")) else None,
+                "period": period,
+                "timestamp": timestamp,
+                "macro_regime": macro_regime_str,
+                "trust_net_5d": inst.get("trust_net_5d"),
+                "foreign_net_5d": inst.get("foreign_net_5d"),
+                "tags": tags_str
+            })
+
         # 3. 雙重/三重符合結果
         overlap_df = results.get("overlap_results", pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
@@ -585,6 +617,70 @@ class DuckDBManager:
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'LSTM'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
+    def get_timesfm_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 TimesFM 預測漲幅最大 TOP N 標的"""
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "model_name = 'TimesFM'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
+    def get_timesfm_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 TimesFM 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "model_name = 'TimesFM'",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"

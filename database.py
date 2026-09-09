@@ -160,6 +160,32 @@ class SupabaseManager:
                 "timestamp": timestamp
             }
             all_data.append(record)
+
+        # 2.5 保存 TimesFM 預測結果
+        timesfm_results = results.get('timesfm_results', [])
+        for result in timesfm_results:
+            record = {
+                "index_name": index_name,
+                "model_name": "TimesFM",
+                "strategy_type": "TimesFM預測",
+                "ticker": result['ticker'],
+                "current_price": float(result['current_price']),
+                "predicted_price": float(result['predicted_price']),
+                "potential": float(result['potential']),
+                "ma5": None,
+                "ma10": None,
+                "ma60": None,
+                "ma120": None,
+                "ma250": None,
+                "pullback_type": None,
+                "pe": float(result.get('pe')) if result.get('pe') and not pd.isna(result.get('pe')) else None,
+                "pb": float(result.get('pb')) if result.get('pb') and not pd.isna(result.get('pb')) else None,
+                "forward_pe": float(result.get('forward_pe')) if result.get('forward_pe') and not pd.isna(result.get('forward_pe')) else None,
+                "ev_ebitda": float(result.get('ev_ebitda')) if result.get('ev_ebitda') and not pd.isna(result.get('ev_ebitda')) else None,
+                "period": period,
+                "timestamp": timestamp
+            }
+            all_data.append(record)
         
         # 3. 保存雙重符合結果
         overlap_df = results.get('overlap_results', pd.DataFrame())

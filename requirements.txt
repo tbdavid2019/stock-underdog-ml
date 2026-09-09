@@ -27,8 +27,10 @@ tqdm>=4.65.0  # Progress bar
 
 # Deep Learning Frameworks
 # ==========================================
-# PyTorch (for LSTM model)
+# PyTorch & Foundation Models
 torch>=2.0.0
+timesfm>=3.0.0
+safetensors>=0.5.0
 
 # TensorFlow/Keras (for LSTM model - optional)
 tensorflow>=2.15.0

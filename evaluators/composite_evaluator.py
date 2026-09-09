@@ -14,6 +14,7 @@ class EvaluationReport:
     ranked_stocks: List[Dict[str, Any]] = field(default_factory=list)
     xuantie_results: pd.DataFrame = field(default_factory=pd.DataFrame)
     lstm_results: List[Dict[str, Any]] = field(default_factory=list)
+    timesfm_results: List[Dict[str, Any]] = field(default_factory=list)
     overlap_results: pd.DataFrame = field(default_factory=pd.DataFrame)
     macro_state: Optional[MacroState] = None
     ai_summary: str = ""
@@ -101,6 +102,35 @@ class CompositeEvaluator:
                     })
             lstm_results_legacy.sort(key=lambda x: x["potential"], reverse=True)
 
+        # TimesFM legacy list
+        timesfm_results_legacy = []
+        if "timesfm" in strategy_outputs:
+            for r in strategy_outputs["timesfm"]:
+                if r.potential is not None:
+                    timesfm_results_legacy.append({
+                        "ticker": r.ticker,
+                        "potential": r.potential,
+                        "current_price": r.current_price,
+                        "predicted_price": r.predicted_price or r.current_price,
+                        "horizon_predicted_price": r.signals.get("horizon_predicted_price"),
+                        "risk_reward_ratio": r.signals.get("risk_reward_ratio"),
+                        "pe": r.metrics.get("pe"),
+                        "pb": r.metrics.get("pb"),
+                        "forward_pe": r.metrics.get("forward_pe"),
+                        "ev_ebitda": r.metrics.get("ev_ebitda")
+                    })
+            timesfm_results_legacy.sort(key=lambda x: x["potential"], reverse=True)
+
+        # Dynamic active weights with timesfm support
+        active_weights = dict(self.weights)
+        if "timesfm" in strategy_outputs and "timesfm" not in active_weights:
+            if "lstm" in active_weights:
+                active_weights["lstm"] = 0.20
+                active_weights["timesfm"] = 0.20
+                active_weights["xuantie"] = 0.30
+            else:
+                active_weights["timesfm"] = 0.35
+
         # 3. Evaluate each stock across all strategies
         overlap_candidates = []
         ranked_stocks = []
@@ -139,6 +169,7 @@ class CompositeEvaluator:
             # Check specific strategies
             xuantie_res = strats.get("xuantie")
             lstm_res = strats.get("lstm")
+            timesfm_res = strats.get("timesfm")
             inst_res = strats.get("institutional")
             sector_res = strats.get("sector_rotation") or strats.get("sector")
 
@@ -146,6 +177,15 @@ class CompositeEvaluator:
                 combined_tags.append("玄鐵買點")
             if lstm_res and lstm_res.is_hit:
                 combined_tags.append("LSTM看漲")
+            if timesfm_res and timesfm_res.is_hit:
+                combined_tags.append("TimesFM看漲")
+                if timesfm_res.signals.get("risk_reward_ratio", 0) >= 2.0:
+                    combined_tags.append("高盈虧比")
+
+            # Dual ML Resonance (雙ML共振: LSTM ∩ TimesFM)
+            if lstm_res and lstm_res.is_hit and timesfm_res and timesfm_res.is_hit:
+                combined_tags.append("🔮雙ML共振")
+
             if inst_res:
                 meta = inst_res.metadata or {}
                 if meta.get("is_sync_buy"):
@@ -159,18 +199,26 @@ class CompositeEvaluator:
                 if sec_meta.get("is_top_sector"):
                     combined_tags.append(f"主流板塊({sec_meta.get('sector', '')})")
 
-            # Triple Resonance (三重共振): 玄鐵 + LSTM + 投信/法人
+            # Quadruple Resonance (四重共振): 玄鐵 + 法人 + LSTM + TimesFM
+            is_quad_resonance = (
+                xuantie_res and xuantie_res.is_hit and
+                inst_res and inst_res.is_hit and
+                lstm_res and lstm_res.is_hit and
+                timesfm_res and timesfm_res.is_hit
+            )
+
+            # Triple Resonance (三重共振): 玄鐵 + 法人 + (LSTM 或 TimesFM)
             is_triple_resonance = (
                 xuantie_res and xuantie_res.is_hit and
-                lstm_res and lstm_res.is_hit and
-                inst_res and inst_res.is_hit
+                inst_res and inst_res.is_hit and
+                ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))
             )
 
             # Calculate Weighted Composite Score (0~100)
             score_total = 0.0
             weight_total = 0.0
 
-            for s_name, s_weight in self.weights.items():
+            for s_name, s_weight in active_weights.items():
                 if s_name == "fundamental":
                     score_total += fund_score * s_weight * 5.0
                     weight_total += s_weight
@@ -189,9 +237,11 @@ class CompositeEvaluator:
 
             # Deduplicate tags
             final_tags = list(dict.fromkeys(combined_tags))
-            if is_triple_resonance:
+            if is_quad_resonance:
+                final_tags.insert(0, "👑四重共振")
+            elif is_triple_resonance:
                 final_tags.insert(0, "🏆三重共振")
-            elif hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and lstm_res and lstm_res.is_hit):
+            elif hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))):
                 final_tags.insert(0, "雙重符合" if hit_count == 2 else f"{hit_count}重符合")
 
             entry = {
@@ -210,13 +260,17 @@ class CompositeEvaluator:
             if lstm_res:
                 entry["lstm_potential"] = lstm_res.potential
                 entry["predicted_price"] = lstm_res.predicted_price
+            if timesfm_res:
+                entry["timesfm_potential"] = timesfm_res.potential
+                entry["timesfm_predicted_price"] = timesfm_res.predicted_price
+                entry["risk_reward_ratio"] = timesfm_res.signals.get("risk_reward_ratio")
             if inst_res:
                 entry["institutional"] = inst_res.metadata
 
             ranked_stocks.append(entry)
 
-            # Check overlap threshold (2 or more hits or Triple Resonance)
-            if is_triple_resonance or hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and lstm_res and lstm_res.is_hit):
+            # Check overlap threshold (2 or more hits, Quadruple, or Triple Resonance)
+            if is_quad_resonance or is_triple_resonance or hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))):
                 overlap_candidates.append(entry)
 
         # Sort ranked stocks and overlaps
@@ -229,8 +283,11 @@ class CompositeEvaluator:
             overlap_legacy_rows.append({
                 "ticker": o["ticker"],
                 "lstm_potential": o.get("lstm_potential", 0.0),
+                "timesfm_potential": o.get("timesfm_potential"),
                 "current_price": o["current_price"],
                 "predicted_price": o.get("predicted_price", o["current_price"]),
+                "timesfm_predicted_price": o.get("timesfm_predicted_price"),
+                "risk_reward_ratio": o.get("risk_reward_ratio"),
                 "pullback_type": o.get("pullback_type", ""),
                 "ma60": o.get("ma60"),
                 "pe": o["fundamentals"].get("pe"),
@@ -247,6 +304,7 @@ class CompositeEvaluator:
             ranked_stocks=ranked_stocks,
             xuantie_results=xuantie_df,
             lstm_results=lstm_results_legacy,
+            timesfm_results=timesfm_results_legacy,
             overlap_results=overlap_df,
             macro_state=macro_state
         )

@@ -23,14 +23,15 @@ graph TD
     subgraph S2 [Stage 2: 模組化多策略矩陣]
         Pool --> ST1[🗡️ 玄鐵重劍: MA60/120 趨勢回調買點]
         Pool --> ST2[🤖 LSTM: 深度學習次日潛力預測]
-        Pool --> ST3[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
-        Pool --> ST4[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
+        Pool --> ST3[🔮 TimesFM: Google 時序大模型 Zero-Shot]
+        Pool --> ST4[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
+        Pool --> ST5[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
     end
 
     subgraph S3 [Stage 3: 綜合評估與 AI 研報]
-        ST1 & ST2 & ST3 & ST4 --> Composite[⭐ 多維綜合評估引擎]
+        ST1 & ST2 & ST3 & ST4 & ST5 --> Composite[⭐ 多維綜合評估引擎]
         Exposure -.->|宏觀折減| Composite
-        Composite --> Overlap[🏆 三重共振 / 雙重符合焦點標的]
+        Composite --> Overlap[🏆 三重/👑四重共振 / 雙重符合焦點標的]
         Composite --> LLM[🧠 3-Tier Fallback LLM 操盤解讀<br>Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板]
     end
 
@@ -61,24 +62,30 @@ graph TD
 ### 3. 🤖 LSTM 深度學習預測 (Deep Learning Forecaster)
 * 針對目標股票最近 60 個交易日量價特徵進行深度學習推論，輸出次日預測目標價與潛在漲跌幅潛力（`Potential %`）。
 
-### 4. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
+### 4. 🔮 Google Research TimesFM 時序大模型 (Time Series Foundation Model)
+* 採用 Google 預訓練之 **TimesFM 2.5** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
+* 輸出 1~5 日預測目標價軌跡，並同步計算 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**。
+* 藉由分位數動態評估 **真實盈虧比 (Risk/Reward Ratio)**，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
+* 與 LSTM 形成 **「雙 ML 交叉驗證」**（微觀個股量價記憶 ∩ 宏觀預訓練波形共振），並支援晉升為 **「👑 四重共振極選」**。
+
+### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
 * 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
 * 計算各板塊 10D (40%) + 15D (30%) + 20D (30%) 加權動量資金流，挑選當日前 3 大主流強勢板塊。
 
-### 5. 📈 台灣三大法人籌碼分析 (TWSE Institutional Flow)
+### 6. 📈 台灣三大法人籌碼分析 (TWSE Institutional Flow)
 * 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
 * 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
 
-### 6. ⭐ 🏆 三重共振極選評估 (Triple Resonance Evaluation)
-* 跨維度篩選同時符合 **「技術買點 ∩ LSTM 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
-* 自動貼上 `🏆三重共振`、`土洋合買`、`投信連買`、`主流板塊`、`低PE` 等量化標籤。
+### 7. ⭐ 🏆 三重共振 / 👑 四重共振極選評估 (Multi-Strategy Resonance)
+* 跨維度篩選同時符合 **「技術買點 ∩ ML 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
+* 自動貼上 `👑四重共振`、`🏆三重共振`、`🔮雙ML共振`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
 
-### 7. 🧠 3 級 Fallback AI 研報引擎 (AI Narrative Generator)
+### 8. 🧠 3 級 Fallback AI 研報引擎 (AI Narrative Generator)
 * 支援 **Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 純程式規則模板** 4 級容錯。
 * 採用標準 OpenAI 相容協定，支援 Google Gemini 2.5 Flash、DeepSeek-V3、OpenAI GPT-4o-mini 或自建 Gateway。
 * 無 API Key 時自動平滑降級為確定性規則模板，確保推播與日報 100% 不中斷。
 
-### 8. 🦆 本地 DuckDB 列式時序庫與雙備份架構
+### 9. 🦆 本地 DuckDB 列式時序庫與雙備份架構
 * 本地採用高性能嵌入式列式資料庫 **DuckDB**（`data/storage/stock_quant.duckdb`），已納入 44,000+ 筆歷史時序記錄（壓縮後僅 4.1 MB）。
 * 支援零延遲 Pandas 查詢、一鍵導出 `.parquet` 冷備份，並提供一鍵資料庫全量同步工具：
   ```bash
@@ -152,6 +159,8 @@ graph TD
 | `/api/v1/predictions/xuantie` | `GET` | 篩選 **玄鐵重劍技術買點**（回測 MA60 季線 / MA120 半年線） |
 | `/api/v1/predictions/lstm/top-bullish` | `GET` | 查詢 **LSTM 預測漲幅 TOP N** 短線看漲榜 |
 | `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
+| `/api/v1/predictions/timesfm/top-bullish` | `GET` | 查詢 **Google TimesFM 預測漲幅 TOP N** 看漲榜與盈虧比 |
+| `/api/v1/predictions/timesfm/top-bearish` | `GET` | 查詢 **Google TimesFM 預測跌幅 TOP N** 避險/破底防禦榜 |
 | `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
 | `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
 | `/api/v1/macro/latest` | `GET` | 即時取得台美股大盤宏觀風控狀態、建議曝險、FedWatch 降息機率與總經催化劑 |

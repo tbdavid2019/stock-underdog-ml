@@ -59,11 +59,20 @@ class PipelineConfig:
     CACHE_MAX_AGE_HOURS: int = 12
     INDEX_CACHE_MAX_AGE_DAYS: int = 90
     DEFAULT_DEVICE: str = os.getenv("DEVICE", "auto")
-    ENABLED_STRATEGIES: List[str] = ["xuantie", "lstm"]
+    ENABLED_STRATEGIES: List[str] = [
+        s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,lstm,timesfm").split(",") if s.strip()
+    ]
     STRATEGY_WEIGHTS: Dict[str, float] = {
-        "xuantie": 0.4,
-        "lstm": 0.4,
+        "xuantie": 0.35,
+        "lstm": 0.25,
+        "timesfm": 0.25,
+        "institutional": 0.15,
     }
+    # TimesFM Model Configurations
+    TIMESFM_MODEL_ID: str = os.getenv("TIMESFM_MODEL_ID", "google/timesfm-2.5-200m-pytorch")
+    TIMESFM_HORIZON: int = int(os.getenv("TIMESFM_HORIZON", "5"))
+    TIMESFM_CONTEXT_LEN: int = int(os.getenv("TIMESFM_CONTEXT_LEN", "128"))
+    TIMESFM_MIN_POTENTIAL: float = float(os.getenv("TIMESFM_MIN_POTENTIAL", "1.0"))
 
 
 class LLMConfig:

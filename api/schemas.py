@@ -33,6 +33,7 @@ class StockPredictionItem(BaseModel):
     macro_regime: Optional[str] = Field(None, description="當時美股宏觀市場環境")
     trust_net_5d: Optional[int] = Field(None, description="投信 5 日累計買賣超 (張)")
     foreign_net_5d: Optional[int] = Field(None, description="外資 5 日累計買賣超 (張)")
+    risk_reward_ratio: Optional[float] = Field(None, description="盈虧比 (TimesFM 90%分位數上行 / 10%下行)")
     tags: Optional[str] = Field(None, description="綜合標籤 (如 🏆三重共振 | 土洋合買)")
 
 
