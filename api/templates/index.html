@@ -1704,8 +1704,10 @@ for p in picks:
                     strategyOptions: [
                         { id: 'resonance', label: '🏆 三重共振焦點', icon: '✨' },
                         { id: 'xuantie', label: '⚔️ 玄鐵均線波段', icon: '🗡️' },
+                        { id: 'timesfm_bullish', label: '🔮 TimesFM 預測 TOP', icon: '💎' },
                         { id: 'bullish', label: '📈 LSTM 看漲 TOP', icon: '🚀' },
                         { id: 'bearish', label: '📉 LSTM 看跌避險', icon: '🐻' },
+                        { id: 'timesfm_bearish', label: '🛡️ TimesFM 避險', icon: '📉' },
                         { id: 'latest', label: '📋 最新全量批次', icon: '📦' }
                     ],
                     macro: {},
@@ -1908,10 +1910,14 @@ for p in picks:
                             url = '/api/v1/predictions/resonance?limit=60';
                         } else if (this.selectedStrategy === 'xuantie') {
                             url = '/api/v1/predictions/xuantie?limit=60';
+                        } else if (this.selectedStrategy === 'timesfm_bullish') {
+                            url = '/api/v1/predictions/timesfm/top-bullish?limit=60';
                         } else if (this.selectedStrategy === 'bullish') {
                             url = '/api/v1/predictions/lstm/top-bullish?limit=60';
                         } else if (this.selectedStrategy === 'bearish') {
                             url = '/api/v1/predictions/lstm/top-bearish?limit=60';
+                        } else if (this.selectedStrategy === 'timesfm_bearish') {
+                            url = '/api/v1/predictions/timesfm/top-bearish?limit=60';
                         }
 
                         if (this.selectedIndex) {
@@ -2366,7 +2372,7 @@ for p in picks:
                             this.activeTab = tab;
                         }
                         const strat = params.get('strategy');
-                        if (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'latest'].includes(strat)) {
+                        if (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) {
                             this.selectedStrategy = strat;
                         }
                         const idx = params.get('index');

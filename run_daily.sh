@@ -48,8 +48,8 @@ else
     ENV_NAME="system default"
 fi
 
-# 解析目標市場參數 (預設 all)
-RAW_ARG="${1:-all}"
+# 解析目標市場參數 (預設 auto: 白天台股、晚上美股)
+RAW_ARG="${1:-auto}"
 case "$RAW_ARG" in
     tw|--tw|--market=tw)
         TARGET_MARKET="tw"
@@ -59,9 +59,22 @@ case "$RAW_ARG" in
         TARGET_MARKET="us"
         MARKET_DESC="🇺🇸 美股開盤前指南 (盤前 20:30)"
         ;;
-    *)
+    all|--all|--market=all)
         TARGET_MARKET="all"
-        MARKET_DESC="🌐 全市場開盤前指南"
+        MARKET_DESC="🌐 全市場開盤前指南 (手動指定)"
+        ;;
+    auto|*)
+        # 依台北時間智慧判定時段 (05:00 ~ 13:30 為台股時段，其餘為美股時段)
+        TAIPEI_HOUR=$(TZ="Asia/Taipei" date +%-H 2>/dev/null || date +%-H)
+        TAIPEI_MIN=$(TZ="Asia/Taipei" date +%-M 2>/dev/null || date +%-M)
+        TOTAL_MIN=$((TAIPEI_HOUR * 60 + TAIPEI_MIN))
+        if [ "$TOTAL_MIN" -ge 300 ] && [ "$TOTAL_MIN" -lt 810 ]; then
+            TARGET_MARKET="tw"
+            MARKET_DESC="🇹🇼 台股開盤前指南 (白天智慧派發)"
+        else
+            TARGET_MARKET="us"
+            MARKET_DESC="🇺🇸 美股開盤前指南 (夜間智慧派發)"
+        fi
         ;;
 esac
 

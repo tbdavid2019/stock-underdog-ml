@@ -7,6 +7,32 @@ from logger import logger
 from pipeline.orchestrator import PipelineOrchestrator
 
 
+def resolve_market(market_arg: str) -> str:
+    """
+    智慧解析目標市場:
+    若指定為 auto (預設):
+      - 依據當前 Asia/Taipei 台北時間判定:
+      - 05:00 ~ 13:30 -> tw (台股開盤前 08:00 與盤中)
+      - 13:30 ~ 05:00 -> us (美股開盤前 20:30 與美股時段)
+      - 嚴格落實「白天跑台股、晚上跑美股」，杜絕夜間誤跑台股浪費運算資源
+    """
+    if market_arg.lower() != "auto":
+        return market_arg.lower()
+
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo("Asia/Taipei")
+        now_taipei = datetime.datetime.now(tz)
+    except Exception:
+        now_taipei = datetime.datetime.now()
+
+    total_minutes = now_taipei.hour * 60 + now_taipei.minute
+    if 300 <= total_minutes < 810:
+        return "tw"
+    else:
+        return "us"
+
+
 def parse_args():
     """解析命令列參數"""
     parser = argparse.ArgumentParser(
@@ -14,9 +40,9 @@ def parse_args():
     )
     parser.add_argument(
         "--market", "-m",
-        choices=["all", "tw", "us"],
-        default="all",
-        help="目標市場: tw (台股盤前 08:00), us (美股盤前 20:30), all (全市場，預設)"
+        choices=["auto", "tw", "us", "all"],
+        default="auto",
+        help="目標市場: auto (依台北時間智慧判定: 白天台股/晚上美股，預設), tw (台股盤前 08:00), us (美股盤前 20:30), all (全市場，僅限手動指定)"
     )
     parser.add_argument(
         "--index", "-i",
@@ -56,7 +82,9 @@ def main():
         logger.info("=" * 70)
         logger.info("🚀 啟動股票多策略量化分析系統 (Pre-Market Trading Guide)...")
         logger.info(f"⏰ 執行時間: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        target_display = ", ".join(args.index) if args.index else args.market.upper()
+        target_market = resolve_market(args.market)
+        market_label = f"{args.market.upper()} (自動解析: {target_market.upper()})" if args.market.lower() == "auto" else args.market.upper()
+        target_display = ", ".join(args.index) if args.index else market_label
         logger.info(f"🎯 目標市場/指數: {target_display}")
         logger.info(f"💻 運算設備: {device_info['name']} ({device_info['device']})")
         logger.info(f"📋 啟用策略: {', '.join(config.pipeline.ENABLED_STRATEGIES)}")
@@ -68,12 +96,12 @@ def main():
         # 初始化兩階段管線排程器
         orchestrator = PipelineOrchestrator()
 
-        # 執行目標指數分析
+        # 執行目標指數分析 (嚴格依據解析後的目標市場執行)
         orchestrator.run_all_indices(
             period=args.period,
             persist_db=persist_db,
             send_notify=send_notify,
-            market=args.market,
+            market=target_market,
             index_names=args.index
         )
 

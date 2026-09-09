@@ -14,6 +14,18 @@
   - `docker/entrypoint.sh` 入口派發腳本將空參數 `""` 安全導向 `api`（Uvicorn REST 伺服器），杜絕因批次退出配合 `restart: unless-stopped` 引發的無限重啟推播死循環。
   - 移除 `docker-compose.yml` 廢棄的 `version: '3.8'` 屬性，消除現代 Compose 解析警告。
 
+### ⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)
+- **智慧時段分流 (`main.py` & `run_daily.sh`)**：
+  - `main.py` 與 `run_daily.sh` 預設市場全面改為 `--market auto`：依據台北時間自動切換（白天 05:00~13:30 專注台股盤前 08:00；夜間 13:30~05:00 專注美股盤前 20:30），非指定全市場時絕不在夜間執行台股運算，徹底避免浪費 CPU 與伺服器資源。
+  - 修復 `test/test_config.py` 單元測試權重斷言（`xuantie: 0.35`, `timesfm: 0.25`），打通 GitHub Actions CI/CD 自動構建最新 Multi-Arch Docker 映像檔。
+
+### 📊 完整打通 TimesFM 前端看板與多管道通知 (TimesFM End-to-End Delivery)
+- **前端 Web 看板整合 (`api/templates/index.html`)**：
+  - 頂部策略切換選單新增「🔮 TimesFM 預測 TOP」與「🛡️ TimesFM 避險」按鈕，即時串接 `/api/v1/predictions/timesfm/top-bullish` 與 `/top-bearish` 端點。
+  - 完整支援 URL 參數同步 (`?strategy=timesfm_bullish`) 與瀏覽器上一頁/下一頁返回。
+- **推播報表整合 (`notifier_dual.py`)**：
+  - 於 Telegram (HTML)、Discord (Markdown) 與 Email 日報中新增 **Google TimesFM 時序大模型** 預測段落，展示 5 日目標價、潛在漲幅百分比與盈虧比 (Risk/Reward Ratio)。
+
 ### 🔮 Google Research TimesFM 時序大模型策略整合 (Google TimesFM Integration)
 - **Zero-Shot 預訓練時序大模型與分位數風控 (`models/timesfm_model.py` & `strategies/timesfm.py`)**：
   - 單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論。

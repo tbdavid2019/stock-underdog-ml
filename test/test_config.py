@@ -16,7 +16,9 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.pipeline.DEFAULT_PERIOD, "6mo")
         self.assertIn("xuantie", config.pipeline.ENABLED_STRATEGIES)
         self.assertIn("lstm", config.pipeline.ENABLED_STRATEGIES)
-        self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["xuantie"], 0.4)
+        self.assertIn("timesfm", config.pipeline.ENABLED_STRATEGIES)
+        self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["xuantie"], 0.35)
+        self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["timesfm"], 0.25)
 
     def test_legacy_import_compatibility(self):
         import config as legacy_config

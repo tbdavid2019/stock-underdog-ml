@@ -13,6 +13,12 @@
   - 將 Dockerfile 預設 `CMD` 由 `["main"]` 切換為 `["api"]`，避免常駐容器在手動運行、更新重啟或未指定命令時誤入全量批次分析。
   - `docker/entrypoint.sh` 入口派發腳本將空參數 `""` 安全導向 `api`（Uvicorn REST 伺服器），杜絕因批次退出配合 `restart: unless-stopped` 引發的無限重啟推播死循環。
   - 移除 `docker-compose.yml` 廢棄的 `version: '3.8'` 屬性，消除現代 Compose 解析警告。
+- **⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)**：
+  - `main.py` 與 `run_daily.sh` 預設市場全面改為 `--market auto`：依據台北時間自動切換（白天 05:00~13:30 專注台股盤前 08:00；夜間 13:30~05:00 專注美股盤前 20:30），非指定全市場時絕不在夜間執行台股運算，徹底避免浪費 CPU 與伺服器資源。
+  - 修復 `test/test_config.py` 單元測試權重斷言（`xuantie: 0.35`, `timesfm: 0.25`），打通 GitHub Actions CI/CD 自動構建最新 Multi-Arch Docker 映像檔。
+- **📊 完整打通 TimesFM 前端看板與多管道通知 (TimesFM End-to-End Delivery)**：
+  - 前端 Web 看板 (`api/templates/index.html`)：策略選單新增「🔮 TimesFM 預測 TOP」與「🛡️ TimesFM 避險」按鈕，即時串接 `/api/v1/predictions/timesfm/top-bullish` 與 `/top-bearish`。
+  - 推播報表 (`notifier_dual.py`)：Telegram、Discord、Email 日報新增 TimesFM 預測段落（5 日目標價、預期潛力 %、盈虧比）。
 
 ### Added
 - **🔮 Google Research TimesFM (Time Series Foundation Model) 策略整合**：

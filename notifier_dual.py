@@ -33,6 +33,7 @@ def format_dual_strategy_message(
     """
     xuantie_df = results.get('xuantie_results', pd.DataFrame())
     lstm_results = results.get('lstm_results', [])
+    timesfm_results = results.get('timesfm_results', [])
     overlap_df = results.get('overlap_results', pd.DataFrame())
     macro = macro_state or results.get('macro_state')
     summary_text = ai_summary or results.get('ai_summary', '')
@@ -105,6 +106,20 @@ def format_dual_strategy_message(
             ticker_label = _format_ticker_cell(result['ticker'], lookup, label_width)
             telegram_msg += f"{ticker_label} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
         telegram_msg += "</pre>\n"
+
+    # TimesFM 預測
+    if timesfm_results:
+        telegram_msg += f"\n<b>🔮 時序大模型 (TimesFM)</b>\n"
+        telegram_msg += f"預測完成: {len(timesfm_results)} 支\n\n"
+        telegram_msg += "<b>📈 TimesFM 看漲 TOP 5</b>\n"
+        telegram_msg += "<pre>\n"
+        telegram_msg += f"{'代碼/名稱':<{label_width}} {'漲幅':>7} {'盈虧比':>6} {'5日目標':>8}\n"
+        for result in timesfm_results[:5]:
+            rr_str = f"{result.get('risk_reward_ratio', 0):.1f}x" if result.get('risk_reward_ratio') else "N/A"
+            h_str = f"{result.get('horizon_predicted_price', 0):.2f}" if result.get('horizon_predicted_price') else "N/A"
+            ticker_label = _format_ticker_cell(result['ticker'], lookup, label_width)
+            telegram_msg += f"{ticker_label} {result['potential']:>+6.1f}% {rr_str:>6} {h_str:>8}\n"
+        telegram_msg += "</pre>\n"
     
     # ===== Discord (Markdown) =====
     discord_msg = f"**🚀 多維量化投資日報**\n"
@@ -158,6 +173,19 @@ def format_dual_strategy_message(
             ev_str = f"{result.get('ev_ebitda', 0):.1f}" if result.get('ev_ebitda') else "N/A"
             ticker_label = _format_ticker_cell(result['ticker'], lookup, label_width)
             discord_msg += f"{ticker_label} {result['potential']:>+7.2f}% {pe_str:>5} {pb_str:>5} {ev_str:>5}\n"
+        discord_msg += "```\n"
+
+    # TimesFM 預測
+    if timesfm_results:
+        discord_msg += f"\n**🔮 時序大模型 (TimesFM)** - 預測: {len(timesfm_results)} 支\n"
+        discord_msg += "**📈 TimesFM 看漲 TOP 5**\n"
+        discord_msg += "```\n"
+        discord_msg += f"{'代碼/名稱':<{label_width}} {'漲幅':>7} {'盈虧比':>6} {'5日目標':>8}\n"
+        for result in timesfm_results[:5]:
+            rr_str = f"{result.get('risk_reward_ratio', 0):.1f}x" if result.get('risk_reward_ratio') else "N/A"
+            h_str = f"{result.get('horizon_predicted_price', 0):.2f}" if result.get('horizon_predicted_price') else "N/A"
+            ticker_label = _format_ticker_cell(result['ticker'], lookup, label_width)
+            discord_msg += f"{ticker_label} {result['potential']:>+6.1f}% {rr_str:>6} {h_str:>8}\n"
         discord_msg += "```\n"
     
     # ===== Email (Plain Text) =====
@@ -213,6 +241,21 @@ def format_dual_strategy_message(
             ev_str = f"{result.get('ev_ebitda', 0):.2f}" if result.get('ev_ebitda') else "N/A"
             ticker_label = _format_ticker_cell(result['ticker'], lookup, 18)
             email_body += f"{ticker_label} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {result['predicted_price']:>10.2f} {pe_str:>8} {pb_str:>8} {ev_str:>8}\n"
+        email_body += "\n"
+
+    # TimesFM 預測
+    if timesfm_results:
+        email_body += f"🔮 時序大模型 (TimesFM) - 預測完成: {len(timesfm_results)} 支\n\n"
+        email_body += "📈 TimesFM 看漲 TOP 10 (含 5 日目標價與盈虧比)\n\n"
+        email_body += f"{'代碼/名稱':<18} {'預測漲幅':>10} {'現價':>10} {'5日目標':>10} {'盈虧比':>8} {'PE':>8} {'PB':>8}\n"
+        email_body += "-" * 75 + "\n"
+        for result in timesfm_results[:10]:
+            pe_str = f"{result.get('pe', 0):.2f}" if result.get('pe') else "N/A"
+            pb_str = f"{result.get('pb', 0):.2f}" if result.get('pb') else "N/A"
+            rr_str = f"{result.get('risk_reward_ratio', 0):.2f}x" if result.get('risk_reward_ratio') else "N/A"
+            h_str = f"{result.get('horizon_predicted_price', 0):.2f}" if result.get('horizon_predicted_price') else "N/A"
+            ticker_label = _format_ticker_cell(result['ticker'], lookup, 18)
+            email_body += f"{ticker_label} {result['potential']:>+9.2f}% {result['current_price']:>10.2f} {h_str:>10} {rr_str:>8} {pe_str:>8} {pb_str:>8}\n"
         email_body += "\n"
     
     return {
