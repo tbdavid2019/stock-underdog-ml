@@ -17,7 +17,7 @@
 ### ⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)
 - **智慧時段分流 (`main.py` & `run_daily.sh`)**：
   - `main.py` 與 `run_daily.sh` 預設市場全面改為 `--market auto`：依據台北時間自動切換（白天 05:00~13:30 專注台股盤前 08:00；夜間 13:30~05:00 專注美股盤前 20:30），非指定全市場時絕不在夜間執行台股運算，徹底避免浪費 CPU 與伺服器資源。
-  - 修復 `test/test_config.py` 單元測試權重斷言（`xuantie: 0.35`, `timesfm: 0.25`），打通 GitHub Actions CI/CD 自動構建最新 Multi-Arch Docker 映像檔。
+  - 修復 `test/test_config.py` 單元測試權重斷言與 `test/test_cli_market.py` 預設參數斷言（`args.market == "auto"`），打通 GitHub Actions CI/CD 自動構建最新 Multi-Arch Docker 映像檔。
 
 ### 📊 完整打通 TimesFM 前端看板與多管道通知 (TimesFM End-to-End Delivery)
 - **前端 Web 看板整合 (`api/templates/index.html`)**：

@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from main import parse_args
+from main import parse_args, resolve_market
 from pipeline.orchestrator import PipelineOrchestrator
 
 
@@ -10,11 +10,21 @@ class TestCLIMarketFiltering(unittest.TestCase):
     def test_parse_args_default(self):
         with patch("sys.argv", ["main.py"]):
             args = parse_args()
-            self.assertEqual(args.market, "all")
+            self.assertEqual(args.market, "auto")
             self.assertIsNone(args.index)
             self.assertFalse(args.no_db)
             self.assertFalse(args.no_notify)
             self.assertFalse(args.dry_run)
+
+    def test_resolve_market_explicit(self):
+        self.assertEqual(resolve_market("tw"), "tw")
+        self.assertEqual(resolve_market("us"), "us")
+        self.assertEqual(resolve_market("all"), "all")
+
+    def test_resolve_market_auto(self):
+        # Auto returns either tw or us based on time
+        market = resolve_market("auto")
+        self.assertIn(market, ["tw", "us"])
 
     def test_parse_args_tw_market(self):
         with patch("sys.argv", ["main.py", "--market", "tw", "--dry-run"]):
