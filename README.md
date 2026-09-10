@@ -116,6 +116,25 @@ graph TD
 | **`macro_regimes`**<br>(DuckDB) | 全球宏觀指數 | • S&P 500 (`SPY`)<br>• VIX 恐慌指數 (`^VIX`)<br>• 費城半導體 (`^SOX`)<br>• MA60 季線水位與建議曝險 | 判定全球系統性風險，自動啟動科技股倉位上限風控 |
 | **`data/cache/`**<br>(Parquet / Pickle) | 標的成分股序列 | • 台灣50 (`TW0050`)<br>• 台灣中型100 (`TW0051`)<br>• S&P 500 (`SP500`)<br>完整 6 個月 OHLCV 日 K 線 | 本地零延遲時序快取，加速特徵工程與策略回測 |
 
+**🌍 全球證券清冊與最後成功快照：**
+
+清冊與日 K 分離保存。`market_universe` 是跨市場主檔，支援 `TW`、`US`、`HK` 及未來新增的 `JP`、`CN`、`GB`、`EU` 等市場；每個官方來源使用獨立 provider、獨立 cache 與獨立同步狀態。
+
+| 官方來源 | Provider / Cache | 標準化內容 |
+| :--- | :--- | :--- |
+| TWSE + TPEx | `TwseTpexProvider` / `cache/universe/TW.json` | 上市、上櫃代號、名稱、交易所、Yahoo 標準代號；成功時同步 `tw_daily_bars` |
+| NASDAQ / NYSE / AMEX / ARCA / BATS / IEX | `NasdaqTraderProvider` / `cache/universe/US-NASDAQ-TRADER.json` | NASDAQ Trader `nasdaqlisted.txt`、`otherlisted.txt`，保留交易所、Market Category、Financial Status、Round Lot |
+| HKEX | `HkexProvider` / `cache/universe/HK-HKEX.json` | 股票代號、官方提供的名稱、ISIN、Board Lot、證券類別 |
+| JPX / TSE | `JpxProvider` / `cache/universe/JP-JPX.json` | 4 位代號、英文名稱、Prime/Standard/Growth/ETF 等產品分類 |
+| SSE | `SseProvider` / `cache/universe/CN-SSE.json` | A 股、B 股、科創板代號、中文/英文名稱、上市板別 |
+| SZSE | `SzseProvider` / `cache/universe/CN-SZSE.json` | A 股、B 股代號、中文/英文名稱、主板/創業板分類 |
+| Euronext | `EuronextProvider` / `cache/universe/EU-EURONEXT.json` | Euronext 各交易地點 MIC、代號、名稱、ISIN |
+| LSE | `LseProvider` / `cache/universe/GB-LSE.json` | SETS、SETSqx、EQS 官方證券清單、Mnemonic、ISIN、證券類別 |
+
+每次全球同步會依序更新上述七個非台灣官方來源；TWSE/TPEx 則由台股同步入口一起更新。每個來源只有在資料完整、欄位有效且筆數通過檢查後才會替換自己的 cache。上游逾時、空資料、格式錯誤或單一來源失敗時，系統只對該來源保留最後成功快照，API 以 `stale=true`、`snapshot_date`、`cache_age_days` 與 `error` 明確標示，不把舊資料偽裝成最新資料。查詢端點：`GET /api/v1/market/universe?source_id=TW`。
+
+官方來源參考：[Nasdaq Trader Symbol Directory](https://www.nasdaqtrader.com/Trader.aspx?id=SymbolDirDefs)、[HKEX Securities Lists](https://www.hkex.com.hk/Services/Trading/Securities/Securities-Lists?sc_lang=en)、[JPX TSE-listed Issues](https://www.jpx.co.jp/english/markets/statistics-equities/misc/01.html)、[Euronext Stocks Directory](https://live.euronext.com/en/products/equities/list)、[LSE UK and European Securities](https://www.londonstockexchange.com/equities-trading/asset-classes/shares-trading/uk-and-european-securities)。
+
 ---
 
 ## 🌐 互動式操盤首頁、FastAPI REST 與 MCP 服務
@@ -197,6 +216,7 @@ graph TD
 | `/api/v1/macro/investing/commodities` | `GET` | 關鍵大宗商品（黃金、銅博士、WTI 原油）即時行情與週期漲跌 |
 | `/api/v1/macro/investing/economic-calendar` | `GET` | 全球重大總經行事曆（CPI、非農 NFP 等） |
 | `/api/v1/market/institutional/top` | `GET` | 三大法人買賣超焦點排行 |
+| `/api/v1/market/universe` | `GET` | 全球證券清冊、來源 snapshot 與 stale/cache freshness 狀態 |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/market/company-profile` | `GET` | 2MD 個股繁體中文營運簡介與新聞 |
 | `/api/v1/market/company-profiles/batch` | `POST` | 並發非同步批次預載多支股票之公司營運摘要 |

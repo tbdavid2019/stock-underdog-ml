@@ -113,16 +113,27 @@ else
     log "🐍 使用本機 Python 環境執行 ($PYTHON_EXEC)..."
 fi
 
-# Step 0: 執行台股全市場日 K 棒官方 OpenAPI 批量同步至 DuckDB
+# Step 0: 執行官方全球證券清冊與台股全市場日 K 棒同步至 DuckDB
 log ""
 if [ "$TARGET_MARKET" = "us" ]; then
-    log "[0/3] ℹ️ 目標為美股市場，略過台股 OpenAPI 同步"
+    log "[0/3] 同步全球官方清冊 (NASDAQ/NYSE/AMEX/ARCA/BATS/IEX、HKEX、JPX、SSE、SZSE、Euronext、LSE)..."
+    if [ "$RUNNER" = "docker" ]; then
+        docker compose run --rm stock-ml python scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"
+    else
+        $PYTHON_EXEC scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"
+    fi
 else
-    log "[0/3] 執行台股全市場官方 OpenAPI 批量同步至 DuckDB (TWSE & TPEX)..."
+    log "[0/3] 執行台股全市場官方清冊與日 K 同步 (TWSE & TPEX)..."
     if [ "$RUNNER" = "docker" ]; then
         docker compose run --rm stock-ml python scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
     else
         $PYTHON_EXEC scripts/sync_twse_market.py 2>&1 | tee -a "$LOG_FILE"
+    fi
+    log "[0/3] 同步全球官方清冊 (NASDAQ/NYSE/AMEX/ARCA/BATS/IEX、HKEX、JPX、SSE、SZSE、Euronext、LSE)..."
+    if [ "$RUNNER" = "docker" ]; then
+        docker compose run --rm stock-ml python scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"
+    else
+        $PYTHON_EXEC scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"
     fi
 fi
 
@@ -174,4 +185,3 @@ log "=========================================="
 
 # 顯示結果摘要
 tail -100 "$LOG_FILE" | grep -E "(符合條件|預測完成|雙重符合|✅ 雙軌策略分析完成|✅ 量化策略分析全數完成)"
-

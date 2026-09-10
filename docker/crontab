@@ -6,7 +6,7 @@ PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 PYTHONPATH=/app
 
 # 1. 台股開盤前買進指南 (週一至週五 早上 08:00)
-0 8 * * 1-5 cd /app && python main.py --market tw >> /app/logs/cron_tw.log 2>&1
+0 8 * * 1-5 cd /app && python scripts/sync_twse_market.py >> /app/logs/cron_tw.log 2>&1 && python scripts/sync_global_universe.py >> /app/logs/cron_tw.log 2>&1 && python main.py --market tw >> /app/logs/cron_tw.log 2>&1
 
 # 2. 美股開盤前買進指南 (週一至週五 晚上 20:30)
-30 20 * * 1-5 cd /app && python main.py --market us >> /app/logs/cron_us.log 2>&1
+30 20 * * 1-5 cd /app && python scripts/sync_global_universe.py >> /app/logs/cron_us.log 2>&1 && python main.py --market us >> /app/logs/cron_us.log 2>&1

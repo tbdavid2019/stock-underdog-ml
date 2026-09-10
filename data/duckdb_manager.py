@@ -104,6 +104,37 @@ class DuckDBManager:
                 );
                 """)
                 con.execute("""
+                CREATE TABLE IF NOT EXISTS market_universe (
+                    source_id VARCHAR,
+                    market VARCHAR,
+                    exchange VARCHAR,
+                    snapshot_date VARCHAR,
+                    local_symbol VARCHAR,
+                    normalized_symbol VARCHAR,
+                    name_local VARCHAR,
+                    name_en VARCHAR,
+                    isin VARCHAR,
+                    security_type VARCHAR,
+                    listing_status VARCHAR,
+                    market_category VARCHAR,
+                    financial_status VARCHAR,
+                    board_lot BIGINT,
+                    source VARCHAR,
+                    source_updated_at VARCHAR,
+                    updated_at VARCHAR
+                );
+                """)
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS universe_sync_runs (
+                    source_id VARCHAR,
+                    snapshot_date VARCHAR,
+                    stale BOOLEAN,
+                    record_count BIGINT,
+                    error VARCHAR,
+                    updated_at VARCHAR
+                );
+                """)
+                con.execute("""
                 CREATE TABLE IF NOT EXISTS tw_institutional_daily (
                     date VARCHAR,
                     ticker VARCHAR,
@@ -846,6 +877,121 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 寫入 tw_daily_bars 失敗: {e}", exc_info=True)
             return 0
+
+    def save_market_universe_snapshot(self, snapshot_date: str, records: List[Dict[str, Any]]) -> int:
+        """Persist one validated source snapshot while retaining previous dates."""
+        if not self.enabled or not records:
+            return 0
+
+        df = pd.DataFrame(records)
+        expected_cols = [
+            "source_id", "market", "exchange", "snapshot_date", "local_symbol",
+            "normalized_symbol", "name_local", "name_en", "isin", "security_type",
+            "listing_status", "market_category", "financial_status", "board_lot",
+            "source", "source_updated_at", "updated_at",
+        ]
+        df["snapshot_date"] = snapshot_date
+        df["updated_at"] = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        try:
+            with self._get_connection() as con:
+                con.register("temp_market_universe_df", df[expected_cols])
+                con.execute("""
+                DELETE FROM market_universe
+                WHERE snapshot_date = ?
+                  AND source_id IN (SELECT DISTINCT source_id FROM temp_market_universe_df)
+                """, [snapshot_date])
+                con.execute("INSERT INTO market_universe SELECT * FROM temp_market_universe_df")
+            logger.info("💾 成功寫入/更新 %s 筆全球清冊資料至 DuckDB", len(df))
+            return len(df)
+        except Exception as e:
+            logger.error("❌ 寫入 market_universe 失敗: %s", e, exc_info=True)
+            return 0
+
+    def get_latest_market_universe(self, source_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Return the latest persisted snapshot, optionally for one source."""
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection() as con:
+                if source_id:
+                    query = """
+                    SELECT * FROM market_universe
+                    WHERE source_id = ?
+                      AND snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE source_id = ?)
+                    ORDER BY normalized_symbol
+                    """
+                    return con.execute(query, [source_id, source_id]).df().to_dict(orient="records")
+                return con.execute("""
+                    SELECT * FROM market_universe
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe)
+                    ORDER BY source_id, normalized_symbol
+                """).df().to_dict(orient="records")
+        except Exception as e:
+            logger.warning("讀取 market_universe 失敗: %s", e)
+            return []
+
+    def save_universe_sync_run(
+        self,
+        source_id: str,
+        snapshot_date: Optional[str],
+        stale: bool,
+        record_count: int,
+        error: Optional[str],
+    ) -> None:
+        if not self.enabled:
+            return
+        try:
+            with self._get_connection() as con:
+                con.execute(
+                    "INSERT INTO universe_sync_runs VALUES (?, ?, ?, ?, ?, ?)",
+                    [
+                        source_id,
+                        snapshot_date,
+                        stale,
+                        record_count,
+                        error,
+                        datetime.datetime.now(TZ_TAIPEI).isoformat(),
+                    ],
+                )
+        except Exception as e:
+            logger.warning("寫入 universe_sync_runs 失敗: %s", e)
+
+    def get_latest_universe_sync_status(self, source_id: Optional[str] = None) -> Dict[str, Any]:
+        """Return the most recent fresh/stale/error status for a source."""
+        if not self.enabled:
+            return {}
+        try:
+            with self._get_connection() as con:
+                if source_id:
+                    row = con.execute(
+                        """
+                        SELECT source_id, snapshot_date, stale, record_count, error, updated_at
+                        FROM universe_sync_runs
+                        WHERE source_id = ?
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """,
+                        [source_id],
+                    ).fetchone()
+                else:
+                    row = con.execute(
+                        """
+                        SELECT source_id, snapshot_date, stale, record_count, error, updated_at
+                        FROM universe_sync_runs
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """
+                    ).fetchone()
+                if not row:
+                    return {}
+                return dict(zip(["source_id", "snapshot_date", "stale", "record_count", "error", "updated_at"], row))
+        except Exception as e:
+            logger.warning("讀取 universe_sync_runs 失敗: %s", e)
+            return {}
 
     def get_daily_bars_for_ticker(self, ticker: str, limit: int = 120) -> pd.DataFrame:
         """

@@ -2,6 +2,7 @@
 api/routes/market.py - 台股全市場行情與三大法人籌碼 Endpoints
 """
 
+from datetime import date
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
@@ -36,6 +37,17 @@ class MarketStatsResponse(BaseModel):
     latest_institutional_date: Optional[str] = None
 
 
+class MarketUniverseResponse(BaseModel):
+    source_id: Optional[str] = None
+    count: int
+    stale: bool
+    snapshot_date: Optional[str] = None
+    last_success_at: Optional[str] = None
+    cache_age_days: Optional[int] = None
+    error: Optional[str] = None
+    items: List[Dict[str, Any]]
+
+
 @router.get("/stats", response_model=MarketStatsResponse, summary="取得時序庫行情與法人籌碼整體統計")
 def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
     """
@@ -67,6 +79,36 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查詢市場統計失敗: {e}")
+
+
+@router.get("/universe", response_model=MarketUniverseResponse, summary="取得全球證券清冊與快取 freshness")
+def get_market_universe(
+    source_id: Optional[str] = Query(None, description="來源: TW, US-NASDAQ-TRADER, HK-HKEX"),
+    db: DuckDBManager = Depends(get_duckdb),
+):
+    """回傳最近清冊；上游失敗時以 stale 欄位明確表示仍使用最後成功快照。"""
+    try:
+        items = db.get_latest_market_universe(source_id=source_id)
+        status = db.get_latest_universe_sync_status(source_id=source_id)
+        snapshot_date = status.get("snapshot_date")
+        cache_age_days = None
+        if snapshot_date:
+            try:
+                cache_age_days = (date.today() - date.fromisoformat(str(snapshot_date))).days
+            except ValueError:
+                cache_age_days = None
+        return MarketUniverseResponse(
+            source_id=source_id or status.get("source_id"),
+            count=len(items),
+            stale=bool(status.get("stale", False)),
+            snapshot_date=str(snapshot_date) if snapshot_date else None,
+            last_success_at=str(status.get("updated_at")) if status.get("updated_at") else None,
+            cache_age_days=cache_age_days,
+            error=status.get("error"),
+            items=items,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查詢證券清冊失敗: {e}")
 
 
 @router.get("/institutional/top", response_model=List[InstitutionalFlowItem], summary="取得三大法人買賣超排行榜")
@@ -364,5 +406,4 @@ def get_company_profiles_batch_endpoint(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批次取得公司資訊失敗: {e}")
-
 

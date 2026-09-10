@@ -21,6 +21,17 @@ class TestMarketAPI(unittest.TestCase):
         self.assertIn("total_institutional_records", data)
         self.assertIn("total_predictions", data)
 
+    def test_get_market_universe_includes_freshness_metadata(self):
+        resp = self.client.get("/api/v1/market/universe?source_id=TW")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("source_id", data)
+        self.assertIn("count", data)
+        self.assertIn("stale", data)
+        self.assertIn("last_success_at", data)
+        self.assertIn("items", data)
+        self.assertIsInstance(data["items"], list)
+
     def test_get_top_institutional_flows(self):
         resp = self.client.get("/api/v1/market/institutional/top?limit=10")
         self.assertEqual(resp.status_code, 200)
@@ -57,4 +68,3 @@ class TestMarketAPI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
