@@ -18,6 +18,12 @@ from data.ticker_resolver import clean_query, normalize_ticker, resolve_alias
 
 logger = logging.getLogger("stock_app.duckdb")
 
+try:
+    import zoneinfo
+    TZ_TAIPEI = zoneinfo.ZoneInfo("Asia/Taipei")
+except Exception:
+    TZ_TAIPEI = datetime.timezone(datetime.timedelta(hours=8))
+
 
 class DuckDBManager:
     """DuckDB 本地量化時序資料庫管理器"""
@@ -180,7 +186,7 @@ class DuckDBManager:
         if not self.enabled:
             return 0
 
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.datetime.now(TZ_TAIPEI).isoformat()
         macro_regime_str = macro_state.regime_name if macro_state else None
         all_data = []
 
@@ -407,8 +413,7 @@ class DuckDBManager:
         預設 (batch_only=True) 僅鎖定最新執行批次（例如 24 小時內或最新批次日期），
         並計算 analysis_date, data_as_of, age_hours, is_stale。
         """
-        import datetime
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(TZ_TAIPEI)
 
         where_clauses = [
             "index_name NOT LIKE '%TEST%'",
@@ -445,16 +450,12 @@ class DuckDBManager:
             }
 
         try:
-            import zoneinfo
-            tz_taipei = zoneinfo.ZoneInfo("Asia/Taipei")
-        except Exception:
-            tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
-
-        try:
             ts_clean = latest_ts.replace("Z", "+00:00")
             batch_dt = datetime.datetime.fromisoformat(ts_clean)
             if batch_dt.tzinfo is None:
-                batch_dt = batch_dt.replace(tzinfo=tz_taipei)
+                batch_dt = batch_dt.replace(tzinfo=TZ_TAIPEI)
+            else:
+                batch_dt = batch_dt.astimezone(TZ_TAIPEI)
             age_hours = max(0.0, round((now - batch_dt).total_seconds() / 3600.0, 1))
             is_stale = age_hours > 48.0
             batch_date = batch_dt.strftime("%Y-%m-%d")
@@ -492,15 +493,18 @@ class DuckDBManager:
             r_ts = r.get("timestamp")
             if r_ts:
                 r["data_as_of"] = str(r_ts)
-                r["analysis_date"] = str(r_ts)[:10]
                 try:
                     r_dt = datetime.datetime.fromisoformat(str(r_ts).replace("Z", "+00:00"))
                     if r_dt.tzinfo is None:
-                        r_dt = r_dt.replace(tzinfo=tz_taipei)
+                        r_dt = r_dt.replace(tzinfo=TZ_TAIPEI)
+                    else:
+                        r_dt = r_dt.astimezone(TZ_TAIPEI)
                     r_age = max(0.0, round((now - r_dt).total_seconds() / 3600.0, 1))
+                    r["analysis_date"] = r_dt.strftime("%Y-%m-%d")
                     r["age_hours"] = r_age
                     r["is_stale"] = r_age > 48.0
                 except Exception:
+                    r["analysis_date"] = str(r_ts)[:10]
                     r["age_hours"] = age_hours
                     r["is_stale"] = is_stale
             else:

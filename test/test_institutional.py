@@ -24,6 +24,28 @@ class TestInstitutionalProvider(unittest.TestCase):
             self.assertEqual(len(d), 8)
             self.assertTrue(d.isdigit())
 
+    def test_recent_trading_days_midnight_boundary(self):
+        import datetime
+        # 1. 週三 08:00 (台股開盤前): 應推算至週二 (2026-09-08)
+        dt_premarket = datetime.datetime(2026, 9, 9, 8, 0, 0)
+        days = InstitutionalProvider.get_recent_trading_days(count=3, reference_dt=dt_premarket)
+        self.assertEqual(days[0], "20260908")
+
+        # 2. 週三 00:05 (剛過午夜): 應推算至週二 (2026-09-08)
+        dt_midnight = datetime.datetime(2026, 9, 9, 0, 5, 0)
+        days = InstitutionalProvider.get_recent_trading_days(count=3, reference_dt=dt_midnight)
+        self.assertEqual(days[0], "20260908")
+
+        # 3. 週三 16:00 (盤後籌碼已結算): 應包含週三 (2026-09-09)
+        dt_afternoon = datetime.datetime(2026, 9, 9, 16, 0, 0)
+        days = InstitutionalProvider.get_recent_trading_days(count=3, reference_dt=dt_afternoon)
+        self.assertEqual(days[0], "20260909")
+
+        # 4. 週一 08:00 (週一開盤前): 應跳過週末推算至上週五 (2026-09-04)
+        dt_monday_pre = datetime.datetime(2026, 9, 7, 8, 0, 0)
+        days = InstitutionalProvider.get_recent_trading_days(count=3, reference_dt=dt_monday_pre)
+        self.assertEqual(days[0], "20260904")
+
     def test_batch_summary_tw50(self):
         tickers = ["2330.TW", "2317.TW", "2454.TW"]
         summaries = InstitutionalProvider.get_institutional_summary_batch(tickers, lookback_days=5)

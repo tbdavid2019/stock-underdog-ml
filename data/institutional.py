@@ -108,12 +108,32 @@ class InstitutionalProvider:
         return res_map
 
     @classmethod
-    def get_recent_trading_days(cls, count: int = 20) -> List[str]:
+    def get_recent_trading_days(
+        cls, 
+        count: int = 20, 
+        reference_dt: Optional[datetime.datetime] = None
+    ) -> List[str]:
         """
-        推算最近 count 個工作日 (排除週末) 之日期字串 YYYYMMDD
+        推算最近 count 個工作日 (排除週末) 之日期字串 YYYYMMDD。
+        若處於午夜至台股盤後籌碼出表前 (15:30 以前，含 08:00 盤前與午夜換日)，起算基準自動往回推一天，
+        杜絕午夜換日後向證交所索取「今日尚未開盤/尚未結算」之籌碼所導致的錯誤請求。
         """
+        if reference_dt is None:
+            try:
+                import zoneinfo
+                tz_taipei = zoneinfo.ZoneInfo("Asia/Taipei")
+            except Exception:
+                tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
+            ref_now = datetime.datetime.now(tz_taipei)
+        else:
+            ref_now = reference_dt
+
+        cur = ref_now.date()
+        # 證交所 T86 約於 15:00~15:30 始出表，在 15:30 前（含午夜換日與 08:00 盤前）不包含當日
+        if ref_now.hour < 15 or (ref_now.hour == 15 and ref_now.minute < 30):
+            cur -= datetime.timedelta(days=1)
+
         days = []
-        cur = datetime.date.today()
         while len(days) < count:
             if cur.weekday() < 5:  # 0~4 為週一至週五
                 days.append(cur.strftime("%Y%m%d"))

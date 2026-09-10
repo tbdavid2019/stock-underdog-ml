@@ -35,7 +35,7 @@ class TWSEDailyFetcher:
     }
 
     @staticmethod
-    def roc_date_to_iso(roc_date_str: str) -> str:
+    def roc_date_to_iso(roc_date_str: str, fallback_date: Optional[str] = None) -> str:
         """
         將民國年月日 (e.g. 1150831 or 115/08/31) 轉換為標準 ISO YYYY-MM-DD
         """
@@ -52,6 +52,8 @@ class TWSEDailyFetcher:
             day = s[-2:]
             year = roc_year + 1911
             return f"{year:04d}-{month}-{day}"
+        if fallback_date:
+            return fallback_date
         return datetime.date.today().strftime("%Y-%m-%d")
 
     @classmethod
@@ -69,6 +71,16 @@ class TWSEDailyFetcher:
             if not isinstance(data, list) or not data:
                 return pd.DataFrame()
 
+            # 探測批次中有效的交易日期作為 fallback，避免未提供日期的標的跳為今日日期
+            batch_market_date = None
+            for item in data[:50]:
+                raw_d = str(item.get("Date", "")).strip()
+                if raw_d:
+                    converted = cls.roc_date_to_iso(raw_d)
+                    if converted:
+                        batch_market_date = converted
+                        break
+
             rows = []
             now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for item in data:
@@ -81,7 +93,7 @@ class TWSEDailyFetcher:
                     ticker = f"{code}.TW" if not code.endswith(".TW") else code
                     name = str(item.get("Name", "")).strip()
                     raw_date = item.get("Date", "")
-                    date_iso = cls.roc_date_to_iso(raw_date)
+                    date_iso = cls.roc_date_to_iso(raw_date, fallback_date=batch_market_date)
 
                     def safe_float(val: Any) -> float:
                         if val is None or val == "" or val == "--":
@@ -143,6 +155,16 @@ class TWSEDailyFetcher:
             if not isinstance(data, list) or not data:
                 return pd.DataFrame()
 
+            # 探測批次中有效的交易日期作為 fallback
+            batch_market_date = None
+            for item in data[:50]:
+                raw_d = str(item.get("Date", "")).strip()
+                if raw_d:
+                    converted = cls.roc_date_to_iso(raw_d)
+                    if converted:
+                        batch_market_date = converted
+                        break
+
             rows = []
             now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for item in data:
@@ -155,7 +177,7 @@ class TWSEDailyFetcher:
                     ticker = f"{code}.TWO" if not code.endswith(".TWO") else code
                     name = str(item.get("CompanyName", "")).strip()
                     raw_date = item.get("Date", "")
-                    date_iso = cls.roc_date_to_iso(raw_date)
+                    date_iso = cls.roc_date_to_iso(raw_date, fallback_date=batch_market_date)
 
                     def safe_float(val: Any) -> float:
                         if val is None or val == "" or val == "--":

@@ -14,6 +14,11 @@ import pandas as pd
 # Add parent directory to path to import logger
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from logger import setup_logger
+from backtest.resolver import (
+    parse_prediction_timestamp,
+    get_target_trading_date,
+    find_actual_close_price
+)
 
 # Setup logger for backtest
 logger = setup_logger('backtest', 'logs/backtest.log')
@@ -59,45 +64,37 @@ for ticker, ticker_preds in tickers.items():
         
         for pred in ticker_preds:
             try:
-                pred_date = datetime.fromisoformat(pred['timestamp'].replace('Z', '+00:00'))
-                
-                # Find NEXT trading day after prediction
-                # Start from the day after prediction
-                search_date = pred_date + timedelta(days=1)
-                max_search_days = 10  # Search up to 10 days for next trading day
-                
-                actual_price = None
-                actual_date = None
-                
-                for i in range(max_search_days):
-                    check_date = search_date + timedelta(days=i)
-                    if check_date.date() in hist.index:
-                        actual_price = float(hist.loc[check_date.date()]['Close'])
-                        actual_date = check_date
-                        break
-                
+                pred_date = parse_prediction_timestamp(pred['timestamp'])
+                target_date_str = get_target_trading_date(pred_date, ticker)
+
+                actual_price, actual_date_str = find_actual_close_price(
+                    hist_df=hist,
+                    target_date_str=target_date_str,
+                    ticker=ticker
+                )
+
                 if actual_price is None:
-                    # No trading day found (maybe too recent or market closed)
+                    # No closed trading day found (maybe too recent or market not closed yet)
                     skipped += 1
                     continue
-                
+
                 # Calculate metrics
                 current = float(pred['current_price'])
                 predicted = float(pred['predicted_price'])
-                
+
                 # Accuracy: how well did we predict the next day
                 absolute_error = abs(predicted - actual_price)
                 percentage_error = ((predicted - actual_price) / actual_price) * 100
-                
+
                 # Direction accuracy: did we predict up/down correctly?
                 predicted_direction = 1 if predicted > current else -1
                 actual_direction = 1 if actual_price > current else -1
                 direction_correct = 1.0 if predicted_direction == actual_direction else 0.0
-                
+
                 # Update record
                 supabase.table('predictions').update({
                     'actual_price': actual_price,
-                    'actual_date': actual_date.isoformat(),
+                    'actual_date': f"{actual_date_str}T00:00:00+00:00",
                     'accuracy': direction_correct,  # 1.0 if direction correct, 0.0 otherwise
                     'absolute_error': absolute_error,
                     'percentage_error': percentage_error

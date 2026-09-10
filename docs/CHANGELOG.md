@@ -9,6 +9,21 @@
 ## 2026-09-10
 
 ### Fixed
+- **🕛 午夜邊界與跨時區換日缺陷全面根治 (Midnight & Timezone Boundary Problem Fixes)**：
+  - **回測目標交易日判定修正 (`backtest/backtest.py`, `backtest/resolver.py`)**：
+    - 解決回測模組因無條件 `pred_date + 1 day` 導致「台股盤前 08:00 與美股盤前 20:30 之預測完全跳過當日真實收盤價」的嚴重邏輯錯誤。
+    - 盤前 08:00 (TW) 與 20:30 (US) 產生的預測，精準判定其目標驗證日為當日 (Day T)；盤後產生的預測才遞延至下一交易日 (Day T+1)。
+    - 重構日期搜尋與收盤狀態檢核 (`is_market_closed`)，杜絕在盤中或盤前提前拿未定價日 K 計算誤差。
+    - 徹底修復 `check_date.date() in hist.index` 因 yfinance 帶時區之 `DatetimeIndex` 導致永真返回 False、所有標的均被 skipped 的比對失效問題。
+  - **三大法人籌碼午夜換日防禦 (`data/institutional.py`)**：
+    - 修復在午夜換日後至台股收盤前 (00:00 ~ 15:30，含 08:00 盤前) 執行時，`get_recent_trading_days` 索取「今日尚未開盤/尚未出表之未來資料」導致證交所 API 報錯的邊界問題。當執行時間早於 15:30 時，起算基準自動往回推一日。
+  - **時間戳記標準化與時區對齊 (`database.py`, `data/duckdb_manager.py`)**：
+    - 全面以顯式 `Asia/Taipei (+08:00)` 產生預測與批次時間戳記，杜絕 UTC 午夜 (00:00 UTC = 台北 08:00) 邊界時寫入 Supabase / DuckDB 產生的 8 小時偏差與 `age_hours` 異常。
+    - `DuckDBManager.get_latest_predictions` 全面採用時區正規化計算，確保跨午夜查詢美股與台股批次之 `batch_date` 與 `analysis_date` 精確對齊。
+  - **台股全市場日 K 跨日批次探測 (`data/twse_daily_fetcher.py`)**：
+    - `roc_date_to_iso` 增加 `fallback_date` 探測機制，優先使用當批次實際交易日，杜絕盤前同步時部分個股日期遺漏跳為「今日日期」造成日 K 混亂。
+  - **單元測試全覆蓋 (`test/test_backtest_date_resolution.py`, `test/test_institutional.py`, `test/test_duckdb.py`)**：
+    - 新增 9 項回測交易日與時區解析測試、4 項籌碼換日邊界測試，以及 DuckDB 時區換算測試，全數測試通過。
 - **Polymarket API/UI 契約一致化**：機率統一為 0~100 百分比，市場資料補上 `probability` 與 `top_outcome`，修正首頁顯示 `8500%` 或 `undefined%` 的問題；WebMCP 的 `category=all` 會正確代表全部分類。
 - **Polymarket 失敗語意與快取修正**：2MD/DoH 都失敗時回傳 `success=false` 與錯誤資訊，不再把空結果快取成新資料；可用上一筆有效結果時會標記 `stale=true`。
 - **TimesFM 風險報酬定義修正**：5 日策略使用 horizon 的 P50/P10 計算潛力與風險報酬，P90 保留為上行參考，避免文件與實際選股判定不一致。

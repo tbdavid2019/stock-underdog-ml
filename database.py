@@ -22,6 +22,17 @@ from core.config import config
 from json_safety import sanitize_json_value, validate_json_payload
 from logger import logger
 
+try:
+    import zoneinfo
+    TZ_TAIPEI = zoneinfo.ZoneInfo("Asia/Taipei")
+except Exception:
+    TZ_TAIPEI = datetime.timezone(datetime.timedelta(hours=8))
+
+
+def get_current_timestamp() -> str:
+    """取得具備台北時區 (+08:00) 的 ISO 8601 時間戳記，杜絕 UTC 午夜邊界與儲存混淆"""
+    return datetime.datetime.now(TZ_TAIPEI).isoformat()
+
 
 class SupabaseManager:
     """Manager for Supabase connection and operations"""
@@ -63,7 +74,7 @@ class SupabaseManager:
             return
 
         data = []
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = get_current_timestamp()
         
         for p in predictions:
             tk = p[0]
@@ -105,7 +116,7 @@ class SupabaseManager:
         if not self.enabled:
             return
         
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = get_current_timestamp()
         all_data = []
         
         # 1. 保存玄鐵策略結果

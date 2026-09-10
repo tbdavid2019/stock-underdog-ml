@@ -106,6 +106,32 @@ class TestDuckDBManager(unittest.TestCase):
         deleted = self.mgr.clean_test_data()
         self.assertGreaterEqual(deleted, 0)
 
+    def test_get_latest_predictions_timezone_and_midnight(self):
+        # 寫入包含 UTC 與 Asia/Taipei 時區的最新批次資料
+        sample_records = [
+            {
+                "index_name": "SP500",
+                "model_name": "LSTM",
+                "strategy_type": "LSTM預測",
+                "ticker": "AAPL",
+                "current_price": 200.0,
+                "predicted_price": 210.0,
+                "potential": 5.0,
+                "period": "6mo",
+                # UTC 時間：2026-09-09 16:30 UTC -> 台北時間 2026-09-10 00:30 (剛跨過台北午夜)
+                "timestamp": "2026-09-09T16:30:00Z",
+                "macro_regime": "全面多頭",
+                "tags": ["LSTM看漲"]
+            }
+        ]
+        self.mgr.save_predictions_batch(sample_records)
+        res = self.mgr.get_latest_predictions(index_name="SP500")
+        # 台北時間應準確換算為 2026-09-10 (而非 UTC 的 2026-09-09)
+        self.assertEqual(res["batch_date"], "2026-09-10")
+        self.assertEqual(len(res["records"]), 1)
+        self.assertEqual(res["records"][0]["analysis_date"], "2026-09-10")
+        self.assertGreaterEqual(res["records"][0]["age_hours"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
