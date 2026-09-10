@@ -13,6 +13,11 @@
   - 修復歷史數據卡片底部遺漏的閉合 `</div>`，徹底解決頂部 4 欄網格未閉合導致總經行事曆、策略按鈕列與標的卡片被錯誤壓迫進 25% 狹窄欄位引發的排版崩潰與按鈕隱形問題。
   - 為標的卡片價格數值補上 `truncate` 與防文字垂直重疊樣式，確保在各裝置與視窗寬度下價格清晰排版。
 
+### ⏱️ DuckDB 時區時效計算負數修復 (Timezone Offset & Age Hours Fix)
+- **修復台北時區轉換導致的負數時效 (`data/duckdb_manager.py`)**：
+  - 修正讀取 DuckDB 批次時間時將本地 Asia/Taipei naive 時間戳誤轉為 UTC 的時差缺陷，杜絕前端出現 `時效: -7.3h 前` 負數時差。
+  - 加入 `ZoneInfo("Asia/Taipei")` 標準時區綁定與 `max(0.0, ...)` 防禦性保護，確保時效顯示精確合規。
+
 ### 🐳 自動排程 Docker 映像檔自動更新 (`run_daily.sh`)
 - **每日自動拉取最新映像檔**：
   - 於每日排程執行容器任務前自動執行 `docker compose pull stock-ml --quiet`，確保即時套用包含 Google TimesFM 與最新相依套件的生產映像檔，杜絕舊映像檔降級略過 TimesFM 的問題。
