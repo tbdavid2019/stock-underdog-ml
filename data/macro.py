@@ -40,6 +40,7 @@ class MacroState:
     earnings_calendar: List[Dict[str, Any]] = field(default_factory=list)
     economic_calendar: List[Dict[str, Any]] = field(default_factory=list)
     catalyst_alerts: List[str] = field(default_factory=list)
+    polymarket: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -58,6 +59,7 @@ class MacroState:
             "earnings_calendar": self.earnings_calendar,
             "economic_calendar": self.economic_calendar,
             "catalyst_alerts": self.catalyst_alerts,
+            "polymarket": self.polymarket,
         }
 
 
@@ -167,6 +169,7 @@ class MacroRegimeAnalyzer:
             ]
             state.summary = " | ".join(summary_parts)
             cls._enrich_with_investing(state)
+            cls._enrich_with_polymarket(state)
             logger.info(f"✅ 台股大盤風控評估完成: {state.summary}")
 
         except Exception as e:
@@ -286,6 +289,7 @@ class MacroRegimeAnalyzer:
             ]
             state.summary = " | ".join(summary_parts)
             cls._enrich_with_investing(state)
+            cls._enrich_with_polymarket(state)
             logger.info(f"✅ 美股宏觀評估完成: {state.summary}")
 
         except Exception as e:
@@ -322,6 +326,16 @@ class MacroRegimeAnalyzer:
                     state.summary += f" | {fed_note}"
         except Exception as e:
             logger.debug(f"InvestingService enrichment skipped: {e}")
+
+    @classmethod
+    def _enrich_with_polymarket(cls, state: MacroState):
+        """以 Polymarket 真金白銀預測市場情緒豐富風控指標 (優雅降級)"""
+        try:
+            from data.polymarket_service import PolymarketService
+            poly_data = PolymarketService.get_macro_sentiment()
+            state.polymarket = poly_data
+        except Exception as e:
+            logger.debug(f"PolymarketService enrichment skipped: {e}")
 
     @staticmethod
     def _extract_close_series(data: pd.DataFrame, ticker: str) -> Optional[pd.Series]:

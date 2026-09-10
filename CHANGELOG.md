@@ -8,77 +8,151 @@
 
 ## 2026-09-10
 
-### 🔮 TimesFM 報表排版與 WebMCP / Agent 發現協議全面補齊 (TimesFM Reporting & Discovery Integration)
-- **終端機與量化日報 (`evaluators/formatter.py`)**：新增 `TimesFM` 時序大模型預測專區（持有 1-5 天目標價、預期潛力、真實盈虧比、PE/PB），並在「⭐ 【優先推薦】多策略交集」表格中完整納入 `TimesFM` 潛力與盈虧比欄位。
-- **AI 操盤解讀引擎 (`evaluators/ai_narrative.py`)**：將 TimesFM 預測數據、雙 ML 共振 (`🔮雙ML共振`) 與高盈虧比特性注入 3-Tier Fallback LLM Prompt 與零依賴規則模板。
-- **通知推播模組升級 (`notifier_dual.py`)**：在 Telegram、Discord、Email 的優先推薦共振標的中完整同步呈現 LSTM 與 TimesFM 訊號及盈虧比。
-- **WebMCP / Chrome WebMCP / API 發現協議全面同步 (`api/main.py`, `api/templates/index.html`, `mcp_server.py`)**：
-  - FastMCP 伺服器新增 `get_commodities_summary` (黃金/原油/期銅) 與 `resolve_stock_ticker` (模糊股票代號解析)，達成全套 15 大量化工具。
-  - `/mcp` 與 `/.well-known/mcp.json` 清單同步收錄全套 15 大量化工具，消除 307 重定向並支援遠端 SSE 串流。
-  - 前端 Chrome WebMCP 動態註冊全套 15 大工具至 `window.document.modelContext`，打通瀏覽器端內建 AI 呼叫能力。
-  - 依據 [llmstxt.org](https://llmstxt.org/) 規範重構 `/llms.txt` 與 `/llms-full.txt`，提供完整數學公式 ($P_{10}/P_{50}/P_{90}$、動態盈虧比、曝險折減)、DuckDB 表結構、REST/MCP 規格與標準 4 步操盤工作流。
-  - 更新 `skills/stock-quant/SKILL.md`、`README.md` 與首頁 Agent Hub 說明卡片，精確對齊 15 大工具與共振因子規範。
-- **資料庫數值防禦 (`data/duckdb_manager.py`, `database.py`)**：安全處理多策略共振標的可能為 None/NaN 的浮點數轉型，杜絕單一模型遺漏時的存檔崩潰。
+### Added
+- **🎲 Polymarket 真金白銀預測市場宏觀情緒整合 (Polymarket Real-Money Macro Sentiment Integration)**：
+  - **核心服務模組 (`data/polymarket_service.py`)**：串接 Polymarket Gamma API，無須 API 金鑰即時追蹤真金白銀千萬美元流動性之宏觀預測市場。
+  - **防封鎖多層連線架構 (Multi-Tier Proxy & DoH Fallback)**：
+    - 第一層（Primary）：透過 `2md.aiurl.tw` 繁中快取代理直連獲取。
+    - 第二層（Backup）：自動輪詢 `2md.glsoft.ai` 與 `create360.ai`。
+    - 第三層（DoH Fallback）：當 2MD 全數逾時或遭遇台灣 ISP 封鎖 sinkhole (182.173.0.181) 時，自動調用 Google (`8.8.8.8`) 與 Cloudflare (`1.1.1.1`) DNS over HTTPS 解析 legitimate Cloudflare Anycast IP，並透過自訂 SNI SSL Adapter 建立直連，確保 100% 高可用。
+  - **降息預期與市場分類**：
+    - 自動提取真金白銀 FOMC 利率決策機率（`fed_real_money_odds`：降息 1 碼、按兵不動、降息 2 碼、升息 1 碼），與 CME FedWatch 形成雙源交叉驗證。
+    - 自動篩選分類為 `fed_rates`、`geopolitics`、`tech_giants`、`macro_recession`，並自動過濾純體育/娛樂雜訊。
+    - 實作 L1 記憶體 + L2 本地磁碟雙層快取（15 分鐘 TTL）。
+  - **宏觀風控聚合 (`data/macro.py`, `api/schemas.py`, `api/routes/macro.py`)**：
+    - 將 `polymarket` 數據自動富化 (enrich) 至台美股宏觀風控狀態 `MacroState` 與 `MacroRegimeResponse`。
+    - 新增 REST 端點 `GET /api/v1/macro/polymarket/sentiment`（支援 `category` 篩選與 `force_refresh` 強制更新）。
+  - **擴充至 16 大標準量化 MCP 函數與 WebMCP 協議**：
+    - 原生 FastMCP 工具新增第 16 號工具 `get_polymarket_macro_sentiment`。
+    - `/mcp`、`/.well-known/mcp.json`、`/.webmcp/bridge.js`、`ai-plugin.json`、`/llms.txt`、`/llms-full.txt` 全面升級至 16 工具宣告。
+    - 前端 Chrome WebMCP 動態註冊全套 16 大工具至 `window.document.modelContext`。
+  - **互動看板第四欄擴充 (`api/templates/index.html`)**：
+    - 宏觀風控摺疊區升級為 4 欄響應式網格（`grid-cols-1 md:grid-cols-2 xl:grid-cols-4`），新增 Panel 4「🎲 Polymarket 預測市場」專區，即時展示真金白銀降息定價卡片與焦點市場清單。
+    - `refreshMacro()` 同步並行刷新 Investing 總經與 Polymarket 預測數據。
+    - 更新 Agent Hub 規格標籤為 16 大原生量化 MCP 函數。
+  - **完整單元測試 (`test/test_polymarket_service.py`, `test/test_api.py`)**：涵蓋雜訊過濾、分類正則、Fed 賠率解析、Fallback 流程與 16 工具端點驗證。
 
-### 🐛 操盤看板四欄網格排版修復 (Web Dashboard Layout & Tag Balancing Fix)
-- **修復前端網頁卡片巢狀坍塌 (`api/templates/index.html`)**：
+- **🔮 TimesFM 報表排版與 WebMCP / Agent 發現協議全面補齊 (TimesFM Reporting & Discovery Integration)**：
+  - **終端機與量化日報 (`evaluators/formatter.py`)**：新增 `TimesFM` 時序大模型預測專區（持有 1-5 天目標價、預期潛力、真實盈虧比、PE/PB），並在「⭐ 【優先推薦】多策略交集」表格中完整納入 `TimesFM` 潛力與盈虧比欄位。
+  - **AI 操盤解讀引擎 (`evaluators/ai_narrative.py`)**：將 TimesFM 預測數據、雙 ML 共振 (`🔮雙ML共振`) 與高盈虧比特性注入 3-Tier Fallback LLM Prompt 與零依賴規則模板。
+  - **通知推播模組升級 (`notifier_dual.py`)**：在 Telegram、Discord、Email 的優先推薦共振標的中完整同步呈現 LSTM 與 TimesFM 訊號及盈虧比。
+  - **WebMCP / Chrome WebMCP / API 發現協議全面同步 (`api/main.py`, `api/templates/index.html`, `mcp_server.py`)**：
+    - FastMCP 伺服器新增 `get_commodities_summary` (黃金/原油/期銅) 與 `resolve_stock_ticker` (模糊股票代號解析)，達成全套 15 大量化工具。
+    - `/mcp` 與 `/.well-known/mcp.json` 清單同步收錄全套 15 大量化工具，消除 307 重定向並支援遠端 SSE 串流。
+    - 前端 Chrome WebMCP 動態註冊全套 15 大工具至 `window.document.modelContext`，打通瀏覽器端內建 AI 呼叫能力。
+    - 依據 [llmstxt.org](https://llmstxt.org/) 規範重構 `/llms.txt` 與 `/llms-full.txt`，提供完整數學公式 ($P_{10}/P_{50}/P_{90}$、動態盈虧比、曝險折減)、DuckDB 表結構、REST/MCP 規格與標準 4 步操盤工作流。
+    - 更新 `skills/stock-quant/SKILL.md`、`README.md` 與首頁 Agent Hub 說明卡片，精確對齊 15 大工具與共振因子規範。
+  - **資料庫數值防禦 (`data/duckdb_manager.py`, `database.py`)**：安全處理多策略共振標的可能為 None/NaN 的浮點數轉型，杜絕單一模型遺漏時的存檔崩潰。
+
+### Fixed
+- **🐛 操盤看板四欄網格排版修復 (Web Dashboard Layout & Tag Balancing Fix)**：
   - 修復歷史數據卡片底部遺漏的閉合 `</div>`，徹底解決頂部 4 欄網格未閉合導致總經行事曆、策略按鈕列與標的卡片被錯誤壓迫進 25% 狹窄欄位引發的排版崩潰與按鈕隱形問題。
   - 為標的卡片價格數值補上 `truncate` 與防文字垂直重疊樣式，確保在各裝置與視窗寬度下價格清晰排版。
-
-### ⏱️ DuckDB 時區時效計算負數修復 (Timezone Offset & Age Hours Fix)
-- **修復台北時區轉換導致的負數時效 (`data/duckdb_manager.py`)**：
-  - 修正讀取 DuckDB 批次時間時將本地 Asia/Taipei naive 時間戳誤轉為 UTC 的時差缺陷，杜絕前端出現 `時效: -7.3h 前` 負數時差。
-  - 加入 `ZoneInfo("Asia/Taipei")` 標準時區綁定與 `max(0.0, ...)` 防禦性保護，確保時效顯示精確合規。
-
-### 🐳 自動排程 Docker 映像檔自動更新 (`run_daily.sh`)
-- **每日自動拉取最新映像檔**：
+- **🐳 自動排程 Docker 映像檔自動更新 (`run_daily.sh`)**：
   - 於每日排程執行容器任務前自動執行 `docker compose pull stock-ml --quiet`，確保即時套用包含 Google TimesFM 與最新相依套件的生產映像檔，杜絕舊映像檔降級略過 TimesFM 的問題。
 
 ## [2.3.0] - 2026-09-09
 
-### 🛡️ 容器預設命令安全加固與防死循環機制 (Docker Container Default Safety)
-- **容器預設命令切換為 API 服務 (`Dockerfile` & `docker/entrypoint.sh`)**：
+### Fixed
+- **🛡️ 容器預設命令安全加固與防死循環機制 (Docker Container Default Safety)**：
   - 將 Dockerfile 預設 `CMD` 由 `["main"]` 切換為 `["api"]`，避免常駐容器在手動運行、更新重啟或未指定命令時誤入全量批次分析。
   - `docker/entrypoint.sh` 入口派發腳本將空參數 `""` 安全導向 `api`（Uvicorn REST 伺服器），杜絕因批次退出配合 `restart: unless-stopped` 引發的無限重啟推播死循環。
   - 移除 `docker-compose.yml` 廢棄的 `version: '3.8'` 屬性，消除現代 Compose 解析警告。
   - 於 `docker-compose.yml` 掛載宿主機 Hugging Face 快取目錄（`${HOME}/.cache/huggingface:/root/.cache/huggingface`），使容器能即時共享本機 TimesFM 預訓練模型權重，免除重複下載。
-
-### ⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)
-- **智慧時段分流 (`main.py` & `run_daily.sh`)**：
+- **⏰ 嚴格落實開盤前時段派發與資源防浪費 (Market Time-of-Day Auto Alignment)**：
   - `main.py` 與 `run_daily.sh` 預設市場全面改為 `--market auto`：依據台北時間自動切換（白天 05:00~13:30 專注台股盤前 08:00；夜間 13:30~05:00 專注美股盤前 20:30），非指定全市場時絕不在夜間執行台股運算，徹底避免浪費 CPU 與伺服器資源。
   - 修復 `test/test_config.py` 單元測試權重斷言與 `test/test_cli_market.py` 預設參數斷言（`args.market == "auto"`），打通 GitHub Actions CI/CD 自動構建最新 Multi-Arch Docker 映像檔。
+- **📊 完整打通 TimesFM 前端看板與多管道通知 (TimesFM End-to-End Delivery)**：
+  - 前端 Web 看板 (`api/templates/index.html`)：策略選單新增「🔮 TimesFM 預測 TOP」與「🛡️ TimesFM 避險」按鈕，即時串接 `/api/v1/predictions/timesfm/top-bullish` 與 `/top-bearish`。
+  - 推播報表 (`notifier_dual.py`)：Telegram、Discord、Email 日報新增 TimesFM 預測段落（5 日目標價、預期潛力 %、盈虧比）。
+  - 官方說明文件 (`README.md`)：全面補充 TimesFM 策略架構、`--market auto` 白天/夜間智慧分流防浪費機制、Web 看板 TimesFM 篩選切換、以及 Docker Compose 本地權重快取掛載說明。
 
-### 📊 完整打通 TimesFM 前端看板與多管道通知 (TimesFM End-to-End Delivery)
-- **前端 Web 看板整合 (`api/templates/index.html`)**：
-  - 頂部策略切換選單新增「🔮 TimesFM 預測 TOP」與「🛡️ TimesFM 避險」按鈕，即時串接 `/api/v1/predictions/timesfm/top-bullish` 與 `/top-bearish` 端點。
-  - 完整支援 URL 參數同步 (`?strategy=timesfm_bullish`) 與瀏覽器上一頁/下一頁返回。
-- **推播報表整合 (`notifier_dual.py`)**：
-  - 於 Telegram (HTML)、Discord (Markdown) 與 Email 日報中新增 **Google TimesFM 時序大模型** 預測段落，展示 5 日目標價、潛在漲幅百分比與盈虧比 (Risk/Reward Ratio)。
-- **官方文件完整更新 (`README.md`)**：
-  - 全面更新專案說明文件：補充 TimesFM 策略架構、`--market auto` 白天/夜間智慧分流防浪費機制、Web 看板 TimesFM 篩選切換、以及 Docker Compose 本地權重快取掛載說明。
+### Added
+- **🔮 Google Research TimesFM (Time Series Foundation Model) 策略整合**：
+  - 新增 `models/timesfm_model.py`：單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論與 P10/P50/P90 分位數風險區間計算。
+  - 新增 `strategies/timesfm.py`：標準化繼承 `BaseStrategy`，透過 `@register_strategy("timesfm")` 掛載至策略工廠，覆寫 `evaluate_batch` 進行零延遲矩陣推論，輸出 `TimesFM看漲`、`TimesFM強`、`高盈虧比`、`TimesFM看跌` 標籤與真實盈虧比 (Risk/Reward Ratio)。
+  - 綜合評估引擎升級 (`evaluators/composite_evaluator.py`)：
+    - 新增 `🔮雙ML共振` 標籤（當 LSTM 看漲 ∩ TimesFM 看漲，形成微觀記憶與宏觀大模型雙重驗證）。
+    - 新增 `👑四重共振` 標籤（同時符合玄鐵技術買點 ∩ 法人籌碼鎖碼 ∩ LSTM 看漲 ∩ TimesFM 看漲）。
+  - DuckDB 與 Supabase 持久化：支援寫入與查詢 `TimesFM` 策略紀錄。
+  - FastAPI REST 端點與 MCP 原生工具：
+    - `GET /api/v1/predictions/timesfm/top-bullish`
+    - `GET /api/v1/predictions/timesfm/top-bearish`
+    - MCP Tool `get_timesfm_top_predictions`
+  - 新增單元測試 `test/test_timesfm_strategy.py`。
 
-### 🔮 Google Research TimesFM 時序大模型策略整合 (Google TimesFM Integration)
-- **Zero-Shot 預訓練時序大模型與分位數風控 (`models/timesfm_model.py` & `strategies/timesfm.py`)**：
-  - 單例惰性載入 Google Research TimesFM 2.5 預訓練權重，支援 PyTorch 向量化批次推論。
-  - 輸出 1~5 日目標價與 10%~90% 分位數風險區間，計算真實盈虧比 (Risk/Reward Ratio)。
-  - 標準化繼承 `BaseStrategy`，透過 `@register_strategy("timesfm")` 掛載至策略工廠。
-  - 綜合評估引擎升級：新增 `🔮雙ML共振`（LSTM 看漲 ∩ TimesFM 看漲）與 `👑四重共振`（玄鐵 ∩ 法人 ∩ LSTM ∩ TimesFM）標籤。
-  - 新增 REST API 端點 `/api/v1/predictions/timesfm/top-bullish` 與 `/api/v1/predictions/timesfm/top-bearish`。
-  - 新增 MCP 工具 `get_timesfm_top_predictions`。
+## [2.2.1] - 2026-09-01
 
-## [Unreleased] - 2026-09-02
+### Changed
 
-### 📄 全面支援 llmstxt.org 規範 (`/llms.txt` & `/llms-full.txt`)
+- **首頁日報導覽優化**：新增「今日量化訊號」主標與日報狀態提示，讓每日計算結果成為首頁主要入口。
+- **資料狀態更誠實**：首頁載入期間不再顯示固定的宏觀、曝險、資料筆數或科技股上限假值；改以讀取中或未提供狀態呈現。
+- **查詢體驗改善**：策略結果載入改用符合卡片版型的 skeleton，並加入日報失敗後的可見錯誤與重新整理操作。
+- **可及性與手機操作**：補充主要導覽、策略選擇、主題切換、重新整理與歷史軌跡控制的語意標籤與鍵盤焦點樣式。
+- **初始化流程整理**：移除首頁 Vue 應用重複的 `mounted()` 定義，保留 WebMCP 註冊與資料載入在同一個初始化流程中。
+- **頁尾文案聚焦產品**：移除頁尾對 DuckDB 與深度學習實作的宣傳句，保留品牌與技術提供者資訊。
+
+## [Unreleased] - 2026-09-04
+
+### 🏛️ Investing.com 宏觀數據、FedWatch 降息監控與美股行事曆整合 (Investing.com Macro & US Calendars via 2MD)
+- **透過 2MD API 整合 Investing.com 全球即時宏觀與日曆數據 (`data/investing_service.py`)**：
+  - **CME FedWatch 聯準會降息監控 (`get_fed_rate_monitor`)**：實時抓取聯準會下次 FOMC 會議日期、倒數天數、各目標利率區間機率分布表（`Target Rate | Current % | Prev Day % | Prev Week %`）、最高機率目標利率與政策預期文字摘要。
+  - **美股重量級財報行事曆 (`get_earnings_calendar`)**：抓取近期即將公佈財報之美股個股（代號、公司名稱、財報公佈日、預估 EPS、預估營收規模與市值）。
+  - **關鍵大宗商品與原物料 (`get_commodities_summary`)**：實時追蹤黃金 (Gold 避險與流動性)、銅博士 (Copper 製造業與 AI 硬體景氣)、WTI 紐約輕原油 (Crude Oil 通膨預期與能源成本) 之日漲跌與週漲跌幅。
+  - **全球重磅總經行事曆 (`get_economic_calendar`)**：自動爬取美國與主要經濟體高衝擊指標（CPI、PCE、非農就業 NFP、失業率、GDP、FOMC 決策）之公佈時間、預測值、前值與實際值。
+  - **大盤催化劑警示 (`catalyst_alerts`)**：自動自總經與財報行事曆提煉今日/明日高衝擊事件，無縫注入大盤風控警示。
+- **高可用 3 級容災與兩層原子持久化快取 (3-Tier Fallback & Atomic Disk Persistence)**：
+  - 與 `CompanyProfileService` 共享防崩潰信號量 `Semaphore(2)`，杜絕高並發連線過載。
+  - 支援 `2md.aiurl.tw` ➔ `2md.glsoft.ai` ➔ `create360.ai` 自動容災輪詢。
+  - 建立 6~12 小時原子磁碟快取（`cache/investing/*.json`）與記憶體 L1 快取，重啟容器或服務時微秒級讀取，免除每次請求向 2MD 爬取外部網頁。
+- **後端 REST API 與風控狀態擴充 (`api/routes/macro.py` & `data/macro.py`)**：
+  - `MacroState` 與 `MacroRegimeResponse` 擴展 `fed_rate`、`commodities`、`earnings_calendar`、`economic_calendar`、`catalyst_alerts` 欄位。
+  - `GET /api/v1/macro/latest` 自動附帶最新總經與行事曆分析。
+  - 新增專屬端點：
+    - `GET /api/v1/macro/investing/summary`
+    - `GET /api/v1/macro/investing/fed-rate`
+    - `GET /api/v1/macro/investing/earnings-calendar`
+    - `GET /api/v1/macro/investing/economic-calendar`
+    - `GET /api/v1/macro/investing/commodities`
+    - 支援 `force_refresh=true` 強制刷新快取。
+- **原生 FastMCP 與 WebMCP 工具支援 (`mcp_server.py` & `api/main.py`)**：
+  - 於 FastMCP 伺服器新增 `@mcp.tool()`：`get_fed_rate_monitor`、`get_us_earnings_calendar`、`get_economic_calendar`。
+  - 同步更新 `/.well-known/mcp.json`、`/.webmcp/bridge.js` 與前端 Chrome WebMCP 註冊清單（擴增至 10 個原生工具）。
+- **前端首頁互動看板整合 (`api/templates/index.html`)**：
+  - 於操盤看板「宏觀環境」卡片下方新增「🏛️ 總經流動性與重磅行事曆」互動看板。
+  - 支援「即時更新」旋轉按鈕與「展開/收合完整行事曆」折疊切換。
+  - 視覺化展示 FedWatch 各目標利率機率分佈進度條、美股重量級財報卡片清單、三大關鍵原物料日/週漲跌與焦點數據即時跑馬燈。
+  - 整合即時 Toast 提示回饋。
+
+### 🐳 Docker Hub 官方預建多架構映像檔與部署文件完善 (Docker Hub Multi-Arch Deployment Docs)
+- **更新 `README.md`、`docs/DOCKER.md` 與 `docker-compose.yml`**：
+  - 正式宣傳並標明 Docker Hub 官方多架構映像檔：`tbdavid2019/stock-underdog-ml:latest`（支援 `linux/amd64` 與 `linux/arm64` 雙架構）。
+  - 將 `docker-compose.yml` 預設映像檔調整為 Docker Hub，使外部使用者直接執行 `docker compose pull` 免除 GHCR 憑證授權困擾。
+  - 詳述推薦直接拉取預建映像檔之優勢（避免本地構建大型 PyTorch / TF / DuckDB 套件耗時 15~20 分鐘及編譯失敗）。
+  - 提供無需 Clone 專案即可單行啟動 Web & API 服務的 `docker run` 快速指引。
+  - 於 `README.md` 頂部新增 Docker Hub 官方徽章。
+
+### 📄 全面支援 llmstxt.org 規範與頁尾開發者專區 (`/llms.txt` & Footer Hub)
 - **遵循 Jeremy Howard [llmstxt.org](https://llmstxt.org/) 標準規範**：
   - 重構 `/llms.txt` 與 `/llms-full.txt`，提供乾淨、結構化之 Markdown 摘要、策略端點清單與全量系統規格。
-  - 前端頂部導覽列新增 `📄 llms.txt ↗` 快捷入口，頁尾新增直接鏈結。
+  - **🧹 頂部導覽列極簡化**：移除頂部右上角多餘的 `llms.txt`、`API 文檔` 及導覽列的 `Agent / MCP` 按鈕，專注呈現「操盤看板」、「法人籌碼」與「個股歷史」，視覺更加俐落清爽。
+  - **⚓ 統一收攏至頁尾 (Footer Developer Hub)**：在頁尾統一設置開發者與 AI 專區，整合 `🤖 Agent / MCP Hub`（點擊平滑切換分頁）、`📄 llms.txt ↗` 標準鏈結、Swagger UI、ReDoc 與 SKILL.md。
   - 在 `Agent / MCP Hub` 分頁新增專屬「📄 llms.txt / llms-full.txt」對接卡片，支援一鍵複製 URL 與直接檢視，供 LLM 系統提示詞、AI 爬蟲與 Agent 快速獲取即時量化模型定義。
 
 ### 🌐 2md 繁體中文公司簡介與即時新聞浮動卡片 (2md Company Profile & News Hover)
 - **整合 2md URL to Markdown 與 Search 服務** (`https://2md.aiurl.tw`, `https://2md.glsoft.ai`, `https://create360.ai`)：
   - 新增 `data/company_profile.py` (`CompanyProfileService`)，支援自 2md 與 Yahoo 股市實時提取個股之繁體中文公司名稱、核心營運業務、產業別、董事長、市值及最新即時新聞動態。
-  - **🚀 背景自動非同步預載 (Background Auto-Prefetch)**：前端於載入量化訊號看板或法人籌碼時，自動並發排程請求 `/api/v1/market/company-profiles/batch`，在使用者懸停前即已完成背景預熱，達成「滑鼠移過去 0 毫秒瞬間彈出」之極致流暢體驗。
-  - 後端內建多執行緒並發批次擷取、LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
+  - **🚀 2md 官方原生微批次抓取 (Native Multi-URL Batch Crawl)**：批次抓取全面改接 2md 原生 `POST /v1/batch` 端點，以每批 2~3 支微批次單一 HTTP 請求並發取回多個 Yahoo Profile Markdown，大幅降低連線開銷與握手延遲。
+  - **🛡️ 防崩潰全域並發信號量 (`Semaphore=2`)**：加入全域信號量節流，限制同時發往 2md 的爬蟲請求上限為 2 組，徹底避免瞬間觸發幾十個 Headless Chromium 渲染導致伺服器 OOM 當機。
+  - **⏱️ 超時放寬至 25 秒給予充足渲染空間 (Realistic 25s Batch Timeout)**：
+    - 單頁渲染超時調增至 10.0 秒，批次超時大幅放寬至 **25.0 秒**，給予 Chromium 充分動態渲染時間，避免過早斷線。
+  - **🔄 完整三級 Fallback 容災輪詢 (Full 3-Tier Fallback Resilience)**：
+    - 無論單筆或批次抓取，遇超時或異常時完整保留 `2md.aiurl.tw` ➔ `2md.glsoft.ai` ➔ `create360.ai` 之多級自動容災切換，確保後手永遠可用。
+    - **由全域 Semaphore(2) 在源頭鎖死並發量**：即使前兩台異常、請求切換至第三台 GCP 機器，同時間也嚴格限制最多 2 個 Chromium 任務，徹底杜絕 20+ 連線暴衝引發的 OOM。
+  - **💾 20 天磁碟持久化兩層快取 (L1 Memory + L2 Disk 20-Day Persistence)**：
+    - 快取效期由 6 小時全面調增至 **20 天 (86,400 × 20 秒)**，滿足常用霸榜標的免頻繁爬蟲之需求。
+    - 導入 L1 記憶體 + L2 磁碟原子持久化 (`./cache/company_profiles/{ticker}.json`)，即使 Docker 容器重建或服務重啟，微秒級自動命中磁碟並回填記憶體，徹底免除每次 hover 重複向 2md 抓取資料之延遲與連線消耗。
+  - 後端內建 LRU 記憶體快取與 UTF-8 解碼，提供毫秒級 Hover Tooltip 回應速度。
   - 新增 REST API 端點 `GET /api/v1/market/company-profile` 與 `POST /api/v1/market/company-profiles/batch`。
   - 新增 MCP 工具 `get_company_profile`，供 AI Agent、Claude Desktop、WebMCP 呼叫。
   - 前端 UI (`api/templates/index.html`) 於所有股票代號（如 `9945.TW`、`2330.TW`、`AAPL`）支援滑鼠 Hover 即時彈出精美 Claude 質感公司介紹浮動卡片，附帶即時新聞與外部行情（Yahoo / Goodinfo / TradingView / 時序軌跡）捷徑。
@@ -116,6 +190,10 @@
   - 移除先前的 platform 條件限制，在每次推送到 `main` 分支時，皆自動透過 QEMU 構建並發布 `linux/amd64` 與 `linux/arm64` (Apple Silicon / Raspberry Pi / Ampere) 雙架構 Docker 映像檔至 GHCR。
 - **README 文件同步更新純數據庫與盤前架構 (`README.md`)**：
   - 補充「⏰ 盤前買進決策排程與純股市數據庫」專章，詳述 `tw_daily_bars`、`tw_institutional_daily`、`tw_broker_trades` 與本地時序快取之抓取與持久化架構。
+- **修正個股查詢誤顯示上一筆結果**：每次新查詢會先清除舊的預測表格與法人圖表；未知輸入或查無資料時不再沿用前一支股票的數據。
+- **個股查詢改為先解析標的**：支援 `TSLA` / `Tesla` / `特斯拉`、`聯電` / `聯華電子` 等明確別名，以及 DuckDB 行情 metadata 中的公司名稱；無法辨識的文字會明確回報，不會猜測代號。
+- **MCP 個股歷史查詢誠實回報空結果**：無法辨識或沒有預測記錄時回傳 `success: false`、空資料與原因，避免 Agent 將空結果當成有效報告。
+- **首頁補齊 SEO 與社群預覽 metadata**：加入 meta description、canonical、Open Graph、Twitter Card、JSON-LD、favicon、Apple Touch Icon、manifest 與 1200×630 OG 圖片資源。
 - **修復 Web UI `index.html` 標籤閉合不對稱導致 Vue 掛載中斷問題**：
   - 移除法人籌碼分頁末端多餘的 `</div>` 標籤，恢復 Vue 根容器完整閉合，解決模板未編譯（顯示 `{{ ... }}`）之渲染異常。
 
@@ -147,6 +225,12 @@
   - 於台灣時間週一至週五 15:30 (UTC 07:30) 自動執行全市場行情同步與 DuckDB Artifact 保存。
 - **籌碼與美股研究評估 (`tw-institutional-stocker` & `us_fddk`)**：
   - 完成法人籌碼持股推估模型與美股 20 年凍結宏觀 Regime 框架深度架構評估。
+- **888 Stock Quant 品牌重塑與文案淨化**：
+  - 全面統一平台名稱為 **`888 Stock Quant`**，移除全站、API 說明與 Agent / MCP 規格文件中所有「AI」字眼，回歸硬核多維量化決策與工程架構。
+- **Anthropic Claude 官方美學（Normal Mode）**：
+  - 淺色模式全面導入 Anthropic Claude 官方暖色調視覺設計（暖羊皮紙白底色 `#FAF9F5`、陶土珊瑚紅焦點色 `#D97757`、暖灰柔和邊框 `#E8E6DC`、炭黑高對比文字 `#141413`）。
+- **JetBrains Mono 數據字體排版與層次重構**：
+  - 全局中文字體採用標準平滑無襯線字體（`Noto Sans TC`），將 `JetBrains Mono`（`.num-font`）精準作用於所有股票代號、現價、目標價、漲跌潛力%、PE/PB 與時間戳記。
 
 ## [2.2.0] - 2026-09-01
 
@@ -165,7 +249,6 @@
   - 支援 Claude Desktop、Cursor、Antigravity、Open-WebUI 原生掛載與 stdio/SSE 傳輸。
 - **Agent Skill 規格文檔 (`skills/stock-quant/SKILL.md` & `/skill`)**：
   - 結構化定義操盤工作流（大盤宏觀 ➔ 三重共振 ➔ 波段/短線候選 ➔ 風控防守位）與金融因子指標解讀指南。
-- **WebMCP 原生 SSE 串流與自動發現標準 (`/mcp/sse` & `/.well-known/mcp.json`)**：
 - **正式生產網域與 Cloudflare 橘雲反向代理 (`https://stockdata.david888.com`)**：
   - 於 `10.9.0.99` Nginx 配置 `stockdata.david888.com` 虛擬主機（支援 HTTP 80 與 HTTP/2 443 SSL），透過 Let's Encrypt 自動續期憑證。
   - 對接 Cloudflare 橘雲 Proxy，支援 WebMCP SSE 長連線（`proxy_buffering off`、`proxy_read_timeout 86400s`）與即時操盤儀表板。

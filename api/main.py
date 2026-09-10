@@ -133,7 +133,8 @@ def mcp_root_endpoint():
             "get_us_earnings_calendar",
             "get_economic_calendar",
             "get_commodities_summary",
-            "resolve_stock_ticker"
+            "resolve_stock_ticker",
+            "get_polymarket_macro_sentiment"
         ]
     })
 
@@ -158,8 +159,8 @@ def get_webmcp_manifest():
     """
     return JSONResponse(content={
         "name": "stock-quant-engine",
-        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振)",
-        "version": "2.3.0",
+        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)",
+        "version": "2.4.0",
         "transport": "sse",
         "endpoints": {
             "sse": "/mcp/sse",
@@ -180,7 +181,8 @@ def get_webmcp_manifest():
             "get_us_earnings_calendar",
             "get_economic_calendar",
             "get_commodities_summary",
-            "resolve_stock_ticker"
+            "resolve_stock_ticker",
+            "get_polymarket_macro_sentiment"
         ]
     })
 
@@ -224,6 +226,7 @@ def get_llms_txt():
 - [US Corporate Earnings Calendar](/api/v1/macro/investing/earnings-calendar): 查詢近期美股重量級企業財報行事曆（EPS、營收預估、市值）
 - [Key Commodities Summary](/api/v1/macro/investing/commodities): 查詢黃金 (Gold)、銅博士 (Copper)、原油 (WTI) 實時報價與週期走勢
 - [Global Economic Calendar](/api/v1/macro/investing/economic-calendar): 查詢全球重磅總經行事曆（CPI、非農 NFP、GDP、PCE）
+- [Polymarket Real-Money Sentiment](/api/v1/macro/polymarket/sentiment): 透過 2MD 與 DoH (8.8.8.8) 查詢 Polymarket 真金白銀預測市場（聯準會降息機率、地緣關稅風險、科技七巨頭 AI 動向、美國經濟衰退預期）
 
 ## Institutional & Broker Fund Flows
 
@@ -234,7 +237,7 @@ def get_llms_txt():
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 15 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 16 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙ML共振焦點股。
 - `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日漲跌幅排行與盈虧比。
@@ -250,6 +253,7 @@ def get_llms_txt():
 - `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆。
 - `get_commodities_summary`: 透過 2MD 查詢黃金、原油、銅博士行情。
 - `resolve_stock_ticker`: 將模糊搜尋之公司名稱快速解析為標準交易代號。
+- `get_polymarket_macro_sentiment`: 透過 2MD/DoH 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒。
 
 ## Agent & Developer Discovery Standards
 
@@ -352,6 +356,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - `GET /api/v1/macro/investing/earnings-calendar`: 美股重量級企業財報公布行事曆。
 - `GET /api/v1/macro/investing/commodities`: 黃金、銅博士、WTI 原油行情與週期漲跌。
 - `GET /api/v1/macro/investing/economic-calendar`: 全球重磅總經行事曆（CPI、非農等）。
+- `GET /api/v1/macro/polymarket/sentiment`: Polymarket 真金白銀預測市場宏觀情緒（FOMC 利率、地緣關稅、科技巨頭、經濟衰退）。
 
 ### 4.3 Institutional & Company Profile
 - `GET /api/v1/market/institutional/top?order_by=total_net&limit=30`: 三大法人買賣超排行。
@@ -363,7 +368,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (15 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`.
+- Tools (16 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -519,6 +524,16 @@ def get_webmcp_bridge():
             execute: async (args) => {
                 return JSON.stringify(await (await fetch('/api/v1/predictions/resolve/' + encodeURIComponent(args.query))).json());
             }
+        },
+        {
+            name: 'get_polymarket_macro_sentiment',
+            description: '透過 2MD 與 DoH 查詢 Polymarket 預測市場宏觀情緒與重大事件機率',
+            inputSchema: { type: 'object', properties: { category: { type: 'string' }, force_refresh: { type: 'boolean' } } },
+            execute: async (args) => {
+                let url = '/api/v1/macro/polymarket/sentiment?force_refresh=' + (args?.force_refresh ? 'true' : 'false');
+                if (args?.category) url += '&category=' + encodeURIComponent(args.category);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
         }
     ];
 
@@ -544,7 +559,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 15 大原生 MCP 量化工具與 WebMCP 協議。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 16 大原生 MCP 量化工具與 WebMCP 協議。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"

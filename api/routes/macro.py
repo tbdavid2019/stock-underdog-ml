@@ -36,6 +36,7 @@ def get_latest_macro(market: str = "us", index_name: Optional[str] = None):
         earnings_calendar=state.earnings_calendar,
         economic_calendar=state.economic_calendar,
         catalyst_alerts=state.catalyst_alerts,
+        polymarket=state.polymarket,
         timestamp=datetime.datetime.now().isoformat()
     )
 
@@ -83,5 +84,18 @@ def get_commodities(refresh: bool = False, force_refresh: bool = False):
     do_refresh = refresh or force_refresh
     data = InvestingService.get_commodities_summary(force_refresh=do_refresh)
     return {"success": True, "data": data}
+
+
+@router.get("/polymarket/sentiment", summary="取得 Polymarket 真金白銀預測市場宏觀情緒與重大催化劑")
+def get_polymarket_sentiment(refresh: bool = False, force_refresh: bool = False, category: Optional[str] = None):
+    """
+    透過 2MD 與 DoH (8.8.8.8 / 1.1.1.1) 取得 Polymarket 真金白銀預測市場數據：
+    包含聯準會降息/維持利率機率、地緣關稅風險、科技七巨頭動向與美國經濟衰退預期。
+    """
+    from data.polymarket_service import PolymarketService
+    do_refresh = refresh or force_refresh
+    data = PolymarketService.get_macro_sentiment(force_refresh=do_refresh, category=category)
+    return {"success": True, "data": data}
+
 
 

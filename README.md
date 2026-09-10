@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **15 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **16 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -145,7 +145,7 @@ graph TD
 }
 ```
 
-**支援之 15 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
+**支援之 16 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
 
 1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
 2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振、🔮雙ML共振焦點多策略交集個股。
@@ -162,6 +162,7 @@ graph TD
 13. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
 14. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅博士 Copper、原油 WTI）實時行情。
 15. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
+16. `get_polymarket_macro_sentiment`: Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
@@ -173,7 +174,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (15 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (16 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -189,6 +190,7 @@ graph TD
 | `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
 | `/api/v1/macro/latest` | `GET` | 即時取得台美股大盤宏觀風控狀態、建議曝險、FedWatch 降息機率與總經催化劑 |
 | `/api/v1/macro/investing/summary` | `GET` | Investing.com 一站式總經數據（FedWatch、美股財報、大宗商品、行事曆） |
+| `/api/v1/macro/polymarket/sentiment` | `GET` | Polymarket 真金白銀宏觀預測市場情緒（含降息預期與各類大事件機率） |
 | `/api/v1/macro/investing/fed-rate` | `GET` | CME FedWatch 聯準會降息機率分布表與 FOMC 倒數 |
 | `/api/v1/macro/investing/earnings-calendar` | `GET` | 美股重量級企業財報行事曆（EPS、營收預估、市值規模） |
 | `/api/v1/macro/investing/commodities` | `GET` | 關鍵大宗商品（黃金、銅博士、WTI 原油）即時行情與週期漲跌 |

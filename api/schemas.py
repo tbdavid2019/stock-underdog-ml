@@ -69,6 +69,7 @@ class MacroRegimeResponse(BaseModel):
     earnings_calendar: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="美股重量級財報行事曆")
     economic_calendar: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="重磅總經行事曆")
     catalyst_alerts: List[str] = Field(default_factory=list, description="催化劑事件預警")
+    polymarket: Optional[Dict[str, Any]] = Field(None, description="Polymarket 真金白銀預測市場宏觀情緒")
     timestamp: Optional[str] = None
 
 

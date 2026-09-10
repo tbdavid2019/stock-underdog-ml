@@ -9,6 +9,29 @@
 ## 2026-09-10
 
 ### Added
+- **🎲 Polymarket 真金白銀預測市場宏觀情緒整合 (Polymarket Real-Money Macro Sentiment Integration)**：
+  - **核心服務模組 (`data/polymarket_service.py`)**：串接 Polymarket Gamma API，無須 API 金鑰即時追蹤真金白銀千萬美元流動性之宏觀預測市場。
+  - **防封鎖多層連線架構 (Multi-Tier Proxy & DoH Fallback)**：
+    - 第一層（Primary）：透過 `2md.aiurl.tw` 繁中快取代理直連獲取。
+    - 第二層（Backup）：自動輪詢 `2md.glsoft.ai` 與 `create360.ai`。
+    - 第三層（DoH Fallback）：當 2MD 全數逾時或遭遇台灣 ISP 封鎖 sinkhole (182.173.0.181) 時，自動調用 Google (`8.8.8.8`) 與 Cloudflare (`1.1.1.1`) DNS over HTTPS 解析 legitimate Cloudflare Anycast IP，並透過自訂 SNI SSL Adapter 建立直連，確保 100% 高可用。
+  - **降息預期與市場分類**：
+    - 自動提取真金白銀 FOMC 利率決策機率（`fed_real_money_odds`：降息 1 碼、按兵不動、降息 2 碼、升息 1 碼），與 CME FedWatch 形成雙源交叉驗證。
+    - 自動篩選分類為 `fed_rates`、`geopolitics`、`tech_giants`、`macro_recession`，並自動過濾純體育/娛樂雜訊。
+    - 實作 L1 記憶體 + L2 本地磁碟雙層快取（15 分鐘 TTL）。
+  - **宏觀風控聚合 (`data/macro.py`, `api/schemas.py`, `api/routes/macro.py`)**：
+    - 將 `polymarket` 數據自動富化 (enrich) 至台美股宏觀風控狀態 `MacroState` 與 `MacroRegimeResponse`。
+    - 新增 REST 端點 `GET /api/v1/macro/polymarket/sentiment`（支援 `category` 篩選與 `force_refresh` 強制更新）。
+  - **擴充至 16 大標準量化 MCP 函數與 WebMCP 協議**：
+    - 原生 FastMCP 工具新增第 16 號工具 `get_polymarket_macro_sentiment`。
+    - `/mcp`、`/.well-known/mcp.json`、`/.webmcp/bridge.js`、`ai-plugin.json`、`/llms.txt`、`/llms-full.txt` 全面升級至 16 工具宣告。
+    - 前端 Chrome WebMCP 動態註冊全套 16 大工具至 `window.document.modelContext`。
+  - **互動看板第四欄擴充 (`api/templates/index.html`)**：
+    - 宏觀風控摺疊區升級為 4 欄響應式網格（`grid-cols-1 md:grid-cols-2 xl:grid-cols-4`），新增 Panel 4「🎲 Polymarket 預測市場」專區，即時展示真金白銀降息定價卡片與焦點市場清單。
+    - `refreshMacro()` 同步並行刷新 Investing 總經與 Polymarket 預測數據。
+    - 更新 Agent Hub 規格標籤為 16 大原生量化 MCP 函數。
+  - **完整單元測試 (`test/test_polymarket_service.py`, `test/test_api.py`)**：涵蓋雜訊過濾、分類正則、Fed 賠率解析、Fallback 流程與 16 工具端點驗證。
+
 - **🔮 TimesFM 報表排版與 WebMCP / Agent 發現協議全面補齊 (TimesFM Reporting & Discovery Integration)**：
   - **終端機與量化日報 (`evaluators/formatter.py`)**：新增 `TimesFM` 時序大模型預測專區（持有 1-5 天目標價、預期潛力、真實盈虧比、PE/PB），並在「⭐ 【優先推薦】多策略交集」表格中完整納入 `TimesFM` 潛力與盈虧比欄位。
   - **AI 操盤解讀引擎 (`evaluators/ai_narrative.py`)**：將 TimesFM 預測數據、雙 ML 共振 (`🔮雙ML共振`) 與高盈虧比特性注入 3-Tier Fallback LLM Prompt 與零依賴規則模板。

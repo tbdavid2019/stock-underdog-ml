@@ -211,18 +211,19 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["name"], "stock-quant-engine")
         self.assertEqual(data["transport"], "sse")
-        self.assertEqual(len(data["tools"]), 15)
+        self.assertEqual(len(data["tools"]), 16)
         self.assertIn("get_market_macro_regime", data["tools"])
         self.assertIn("get_fed_rate_monitor", data["tools"])
         self.assertIn("get_us_earnings_calendar", data["tools"])
         self.assertIn("get_commodities_summary", data["tools"])
         self.assertIn("resolve_stock_ticker", data["tools"])
+        self.assertIn("get_polymarket_macro_sentiment", data["tools"])
 
         # Test alias /mcp.json
         resp_alias = self.client.get("/mcp.json")
         self.assertEqual(resp_alias.status_code, 200)
         self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
-        self.assertEqual(len(resp_alias.json()["tools"]), 15)
+        self.assertEqual(len(resp_alias.json()["tools"]), 16)
 
     def test_macro_investing_endpoints(self):
         from unittest.mock import patch
@@ -292,23 +293,57 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("get_timesfm_top_predictions", resp.text)
         self.assertIn("get_commodities_summary", resp.text)
         self.assertIn("resolve_stock_ticker", resp.text)
+        self.assertIn("get_polymarket_macro_sentiment", resp.text)
 
     def test_mcp_discovery_manifest(self):
         resp = self.client.get("/mcp")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertEqual(len(data.get("tools", [])), 15)
+        self.assertEqual(len(data.get("tools", [])), 16)
         self.assertIn("get_timesfm_top_predictions", data.get("tools", []))
         self.assertIn("get_commodities_summary", data.get("tools", []))
         self.assertIn("resolve_stock_ticker", data.get("tools", []))
+        self.assertIn("get_polymarket_macro_sentiment", data.get("tools", []))
 
         resp_wk = self.client.get("/.well-known/mcp.json")
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
-        self.assertEqual(len(data_wk.get("tools", [])), 15)
+        self.assertEqual(len(data_wk.get("tools", [])), 16)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
         self.assertIn("get_commodities_summary", data_wk.get("tools", []))
         self.assertIn("resolve_stock_ticker", data_wk.get("tools", []))
+        self.assertIn("get_polymarket_macro_sentiment", data_wk.get("tools", []))
+
+    def test_macro_polymarket_sentiment_endpoint(self):
+        from unittest.mock import patch
+        with patch("data.polymarket_service.PolymarketService.get_macro_sentiment") as mock_pm:
+            mock_pm.return_value = {
+                "source": "doh_direct",
+                "fed_real_money_odds": {
+                    "pause": 0.05,
+                    "cut_25bps": 0.88,
+                    "cut_50bps": 0.07,
+                    "hike_25bps": 0.0
+                },
+                "total_markets_tracked": 12,
+                "markets": [
+                    {
+                        "id": "pm_fed_1",
+                        "question": "Fed rate cut in next FOMC?",
+                        "category": "fed_rates",
+                        "probability": 88.0,
+                        "volume_24h": 450000.0,
+                        "top_outcome": "Yes"
+                    }
+                ]
+            }
+            resp = self.client.get("/api/v1/macro/polymarket/sentiment")
+            self.assertEqual(resp.status_code, 200)
+            res_json = resp.json()
+            self.assertTrue(res_json["success"])
+            self.assertEqual(res_json["data"]["source"], "doh_direct")
+            self.assertEqual(res_json["data"]["fed_real_money_odds"]["cut_25bps"], 0.88)
+            self.assertEqual(len(res_json["data"]["markets"]), 1)
 
 
 if __name__ == "__main__":

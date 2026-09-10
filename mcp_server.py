@@ -20,7 +20,7 @@ from data.macro import MacroRegimeAnalyzer
 # Initialize FastMCP Server with name and instructions
 mcp = FastMCP(
     "stock-quant-engine",
-    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、🏆三重共振、👑四重共振、🔮雙ML共振)"
+    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、🏆三重共振、👑四重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)"
 )
 
 # Global DuckDB Manager
@@ -400,6 +400,22 @@ def resolve_stock_ticker(query: str) -> Dict[str, Any]:
     if res:
         return {"success": True, "data": res}
     return {"success": False, "query": query, "error": f"無法識別的股票代號或公司名稱: {query}"}
+
+
+@mcp.tool(
+    name="get_polymarket_macro_sentiment",
+    description="透過 2MD 與 DoH (8.8.8.8 / 1.1.1.1) 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒（聯準會利率決策機率、地緣關稅風險、科技七巨頭 AI 動向、美國經濟衰退機率）。"
+)
+def get_polymarket_macro_sentiment(
+    category: Optional[str] = None,
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    """
+    Fetch Polymarket real-money prediction market macro sentiment & event odds.
+    Categories: 'fed_rates', 'geopolitics', 'tech_giants', 'macro_recession', or None for all.
+    """
+    from data.polymarket_service import PolymarketService
+    return PolymarketService.get_macro_sentiment(force_refresh=force_refresh, category=category)
 
 
 if __name__ == "__main__":
