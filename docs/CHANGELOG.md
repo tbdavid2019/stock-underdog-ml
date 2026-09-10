@@ -13,10 +13,12 @@
   - **終端機與量化日報 (`evaluators/formatter.py`)**：新增 `TimesFM` 時序大模型預測專區（持有 1-5 天目標價、預期潛力、真實盈虧比、PE/PB），並在「⭐ 【優先推薦】多策略交集」表格中完整納入 `TimesFM` 潛力與盈虧比欄位。
   - **AI 操盤解讀引擎 (`evaluators/ai_narrative.py`)**：將 TimesFM 預測數據、雙 ML 共振 (`🔮雙ML共振`) 與高盈虧比特性注入 3-Tier Fallback LLM Prompt 與零依賴規則模板。
   - **通知推播模組升級 (`notifier_dual.py`)**：在 Telegram、Discord、Email 的優先推薦共振標的中完整同步呈現 LSTM 與 TimesFM 訊號及盈虧比。
-  - **WebMCP / Chrome WebMCP / API 發現協議全面同步 (`api/main.py`, `api/templates/index.html`)**：
-    - `/mcp` 與 `/.well-known/mcp.json` 清單補齊 `get_timesfm_top_predictions`、`get_broker_trades_for_stock`、`get_company_profile`、`get_economic_calendar`。
-    - 前端 Chrome WebMCP 動態註冊 `get_timesfm_top_predictions` 至 `window.document.modelContext`（累計註冊 11 組量化工具）。
-    - 更新 `skills/stock-quant/SKILL.md`、`/llms.txt` 與 `/llms-full.txt` 完整納入 TimesFM、四重共振與 5 日盈虧比規範。
+  - **WebMCP / Chrome WebMCP / API 發現協議全面同步 (`api/main.py`, `api/templates/index.html`, `mcp_server.py`)**：
+    - FastMCP 伺服器新增 `get_commodities_summary` (黃金/原油/期銅) 與 `resolve_stock_ticker` (模糊股票代號解析)，達成全套 15 大量化工具。
+    - `/mcp` 與 `/.well-known/mcp.json` 清單同步收錄全套 15 大量化工具，消除 307 重定向並支援遠端 SSE 串流。
+    - 前端 Chrome WebMCP 動態註冊全套 15 大工具至 `window.document.modelContext`，打通瀏覽器端內建 AI 呼叫能力。
+    - 依據 [llmstxt.org](https://llmstxt.org/) 規範重構 `/llms.txt` 與 `/llms-full.txt`，提供完整數學公式 ($P_{10}/P_{50}/P_{90}$、動態盈虧比、曝險折減)、DuckDB 表結構、REST/MCP 規格與標準 4 步操盤工作流。
+    - 更新 `skills/stock-quant/SKILL.md`、`README.md` 與首頁 Agent Hub 說明卡片，精確對齊 15 大工具與共振因子規範。
   - **資料庫數值防禦 (`data/duckdb_manager.py`, `database.py`)**：安全處理多策略共振標的可能為 None/NaN 的浮點數轉型，杜絕單一模型遺漏時的存檔崩潰。
 
 ### Fixed

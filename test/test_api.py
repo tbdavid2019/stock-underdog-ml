@@ -211,14 +211,18 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["name"], "stock-quant-engine")
         self.assertEqual(data["transport"], "sse")
+        self.assertEqual(len(data["tools"]), 15)
         self.assertIn("get_market_macro_regime", data["tools"])
         self.assertIn("get_fed_rate_monitor", data["tools"])
         self.assertIn("get_us_earnings_calendar", data["tools"])
+        self.assertIn("get_commodities_summary", data["tools"])
+        self.assertIn("resolve_stock_ticker", data["tools"])
 
         # Test alias /mcp.json
         resp_alias = self.client.get("/mcp.json")
         self.assertEqual(resp_alias.status_code, 200)
         self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
+        self.assertEqual(len(resp_alias.json()["tools"]), 15)
 
     def test_macro_investing_endpoints(self):
         from unittest.mock import patch
@@ -286,17 +290,25 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("Cloudflare & Chrome WebMCP Bridge", resp.text)
         self.assertIn("registerTool", resp.text)
         self.assertIn("get_timesfm_top_predictions", resp.text)
+        self.assertIn("get_commodities_summary", resp.text)
+        self.assertIn("resolve_stock_ticker", resp.text)
 
     def test_mcp_discovery_manifest(self):
         resp = self.client.get("/mcp")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        self.assertEqual(len(data.get("tools", [])), 15)
         self.assertIn("get_timesfm_top_predictions", data.get("tools", []))
+        self.assertIn("get_commodities_summary", data.get("tools", []))
+        self.assertIn("resolve_stock_ticker", data.get("tools", []))
 
         resp_wk = self.client.get("/.well-known/mcp.json")
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
+        self.assertEqual(len(data_wk.get("tools", [])), 15)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
+        self.assertIn("get_commodities_summary", data_wk.get("tools", []))
+        self.assertIn("resolve_stock_ticker", data_wk.get("tools", []))
 
 
 if __name__ == "__main__":

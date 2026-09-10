@@ -54,26 +54,40 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表
+## 4. MCP Tools 快速對照表 (15 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
 | `get_market_macro_regime` | `market`, `index_name` | 台美股大盤情境、VIX 指數、季線狀態、建議曝險百分比 (0~100%) |
-| `get_triple_resonance_stocks` | `index_name`, `limit` | 👑 四重共振與 🏆 三重共振多策略焦點交集股清單 |
+| `get_triple_resonance_stocks` | `index_name`, `limit` | 👑 四重共振、🏆 三重共振與 🔮 雙ML共振多策略焦點交集股清單 |
 | `get_xuantie_pullback_stocks` | `index_name`, `pullback_type`, `limit` | 玄鐵重劍 MA60/MA120 回調買點清單 |
-| `get_timesfm_top_predictions` | `index_name`, `direction`, `limit` | Google TimesFM 時序大模型漲跌幅排行與盈虧比 |
+| `get_timesfm_top_predictions` | `index_name`, `direction`, `limit` | Google TimesFM 時序大模型漲跌幅排行與盈虧比 (Risk/Reward) |
 | `get_lstm_top_predictions` | `index_name`, `direction`, `limit` | LSTM 預測次日漲幅 TOP N 或 跌幅 TOP N 避險榜 |
 | `get_stock_history` | `ticker`, `limit` | 指定代號之歷史時序量化預測與指標軌跡 |
-| `get_latest_market_snapshot` | `index_name`, `limit` | 當日最新完整日報批次數據 |
+| `get_latest_market_snapshot` | `index_name`, `limit` | 當日最新完整日報批次數據快照 |
 | `get_top_institutional_flows` | `order_by`, `sort_dir`, `market`, `limit` | 三大法人（外資、投信、自營商）買賣超排行榜 |
 | `get_broker_trades_for_stock` | `ticker`, `days` | 券商關鍵分點主力買賣超追蹤 |
 | `get_company_profile` | `ticker` | 2MD 繁中公司簡介、核心業務、市值與即時新聞 |
+| `get_fed_rate_monitor` | `force_refresh` | CME FedWatch 聯準會利率決策機率分布表與 FOMC 倒數 |
+| `get_us_earnings_calendar` | `force_refresh`, `limit` | Investing.com 美股近期重量級財報行事曆（EPS、營收預估） |
+| `get_economic_calendar` | `force_refresh`, `limit` | 全球重大總經行事曆（CPI、非農 NFP、GDP、PCE） |
+| `get_commodities_summary` | `force_refresh` | 關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油）實時行情 |
+| `resolve_stock_ticker` | `query` | 將中英文股票名稱模糊解析為標準交易代號（如台積電 ➔ 2330.TW） |
 
 ---
 
-## 5. REST API 端點對照 (Base URL: `http://10.9.0.99:8088`)
+## 5. REST API 端點對照 (Base URL: `https://stockdata.david888.com` / `http://10.9.0.99:8088`)
 
+- `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
+- `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (15 大量化工具)
+- `GET /mcp/sse` - WebMCP SSE 串流通訊端點
 - `GET /api/v1/macro/latest` - 宏觀風控狀態與建議曝險
+- `GET /api/v1/macro/investing/summary` - 一站式總經數據彙整 (FedWatch、財報、大宗商品、日曆)
+- `GET /api/v1/macro/investing/fed-rate` - 聯準會利率決策機率與 FOMC 倒數
+- `GET /api/v1/macro/investing/earnings-calendar` - 美股重量級企業財報行事曆
+- `GET /api/v1/macro/investing/commodities` - 黃金、原油、銅博士實時報價
+- `GET /api/v1/macro/investing/economic-calendar` - 全球重磅總經行事曆
 - `GET /api/v1/predictions/resonance` - 三重/四重共振焦點股
 - `GET /api/v1/predictions/xuantie` - 玄鐵均線買點
 - `GET /api/v1/predictions/timesfm/top-bullish` - TimesFM 5日看漲榜與盈虧比
@@ -81,7 +95,9 @@ graph TD
 - `GET /api/v1/predictions/lstm/top-bullish` - LSTM 次日看漲榜
 - `GET /api/v1/predictions/lstm/top-bearish` - LSTM 次日看跌榜
 - `GET /api/v1/predictions/history/{ticker}` - 個股時序歷史
+- `GET /api/v1/predictions/resolve/{query}` - 股票名稱與代號模糊解析
 - `GET /api/v1/market/institutional/top` - 法人買賣超排行
+- `GET /api/v1/market/broker/summary/{ticker}` - 券商主力分點累計進出
 - `GET /api/v1/market/company-profile` - 2MD 公司營運簡介
 - `GET /api/v1/predictions/latest` - 最新批次日報
 - `GET /api/v1/stats/summary` - 資料庫時序統計

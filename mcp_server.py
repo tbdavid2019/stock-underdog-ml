@@ -20,7 +20,7 @@ from data.macro import MacroRegimeAnalyzer
 # Initialize FastMCP Server with name and instructions
 mcp = FastMCP(
     "stock-quant-engine",
-    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、三大法人籌碼、🏆三重共振)"
+    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、🏆三重共振、👑四重共振、🔮雙ML共振)"
 )
 
 # Global DuckDB Manager
@@ -57,7 +57,7 @@ def get_market_macro_regime(
 
 @mcp.tool(
     name="get_triple_resonance_stocks",
-    description="查詢多策略交集與 🏆 三重共振焦點股票。篩選同時符合「技術面 MA60/120 買點 ∩ LSTM 看漲 ∩ 投信/外資主力連續買超鎖碼 ∩ 低PE估值」之最高信心標的。"
+    description="查詢多策略交集與 👑 四重共振 / 🏆 三重共振 / 🔮 雙ML共振焦點股票。篩選同時符合「技術面 MA60/120 買點 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 投信/外資主力連續買超鎖碼 ∩ 低PE估值」之最高信心標的。"
 )
 def get_triple_resonance_stocks(
     index_name: Optional[str] = None,
@@ -374,6 +374,32 @@ def get_economic_calendar(force_refresh: bool = False, limit: int = 15) -> Dict[
     if "events" in data and isinstance(data["events"], list):
         data["events"] = data["events"][:limit]
     return data
+
+
+@mcp.tool(
+    name="get_commodities_summary",
+    description="透過 2MD 查詢 Investing.com 關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油 Crude Oil）實時行情、即時報價與週期漲跌幅。"
+)
+def get_commodities_summary(force_refresh: bool = False) -> Dict[str, Any]:
+    """
+    Fetch major commodity prices (Gold, Crude Oil, Copper) from Investing.com via 2MD.
+    """
+    from data.investing_service import InvestingService
+    return InvestingService.get_commodities_summary(force_refresh=force_refresh)
+
+
+@mcp.tool(
+    name="resolve_stock_ticker",
+    description="將模糊搜尋的個股名稱（例如『台積電』、『聯發科』、『Tesla』、『輝達』）快速解析為標準交易代號（如 '2330.TW', '2454.TW', 'TSLA', 'NVDA'）。"
+)
+def resolve_stock_ticker(query: str) -> Dict[str, Any]:
+    """
+    Resolve company name or ticker query to standardized symbol.
+    """
+    res = db.resolve_ticker(query.strip())
+    if res:
+        return {"success": True, "data": res}
+    return {"success": False, "query": query, "error": f"無法識別的股票代號或公司名稱: {query}"}
 
 
 if __name__ == "__main__":

@@ -1391,8 +1391,8 @@
                             <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
                                  :class="isDark ? 'bg-slate-950 border-dark-border text-slate-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-stone-200'">
                                 <div>📁 本地路徑: <code>skills/stock-quant/SKILL.md</code></div>
-                                <div>🛠️ 工具數量: <code>11 大原生量化 MCP 函數 (含 TimesFM)</code></div>
-                                <div>🏆 因子支援: <code>三重/四重共振 / TimesFM / 玄鐵均線 / 法人連買</code></div>
+                                <div>🛠️ 工具數量: <code>15 大原生量化 MCP 函數 (含 TimesFM)</code></div>
+                                <div>🏆 因子支援: <code>👑四重共振 / 🏆三重共振 / 🔮雙ML共振 / TimesFM / 玄鐵均線 / 法人連買</code></div>
                             </div>
                         </div>
 
@@ -2764,7 +2764,7 @@ for p in picks:
                             }
                         });
 
-                        // Tool 10: get_us_earnings_calendar
+                        // Tool 11: get_us_earnings_calendar
                         await modelCtx.registerTool({
                             name: 'get_us_earnings_calendar',
                             description: '透過 2MD 查詢 Investing.com 美股近期重量級財報行事曆（個股代號、EPS、營收預估、市值規模）。',
@@ -2785,7 +2785,80 @@ for p in picks:
                             }
                         });
 
-                        console.log('✅ [Chrome WebMCP] Registered 11 tools to document.modelContext');
+                        // Tool 12: get_latest_market_snapshot
+                        await modelCtx.registerTool({
+                            name: 'get_latest_market_snapshot',
+                            description: '取得全市場最新日報批次數據快照（包含現價、目標價、均線、估值、標籤）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    index_name: { type: 'string', description: '指數名稱（台灣50、台灣中型100、SP500）' },
+                                    limit: { type: 'integer', description: '回傳筆數，預設 50' }
+                                }
+                            },
+                            execute: async ({ index_name, limit }) => {
+                                let url = `/api/v1/predictions/latest?limit=${limit || 50}`;
+                                if (index_name) url += `&index_name=${encodeURIComponent(index_name)}`;
+                                const res = await fetch(url);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 13: get_economic_calendar
+                        await modelCtx.registerTool({
+                            name: 'get_economic_calendar',
+                            description: '透過 2MD 查詢全球重大總經行事曆（CPI、非農 NFP、GDP、PCE 與央行利率）。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    force_refresh: { type: 'boolean', description: '是否強制刷新快取' },
+                                    limit: { type: 'integer', description: '回傳筆數' }
+                                }
+                            },
+                            execute: async ({ force_refresh, limit }) => {
+                                const res = await fetch(`/api/v1/macro/investing/economic-calendar?force_refresh=${!!force_refresh}`);
+                                const data = await res.json();
+                                if (data && Array.isArray(data.data) && limit) {
+                                    data.data = data.data.slice(0, limit);
+                                }
+                                return JSON.stringify(data);
+                            }
+                        });
+
+                        // Tool 14: get_commodities_summary
+                        await modelCtx.registerTool({
+                            name: 'get_commodities_summary',
+                            description: '透過 2MD 查詢關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油）實時行情與週期漲跌。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    force_refresh: { type: 'boolean', description: '是否強制刷新快取' }
+                                }
+                            },
+                            execute: async ({ force_refresh }) => {
+                                const res = await fetch(`/api/v1/macro/investing/commodities?force_refresh=${!!force_refresh}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 15: resolve_stock_ticker
+                        await modelCtx.registerTool({
+                            name: 'resolve_stock_ticker',
+                            description: '將中英文股票名稱（例如『台積電』、『聯發科』、『Tesla』、『輝達』）快速解析為標準交易代號。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    query: { type: 'string', description: '公司名稱或股票代號' }
+                                },
+                                required: ['query']
+                            },
+                            execute: async ({ query }) => {
+                                const res = await fetch(`/api/v1/predictions/resolve/${encodeURIComponent(query)}`);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        console.log('✅ [Chrome WebMCP] Registered 15 tools to document.modelContext');
                     } catch (e) {
                         console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
                     }

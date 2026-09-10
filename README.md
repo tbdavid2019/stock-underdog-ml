@@ -145,18 +145,22 @@ graph TD
 }
 ```
 
-**支援之 11 大標準 MCP 工具函數：**
+**支援之 15 大標準 MCP 工具函數 (FastMCP & WebMCP)：**
 * `get_market_macro_regime`: 評估台美股大盤宏觀風控情境與建議投資曝險比例。
-* `get_triple_resonance_stocks`: 查詢 👑 四重共振與 🏆 三重共振焦點多策略交集個股。
+* `get_triple_resonance_stocks`: 查詢 👑 四重共振、🏆 三重共振與 🔮 雙ML共振焦點多策略交集個股。
 * `get_xuantie_pullback_stocks`: 查詢玄鐵重劍 MA60/120 趨勢回調買點標的。
-* `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型預測漲跌幅排行與盈虧比。
+* `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日預測漲跌幅排行與盈虧比。
 * `get_lstm_top_predictions`: 查詢 LSTM 深度學習次日預測漲跌幅排行。
 * `get_stock_history`: 查詢特定股票歷史時序量化預測軌跡與法人籌碼。
 * `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
 * `get_top_institutional_flows`: 查詢三大法人（外資、投信、自營商）買賣超排行榜。
-* `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細。
+* `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細與累計買賣超。
 * `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞。
-* `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率。
+* `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率與 FOMC 倒數。
+* `get_us_earnings_calendar`: 透過 2MD 查詢美股重量級企業財報行事曆。
+* `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆（CPI、非農 NFP 等）。
+* `get_commodities_summary`: 透過 2MD 查詢關鍵大宗商品（黃金、銅博士、WTI 原油）實時行情。
+* `resolve_stock_ticker`: 將模糊搜尋之股票名稱或代號解析為標準交易代號（如台積電 ➔ 2330.TW）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
@@ -166,11 +170,15 @@ graph TD
 | 端點 | 方法 | 說明 |
 | :--- | :---: | :--- |
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
+| `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
+| `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (15 大量化工具宣告) |
+| `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
 | `/health` | `GET` | 系統健康狀態與 DuckDB 總記錄筆數 |
 | `/api/v1/predictions/latest` | `GET` | 查詢多指數最新各標的現價、預測價、均線數據、PE/PB 估值與籌碼 |
-| `/api/v1/predictions/resonance` | `GET` | 篩選 **雙重符合 / 🏆三重共振** 重點焦點股 |
+| `/api/v1/predictions/resonance` | `GET` | 篩選 **👑四重共振 / 🏆三重共振 / 🔮雙ML共振** 重點焦點股 |
 | `/api/v1/predictions/xuantie` | `GET` | 篩選 **玄鐵重劍技術買點**（回測 MA60 季線 / MA120 半年線） |
 | `/api/v1/predictions/lstm/top-bullish` | `GET` | 查詢 **LSTM 預測漲幅 TOP N** 短線看漲榜 |
 | `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
@@ -183,6 +191,11 @@ graph TD
 | `/api/v1/macro/investing/fed-rate` | `GET` | CME FedWatch 聯準會降息機率分布表與 FOMC 倒數 |
 | `/api/v1/macro/investing/earnings-calendar` | `GET` | 美股重量級企業財報行事曆（EPS、營收預估、市值規模） |
 | `/api/v1/macro/investing/commodities` | `GET` | 關鍵大宗商品（黃金、銅博士、WTI 原油）即時行情與週期漲跌 |
+| `/api/v1/macro/investing/economic-calendar` | `GET` | 全球重大總經行事曆（CPI、非農 NFP 等） |
+| `/api/v1/market/institutional/top` | `GET` | 三大法人買賣超焦點排行 |
+| `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
+| `/api/v1/market/company-profile` | `GET` | 2MD 個股繁體中文營運簡介與新聞 |
+| `/api/v1/market/company-profiles/batch` | `POST` | 並發非同步批次預載多支股票之公司營運摘要 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 
 ---
