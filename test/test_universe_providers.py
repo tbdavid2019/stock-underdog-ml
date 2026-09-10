@@ -161,6 +161,19 @@ class TestUniverseProviders(unittest.TestCase):
         self.assertEqual(records[0].name_en, "2CRSI")
         self.assertEqual(records[0].isin, "FR0013341781")
 
+    def test_euronext_official_csv_parses_all_market_rows(self):
+        content = (
+            "Name;ISIN;Symbol;Market;Currency\n"
+            '"2020 BULKERS";BMG9156K1018;2020;"Oslo Børs";NOK\n'
+            "2CRSI;FR0013341781;AL2SI;\"Euronext Growth Paris\";EUR\n"
+        )
+
+        records = EuronextProvider.parse_csv(content)
+
+        self.assertEqual([record.local_symbol for record in records], ["2020", "AL2SI"])
+        self.assertEqual(records[0].normalized_symbol, "2020.XOSL")
+        self.assertEqual(records[1].normalized_symbol, "AL2SI.ALXP")
+
     def test_lse_rows_parse_official_directory_columns(self):
         frame = pd.DataFrame([
             {

@@ -12,6 +12,7 @@
 - **🌍 全球證券清冊與最後成功快照架構**：
   - 新增跨市場 `market_universe` DuckDB 主檔與 `universe_sync_runs` 同步狀態表，欄位涵蓋市場、交易所、本地代號、標準代號、雙語名稱、ISIN、證券類別、上市狀態、Market Category、Financial Status 與 Board Lot。
   - 新增 TWSE/TPEx、NASDAQ Trader（涵蓋 NASDAQ、NYSE、AMEX、ARCA、BATS、IEX）、HKEX、JPX、SSE、SZSE、Euronext、LSE provider；各來源使用獨立 `cache/universe/<source_id>.json`，HKEX 名稱欄位以官方當次下載檔提供的語言為準。
+  - Euronext 改用官方 `stocks-all-places/download` 完整 CSV 清冊，避免頁面 JSON 只回傳 20 筆造成不完整同步。
   - 上游失敗、空回應、格式錯誤或異常筆數時，保留最後成功快照並以 `stale=true` 回報；有效 cache 不會被空資料覆蓋。
   - 新增 `GET /api/v1/market/universe`，回傳清冊筆數、快照日期、cache 年齡、來源錯誤與標的清單。
   - 台股每日同步先更新清冊再寫入 `tw_daily_bars`；Docker cron 與本機排程共用 cache-aware 同步指令。

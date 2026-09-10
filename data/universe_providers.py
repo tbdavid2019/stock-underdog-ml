@@ -411,6 +411,33 @@ class EuronextProvider:
     source_id = "EU-EURONEXT"
     PAGE_URL = "https://live.euronext.com/en/products/equities/list"
     BASE_URL = "https://live.euronext.com"
+    DOWNLOAD_URL = "https://live.euronext.com/product_directory/data/stocks-all-places/download"
+    MIC_FILTER = (
+        "ALXB,ALXL,ALXP,BGEM,ENXB,ENXL,ETLX,EXGM,MERK,MIVX,MLXB,MTAA,MTAH,"
+        "TNLA,TNLB,XAMC,XAMS,XATL,XBRU,XESM,XLDN,XLIS,XMLI,XMSM,XOAS,XOSL,XPAR,XPMC"
+    )
+    MARKET_MICS = {
+        "Euronext Amsterdam": "XAMS",
+        "Euronext Brussels": "XBRU",
+        "Euronext Dublin": "XESM",
+        "Euronext Lisbon": "XLIS",
+        "Euronext Milan": "XMIL",
+        "Oslo Børs": "XOSL",
+        "Euronext Paris": "XPAR",
+        "Euronext Growth Brussels": "ENXB",
+        "Euronext Growth Dublin": "ENXL",
+        "Euronext Growth Lisbon": "ENXL",
+        "Euronext Growth Milan": "ETLX",
+        "Euronext Growth Oslo": "MOTX",
+        "Euronext Growth Paris": "ALXP",
+        "Euronext Access Lisbon": "ALXL",
+        "Euronext Access Brussels": "ALXB",
+        "Euronext Access Paris": "ALXP",
+        "Euronext Expand Oslo": "MERK",
+        "Euronext Global Equity Market": "BGEM",
+        "EuroTLX": "ETLX",
+        "Trading After Hours": "MTAH",
+    }
 
     @staticmethod
     def parse_payload(payload: Dict[str, Any]) -> List[UniverseRecord]:
@@ -441,43 +468,44 @@ class EuronextProvider:
             )
         return records
 
-    def fetch_records(self) -> List[UniverseRecord]:
-        page = requests.get(self.PAGE_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=45)
-        page.raise_for_status()
-        match = re.search(r'"jsongateway":"([^\"]+)"', page.text)
-        if not match:
-            raise ValueError("Euronext JSON gateway URL not found")
-        gateway = html.unescape(match.group(1)).replace("\\/", "/")
-        gateway_url = urljoin(self.BASE_URL, gateway)
-        headers = {
-            "Accept": "application/json",
-            "Referer": self.PAGE_URL,
-            "User-Agent": "Mozilla/5.0",
-        }
+    @classmethod
+    def parse_csv(cls, content: str) -> List[UniverseRecord]:
         records: List[UniverseRecord] = []
-        offset = 0
-        page_size = 500
-        total = None
-        while total is None or offset < total:
-            response = requests.get(
-                gateway_url,
-                params={"iDisplayStart": offset, "iDisplayLength": page_size},
-                headers=headers,
-                timeout=45,
+        reader = csv.DictReader(StringIO(content), delimiter=";")
+        for row in reader:
+            symbol = str(row.get("Symbol") or "").strip()
+            isin = str(row.get("ISIN") or "").strip()
+            market = str(row.get("Market") or "").strip()
+            name = str(row.get("Name") or "").strip()
+            if not symbol or not isin or not market or symbol.lower() == "nan":
+                continue
+            mic = cls.MARKET_MICS.get(market, market.upper().replace(" ", "_"))
+            records.append(
+                UniverseRecord(
+                    source_id=cls.source_id,
+                    market="EU",
+                    exchange="EURONEXT",
+                    local_symbol=symbol,
+                    normalized_symbol=f"{symbol}.{mic}",
+                    name_local=name,
+                    name_en=name,
+                    isin=isin,
+                    security_type="EQUITY",
+                    market_category=market,
+                    source="EURONEXT_STOCKS_ALL_PLACES",
+                )
             )
-            response.raise_for_status()
-            payload = response.json()
-            page_records = self.parse_payload(payload)
-            if not page_records:
-                break
-            records.extend(page_records)
-            total = int(payload.get("iTotalRecords") or len(records))
-            offset += len(page_records)
-            if len(page_records) < page_size and offset >= total:
-                break
-            if offset >= total:
-                break
         return records
+
+    def fetch_records(self) -> List[UniverseRecord]:
+        response = requests.get(
+            self.DOWNLOAD_URL,
+            params={"mics": self.MIC_FILTER},
+            headers={"Accept": "text/csv", "User-Agent": "Mozilla/5.0", "Referer": self.PAGE_URL},
+            timeout=60,
+        )
+        response.raise_for_status()
+        return self.parse_csv(response.content.decode("utf-8-sig"))
 
 
 class LseProvider:
