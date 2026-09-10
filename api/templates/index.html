@@ -367,8 +367,8 @@
                         <div class="pt-2 border-t flex items-center justify-between text-xs" 
                              :class="isDark ? 'border-dark-border text-dark-muted' : 'border-claude-border text-claude-muted'">
                             <span>標的: {{ stats.distinct_tickers !== null && stats.distinct_tickers !== undefined ? stats.distinct_tickers : '—' }} 檔</span>
+                        </div>
                     </div>
-
                 </div>
 
                 <!-- 1.1 Macro Catalysts, FedWatch & US Calendars (Investing.com via 2MD) -->
@@ -697,14 +697,14 @@
                                  :class="isDark ? 'bg-dark-cardInner border-dark-border' : 'bg-claude-cardInner border-claude-border'">
                                 <div>
                                     <div class="text-[11px] font-bold" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">當前現價</div>
-                                    <div class="text-base font-black num-font" :class="isDark ? 'text-slate-100' : 'text-claude-text'">
+                                    <div class="text-base font-black num-font truncate" :class="isDark ? 'text-slate-100' : 'text-claude-text'">
                                         ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
                                     </div>
                                 </div>
 
                                 <div v-if="item.predicted_price">
                                     <div class="text-[11px] font-bold" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">預測目標價</div>
-                                    <div class="text-base font-black num-font" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
+                                    <div class="text-base font-black num-font truncate" :class="isDark ? 'text-sky-400' : 'text-claude-terracotta'">
                                         ${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
                                     </div>
                                 </div>

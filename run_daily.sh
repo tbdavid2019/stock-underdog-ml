@@ -106,6 +106,8 @@ fi
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     RUNNER="docker"
     log "🐳 偵測到 Docker 環境，使用 Docker Compose 容器執行..."
+    log "📥 檢查並拉取最新 Docker 映像檔..."
+    docker compose pull stock-ml --quiet 2>/dev/null || true
 else
     RUNNER="python"
     log "🐍 使用本機 Python 環境執行 ($PYTHON_EXEC)..."

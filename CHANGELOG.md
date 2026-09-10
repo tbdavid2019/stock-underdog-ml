@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-09-10
+
+### 🐛 操盤看板四欄網格排版修復 (Web Dashboard Layout & Tag Balancing Fix)
+- **修復前端網頁卡片巢狀坍塌 (`api/templates/index.html`)**：
+  - 修復歷史數據卡片底部遺漏的閉合 `</div>`，徹底解決頂部 4 欄網格未閉合導致總經行事曆、策略按鈕列與標的卡片被錯誤壓迫進 25% 狹窄欄位引發的排版崩潰與按鈕隱形問題。
+  - 為標的卡片價格數值補上 `truncate` 與防文字垂直重疊樣式，確保在各裝置與視窗寬度下價格清晰排版。
+
+### 🐳 自動排程 Docker 映像檔自動更新 (`run_daily.sh`)
+- **每日自動拉取最新映像檔**：
+  - 於每日排程執行容器任務前自動執行 `docker compose pull stock-ml --quiet`，確保即時套用包含 Google TimesFM 與最新相依套件的生產映像檔，杜絕舊映像檔降級略過 TimesFM 的問題。
+
 ## [2.3.0] - 2026-09-09
 
 ### 🛡️ 容器預設命令安全加固與防死循環機制 (Docker Container Default Safety)
