@@ -175,18 +175,37 @@ class AINarrativeEngine:
         overlap_summary = []
         for r in overlap_list[:3]:
             ticker = r.get("ticker", "")
-            pot = r.get("potential") or r.get("lstm_potential", 0.0)
+            pot_parts = []
+            if r.get("lstm_potential") is not None and pd.notna(r.get("lstm_potential")):
+                pot_parts.append(f"LSTM {r['lstm_potential']:+.2f}%")
+            if r.get("timesfm_potential") is not None and pd.notna(r.get("timesfm_potential")):
+                rr_val = r.get("risk_reward_ratio")
+                rr_str = f"(盈虧比{rr_val:.2f}x)" if rr_val else ""
+                pot_parts.append(f"TimesFM {r['timesfm_potential']:+.2f}%{rr_str}")
+            pot_str = " / ".join(pot_parts) if pot_parts else f"預測潛力 {r.get('potential', 0.0):+.2f}%"
             raw_tags = r.get("tags", [])
             tags = ",".join(raw_tags) if isinstance(raw_tags, list) else str(raw_tags)
             pe = r.get("pe", "N/A")
             pb = r.get("pb", "N/A")
             pullback = r.get("pullback_type", "MA60")
-            overlap_summary.append(f"{ticker}: 預測漲幅 {pot:+.2f}%, 回調支撐 {pullback}, 估值 PE:{pe}/PB:{pb}, 標籤:[{tags}]")
+            overlap_summary.append(f"{ticker}: {pot_str}, 回調支撐 {pullback}, 估值 PE:{pe}/PB:{pb}, 標籤:[{tags}]")
 
         xuantie_raw = report_data.get("xuantie_results")
         xuantie_hits = len(xuantie_raw) if xuantie_raw is not None else 0
         lstm_raw = report_data.get("lstm_results")
         lstm_predictions = len(lstm_raw) if lstm_raw is not None else 0
+        timesfm_raw = report_data.get("timesfm_results")
+        timesfm_predictions = len(timesfm_raw) if timesfm_raw is not None else 0
+
+        timesfm_top_str = ""
+        if timesfm_raw and isinstance(timesfm_raw, list):
+            top_tfm = []
+            for t_res in timesfm_raw[:3]:
+                rr_v = t_res.get("risk_reward_ratio")
+                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
+                top_tfm.append(f"{t_res.get('ticker')}: 漲幅 {t_res.get('potential', 0.0):+.2f}%{rr_info}")
+            if top_tfm:
+                timesfm_top_str = f"\n- TimesFM 時序大模型看漲焦點: " + "; ".join(top_tfm)
 
         prompt = f"""
 目標市場: {market_type} - {index_name}
@@ -196,11 +215,12 @@ class AINarrativeEngine:
 【量化數據概況】
 - 技術買點 (玄鐵重劍符合): {xuantie_hits} 支
 - LSTM 短線預測完成: {lstm_predictions} 支
+- TimesFM 時序大模型預測完成: {timesfm_predictions} 支{timesfm_top_str}
 - ⭐ 重點交集/多維共振推薦標的:
 {chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙重/三重共振股票，建議維持防禦觀望'}
 
 請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
-【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「🔮雙ML共振」或「高盈虧比」個股，請特別提示其動量與風險收益比優勢。
 """
         return prompt.strip()
 
@@ -227,16 +247,22 @@ class AINarrativeEngine:
 
         if overlap_list:
             top_stock = overlap_list[0].get("ticker", "")
-            top_pot = overlap_list[0].get("potential") or overlap_list[0].get("lstm_potential", 0.0)
+            pot_parts = []
+            if overlap_list[0].get("lstm_potential") is not None and pd.notna(overlap_list[0].get("lstm_potential")):
+                pot_parts.append(f"LSTM {overlap_list[0]['lstm_potential']:+.2f}%")
+            if overlap_list[0].get("timesfm_potential") is not None and pd.notna(overlap_list[0].get("timesfm_potential")):
+                pot_parts.append(f"TimesFM {overlap_list[0]['timesfm_potential']:+.2f}%")
+            top_pot = " / ".join(pot_parts) if pot_parts else f"預期潛力 {overlap_list[0].get('potential', 0.0):+.2f}%"
+
             raw_tags = overlap_list[0].get("tags", [])
-            tags_str = "、".join(raw_tags[:3]) if isinstance(raw_tags, list) else str(raw_tags)
+            tags_str = "、".join(raw_tags[:4]) if isinstance(raw_tags, list) else str(raw_tags)
             return (
                 f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，整體建議曝險為 {exposure_str}。"
-                f"今日 {index_name} 優先聚焦 {top_stock}（預期潛力 {top_pot:+.2f}%），"
+                f"今日 {index_name} 優先聚焦 {top_stock}（{top_pot}），"
                 f"符合 {tags_str or '多維共振'} 等條件，建議順應大盤水位分批佈局。"
             )
         else:
             return (
                 f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，建議曝險比例維持 {exposure_str}。"
-                f"今日 {index_name} 無雙重或三重共振之重點交集標的，短線操作宜保持耐心，控制倉位。"
+                f"今日 {index_name} 無多策略共振之重點交集標的，短線操作宜保持耐心，控制倉位。"
             )

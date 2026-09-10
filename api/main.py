@@ -153,11 +153,15 @@ def get_webmcp_manifest():
             "get_triple_resonance_stocks",
             "get_xuantie_pullback_stocks",
             "get_lstm_top_predictions",
+            "get_timesfm_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
             "get_top_institutional_flows",
+            "get_broker_trades_for_stock",
+            "get_company_profile",
             "get_fed_rate_monitor",
-            "get_us_earnings_calendar"
+            "get_us_earnings_calendar",
+            "get_economic_calendar"
         ]
     })
 
@@ -169,16 +173,18 @@ def get_llms_txt():
     """
     content = """# 888 Stock Quant Platform
 
-> 專業級台美股多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、三大法人籌碼鎖碼與 2md 繁中公司簡介與即時新聞。
+> 專業級台美股多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、Google TimesFM 時序大模型、三大法人籌碼鎖碼與 2md 繁中公司簡介與即時新聞。
 
 888 Stock Quant 遵循 [llmstxt.org](https://llmstxt.org/) 規範，為大語言模型 (LLM)、AI Agents、Claude Desktop 與自動化投資系統提供標準化、結構化的量化訊號與資料字典。
 
 ## Quantitative Strategy Endpoints
 
-- [Triple Resonance Recommendations](/api/v1/predictions/resonance): 取得多策略共振焦點推薦（技術面均線 ∩ LSTM看漲 ∩ 籌碼鎖碼 ∩ 估值合理）
+- [Triple Resonance Recommendations](/api/v1/predictions/resonance): 取得多策略共振焦點推薦（技術面均線 ∩ LSTM/TimesFM看漲 ∩ 籌碼鎖碼 ∩ 估值合理）
 - [Xuantie Heavy Sword Pullback](/api/v1/predictions/xuantie): 查詢玄鐵重劍策略 MA60/120 均線趨勢回調技術買點
 - [LSTM Bullish Top Picks](/api/v1/predictions/lstm/top-bullish): 查詢 LSTM 深度學習下一交易日預測漲幅排行
 - [LSTM Bearish Top Picks](/api/v1/predictions/lstm/top-bearish): 查詢 LSTM 深度學習下一交易日預測跌幅排行
+- [TimesFM Bullish Top Picks](/api/v1/predictions/timesfm/top-bullish): 查詢 Google TimesFM 時序大模型預測漲幅與盈虧比排行
+- [TimesFM Bearish Top Picks](/api/v1/predictions/timesfm/top-bearish): 查詢 Google TimesFM 時序大模型預測跌幅避險排行
 - [Market Macro Risk Regime](/api/v1/macro/latest): 查詢台股加權指數/美股S&P500、VIX恐慌指數、費城半導體趨勢與建議投資曝險比例
 - [Institutional Fund Flows](/api/v1/market/institutional/top): 查詢外資、投信、自營商三大法人買賣超與籌碼集中度排行
 - [Company Profile & Live News](/api/v1/market/company-profile): 整合 2md 提取個股繁體中文公司簡介、核心業務與最新新聞
@@ -226,11 +232,13 @@ def get_llms_full_txt():
    - 篩選長線多頭排列（MA60/MA120 斜率向上）、中期回調至季線/半年線支撐帶（價格在 MA60/120 之 ±3% 內）之技術性買點。
 3. **短線預測 - LSTM 深度學習 (LSTM Next-Day Forecast)**:
    - 基於 PyTorch LSTM 雙層架構，輸入過去 60 日 OHLCV 與技術指標，預測次日價格與漲跌幅度排行。
-4. **籌碼策略 - 三大法人鎖碼 (Institutional Accumulation)**:
+4. **時序基礎大模型 - Google TimesFM (TimesFM 5-Day Forecast & Quantiles)**:
+   - 採用 Google Research 預訓練時序大模型，向量化批次推理未來 5 日價格路徑、10%~90% 分位數風險帶與真實盈虧比 (Risk/Reward Ratio >= 1.5)。
+5. **籌碼策略 - 三大法人鎖碼 (Institutional Accumulation)**:
    - 分析外資、投信、自營商連續買超天數、買超佔比與股本集中度，篩選「土洋合買」主力加碼標的。
-5. **多維交集 - 🏆 三重共振 (Triple Resonance)**:
-   - 技術面買點 ∩ LSTM 看漲 ∩ 法人鎖碼 ∩ 估值合理 (PE < 25 / PB < 3.5) 之高勝率焦點標的。
-6. **2md 繁中公司簡介與即時新聞 (2md Company Profile & News)**:
+6. **多維交集 - 🏆 三重共振與 👑 四重共振 (Multi-Model Resonance)**:
+   - 技術面買點 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 法人鎖碼 ∩ 估值合理 (PE < 25 / PB < 3.5)。若同時滿足 LSTM 與 TimesFM 則觸發「🔮雙ML共振」；若四者兼備則為「👑四重共振」。
+7. **2md 繁中公司簡介與即時新聞 (2md Company Profile & News)**:
    - 整合 2md.aiurl.tw / 2md.glsoft.ai / create360.ai，實時提取公司全名、主要營運業務、董事長、市值與最新新聞頭條。
 
 ## 2. DuckDB Time-Series Data Tables
@@ -246,13 +254,15 @@ def get_llms_full_txt():
 - `GET /api/v1/predictions/xuantie?index_name=...&limit=60`: 玄鐵重劍波段買點。
 - `GET /api/v1/predictions/lstm/top-bullish?index_name=...&limit=60`: LSTM 次日看漲排行。
 - `GET /api/v1/predictions/lstm/top-bearish?index_name=...&limit=60`: LSTM 次日看跌排行。
+- `GET /api/v1/predictions/timesfm/top-bullish?index_name=...&limit=60`: TimesFM 5日看漲排行與盈虧比。
+- `GET /api/v1/predictions/timesfm/top-bearish?index_name=...&limit=60`: TimesFM 5日看跌避險排行。
 - `GET /api/v1/market/institutional/top?order_by=total_net|trust_net|foreign_net&market=ALL|TWSE|TPEX&limit=30`: 法人買賣超排行。
 - `GET /api/v1/market/company-profile?ticker=9945.TW`: 取得單一個股 2md 繁中公司簡介與即時新聞。
 - `POST /api/v1/market/company-profiles/batch`: 並發批次預載多支股票之公司營運摘要。
 - `GET /api/v1/predictions/history/{ticker}?limit=30`: 查詢個股歷史預測軌跡與法人籌碼。
 
 ## 4. WebMCP / Chrome WebMCP Standard
-本系統符合 Google Chrome WebMCP 標準，前端頁面於 `window.document.modelContext` 自動註冊 8 組量化工具，並支援 `/mcp/sse` Server-Sent Events 雙向 RPC 串流。
+本系統符合 Google Chrome WebMCP 標準，前端頁面於 `window.document.modelContext` 自動註冊量化工具，並支援 `/mcp/sse` Server-Sent Events 雙向 RPC 串流。
 
 Specification Conformance: https://llmstxt.org/
 """
@@ -307,11 +317,31 @@ def get_webmcp_bridge():
             }
         },
         {
+            name: 'get_timesfm_top_predictions',
+            description: '取得 Google Research TimesFM 時序大模型 5 日預測漲跌幅排行與盈虧比',
+            inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['bullish', 'bearish'] }, limit: { type: 'integer' }, index_name: { type: 'string' } }, required: ['direction'] },
+            execute: async (args) => {
+                const ep = args?.direction === 'bearish' ? 'top-bearish' : 'top-bullish';
+                let url = '/api/v1/predictions/timesfm/' + ep + '?limit=' + (args?.limit || 20);
+                if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
             name: 'get_stock_history',
             description: '查詢個股歷史時序預測軌跡與法人籌碼',
             inputSchema: { type: 'object', properties: { ticker: { type: 'string' }, limit: { type: 'integer' } }, required: ['ticker'] },
             execute: async (args) => {
                 return JSON.stringify(await (await fetch('/api/v1/predictions/history/' + encodeURIComponent(args.ticker.toUpperCase()) + '?limit=' + (args?.limit || 30))).json());
+            }
+        },
+        {
+            name: 'get_top_institutional_flows',
+            description: '查詢三大法人買賣超焦點股排行榜',
+            inputSchema: { type: 'object', properties: { order_by: { type: 'string', enum: ['total_net', 'trust_net', 'foreign_net'] }, limit: { type: 'integer' }, market: { type: 'string' } } },
+            execute: async (args) => {
+                const url = '/api/v1/market/institutional/top?order_by=' + (args?.order_by || 'total_net') + '&limit=' + (args?.limit || 20) + '&market=' + (args?.market || 'ALL');
+                return JSON.stringify(await (await fetch(url)).json());
             }
         },
         {
@@ -339,7 +369,7 @@ def get_webmcp_bridge():
             console.warn('[WebMCP] registerTool error:', e);
         }
     }
-    console.log('[WebMCP] Cloudflare WebMCP Bridge initialized with 7 tools.');
+    console.log('[WebMCP] Cloudflare WebMCP Bridge initialized with ' + tools.length + ' tools.');
 })();
 """
     return PlainTextResponse(content=js_content, media_type="application/javascript; charset=utf-8")

@@ -8,6 +8,16 @@
 
 ## 2026-09-10
 
+### 🔮 TimesFM 報表排版與 WebMCP / Agent 發現協議全面補齊 (TimesFM Reporting & Discovery Integration)
+- **終端機與量化日報 (`evaluators/formatter.py`)**：新增 `TimesFM` 時序大模型預測專區（持有 1-5 天目標價、預期潛力、真實盈虧比、PE/PB），並在「⭐ 【優先推薦】多策略交集」表格中完整納入 `TimesFM` 潛力與盈虧比欄位。
+- **AI 操盤解讀引擎 (`evaluators/ai_narrative.py`)**：將 TimesFM 預測數據、雙 ML 共振 (`🔮雙ML共振`) 與高盈虧比特性注入 3-Tier Fallback LLM Prompt 與零依賴規則模板。
+- **通知推播模組升級 (`notifier_dual.py`)**：在 Telegram、Discord、Email 的優先推薦共振標的中完整同步呈現 LSTM 與 TimesFM 訊號及盈虧比。
+- **WebMCP / Chrome WebMCP / API 發現協議全面同步 (`api/main.py`, `api/templates/index.html`)**：
+  - `/mcp` 與 `/.well-known/mcp.json` 清單補齊 `get_timesfm_top_predictions`、`get_broker_trades_for_stock`、`get_company_profile`、`get_economic_calendar`。
+  - 前端 Chrome WebMCP 動態註冊 `get_timesfm_top_predictions` 至 `window.document.modelContext`（累計註冊 11 組量化工具）。
+  - 更新 `skills/stock-quant/SKILL.md`、`/llms.txt` 與 `/llms-full.txt` 完整納入 TimesFM、四重共振與 5 日盈虧比規範。
+- **資料庫數值防禦 (`data/duckdb_manager.py`, `database.py`)**：安全處理多策略共振標的可能為 None/NaN 的浮點數轉型，杜絕單一模型遺漏時的存檔崩潰。
+
 ### 🐛 操盤看板四欄網格排版修復 (Web Dashboard Layout & Tag Balancing Fix)
 - **修復前端網頁卡片巢狀坍塌 (`api/templates/index.html`)**：
   - 修復歷史數據卡片底部遺漏的閉合 `</div>`，徹底解決頂部 4 欄網格未閉合導致總經行事曆、策略按鈕列與標的卡片被錯誤壓迫進 25% 狹窄欄位引發的排版崩潰與按鈕隱形問題。

@@ -72,9 +72,15 @@ def format_dual_strategy_message(
         for idx, row in overlap_df.iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            models_parts = []
+            if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None:
+                models_parts.append(f"LSTM:{row['lstm_potential']:+.1f}%")
+            if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None:
+                rr_str = f"({row['risk_reward_ratio']:.1f}x)" if pd.notna(row.get('risk_reward_ratio')) and row.get('risk_reward_ratio') else ""
+                models_parts.append(f"TFM:{row['timesfm_potential']:+.1f}%{rr_str}")
+            models_str = " ".join(models_parts) if models_parts else "ML"
             ticker_label = _format_ticker_label(row['ticker'], lookup)
-            telegram_msg += f"{ticker_label} LSTM:{row['lstm_potential']:+.1f}% {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
+            telegram_msg += f"{ticker_label} {models_str} {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
         telegram_msg += "</pre>\n\n"
     
     # 玄鐵重劍
@@ -143,9 +149,15 @@ def format_dual_strategy_message(
         for idx, row in overlap_df.iterrows():
             pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
             pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
-            ev_str = f"{row.get('ev_ebitda', 0):.1f}" if row.get('ev_ebitda') else "N/A"
+            models_parts = []
+            if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None:
+                models_parts.append(f"LSTM:{row['lstm_potential']:+.1f}%")
+            if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None:
+                rr_str = f"({row['risk_reward_ratio']:.1f}x)" if pd.notna(row.get('risk_reward_ratio')) and row.get('risk_reward_ratio') else ""
+                models_parts.append(f"TFM:{row['timesfm_potential']:+.1f}%{rr_str}")
+            models_str = " ".join(models_parts) if models_parts else "ML"
             ticker_label = _format_ticker_label(row['ticker'], lookup)
-            discord_msg += f"{ticker_label} LSTM:{row['lstm_potential']:+.1f}% EV:{ev_str} {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
+            discord_msg += f"{ticker_label} {models_str} {row['pullback_type']} PE:{pe_str} PB:{pb_str}\n"
         discord_msg += "```\n"
 
     # 玄鐵重劍
@@ -206,14 +218,17 @@ def format_dual_strategy_message(
     # 優先推薦
     email_body += f"⭐ 優先推薦 (多維共振) - 符合條件: {len(overlap_df)} 支\n\n"
     if not overlap_df.empty:
-        email_body += f"{'代碼/名稱':<18} {'LSTM漲幅':>10} {'EV':>8} {'回調類型':<15} {'PE':>8} {'PB':>8}\n"
-        email_body += "-" * 70 + "\n"
+        email_body += f"{'代碼/名稱':<18} {'LSTM':>8} {'TimesFM':>8} {'盈虧比':>7} {'回調類型':<12} {'PE':>6} {'PB':>6}\n"
+        email_body += "-" * 75 + "\n"
         for idx, row in overlap_df.iterrows():
-            pe_str = f"{row.get('pe', 0):.2f}" if row.get('pe') else "N/A"
-            pb_str = f"{row.get('pb', 0):.2f}" if row.get('pb') else "N/A"
-            ev_str = f"{row.get('ev_ebitda', 0):.2f}" if row.get('ev_ebitda') else "N/A"
+            pe_str = f"{row.get('pe', 0):.1f}" if row.get('pe') else "N/A"
+            pb_str = f"{row.get('pb', 0):.1f}" if row.get('pb') else "N/A"
+            lstm_str = f"{row['lstm_potential']:>+7.1f}%" if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None else "    N/A"
+            tfm_str = f"{row['timesfm_potential']:>+7.1f}%" if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None else "    N/A"
+            rr_val = row.get('risk_reward_ratio')
+            rr_str = f"{rr_val:>6.1f}x" if pd.notna(rr_val) and rr_val is not None else "   N/A"
             ticker_label = _format_ticker_cell(row['ticker'], lookup, 18)
-            email_body += f"{ticker_label} {row['lstm_potential']:>+9.2f}% {ev_str:>8} {row['pullback_type'][:15]:<15} {pe_str:>8} {pb_str:>8}\n"
+            email_body += f"{ticker_label} {lstm_str} {tfm_str} {rr_str} {row['pullback_type'][:12]:<12} {pe_str:>6} {pb_str:>6}\n"
         email_body += "\n\n"
 
     # 玄鐵重劍

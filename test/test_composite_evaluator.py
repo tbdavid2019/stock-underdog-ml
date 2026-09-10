@@ -70,6 +70,49 @@ class TestCompositeEvaluator(unittest.TestCase):
         self.assertLess(cand["composite_score"], 80.0 * 0.6)
         print("Panic Score Discounted:", cand["composite_score"])
 
+    def test_timesfm_resonance_and_formatter(self):
+        from evaluators.formatter import print_evaluation_report
+        import logging
+
+        evaluator = CompositeEvaluator()
+        macro = MacroState(regime_name="全面多頭 (Bullish)", exposure=1.0, vix=14.5)
+
+        strategy_outputs = {
+            "xuantie": [
+                StrategyResult(ticker="2330.TW", strategy_name="玄鐵重劍", is_hit=True, score=85.0, current_price=1000.0, metrics={"ma60": 980.0, "pe": 20.0, "pb": 4.5}, signals={"pullback_type": "MA60 (+2.0%)"})
+            ],
+            "lstm": [
+                StrategyResult(ticker="2330.TW", strategy_name="LSTM", is_hit=True, score=88.0, current_price=1000.0, predicted_price=1050.0, potential=5.0)
+            ],
+            "timesfm": [
+                StrategyResult(ticker="2330.TW", strategy_name="TimesFM", is_hit=True, score=92.0, current_price=1000.0, predicted_price=1060.0, potential=6.0, signals={"risk_reward_ratio": 2.5, "horizon_predicted_price": 1060.0}, metrics={"pe": 20.0, "pb": 4.5}),
+                StrategyResult(ticker="2454.TW", strategy_name="TimesFM", is_hit=True, score=80.0, current_price=1200.0, predicted_price=1250.0, potential=4.17, signals={"risk_reward_ratio": 1.8, "horizon_predicted_price": 1250.0})
+            ],
+            "institutional": [
+                StrategyResult(ticker="2330.TW", strategy_name="三大法人籌碼", is_hit=True, score=80.0, current_price=1000.0, metadata={"trust_streak": 3, "is_sync_buy": True})
+            ]
+        }
+
+        fundamentals = {"2330.TW": {"pe": 20.0, "pb": 4.5}}
+        report = evaluator.evaluate("台灣50", strategy_outputs, fundamentals, macro_state=macro)
+
+        # 驗證四重共振與雙ML共振
+        cand = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
+        self.assertIsNotNone(cand)
+        self.assertIn("👑四重共振", cand["tags"])
+        self.assertIn("🔮雙ML共振", cand["tags"])
+        self.assertIn("高盈虧比", cand["tags"])
+
+        # 驗證 TimesFM 結果列表
+        self.assertEqual(len(report.timesfm_results), 2)
+        self.assertEqual(report.timesfm_results[0]["ticker"], "2330.TW")
+        self.assertEqual(report.timesfm_results[0]["risk_reward_ratio"], 2.5)
+
+        # 驗證 formatter 輸出不報錯
+        logger = logging.getLogger("test_formatter")
+        logger.setLevel(logging.INFO)
+        print_evaluation_report(report, log=logger)
+
 
 if __name__ == "__main__":
     unittest.main()

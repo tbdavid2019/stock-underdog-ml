@@ -1391,8 +1391,8 @@
                             <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
                                  :class="isDark ? 'bg-slate-950 border-dark-border text-slate-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-stone-200'">
                                 <div>📁 本地路徑: <code>skills/stock-quant/SKILL.md</code></div>
-                                <div>🛠️ 工具數量: <code>6 大原生量化 MCP 函數</code></div>
-                                <div>🏆 因子支援: <code>三重共振 / 玄鐵均線 / 法人連買</code></div>
+                                <div>🛠️ 工具數量: <code>11 大原生量化 MCP 函數 (含 TimesFM)</code></div>
+                                <div>🏆 因子支援: <code>三重/四重共振 / TimesFM / 玄鐵均線 / 法人連買</code></div>
                             </div>
                         </div>
 
@@ -2653,7 +2653,29 @@ for p in picks:
                             }
                         });
 
-                        // Tool 5: get_stock_history
+                        // Tool 5: get_timesfm_top_predictions
+                        await modelCtx.registerTool({
+                            name: 'get_timesfm_top_predictions',
+                            description: '取得 Google Research TimesFM 時序大模型 5 日預測漲跌幅排行榜與盈虧比。',
+                            inputSchema: {
+                                type: 'object',
+                                properties: {
+                                    direction: { type: 'string', enum: ['bullish', 'bearish'], description: 'bullish 看漲 / bearish 看跌' },
+                                    index_name: { type: 'string', description: '指數名稱' },
+                                    limit: { type: 'integer', description: '回傳筆數' }
+                                },
+                                required: ['direction']
+                            },
+                            execute: async ({ direction, index_name, limit }) => {
+                                const endpoint = direction === 'bearish' ? 'top-bearish' : 'top-bullish';
+                                let url = `/api/v1/predictions/timesfm/${endpoint}?limit=${limit || 20}`;
+                                if (index_name) url += `&index_name=${encodeURIComponent(index_name)}`;
+                                const res = await fetch(url);
+                                return JSON.stringify(await res.json());
+                            }
+                        });
+
+                        // Tool 6: get_stock_history
                         await modelCtx.registerTool({
                             name: 'get_stock_history',
                             description: '查詢特定股票（如 2330.TW, NVDA）在 DuckDB 中的歷史時序預測軌跡與法人籌碼。',
@@ -2763,7 +2785,7 @@ for p in picks:
                             }
                         });
 
-                        console.log('✅ [Chrome WebMCP] Registered 10 tools to document.modelContext');
+                        console.log('✅ [Chrome WebMCP] Registered 11 tools to document.modelContext');
                     } catch (e) {
                         console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
                     }

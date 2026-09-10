@@ -127,6 +127,13 @@ class TestFastAPIService(unittest.TestCase):
         bear_resp = self.client.get("/api/v1/predictions/lstm/top-bearish?limit=5")
         self.assertEqual(bear_resp.status_code, 200)
 
+    def test_timesfm_top_bullish_and_bearish(self):
+        bull_resp = self.client.get("/api/v1/predictions/timesfm/top-bullish?limit=5")
+        self.assertEqual(bull_resp.status_code, 200)
+        
+        bear_resp = self.client.get("/api/v1/predictions/timesfm/top-bearish?limit=5")
+        self.assertEqual(bear_resp.status_code, 200)
+
     def test_stats_summary(self):
         resp = self.client.get("/api/v1/stats/summary")
         self.assertEqual(resp.status_code, 200)
@@ -278,6 +285,13 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Cloudflare & Chrome WebMCP Bridge", resp.text)
         self.assertIn("registerTool", resp.text)
+        self.assertIn("get_timesfm_top_predictions", resp.text)
+
+    def test_mcp_discovery_manifest(self):
+        resp = self.client.get("/mcp")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("get_timesfm_top_predictions", data.get("tools", []))
 
 
 if __name__ == "__main__":

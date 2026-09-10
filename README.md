@@ -129,7 +129,7 @@ graph TD
 * **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼。
 
 ### 2. 🤖 Model Context Protocol (MCP) 原生工具伺服器
-提供符合 Anthropic 官方標準的 FastMCP 伺服器（[`mcp_server.py`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py)），可直接掛載至 Claude Desktop、Cursor、Antigravity：
+提供符合 Anthropic 官方標準的 FastMCP 伺服器（[`mcp_server.py`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/mcp_server.py)），可直接掛載至 Claude Desktop、Cursor、Antigravity：
 
 **Claude Desktop 設定 (`claude_desktop_config.json`)：**
 ```json
@@ -138,15 +138,28 @@ graph TD
     "stock-quant": {
       "command": "python",
       "args": [
-        "/Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py"
+        "/home/david/stock-underdog-ml/mcp_server.py"
       ]
     }
   }
 }
 ```
 
+**支援之 11 大標準 MCP 工具函數：**
+* `get_market_macro_regime`: 評估台美股大盤宏觀風控情境與建議投資曝險比例。
+* `get_triple_resonance_stocks`: 查詢 👑 四重共振與 🏆 三重共振焦點多策略交集個股。
+* `get_xuantie_pullback_stocks`: 查詢玄鐵重劍 MA60/120 趨勢回調買點標的。
+* `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型預測漲跌幅排行與盈虧比。
+* `get_lstm_top_predictions`: 查詢 LSTM 深度學習次日預測漲跌幅排行。
+* `get_stock_history`: 查詢特定股票歷史時序量化預測軌跡與法人籌碼。
+* `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
+* `get_top_institutional_flows`: 查詢三大法人（外資、投信、自營商）買賣超排行榜。
+* `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細。
+* `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞。
+* `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率。
+
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
-本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
+本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
 
 ### 4. 核心 REST API 端點清單
 

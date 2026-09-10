@@ -34,6 +34,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     index_name = report.index_name
     xuantie_df = report.xuantie_results
     lstm_results = report.lstm_results
+    timesfm_results = getattr(report, "timesfm_results", [])
     overlap_df = report.overlap_results
     macro = report.macro_state
 
@@ -71,15 +72,22 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
 
     if not overlap_df.empty:
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'LSTM':>8} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
-        logger.info(f"   {'-'*4} {'-'*10} {'-'*8} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'LSTM':>8} {'TimesFM':>8} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
+        logger.info(f"   {'-'*4} {'-'*10} {'-'*8} {'-'*8} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
         for idx, row in overlap_df.iterrows():
             cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
             tags_str = " | ".join(cand["tags"]) if cand and cand.get("tags") else "觀察"
 
+            lstm_str = f"{row['lstm_potential']:>+7.2f}%" if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None else "    N/A"
+            tfm_str = f"{row['timesfm_potential']:>+7.2f}%" if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None else "    N/A"
+            rr_val = row.get('risk_reward_ratio')
+            rr_str = f"{rr_val:>6.2f}x" if pd.notna(rr_val) and rr_val is not None else "   N/A"
+
             logger.info(
                 f"   {idx+1:<4} {row['ticker']:<10} "
-                f"{row['lstm_potential']:>+7.2f}% "
+                f"{lstm_str} "
+                f"{tfm_str} "
+                f"{rr_str} "
                 f"{str(row['pullback_type'])[:6]:>6} "
                 f"{format_value(row.get('ma60')):>8} "
                 f"{format_value(row.get('pe')):>6} "
@@ -129,6 +137,31 @@ def print_evaluation_report(report: EvaluationReport, log=None):
                 f"{format_value(result.get('pb')):>6}"
             )
     else:
-        logger.info("   (本期無預測結果)")
+        logger.info("   (本期無 LSTM 預測結果)")
+
+    logger.info("")
+
+    # ====== 軌道 3: TimesFM 預測 ======
+    logger.info("🔮 【時序大模型】TimesFM 預測 (持有 1-5 天) - 預測漲幅排行與盈虧比")
+    logger.info(f"   預測完成: {len(timesfm_results)} 支\n")
+
+    if timesfm_results:
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'5日目標':>8} {'盈虧比':>8} {'PE':>6} {'PB':>6}")
+        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*8} {'-'*6} {'-'*6}")
+        for i, result in enumerate(timesfm_results[:10], 1):
+            h_price = result.get('horizon_predicted_price') or result.get('predicted_price') or result.get('current_price', 0.0)
+            rr_val = result.get('risk_reward_ratio')
+            rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "     N/A"
+            logger.info(
+                f"   {i:<4} {result['ticker']:<10} "
+                f"{result['potential']:>+9.2f}% "
+                f"{result['current_price']:>8.2f} {'→':^3} "
+                f"{h_price:>8.2f} "
+                f"{rr_str:>8} "
+                f"{format_value(result.get('pe')):>6} "
+                f"{format_value(result.get('pb')):>6}"
+            )
+    else:
+        logger.info("   (本期無 TimesFM 預測結果)")
 
     logger.info(f"\n{'='*100}\n")
