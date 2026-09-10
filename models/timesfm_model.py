@@ -152,24 +152,28 @@ class TimesFMWrapper:
                 p50_horizon = float(quantiles[-1, 5])
                 p90_horizon = float(quantiles[-1, 9])
 
-                # Potential calculations (%)
-                potential = ((day1_pred - curr_price) / curr_price) * 100.0
+                # The public strategy contract is horizon-based. Keep day-one
+                # potential as a diagnostic, while `potential` is the value
+                # used by ranking and hit criteria.
+                day1_potential = ((day1_pred - curr_price) / curr_price) * 100.0
                 horizon_potential = ((dayN_pred - curr_price) / curr_price) * 100.0
 
-                # Risk / Reward ratio calculation based on P10 (downside) and P90 (upside)
-                downside_risk = ((p10_day1 - curr_price) / curr_price) * 100.0
-                upside_potential = ((p90_day1 - curr_price) / curr_price) * 100.0
+                # Risk / reward uses the documented horizon P50 reward and
+                # horizon P10 downside. P90 remains an upside reference only.
+                downside_risk = ((p10_horizon - curr_price) / curr_price) * 100.0
+                upside_potential = ((p50_horizon - curr_price) / curr_price) * 100.0
 
-                risk_span = max(abs(curr_price - p10_day1), 1e-4)
-                reward_span = max(p90_day1 - curr_price, 0.0)
+                risk_span = max(abs(curr_price - p10_horizon), 1e-4)
+                reward_span = max(p50_horizon - curr_price, 0.0)
                 risk_reward_ratio = float(reward_span / risk_span)
 
                 results[ticker] = {
                     "current_price": curr_price,
                     "predicted_price": day1_pred,
                     "horizon_predicted_price": dayN_pred,
-                    "potential": float(potential),
+                    "potential": float(horizon_potential),
                     "horizon_potential": float(horizon_potential),
+                    "day1_potential": float(day1_potential),
                     "trajectory": [float(p) for p in points],
                     "quantiles": {
                         "p10": p10_day1,

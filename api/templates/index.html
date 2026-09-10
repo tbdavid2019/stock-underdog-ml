@@ -188,7 +188,7 @@
                             </span>
                             <span class="px-2 py-0.5 text-[11px] font-bold num-font rounded-full border whitespace-nowrap"
                                   :class="isDark ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-claude-terracotta/10 text-claude-terracotta border-claude-terracotta/20'">
-                                v2.2.0
+                                v__APP_VERSION__
                             </span>
                         </div>
                         <p class="text-[11px] font-medium leading-none mt-0.5 whitespace-nowrap" 
@@ -587,19 +587,19 @@
                                     <div class="grid grid-cols-2 gap-1 text-[11px] pt-0.5">
                                         <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-dark-cardInner' : 'bg-white'">
                                             <span class="text-slate-400">降息 1 碼</span>
-                                            <span class="font-bold num-font" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">{{ Math.round((macro.polymarket.fed_real_money_odds.cut_25bps || 0) * 100) }}%</span>
+                                            <span class="font-bold num-font" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'">{{ Math.round(macro.polymarket.fed_real_money_odds.cut_25bps || 0) }}%</span>
                                         </div>
                                         <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-dark-cardInner' : 'bg-white'">
                                             <span class="text-slate-400">按兵不動</span>
-                                            <span class="font-bold num-font" :class="isDark ? 'text-sky-400' : 'text-sky-700'">{{ Math.round((macro.polymarket.fed_real_money_odds.pause || 0) * 100) }}%</span>
+                                            <span class="font-bold num-font" :class="isDark ? 'text-sky-400' : 'text-sky-700'">{{ Math.round(macro.polymarket.fed_real_money_odds.pause || 0) }}%</span>
                                         </div>
                                         <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-dark-cardInner' : 'bg-white'">
                                             <span class="text-slate-400">降息 2 碼</span>
-                                            <span class="font-bold num-font" :class="isDark ? 'text-amber-400' : 'text-amber-700'">{{ Math.round((macro.polymarket.fed_real_money_odds.cut_50bps || 0) * 100) }}%</span>
+                                            <span class="font-bold num-font" :class="isDark ? 'text-amber-400' : 'text-amber-700'">{{ Math.round(macro.polymarket.fed_real_money_odds.cut_50bps || 0) }}%</span>
                                         </div>
                                         <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-dark-cardInner' : 'bg-white'">
                                             <span class="text-slate-400">升息 1 碼</span>
-                                            <span class="font-bold num-font text-rose-500">{{ Math.round((macro.polymarket.fed_real_money_odds.hike_25bps || 0) * 100) }}%</span>
+                                            <span class="font-bold num-font text-rose-500">{{ Math.round(macro.polymarket.fed_real_money_odds.hike_25bps || 0) }}%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -615,7 +615,7 @@
                                             </div>
                                             <span class="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded"
                                                   :class="m.probability >= 50 ? (isDark ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700')">
-                                                {{ m.probability }}% {{ m.top_outcome || 'Yes' }}
+                                                {{ Math.round(m.probability || 0) }}% {{ m.top_outcome || 'Yes' }}
                                             </span>
                                         </div>
                                         <div class="flex items-center justify-between text-[10px]" :class="isDark ? 'text-dark-muted' : 'text-claude-muted'">
@@ -2948,8 +2948,11 @@ for p in picks:
                                 }
                             },
                             execute: async ({ category, force_refresh }) => {
-                                let url = `/api/v1/macro/polymarket/sentiment?category=${category || 'all'}`;
-                                if (force_refresh) url += `&force_refresh=true`;
+                                const params = new URLSearchParams();
+                                if (category && category !== 'all') params.set('category', category);
+                                if (force_refresh) params.set('force_refresh', 'true');
+                                const query = params.toString();
+                                const url = '/api/v1/macro/polymarket/sentiment' + (query ? '?' + query : '');
                                 const res = await fetch(url);
                                 return JSON.stringify(await res.json());
                             }

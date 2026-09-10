@@ -32,6 +32,8 @@ import urllib.request
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
+from core.version import APP_VERSION
+
 # Setup logging
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -65,7 +67,7 @@ def get_latest_pypi_version() -> tuple[str, str]:
     url = "https://pypi.org/pypi/yfinance/json"
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "888-Stock-Quant-Updater/2.2.0"}
+        headers={"User-Agent": f"888-Stock-Quant-Updater/{APP_VERSION}"}
     )
     with urllib.request.urlopen(req, timeout=10) as response:
         if response.status != 200:
@@ -199,7 +201,7 @@ def git_commit_and_push(new_version: str):
     """自動提交並推送 Git 更新"""
     try:
         subprocess.run(["git", "add", "requirements.txt"], cwd=PROJECT_ROOT, check=True)
-        commit_msg = f"chore(deps): auto-update yfinance to {new_version} [skip ci]"
+        commit_msg = f"chore(deps): auto-update yfinance to {new_version}"
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=PROJECT_ROOT, check=True)
         push_res = subprocess.run(["git", "push"], cwd=PROJECT_ROOT, capture_output=True, text=True)
         if push_res.returncode == 0:

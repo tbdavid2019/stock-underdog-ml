@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Fil
 from api.routes import predictions, macro, stats, market
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
+from core.version import APP_VERSION
 
 app = FastAPI(
     title="888 Stock Quant Platform API",
@@ -23,7 +24,7 @@ app = FastAPI(
     * 🌐 **美股宏觀門檻**：S&P 500 / VIX / 費城半導體 即時曝險評估
     * 🦆 **DuckDB 引擎**：支援 560,000+ 歷史時序與籌碼數據零拷貝秒級查詢
     """,
-    version="2.2.0",
+    version=APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -147,7 +148,7 @@ def root():
     template_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(template_path):
         with open(template_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read().replace("__APP_VERSION__", APP_VERSION))
     return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
 
 
@@ -160,7 +161,7 @@ def get_webmcp_manifest():
     return JSONResponse(content={
         "name": "stock-quant-engine",
         "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)",
-        "version": "2.4.0",
+        "version": APP_VERSION,
         "transport": "sse",
         "endpoints": {
             "sse": "/mcp/sse",
@@ -204,7 +205,7 @@ def get_llms_txt():
   - 👑 **四重共振 (Quadruple Resonance)**: 同時滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ LSTM 看漲 ∩ TimesFM 看漲」之極高信心標的。
   - 🏆 **三重共振 (Triple Resonance)**: 滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 估值合理 (PE<25, PB<3.5)」。
   - 🔮 **雙ML共振 (Dual-ML Resonance)**: 微觀個股量價 LSTM 與宏觀預訓練 TimesFM 同步給出看漲訊號，雙重驗證勝率最高。
-  - ⚖️ **高盈虧比 (High Risk/Reward)**: TimesFM 5日預測真實盈虧比 (P50 - P0) / (P0 - P10) >= 1.5，具備非對稱獲利空間。
+  - ⚖️ **高盈虧比 (High Risk/Reward)**: TimesFM horizon 預測真實盈虧比 (P50_h - P0) / (P0 - P10_h) >= 1.5，具備非對稱獲利空間。
 
 ## Quantitative Strategy Endpoints
 
@@ -226,7 +227,7 @@ def get_llms_txt():
 - [US Corporate Earnings Calendar](/api/v1/macro/investing/earnings-calendar): 查詢近期美股重量級企業財報行事曆（EPS、營收預估、市值）
 - [Key Commodities Summary](/api/v1/macro/investing/commodities): 查詢黃金 (Gold)、銅博士 (Copper)、原油 (WTI) 實時報價與週期走勢
 - [Global Economic Calendar](/api/v1/macro/investing/economic-calendar): 查詢全球重磅總經行事曆（CPI、非農 NFP、GDP、PCE）
-- [Polymarket Real-Money Sentiment](/api/v1/macro/polymarket/sentiment): 透過 2MD 與 DoH (8.8.8.8) 查詢 Polymarket 真金白銀預測市場（聯準會降息機率、地緣關稅風險、科技七巨頭 AI 動向、美國經濟衰退預期）
+- [Polymarket Real-Money Sentiment](/api/v1/macro/polymarket/sentiment): 透過 2MD 與 DoH (8.8.8.8) 查詢 Polymarket 真金白銀預測市場；機率欄位統一為 0~100 百分比，上游失敗會回傳 `success=false`，可用舊快取時標記 `stale=true`
 
 ## Institutional & Broker Fund Flows
 
@@ -301,8 +302,8 @@ def get_llms_full_txt():
    - 輸入過去 60 日 OHLCV 與技術指標，2 層雙向 LSTM 輸出次日收盤價預測與漲跌幅潛力。
 4. **時序基礎大模型 - Google TimesFM (TimesFM 5-Day Forecast & Quantiles)**:
    - 採用 Google Research 預訓練 Decoder 架構時序基礎大模型 (TimesFM 2.5 500M)。
-   - 輸出 1~5 日預測目標價軌跡，並計算 P10 (下行防守位)、P50 (中位預期) 與 P90 (上行獲利位)。
-   - 真實盈虧比 (Risk/Reward Ratio): $RR = \\frac{P_{50} - P_0}{P_0 - P_{10}}$。當 $RR \\ge 1.5$ 且 $P_{50} > P_0$ 時判定為高勝率看漲標的。
+   - 輸出 1~5 日預測目標價軌跡，並以設定 horizon 的最後一天計算 P10 (下行防守位)、P50 (中位預期) 與 P90 (上行參考位)。
+   - 真實盈虧比 (Risk/Reward Ratio): $RR = \\frac{P_{50,h} - P_0}{P_0 - P_{10,h}}$。當 $RR \\ge 1.5$ 且 horizon P50 $> P_0$ 時判定為高勝率看漲標的；次日潛力僅供診斷。
 5. **籌碼策略 - 三大法人鎖碼 (TWSE Institutional Accumulation)**:
    - 分析外資、投信、自營商買賣超。篩選「投信連買 >= 3 天」或「土洋合買（外資與投信同向買超）」主力標的。
 6. **產業板塊資金輪動 (Sector Rotation)**:
@@ -356,7 +357,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - `GET /api/v1/macro/investing/earnings-calendar`: 美股重量級企業財報公布行事曆。
 - `GET /api/v1/macro/investing/commodities`: 黃金、銅博士、WTI 原油行情與週期漲跌。
 - `GET /api/v1/macro/investing/economic-calendar`: 全球重磅總經行事曆（CPI、非農等）。
-- `GET /api/v1/macro/polymarket/sentiment`: Polymarket 真金白銀預測市場宏觀情緒（FOMC 利率、地緣關稅、科技巨頭、經濟衰退）。
+- `GET /api/v1/macro/polymarket/sentiment`: Polymarket 真金白銀預測市場宏觀情緒（FOMC 利率、地緣關稅、科技巨頭、經濟衰退）；機率為 0~100 百分比，並回傳 `success`/`stale`/`error` 狀態。
 
 ### 4.3 Institutional & Company Profile
 - `GET /api/v1/market/institutional/top?order_by=total_net&limit=30`: 三大法人買賣超排行。
@@ -531,7 +532,7 @@ def get_webmcp_bridge():
             inputSchema: { type: 'object', properties: { category: { type: 'string' }, force_refresh: { type: 'boolean' } } },
             execute: async (args) => {
                 let url = '/api/v1/macro/polymarket/sentiment?force_refresh=' + (args?.force_refresh ? 'true' : 'false');
-                if (args?.category) url += '&category=' + encodeURIComponent(args.category);
+                if (args?.category && args.category !== 'all') url += '&category=' + encodeURIComponent(args.category);
                 return JSON.stringify(await (await fetch(url)).json());
             }
         }
@@ -593,7 +594,7 @@ def health_check():
     return HealthResponse(
         status="healthy",
         timestamp=datetime.datetime.now().isoformat(),
-        version="2.2.0",
+        version=APP_VERSION,
         duckdb_records=count
     )
 

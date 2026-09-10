@@ -8,6 +8,9 @@ from data.polymarket_service import PolymarketService
 
 
 class TestPolymarketService(unittest.TestCase):
+    def setUp(self):
+        PolymarketService._MEM_CACHE.clear()
+
     def test_exclude_patterns(self):
         noisy_titles = [
             "Will Kansas City Chiefs win the Super Bowl?",
@@ -82,6 +85,53 @@ class TestPolymarketService(unittest.TestCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["markets"][0]["category"], "fed_rates")
         self.assertEqual(result["markets"][0]["yes_prob"], 85.0)
+        self.assertEqual(result["markets"][0]["probability"], 85.0)
+        self.assertEqual(result["markets"][0]["top_outcome"], "Yes")
+
+        all_result = PolymarketService.get_macro_sentiment(
+            force_refresh=True, category="all"
+        )
+        self.assertEqual(all_result["count"], 1)
+
+    @patch("data.polymarket_service.PolymarketService._fetch_raw_markets")
+    @patch("data.polymarket_service.PolymarketService._read_stale_cache")
+    def test_upstream_failure_is_not_reported_as_fresh_success(
+        self, mock_stale_cache, mock_fetch
+    ):
+        mock_fetch.return_value = []
+        mock_stale_cache.return_value = None
+
+        result = PolymarketService.get_macro_sentiment(force_refresh=True)
+
+        self.assertFalse(result["success"])
+        self.assertFalse(result["stale"])
+        self.assertEqual(result["markets"], [])
+        self.assertIn("error", result)
+
+    @patch("data.polymarket_service.PolymarketService._fetch_raw_markets")
+    @patch("data.polymarket_service.PolymarketService._read_stale_cache")
+    def test_upstream_failure_returns_last_known_good_as_stale(
+        self, mock_stale_cache, mock_fetch
+    ):
+        mock_fetch.return_value = []
+        mock_stale_cache.return_value = {
+            "success": True,
+            "stale": False,
+            "source": "2md_reader",
+            "count": 1,
+            "fed_real_money_odds": {"cut_25bps": 72.0},
+            "markets": [{"category": "fed_rates", "probability": 72.0}],
+        }
+
+        result = PolymarketService.get_macro_sentiment(
+            force_refresh=True, category="fed_rates"
+        )
+
+        self.assertFalse(result["success"])
+        self.assertTrue(result["stale"])
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["markets"][0]["probability"], 72.0)
+        self.assertIn("error", result)
 
 
 if __name__ == "__main__":

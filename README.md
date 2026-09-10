@@ -54,6 +54,7 @@ graph TD
 * 動態識別市場情境：`全面多頭` (100% 曝險)、`多頭回調` (85% 曝險)、`避險防禦` (30~50% 曝險) 與 `極度恐慌` (0% 空倉)。
 * 透過 2MD 整合 **Investing.com** 實時數據：**CME FedWatch** 聯準會降息機率、**美股重量級財報行事曆**、**關鍵大宗商品（黃金、原油、期銅）** 以及 **全球重磅總經行事曆（CPI、非農 NFP）**。
 * 當費半跌破季線時，自動觸發科技股部位上限保護。
+* **Polymarket 預測市場**為輔助情緒訊號：`fed_real_money_odds` 與市場 `probability` 使用 0~100 百分比；上游失敗時 API 會標記 `success=false`，若有上一筆有效快取則同時標記 `stale=true`，不把過期資料假裝成即時資料。
 
 ### 2. 🗡️ 玄鐵重劍策略 (XuanTie Trend Pullback)
 * 核心思維：「**順大勢（MA60/120 多頭排列）、逆小勢（回踩均線支撐）**」。
@@ -65,7 +66,7 @@ graph TD
 ### 4. 🔮 Google Research TimesFM 時序大模型 (Time Series Foundation Model)
 * 採用 Google 預訓練之 **TimesFM 2.5** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
 * 輸出 1~5 日預測目標價軌跡，並同步計算 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**。
-* 藉由分位數動態評估 **真實盈虧比 (Risk/Reward Ratio)**，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
+* 以設定 horizon 的 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
 * 與 LSTM 形成 **「雙 ML 交叉驗證」**（微觀個股量價記憶 ∩ 宏觀預訓練波形共振），並支援晉升為 **「👑 四重共振極選」**。
 
 ### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
@@ -387,9 +388,15 @@ stock-underdog-ml/
 ## 🤖 GitHub Actions 自動化 CI/CD
 
 本專案配置了完整 GitHub Actions 自動化流程（`.github/workflows/docker-ci-cd.yml`）：
-1. **🧪 測試關卡 (Test Gate)**：每次 Push / PR 自動執行 50 項單元測試。
+1. **🧪 測試關卡 (Test Gate)**：每次 Push / PR 自動執行全量單元測試。
 2. **🐳 多架構構建**：測試通過後自動構建 `linux/amd64` (Intel/AMD) 與 `linux/arm64` (Apple Silicon / ARM) 雙架構映像。
 3. **📦 自動推送**：發布至 GitHub Container Registry (`ghcr.io/tbdavid2019/stock-underdog-ml`) 與 Docker Hub。
+
+### 🔐 自動更新與主線保護
+
+- `yfinance` 排程檢查只會建立 dependency update PR，通過一般 PR CI 後再合併，不直接推送 `main`，也不使用 `[skip ci]` 繞過驗證。
+- 建議在 GitHub `main` 分支設定 branch protection：要求 CI/CD workflow 通過、啟用 force-push/delete 保護；個人專案仍可由專案擁有者自行合併 PR。
+- 直接推送 `main` 會觸發測試與 Docker pipeline，但不會產生 PR，因此不會有 PR Agent 的 inline review 留言。
 
 ---
 

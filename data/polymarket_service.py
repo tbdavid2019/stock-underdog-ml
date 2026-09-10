@@ -49,8 +49,11 @@ class PolymarketService:
     _MEM_CACHE: Dict[str, Any] = {}
     _CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
     _CRAWLER_SEMAPHORE = threading.Semaphore(3)
+    _DNS_HOOK_LOCK = threading.Lock()
     _RESOLVED_IP: Optional[str] = None
     _IP_RESOLVED_AT: float = 0
+    _LAST_FETCH_SOURCE: Optional[str] = None
+    _LAST_FETCH_ERROR: Optional[str] = None
 
     # 分類規則
     PATTERNS = {
@@ -108,6 +111,26 @@ class PolymarketService:
         return None
 
     @classmethod
+    def _read_stale_cache(cls, key: str = "macro_sentiment") -> Optional[Any]:
+        """Read the last valid snapshot without extending its freshness window."""
+        if key in cls._MEM_CACHE:
+            return cls._MEM_CACHE[key][1]
+
+        filepath = cls._get_cache_filepath(key)
+        if not os.path.exists(filepath):
+            return None
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            data = payload.get("data")
+            if isinstance(data, dict):
+                cls._MEM_CACHE[key] = (payload.get("cached_at", 0), data)
+                return data
+        except Exception as e:
+            logger.debug(f"讀取 Polymarket stale 快取失敗 {key}: {e}")
+        return None
+
+    @classmethod
     def _write_cache(cls, key: str, data: Any):
         now = time.time()
         cls._MEM_CACHE[key] = (now, data)
@@ -148,6 +171,32 @@ class PolymarketService:
 
         return None
 
+    @staticmethod
+    def _parse_json_list(value: Any) -> List[Any]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else []
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return []
+
+    @staticmethod
+    def _to_float(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _filter_category(result: Dict[str, Any], category: Optional[str]) -> Dict[str, Any]:
+        if not category or category == "all":
+            return result
+        markets = [m for m in result.get("markets", []) if m.get("category") == category]
+        return {**result, "markets": markets, "count": len(markets)}
+
     @classmethod
     def _fetch_raw_markets(cls) -> List[Dict[str, Any]]:
         """
@@ -155,6 +204,8 @@ class PolymarketService:
         1. 優先透過 2MD 代理輪詢
         2. 2MD 全數失敗時自動啟動 DoH (8.8.8.8 / 1.1.1.1) 直連
         """
+        cls._LAST_FETCH_SOURCE = None
+        cls._LAST_FETCH_ERROR = None
         with cls._CRAWLER_SEMAPHORE:
             # 軌道 1: 2MD 輪詢
             for host in cls.FALLBACK_2MD_HOSTS:
@@ -167,6 +218,7 @@ class PolymarketService:
                         if match:
                             data = json.loads(match.group(0))
                             if isinstance(data, list) and len(data) > 0:
+                                cls._LAST_FETCH_SOURCE = "2md_reader"
                                 return data
                 except requests.exceptions.Timeout:
                     logger.debug(f"2MD timeout on {host} for Polymarket, trying next...")
@@ -178,6 +230,7 @@ class PolymarketService:
             if resolved_ip:
                 try:
                     from requests.adapters import HTTPAdapter
+                    from urllib3 import util as urllib3_util
                     from urllib3.util.connection import create_connection
 
                     class HostHeaderSSLAdapter(HTTPAdapter):
@@ -193,16 +246,25 @@ class PolymarketService:
                             super().init_poolmanager(*args, **kwargs)
 
                     session = requests.Session()
-                    session.mount("https://gamma-api.polymarket.com", HostHeaderSSLAdapter())
-                    resp = session.get(cls.TARGET_API, timeout=cls.TIMEOUT)
+                    # urllib3 does not expose per-request DNS injection. Keep the
+                    # compatibility hook scoped, serialized, and always restored.
+                    with cls._DNS_HOOK_LOCK:
+                        original_create_connection = urllib3_util.connection.create_connection
+                        try:
+                            session.mount("https://gamma-api.polymarket.com", HostHeaderSSLAdapter())
+                            resp = session.get(cls.TARGET_API, timeout=cls.TIMEOUT)
+                        finally:
+                            urllib3_util.connection.create_connection = original_create_connection
                     if resp.status_code == 200:
                         data = resp.json()
                         if isinstance(data, list):
+                            cls._LAST_FETCH_SOURCE = "doh_direct"
                             logger.info(f"✅ Polymarket DoH 直連成功，獲取 {len(data)} 檔市場")
                             return data
                 except Exception as e:
                     logger.warning(f"Polymarket DoH 直連失敗: {e}")
 
+        cls._LAST_FETCH_ERROR = "2MD 與 DoH 上游皆無法取得有效 Polymarket 資料"
         return []
 
     @classmethod
@@ -213,17 +275,40 @@ class PolymarketService:
         獲取 Polymarket 真金白銀宏觀情緒與重大預測市場數據
         """
         cache_key = "macro_sentiment"
+        normalized_category = None if not category or category == "all" else category
         if not force_refresh:
             cached = cls._read_cache(cache_key, cls.TTL_MACRO_SENTIMENT)
-            if cached:
-                if category:
-                    filtered_markets = [
-                        m for m in cached.get("markets", []) if m.get("category") == category
-                    ]
-                    return {**cached, "markets": filtered_markets, "count": len(filtered_markets)}
-                return cached
+            if cached and cached.get("success") and cached.get("markets"):
+                return cls._filter_category(cached, normalized_category)
 
-        raw_markets = cls._fetch_raw_markets()
+        try:
+            raw_markets = cls._fetch_raw_markets()
+        except Exception as e:
+            raw_markets = []
+            cls._LAST_FETCH_ERROR = str(e)
+
+        if not raw_markets:
+            stale = cls._read_stale_cache(cache_key)
+            if stale and stale.get("success") and stale.get("markets"):
+                stale_result = {
+                    **stale,
+                    "success": False,
+                    "stale": True,
+                    "error": cls._LAST_FETCH_ERROR or "Polymarket 上游沒有回傳資料",
+                    "source": stale.get("source", "stale_cache"),
+                }
+                return cls._filter_category(stale_result, normalized_category)
+            return {
+                "success": False,
+                "stale": False,
+                "source": cls._LAST_FETCH_SOURCE or "unavailable",
+                "error": cls._LAST_FETCH_ERROR or "Polymarket 上游沒有回傳資料",
+                "timestamp": datetime.datetime.now().isoformat(),
+                "count": 0,
+                "fed_real_money_odds": {},
+                "markets": [],
+            }
+
         processed_markets: List[Dict[str, Any]] = []
 
         # 指標統計
@@ -245,21 +330,24 @@ class PolymarketService:
             primary_cat = matched_cats[0]
 
             # 解析機率與選項
-            try:
-                outcomes = json.loads(m.get("outcomes", "[]"))
-                prices = json.loads(m.get("outcomePrices", "[]"))
-                prices = [float(p) for p in prices]
-            except Exception:
-                outcomes = ["Yes", "No"]
-                prices = [0.5, 0.5]
+            outcomes = cls._parse_json_list(m.get("outcomes", []))
+            prices = [cls._to_float(p, default=-1.0) for p in cls._parse_json_list(m.get("outcomePrices", []))]
+            if not outcomes or not prices:
+                continue
 
             odds_map: Dict[str, float] = {}
             for o, p in zip(outcomes, prices):
-                odds_map[o] = round(p * 100, 1)
+                if p >= 0:
+                    odds_map[str(o)] = round(min(max(p, 0.0), 1.0) * 100, 1)
 
-            vol_24h = float(m.get("volume24hr", 0) or 0)
-            total_vol = float(m.get("volume", 0) or 0)
-            liquidity = float(m.get("liquidity", 0) or 0)
+            if not odds_map:
+                continue
+
+            top_outcome, probability = max(odds_map.items(), key=lambda item: item[1])
+
+            vol_24h = cls._to_float(m.get("volume24hr", 0))
+            total_vol = cls._to_float(m.get("volume", 0))
+            liquidity = cls._to_float(m.get("liquidity", 0))
             slug = m.get("slug", "")
 
             market_item = {
@@ -271,6 +359,8 @@ class PolymarketService:
                 "odds_percent": odds_map,
                 "yes_prob": odds_map.get("Yes", 0.0),
                 "no_prob": odds_map.get("No", 0.0),
+                "probability": probability,
+                "top_outcome": top_outcome,
                 "volume_24h": round(vol_24h, 2),
                 "total_volume": round(total_vol, 2),
                 "liquidity": round(liquidity, 2),
@@ -296,18 +386,14 @@ class PolymarketService:
         # 整理輸出
         result = {
             "success": True,
-            "source": "Polymarket via 2MD / DoH (8.8.8.8)",
+            "source": cls._LAST_FETCH_SOURCE or "unknown",
+            "stale": False,
             "timestamp": datetime.datetime.now().isoformat(),
-            "count": len(processed_markets),
+            "count": min(len(processed_markets), 25),
             "fed_real_money_odds": fed_prob_summary,
             "markets": processed_markets[:25],
         }
 
         # 寫入快取
         cls._write_cache(cache_key, result)
-
-        if category:
-            filtered = [m for m in result["markets"] if m.get("category") == category]
-            return {**result, "markets": filtered, "count": len(filtered)}
-
-        return result
+        return cls._filter_category(result, normalized_category)

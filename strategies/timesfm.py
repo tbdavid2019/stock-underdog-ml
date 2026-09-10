@@ -121,13 +121,15 @@ class TimesFMStrategy(BaseStrategy):
                 )
                 continue
 
+            # `potential` is the configured horizon potential. The wrapper
+            # also exposes day-one potential for diagnostics only.
             potential = float(f["potential"])
             horizon_potential = float(f.get("horizon_potential", potential))
             risk_reward = float(f.get("risk_reward_ratio", 1.0))
             predicted_price = float(f["predicted_price"])
 
-            # Hit criteria: positive next-day/horizon potential AND viable risk/reward
-            is_hit = potential >= self.min_potential_hit and risk_reward >= self.min_risk_reward_hit
+            # Hit criteria: positive horizon potential AND viable horizon P50/P10 risk/reward
+            is_hit = horizon_potential >= self.min_potential_hit and risk_reward >= self.min_risk_reward_hit
 
             # Multi-factor score (0 ~ 100) combining potential and risk/reward
             base_score = 50.0 + (potential * 8.0)
@@ -150,6 +152,7 @@ class TimesFMStrategy(BaseStrategy):
                 "horizon_predicted_price": f.get("horizon_predicted_price"),
                 "potential": potential,
                 "horizon_potential": horizon_potential,
+                "day1_potential": f.get("day1_potential"),
                 "risk_reward_ratio": risk_reward,
                 "downside_risk": f.get("downside_risk"),
                 "upside_potential": f.get("upside_potential"),

@@ -8,6 +8,13 @@
 
 ## 2026-09-10
 
+### Fixed
+- **Polymarket API/UI 契約一致化**：機率統一為 0~100 百分比，市場資料補上 `probability` 與 `top_outcome`，修正首頁顯示 `8500%` 或 `undefined%` 的問題；WebMCP 的 `category=all` 會正確代表全部分類。
+- **Polymarket 失敗語意與快取修正**：2MD/DoH 都失敗時回傳 `success=false` 與錯誤資訊，不再把空結果快取成新資料；可用上一筆有效結果時會標記 `stale=true`。
+- **TimesFM 風險報酬定義修正**：5 日策略使用 horizon 的 P50/P10 計算潛力與風險報酬，P90 保留為上行參考，避免文件與實際選股判定不一致。
+- **版本資訊統一**：FastAPI、health endpoint 與首頁版本標籤共用 `2.4.0`。
+- **CI/CD 安全與可驗證性**：yfinance 自動更新改建立 dependency PR，不再直接推送 `main` 或使用 `[skip ci]`；Docker package 寫入權限限縮到 image publishing job。
+
 ### Added
 - **🎲 Polymarket 真金白銀預測市場宏觀情緒整合 (Polymarket Real-Money Macro Sentiment Integration)**：
   - **核心服務模組 (`data/polymarket_service.py`)**：串接 Polymarket Gamma API，無須 API 金鑰即時追蹤真金白銀千萬美元流動性之宏觀預測市場。

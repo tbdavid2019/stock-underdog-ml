@@ -1,5 +1,9 @@
 name: yfinance Auto-Update & CI/CD Verification
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   schedule:
     # 每天 UTC 05:00 (台灣時間 13:00，台股收盤前 0.5hr 檢查)
@@ -30,14 +34,16 @@ jobs:
         run: |
           python scripts/check_yfinance_update.py --no-commit
 
-      - name: Commit & Push if Updated
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          if [[ -n $(git status -s requirements.txt) ]]; then
-            git add requirements.txt
-            git commit -m "chore(deps): auto-update yfinance to latest PyPI release [skip ci]"
-            git push origin main
-          else
-            echo "yfinance is already up to date."
-          fi
+      - name: Create dependency update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): auto-update yfinance to latest PyPI release"
+          title: "chore(deps): update yfinance"
+          body: |
+            Automated yfinance update validated by the compatibility pipeline.
+
+            The normal pull-request CI must pass before this change is merged.
+          branch: automation/yfinance-update
+          delete-branch: true
+          add-paths: requirements.txt

@@ -22,7 +22,7 @@ description: 888 Stock Quant 專業級深度學習與多維量化決策大腦 (�
 | 🔮 **雙ML共振** | `dual_ml_resonance` | **雙重模型背書**：LSTM 短線動量與 TimesFM 5日路徑同步給出看漲訊號。 |
 | ⚔️ **玄鐵重劍** | `pullback_type` (MA60/120) | **波段操作 (2-4週)**：多頭趨勢中股價回踩季線 (MA60) 或半年線 (MA120) 不破之支撐買點。 |
 | 🤖 **LSTM 深度學習** | `potential` (%) | **短線操作 (1-7天)**：預測次日價格空間。`potential > +3%` 視為看漲潛力股。 |
-| 🔮 **Google TimesFM** | `potential` (%), `risk_reward_ratio` | **時序大模型 (1-5天)**：5 日預測價格路徑、10%~90% 分位數風險帶與盈虧比 (`RR >= 1.5` 為高勝率)。 |
+| 🔮 **Google TimesFM** | `potential` (%), `risk_reward_ratio` | **時序大模型 (1-5天)**：以設定 horizon 的 P50/P10 計算 5 日預測潛力與盈虧比，P90 為上行參考 (`RR >= 1.5` 為高勝率)。 |
 | 🏦 **三大法人籌碼** | `trust_net_5d`, `foreign_net_5d` | **主力籌碼**：`投信連買N天` (Streak >= 3) 或 `土洋合買` (外資投信同步買超)。 |
 | 🌍 **宏觀風控** | `macro_regime`, `exposure` | **資金水位控制**：根據加權指數/SPY 季線、VIX 恐慌指數、SOX 費半動態調整倉位 (0% ~ 100%)。 |
 

@@ -276,10 +276,13 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp1.status_code, 200)
         self.assertIn("888 Stock Quant", resp1.text)
         self.assertIn("/mcp/sse", resp1.text)
+        self.assertIn("success=false", resp1.text)
+        self.assertIn("0~100 百分比", resp1.text)
 
         resp2 = self.client.get("/llms-full.txt")
         self.assertEqual(resp2.status_code, 200)
         self.assertIn("888 Stock Quant", resp2.text)
+        self.assertIn("P_{50,h}", resp2.text)
 
     def test_root_head_method(self):
         resp = self.client.head("/")
@@ -294,6 +297,7 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("get_commodities_summary", resp.text)
         self.assertIn("resolve_stock_ticker", resp.text)
         self.assertIn("get_polymarket_macro_sentiment", resp.text)
+        self.assertNotIn("category=${category || 'all'}", resp.text)
 
     def test_mcp_discovery_manifest(self):
         resp = self.client.get("/mcp")
@@ -308,6 +312,7 @@ class TestFastAPIService(unittest.TestCase):
         resp_wk = self.client.get("/.well-known/mcp.json")
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
+        self.assertEqual(data_wk["version"], "2.4.0")
         self.assertEqual(len(data_wk.get("tools", [])), 16)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
         self.assertIn("get_commodities_summary", data_wk.get("tools", []))
@@ -318,14 +323,16 @@ class TestFastAPIService(unittest.TestCase):
         from unittest.mock import patch
         with patch("data.polymarket_service.PolymarketService.get_macro_sentiment") as mock_pm:
             mock_pm.return_value = {
+                "success": True,
+                "stale": False,
                 "source": "doh_direct",
                 "fed_real_money_odds": {
-                    "pause": 0.05,
-                    "cut_25bps": 0.88,
-                    "cut_50bps": 0.07,
+                    "pause": 5.0,
+                    "cut_25bps": 88.0,
+                    "cut_50bps": 7.0,
                     "hike_25bps": 0.0
                 },
-                "total_markets_tracked": 12,
+                "count": 1,
                 "markets": [
                     {
                         "id": "pm_fed_1",
@@ -341,9 +348,44 @@ class TestFastAPIService(unittest.TestCase):
             self.assertEqual(resp.status_code, 200)
             res_json = resp.json()
             self.assertTrue(res_json["success"])
+            mock_pm.assert_called_once_with(force_refresh=False, category=None)
             self.assertEqual(res_json["data"]["source"], "doh_direct")
-            self.assertEqual(res_json["data"]["fed_real_money_odds"]["cut_25bps"], 0.88)
+            self.assertEqual(res_json["data"]["fed_real_money_odds"]["cut_25bps"], 88.0)
             self.assertEqual(len(res_json["data"]["markets"]), 1)
+
+    def test_macro_polymarket_failure_is_visible_to_api_clients(self):
+        from unittest.mock import patch
+        with patch("data.polymarket_service.PolymarketService.get_macro_sentiment") as mock_pm:
+            mock_pm.return_value = {
+                "success": False,
+                "stale": False,
+                "error": "upstream unavailable",
+                "markets": [],
+            }
+            resp = self.client.get(
+                "/api/v1/macro/polymarket/sentiment?force_refresh=true&category=fed_rates"
+            )
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertFalse(resp.json()["success"])
+            self.assertEqual(resp.json()["data"]["error"], "upstream unavailable")
+            mock_pm.assert_called_once_with(force_refresh=True, category="fed_rates")
+
+    def test_polymarket_frontend_uses_service_contract(self):
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("fed_real_money_odds.cut_25bps || 0) }}", resp.text)
+        self.assertNotIn("fed_real_money_odds.cut_25bps || 0) * 100", resp.text)
+        self.assertIn("m.probability", resp.text)
+        self.assertIn("m.top_outcome", resp.text)
+        self.assertIn("const params = new URLSearchParams()", resp.text)
+
+    def test_public_version_surfaces_are_current(self):
+        health = self.client.get("/health")
+        self.assertEqual(health.status_code, 200)
+        self.assertEqual(health.json()["version"], "2.4.0")
+        homepage = self.client.get("/")
+        self.assertIn("v2.4.0", homepage.text)
 
 
 if __name__ == "__main__":

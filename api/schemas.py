@@ -4,6 +4,7 @@ api/schemas.py - Pydantic Data Models for Quantitative API & MCP Tools
 
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+from core.version import APP_VERSION
 
 
 class StockPredictionItem(BaseModel):
@@ -86,5 +87,5 @@ class DBStatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "healthy"
     timestamp: str
-    version: str = "2.2.0"
+    version: str = APP_VERSION
     duckdb_records: int

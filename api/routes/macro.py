@@ -95,7 +95,6 @@ def get_polymarket_sentiment(refresh: bool = False, force_refresh: bool = False,
     from data.polymarket_service import PolymarketService
     do_refresh = refresh or force_refresh
     data = PolymarketService.get_macro_sentiment(force_refresh=do_refresh, category=category)
-    return {"success": True, "data": data}
-
+    return {"success": data.get("success", False), "data": data}
 
 
