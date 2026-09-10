@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import html
 import io
-import json
 import re
 from dataclasses import asdict, dataclass
 from io import BytesIO
@@ -449,13 +448,36 @@ class EuronextProvider:
         if not match:
             raise ValueError("Euronext JSON gateway URL not found")
         gateway = html.unescape(match.group(1)).replace("\\/", "/")
-        response = requests.get(
-            urljoin(self.BASE_URL, gateway),
-            headers={"Accept": "application/json", "Referer": self.PAGE_URL, "User-Agent": "Mozilla/5.0"},
-            timeout=45,
-        )
-        response.raise_for_status()
-        return self.parse_payload(response.json())
+        gateway_url = urljoin(self.BASE_URL, gateway)
+        headers = {
+            "Accept": "application/json",
+            "Referer": self.PAGE_URL,
+            "User-Agent": "Mozilla/5.0",
+        }
+        records: List[UniverseRecord] = []
+        offset = 0
+        page_size = 500
+        total = None
+        while total is None or offset < total:
+            response = requests.get(
+                gateway_url,
+                params={"iDisplayStart": offset, "iDisplayLength": page_size},
+                headers=headers,
+                timeout=45,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            page_records = self.parse_payload(payload)
+            if not page_records:
+                break
+            records.extend(page_records)
+            total = int(payload.get("iTotalRecords") or len(records))
+            offset += len(page_records)
+            if len(page_records) < page_size and offset >= total:
+                break
+            if offset >= total:
+                break
+        return records
 
 
 class LseProvider:
