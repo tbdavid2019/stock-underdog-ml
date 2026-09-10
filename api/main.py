@@ -117,7 +117,22 @@ def mcp_root_endpoint():
         "endpoints": {
             "sse": "/mcp/sse",
             "manifest": "/.well-known/mcp.json"
-        }
+        },
+        "tools": [
+            "get_market_macro_regime",
+            "get_triple_resonance_stocks",
+            "get_xuantie_pullback_stocks",
+            "get_lstm_top_predictions",
+            "get_timesfm_top_predictions",
+            "get_stock_history",
+            "get_latest_market_snapshot",
+            "get_top_institutional_flows",
+            "get_broker_trades_for_stock",
+            "get_company_profile",
+            "get_fed_rate_monitor",
+            "get_us_earnings_calendar",
+            "get_economic_calendar"
+        ]
     })
 
 

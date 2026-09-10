@@ -293,6 +293,11 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertIn("get_timesfm_top_predictions", data.get("tools", []))
 
+        resp_wk = self.client.get("/.well-known/mcp.json")
+        self.assertEqual(resp_wk.status_code, 200)
+        data_wk = resp_wk.json()
+        self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
+
 
 if __name__ == "__main__":
     unittest.main()
