@@ -445,11 +445,17 @@ class DuckDBManager:
             }
 
         try:
+            import zoneinfo
+            tz_taipei = zoneinfo.ZoneInfo("Asia/Taipei")
+        except Exception:
+            tz_taipei = datetime.timezone(datetime.timedelta(hours=8))
+
+        try:
             ts_clean = latest_ts.replace("Z", "+00:00")
             batch_dt = datetime.datetime.fromisoformat(ts_clean)
             if batch_dt.tzinfo is None:
-                batch_dt = batch_dt.replace(tzinfo=datetime.timezone.utc)
-            age_hours = round((now - batch_dt).total_seconds() / 3600.0, 1)
+                batch_dt = batch_dt.replace(tzinfo=tz_taipei)
+            age_hours = max(0.0, round((now - batch_dt).total_seconds() / 3600.0, 1))
             is_stale = age_hours > 48.0
             batch_date = batch_dt.strftime("%Y-%m-%d")
         except Exception:
@@ -490,8 +496,8 @@ class DuckDBManager:
                 try:
                     r_dt = datetime.datetime.fromisoformat(str(r_ts).replace("Z", "+00:00"))
                     if r_dt.tzinfo is None:
-                        r_dt = r_dt.replace(tzinfo=datetime.timezone.utc)
-                    r_age = round((now - r_dt).total_seconds() / 3600.0, 1)
+                        r_dt = r_dt.replace(tzinfo=tz_taipei)
+                    r_age = max(0.0, round((now - r_dt).total_seconds() / 3600.0, 1))
                     r["age_hours"] = r_age
                     r["is_stale"] = r_age > 48.0
                 except Exception:
