@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **FastAPI REST / MCP 服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**本地 DuckDB 列式時序庫** 與 **15 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -145,22 +145,23 @@ graph TD
 }
 ```
 
-**支援之 15 大標準 MCP 工具函數 (FastMCP & WebMCP)：**
-* `get_market_macro_regime`: 評估台美股大盤宏觀風控情境與建議投資曝險比例。
-* `get_triple_resonance_stocks`: 查詢 👑 四重共振、🏆 三重共振與 🔮 雙ML共振焦點多策略交集個股。
-* `get_xuantie_pullback_stocks`: 查詢玄鐵重劍 MA60/120 趨勢回調買點標的。
-* `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日預測漲跌幅排行與盈虧比。
-* `get_lstm_top_predictions`: 查詢 LSTM 深度學習次日預測漲跌幅排行。
-* `get_stock_history`: 查詢特定股票歷史時序量化預測軌跡與法人籌碼。
-* `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
-* `get_top_institutional_flows`: 查詢三大法人（外資、投信、自營商）買賣超排行榜。
-* `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細與累計買賣超。
-* `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞。
-* `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率與 FOMC 倒數。
-* `get_us_earnings_calendar`: 透過 2MD 查詢美股重量級企業財報行事曆。
-* `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆（CPI、非農 NFP 等）。
-* `get_commodities_summary`: 透過 2MD 查詢關鍵大宗商品（黃金、銅博士、WTI 原油）實時行情。
-* `resolve_stock_ticker`: 將模糊搜尋之股票名稱或代號解析為標準交易代號（如台積電 ➔ 2330.TW）。
+**支援之 15 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
+
+1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
+2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振、🔮雙ML共振焦點多策略交集個股。
+3. `get_xuantie_pullback_stocks`: 玄鐵重劍 MA60/120 波段回踩買點標的。
+4. `get_lstm_top_predictions`: LSTM 深度學習次日預測漲跌幅排行。
+5. `get_timesfm_top_predictions`: Google Research TimesFM 2.5 5 日預測漲跌榜與真實盈虧比 (Risk/Reward)。
+6. `get_stock_history`: 個股時序預測軌跡與法人籌碼。
+7. `get_latest_market_snapshot`: 最新全市場日報批次數據快照。
+8. `get_top_institutional_flows`: 三大法人（外資、投信、自營商）買賣超焦點股排行榜。
+9. `get_broker_trades_for_stock`: 關鍵券商主力分點進出明細與累計買賣超。
+10. `get_company_profile`: 2MD 繁中公司營運簡介與即時新聞。
+11. `get_fed_rate_monitor`: CME FedWatch 利率決策機率與 FOMC 倒數。
+12. `get_us_earnings_calendar`: 美股重量級企業財報公布行事曆（EPS、營收預估）。
+13. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
+14. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅博士 Copper、原油 WTI）實時行情。
+15. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
