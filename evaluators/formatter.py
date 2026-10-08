@@ -60,7 +60,7 @@ def _extract_candidates(results: dict, overlap_df: pd.DataFrame) -> List[dict]:
 # ==============================================================================
 
 def _format_telegram_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
-    """單一候選標的高級卡片排版 (適合手機閱讀，不因中英等寬破版)"""
+    """單一候選標的高級卡片排版 (適合手機閱讀，簡潔專業無雜亂表情符號)"""
     ticker = cand.get("ticker", "")
     ticker_label = html.escape(format_ticker_label(ticker, lookup))
     curr_price = cand.get("current_price") or 0.0
@@ -68,55 +68,49 @@ def _format_telegram_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
 
     lines = [f"• <b>{ticker_label}</b> <code>{price_str}</code>"]
 
-    # Line 2: ML 模型預測與盈虧比
-    ml_parts = []
+    details = []
+
+    # 1. ML 模型預測
     lstm_pot = cand.get("lstm_potential")
     if lstm_pot is not None and pd.notna(lstm_pot):
         pot_val = float(lstm_pot)
-        arrow = "🔺" if pot_val > 0 else ("🔻" if pot_val < 0 else "▫️")
-        ml_parts.append(f"{arrow} LSTM <b>{pot_val:+.1f}%</b>")
+        details.append(f"LSTM <b>{pot_val:+.1f}%</b>")
 
     tfm_pot = cand.get("timesfm_potential")
     if tfm_pot is not None and pd.notna(tfm_pot):
         pot_val = float(tfm_pot)
-        arrow = "🔺" if pot_val > 0 else ("🔻" if pot_val < 0 else "▫️")
         rr = cand.get("risk_reward_ratio")
         rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        ml_parts.append(f"{arrow} TFM <b>{pot_val:+.1f}%</b>{rr_str}")
+        details.append(f"TFM <b>{pot_val:+.1f}%</b>{rr_str}")
 
-    if ml_parts:
-        lines.append("  " + " | ".join(ml_parts))
-
-    # Line 3: 核心訊號與籌碼鎖碼
-    sig_parts = []
+    # 2. 均線技術買點
     pb_type = cand.get("pullback_type")
     if pb_type:
-        sig_parts.append(f"📍 {pb_type}")
+        details.append(str(pb_type).strip())
 
+    # 3. 籌碼鎖碼訊號
     tags = cand.get("tags") or []
     inst = cand.get("institutional") or {}
     if inst.get("is_sync_buy") or "土洋合買" in tags:
-        sig_parts.append("🔒土洋合買")
+        details.append("土洋合買")
 
     streak_tag = next((t for t in tags if "投信連買" in t), None)
     if streak_tag:
-        sig_parts.append(f"💼{streak_tag}")
+        details.append(streak_tag)
     elif inst.get("trust_streak", 0) >= 3:
-        sig_parts.append(f"💼投信連買{inst.get('trust_streak')}天")
+        details.append(f"投信連買{inst.get('trust_streak')}天")
     elif inst.get("trust_net_5d", 0) > 0 or "投信買超" in tags:
-        sig_parts.append("💼投信買超")
+        details.append("投信買超")
 
     for t in tags:
         if "主流板塊" in t:
-            sig_parts.append(f"🧭{t}")
+            details.append(t)
         elif t in ("高盈虧比", "低PE", "低PB"):
-            sig_parts.append(f"🏷️{t}")
+            details.append(t)
 
-    unique_sigs = list(dict.fromkeys(sig_parts))
-    if unique_sigs:
-        lines.append("  🎯 " + " · ".join(unique_sigs[:4]))
+    unique_details = list(dict.fromkeys(details))
 
-    # Line 4: 估值 (PE / PB)
+    # 4. 估值 (PE / PB)
     val_parts = []
     pe_val = cand.get("pe") or (cand.get("fundamentals") or {}).get("pe")
     pb_val = cand.get("pb") or (cand.get("fundamentals") or {}).get("pb")
@@ -124,8 +118,16 @@ def _format_telegram_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
         val_parts.append(f"PE:{float(pe_val):.1f}")
     if pb_val and pd.notna(pb_val) and float(pb_val) > 0:
         val_parts.append(f"PB:{float(pb_val):.1f}")
-    if val_parts:
-        lines.append("  📊 " + " · ".join(val_parts))
+
+    detail_str = " · ".join(unique_details[:4])
+    val_str = " · ".join(val_parts)
+
+    if detail_str and val_str:
+        lines.append(f"  {detail_str} | {val_str}")
+    elif detail_str:
+        lines.append(f"  {detail_str}")
+    elif val_str:
+        lines.append(f"  {val_str}")
 
     return "\n".join(lines)
 
@@ -138,7 +140,7 @@ def format_telegram_message(
     macro_state: Optional[Any] = None,
     ai_summary: str = ""
 ) -> str:
-    """格式化量化結果為適合手機 Telegram 閱讀的高級 HTML 訊息"""
+    """格式化量化結果為適合手機 Telegram 閱讀的高級 HTML 訊息 (去雜亂表情符號，強化層次)"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
     lstm_results = results.get("lstm_results", [])
@@ -149,9 +151,8 @@ def format_telegram_message(
 
     candidates = _extract_candidates(results, overlap_df)
 
-    msg = "<b>🚀 多維量化投資日報</b>\n"
-    msg += f"⏰ {calculation_time}\n"
-    msg += f"📊 指數: <b>{html.escape(index_name)}</b>\n\n"
+    msg = "<b>多維量化投資日報</b>\n"
+    msg += f"⏰ {calculation_time} | 指數: <b>{html.escape(index_name)}</b>\n\n"
 
     is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
 
@@ -161,51 +162,66 @@ def format_telegram_message(
             twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
             sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
             vix_val = getattr(macro, 'vix', 0.0)
-            msg += "<b>🇹🇼 台股大盤與風控</b>\n"
+            msg += "<b>【台股大盤與風控】</b>\n"
             msg += f"• 大盤狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
             msg += f"• 加權指數: {twii_str} | 國際連動: {sox_str} (VIX {vix_val:.1f})\n\n"
         else:
             spy_str = '站穩MA60' if getattr(macro, 'spy_above_ma60', True) else '破季線'
             sox_str = '站穩MA60' if getattr(macro, 'sox_above_ma60', True) else '破季線'
             vix_val = getattr(macro, 'vix', 0.0)
-            msg += "<b>🇺🇸 美股宏觀風控</b>\n"
+            msg += "<b>【美股宏觀風控】</b>\n"
             msg += f"• 狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
             msg += f"• VIX: {vix_val:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     # AI 操盤總評 (採用 Telegram Blockquote 美化引言，嚴格跳脫 HTML 避免訊息解析失敗)
     if summary_text:
         clean_summary = html.escape(summary_text.strip())
-        msg += f"<b>🧠 AI 操盤解讀</b>\n<blockquote>{clean_summary}</blockquote>\n\n"
+        msg += f"<b>【AI 操盤解讀】</b>\n<blockquote>{clean_summary}</blockquote>\n\n"
 
-    # ⭐ 優先推薦 (多維共振)
-    msg += "<b>⭐ 優先推薦 (多維共振)</b>\n"
+    # 優先推薦 (多維共振)
+    msg += "<b>【優先推薦 (多維共振)】</b>\n"
     if candidates:
         msg += f"符合共振條件: <b>{len(candidates)}</b> 支\n\n"
 
-        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"]
+        tier_display_map = {
+            "👑四重共振": "【四重共振】",
+            "🏆三重共振": "【三重共振】",
+            "🔮雙ML共振": "【雙ML共振】",
+            "🌟多維共振": "【多維共振】",
+            "⭐雙重共振": "【雙重共振】",
+            "四重共振": "【四重共振】",
+            "三重共振": "【三重共振】",
+            "雙ML共振": "【雙ML共振】",
+            "多維共振": "【多維共振】",
+            "雙重共振": "【雙重共振】"
+        }
+        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振", "四重共振", "三重共振", "雙ML共振", "多維共振", "雙重共振"]
         grouped: Dict[str, List[dict]] = {}
         for c in candidates:
             tier = c.get("resonance_tier")
             if not tier:
                 tags = c.get("tags") or []
-                tier = next((t for t in tier_order if t in tags), "🌟多維共振")
+                tier = next((t for t in tier_order if t in tags), "多維共振")
             grouped.setdefault(tier, []).append(c)
 
         shown_count = 0
         max_candidates_display = 15
         for tier_key in tier_order:
             if tier_key in grouped and shown_count < max_candidates_display:
-                msg += f"<b>{tier_key}</b>\n"
+                label = tier_display_map.get(tier_key, f"【{tier_key}】")
+                msg += f"<b>{label}</b>\n"
                 for cand in grouped[tier_key]:
                     if shown_count >= max_candidates_display:
                         break
                     msg += _format_telegram_candidate_card(cand, lookup) + "\n"
                     shown_count += 1
                 msg += "\n"
+                del grouped[tier_key]
 
         for tier_key, c_list in grouped.items():
-            if tier_key not in tier_order and shown_count < max_candidates_display:
-                msg += f"<b>{tier_key}</b>\n"
+            if shown_count < max_candidates_display:
+                label = tier_display_map.get(tier_key, f"【{tier_key}】")
+                msg += f"<b>{label}</b>\n"
                 for cand in c_list:
                     if shown_count >= max_candidates_display:
                         break
@@ -219,8 +235,8 @@ def format_telegram_message(
     else:
         msg += "<i>(本期無符合多維正向共振條件之標的，建議防守觀望)</i>\n\n"
 
-    # 🗡️ 波段操作 (玄鐵重劍)
-    msg += "<b>🗡️ 波段操作 (玄鐵重劍)</b>\n"
+    # 波段操作 (玄鐵重劍)
+    msg += "<b>【波段操作 (玄鐵重劍)】</b>\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         msg += f"符合買點: <b>{len(xuantie_df)}</b> 支 (顯示前5名)\n"
         for idx, row in xuantie_df.head(5).iterrows():
@@ -230,39 +246,37 @@ def format_telegram_message(
             pe_str = f"PE:{pe_val:.1f}" if pd.notna(pe_val) and pe_val else "PE:N/A"
             pb_val = row.get('pb')
             pb_str = f"PB:{pb_val:.1f}" if pd.notna(pb_val) and pb_val else "PB:N/A"
-            pb_type = html.escape(str(row.get('pullback_type', '')))
-            msg += f"{idx+1}. <b>{ticker_label}</b> <code>{price_str}</code> | 📍 {pb_type} | {pe_str} · {pb_str}\n"
+            pb_type = html.escape(str(row.get('pullback_type', '')).strip())
+            msg += f"{idx+1}. <b>{ticker_label}</b> <code>{price_str}</code> | {pb_type} | {pe_str} · {pb_str}\n"
         msg += "\n"
     else:
         msg += "<i>(本期無符合波段買點標的)</i>\n\n"
 
-    # 🤖 短線操作 (LSTM)
-    msg += "<b>🤖 短線操作 (LSTM 預測 TOP 5)</b>\n"
+    # 短線操作 (LSTM)
+    msg += "<b>【短線操作 (LSTM 預測 TOP 5)】</b>\n"
     if lstm_results:
         for idx, result in enumerate(lstm_results[:5], 1):
             ticker_label = html.escape(format_ticker_label(result['ticker'], lookup))
             pot = result['potential']
-            arrow = "🔺" if pot > 0 else ("🔻" if pot < 0 else "▫️")
             curr_p = result['current_price']
             pred_p = result.get('predicted_price', curr_p)
-            msg += f"{idx}. <b>{ticker_label}</b> {arrow} <b>{pot:+.1f}%</b> (<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>)\n"
+            msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b> (<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>)\n"
         msg += "\n"
     else:
         msg += "<i>(本期無 LSTM 預測結果)</i>\n\n"
 
-    # 🔮 時序大模型 (TimesFM)
+    # 時序大模型 (TimesFM)
     if timesfm_results:
-        msg += "<b>🔮 時序大模型 (TimesFM 預測 TOP 5)</b>\n"
+        msg += "<b>【時序大模型 (TimesFM 預測 TOP 5)】</b>\n"
         for idx, result in enumerate(timesfm_results[:5], 1):
             ticker_label = html.escape(format_ticker_label(result['ticker'], lookup))
             pot = result['potential']
-            arrow = "🔺" if pot > 0 else ("🔻" if pot < 0 else "▫️")
             rr = result.get('risk_reward_ratio')
             rr_str = f" | 盈虧比: <b>{rr:.1f}x</b>" if rr and pd.notna(rr) else ""
             h_price = result.get('horizon_predicted_price')
             h_str = f"5日目標 <code>{h_price:,.1f}</code>" if h_price and pd.notna(h_price) else ""
             info_str = f" ({h_str}{rr_str})" if (h_str or rr_str) else ""
-            msg += f"{idx}. <b>{ticker_label}</b> {arrow} <b>{pot:+.1f}%</b>{info_str}\n"
+            msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b>{info_str}\n"
         msg += "\n"
 
     return msg
@@ -377,7 +391,7 @@ def split_telegram_message(message: str, max_length: int = 4000) -> List[str]:
 # ==============================================================================
 
 def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
-    """Discord Markdown 卡片"""
+    """Discord Markdown 卡片 (簡潔專業無雜亂表情符號)"""
     ticker = cand.get("ticker", "")
     ticker_label = format_ticker_label(ticker, lookup)
     curr_price = cand.get("current_price") or 0.0
@@ -385,52 +399,49 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
 
     lines = [f"• **{ticker_label}** `{price_str}`"]
 
-    ml_parts = []
+    details = []
+
+    # 1. ML 模型預測
     lstm_pot = cand.get("lstm_potential")
     if lstm_pot is not None and pd.notna(lstm_pot):
         pot_val = float(lstm_pot)
-        arrow = "🔺" if pot_val > 0 else ("🔻" if pot_val < 0 else "▫️")
-        ml_parts.append(f"{arrow} LSTM **{pot_val:+.1f}%**")
+        details.append(f"LSTM **{pot_val:+.1f}%**")
 
     tfm_pot = cand.get("timesfm_potential")
     if tfm_pot is not None and pd.notna(tfm_pot):
         pot_val = float(tfm_pot)
-        arrow = "🔺" if pot_val > 0 else ("🔻" if pot_val < 0 else "▫️")
         rr = cand.get("risk_reward_ratio")
         rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        ml_parts.append(f"{arrow} TFM **{pot_val:+.1f}%**{rr_str}")
+        details.append(f"TFM **{pot_val:+.1f}%**{rr_str}")
 
-    if ml_parts:
-        lines.append("  " + " | ".join(ml_parts))
-
-    sig_parts = []
+    # 2. 均線技術買點
     pb_type = cand.get("pullback_type")
     if pb_type:
-        sig_parts.append(f"📍 {pb_type}")
+        details.append(str(pb_type).strip())
 
+    # 3. 籌碼鎖碼訊號
     tags = cand.get("tags") or []
     inst = cand.get("institutional") or {}
     if inst.get("is_sync_buy") or "土洋合買" in tags:
-        sig_parts.append("🔒土洋合買")
+        details.append("土洋合買")
 
     streak_tag = next((t for t in tags if "投信連買" in t), None)
     if streak_tag:
-        sig_parts.append(f"💼{streak_tag}")
+        details.append(streak_tag)
     elif inst.get("trust_streak", 0) >= 3:
-        sig_parts.append(f"💼投信連買{inst.get('trust_streak')}天")
+        details.append(f"投信連買{inst.get('trust_streak')}天")
     elif inst.get("trust_net_5d", 0) > 0 or "投信買超" in tags:
-        sig_parts.append("💼投信買超")
+        details.append("投信買超")
 
     for t in tags:
         if "主流板塊" in t:
-            sig_parts.append(f"🧭{t}")
+            details.append(t)
         elif t in ("高盈虧比", "低PE", "低PB"):
-            sig_parts.append(f"🏷️{t}")
+            details.append(t)
 
-    unique_sigs = list(dict.fromkeys(sig_parts))
-    if unique_sigs:
-        lines.append("  🎯 " + " · ".join(unique_sigs[:4]))
+    unique_details = list(dict.fromkeys(details))
 
+    # 4. 估值 (PE / PB)
     val_parts = []
     pe_val = cand.get("pe") or (cand.get("fundamentals") or {}).get("pe")
     pb_val = cand.get("pb") or (cand.get("fundamentals") or {}).get("pb")
@@ -438,8 +449,16 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
         val_parts.append(f"PE:{float(pe_val):.1f}")
     if pb_val and pd.notna(pb_val) and float(pb_val) > 0:
         val_parts.append(f"PB:{float(pb_val):.1f}")
-    if val_parts:
-        lines.append("  📊 " + " · ".join(val_parts))
+
+    detail_str = " · ".join(unique_details[:4])
+    val_str = " · ".join(val_parts)
+
+    if detail_str and val_str:
+        lines.append(f"  {detail_str} | {val_str}")
+    elif detail_str:
+        lines.append(f"  {detail_str}")
+    elif val_str:
+        lines.append(f"  {val_str}")
 
     return "\n".join(lines)
 
@@ -463,9 +482,8 @@ def format_discord_message(
 
     candidates = _extract_candidates(results, overlap_df)
 
-    msg = "**🚀 多維量化投資日報**\n"
-    msg += f"⏰ {calculation_time}\n"
-    msg += f"📊 指數: **{index_name}**\n\n"
+    msg = "**多維量化投資日報**\n"
+    msg += f"⏰ {calculation_time} | 指數: **{index_name}**\n\n"
 
     is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
 
@@ -473,44 +491,58 @@ def format_discord_message(
         if is_tw:
             twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
             sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
-            msg += f"**🇹🇼 台股大盤與風控**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
+            msg += f"**【台股大盤與風控】**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
         else:
             spy_str = '站穩MA60' if getattr(macro, 'spy_above_ma60', True) else '破季線'
             sox_str = '站穩MA60' if getattr(macro, 'sox_above_ma60', True) else '破季線'
-            msg += f"**🇺🇸 美股宏觀風控**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
+            msg += f"**【美股宏觀風控】**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     if summary_text:
         quoted = summary_text.replace("\n", "\n> ")
-        msg += f"**🧠 AI 操盤解讀**:\n> {quoted}\n\n"
+        msg += f"**【AI 操盤解讀】**:\n> {quoted}\n\n"
 
-    # ⭐ 優先推薦 (多維共振)
-    msg += "**⭐ 優先推薦 (多維共振)**\n"
+    # 優先推薦 (多維共振)
+    msg += "**【優先推薦 (多維共振)】**\n"
     if candidates:
         msg += f"符合共振條件: **{len(candidates)}** 支\n\n"
-        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"]
+        tier_display_map = {
+            "👑四重共振": "【四重共振】",
+            "🏆三重共振": "【三重共振】",
+            "🔮雙ML共振": "【雙ML共振】",
+            "🌟多維共振": "【多維共振】",
+            "⭐雙重共振": "【雙重共振】",
+            "四重共振": "【四重共振】",
+            "三重共振": "【三重共振】",
+            "雙ML共振": "【雙ML共振】",
+            "多維共振": "【多維共振】",
+            "雙重共振": "【雙重共振】"
+        }
+        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振", "四重共振", "三重共振", "雙ML共振", "多維共振", "雙重共振"]
         grouped: Dict[str, List[dict]] = {}
         for c in candidates:
-            tier = c.get("resonance_tier") or "🌟多維共振"
+            tier = c.get("resonance_tier") or "多維共振"
             grouped.setdefault(tier, []).append(c)
 
         for tier_key in tier_order:
             if tier_key in grouped:
-                msg += f"**{tier_key}**\n"
+                label = tier_display_map.get(tier_key, f"【{tier_key}】")
+                msg += f"**{label}**\n"
                 for cand in grouped[tier_key]:
                     msg += _format_discord_candidate_card(cand, lookup) + "\n"
                 msg += "\n"
+                del grouped[tier_key]
 
         for tier_key, c_list in grouped.items():
-            if tier_key not in tier_order:
-                msg += f"**{tier_key}**\n"
-                for cand in c_list:
-                    msg += _format_discord_candidate_card(cand, lookup) + "\n"
-                msg += "\n"
+            label = tier_display_map.get(tier_key, f"【{tier_key}】")
+            msg += f"**{label}**\n"
+            for cand in c_list:
+                msg += _format_discord_candidate_card(cand, lookup) + "\n"
+            msg += "\n"
     else:
         msg += "*(本期無符合多維正向共振條件之標的，建議防守觀望)*\n\n"
 
-    # 🗡️ 波段操作
-    msg += "**🗡️ 波段操作 (玄鐵重劍)**\n"
+    # 波段操作
+    msg += "**【波段操作 (玄鐵重劍)】**\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         msg += f"符合買點: **{len(xuantie_df)}** 支 (顯示前5名)\n"
         for idx, row in xuantie_df.head(5).iterrows():
@@ -520,37 +552,35 @@ def format_discord_message(
             pe_str = f"PE:{pe_val:.1f}" if pd.notna(pe_val) and pe_val else "PE:N/A"
             pb_val = row.get('pb')
             pb_str = f"PB:{pb_val:.1f}" if pd.notna(pb_val) and pb_val else "PB:N/A"
-            pb_type = row.get('pullback_type', '')
-            msg += f"{idx+1}. **{ticker_label}** `{price_str}` | 📍 {pb_type} | {pe_str} · {pb_str}\n"
+            pb_type = str(row.get('pullback_type', '')).strip()
+            msg += f"{idx+1}. **{ticker_label}** `{price_str}` | {pb_type} | {pe_str} · {pb_str}\n"
         msg += "\n"
     else:
         msg += "*(本期無符合波段買點標的)*\n\n"
 
-    # 🤖 短線操作
-    msg += "**🤖 短線操作 (LSTM 預測 TOP 5)**\n"
+    # 短線操作
+    msg += "**【短線操作 (LSTM 預測 TOP 5)】**\n"
     if lstm_results:
         for idx, result in enumerate(lstm_results[:5], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             pot = result['potential']
-            arrow = "🔺" if pot > 0 else ("🔻" if pot < 0 else "▫️")
             curr_p = result['current_price']
             pred_p = result.get('predicted_price', curr_p)
-            msg += f"{idx}. **{ticker_label}** {arrow} **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`)\n"
+            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`)\n"
         msg += "\n"
 
-    # 🔮 TimesFM
+    # TimesFM
     if timesfm_results:
-        msg += "**🔮 時序大模型 (TimesFM 預測 TOP 5)**\n"
+        msg += "**【時序大模型 (TimesFM 預測 TOP 5)】**\n"
         for idx, result in enumerate(timesfm_results[:5], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             pot = result['potential']
-            arrow = "🔺" if pot > 0 else ("🔻" if pot < 0 else "▫️")
             rr = result.get('risk_reward_ratio')
             rr_str = f" | 盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
             h_price = result.get('horizon_predicted_price')
             h_str = f"5日目標 `{h_price:,.1f}`" if h_price and pd.notna(h_price) else ""
             info_str = f" ({h_str}{rr_str})" if (h_str or rr_str) else ""
-            msg += f"{idx}. **{ticker_label}** {arrow} **{pot:+.1f}%**{info_str}\n"
+            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
         msg += "\n"
 
     return msg

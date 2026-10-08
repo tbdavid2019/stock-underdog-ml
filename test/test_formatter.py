@@ -114,8 +114,8 @@ class TestFormatter(unittest.TestCase):
         """
         驗證 Telegram 訊息：
         1. 不再使用巨大 <pre> 包含優先推薦
-        2. 包含清晰層次標籤（👑四重共振、🏆三重共振、🔮雙ML共振）
-        3. 包含數值顏色/表情符號指引（🔺, 🎯, 🔒, 💼, 📊, 📍）
+        2. 採用清晰簡潔的層次標籤（【四重共振】、【三重共振】、【雙ML共振】）
+        3. 去除雜亂無章的 emoji 堆疊，維持專業金融資訊閱讀體驗
         4. 包含 blockquote AI 解讀
         """
         msg = format_telegram_message(
@@ -127,28 +127,27 @@ class TestFormatter(unittest.TestCase):
             ai_summary=self.report_dict["ai_summary"]
         )
 
-        self.assertIn("<b>🚀 多維量化投資日報</b>", msg)
+        self.assertIn("<b>多維量化投資日報</b>", msg)
         self.assertIn("<b>台灣50</b>", msg)
         self.assertIn("<b>全面多頭 (Bullish)</b>", msg)
         self.assertIn("<blockquote>今日盤勢處於全面多頭", msg)
 
         # 優先推薦區塊
-        self.assertIn("<b>⭐ 優先推薦 (多維共振)</b>", msg)
-        self.assertIn("<b>👑四重共振</b>", msg)
-        self.assertIn("<b>🏆三重共振</b>", msg)
-        self.assertIn("<b>🔮雙ML共振</b>", msg)
+        self.assertIn("<b>【優先推薦 (多維共振)】</b>", msg)
+        self.assertIn("<b>【四重共振】</b>", msg)
+        self.assertIn("<b>【三重共振】</b>", msg)
+        self.assertIn("<b>【雙ML共振】</b>", msg)
 
         # 驗證個股卡片內容
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("<code>1,005.00</code>", msg)
-        self.assertIn("🔺 LSTM <b>+5.2%</b>", msg)
-        self.assertIn("🔺 TFM <b>+4.1%</b> (2.5x)", msg)
-        self.assertIn("🔒土洋合買", msg)
+        self.assertIn("LSTM <b>+5.2%</b>", msg)
+        self.assertIn("TFM <b>+4.1%</b> (2.5x)", msg)
+        self.assertIn("土洋合買", msg)
         self.assertIn("PE:22.0 · PB:5.0", msg)
 
         # 驗證沒有使用 <pre> 包裹優先推薦
-        # (優先推薦內容不應在 <pre> 中)
-        cand_section = msg[msg.find("⭐ 優先推薦"):msg.find("🗡️ 波段操作")]
+        cand_section = msg[msg.find("優先推薦"):msg.find("波段操作")]
         self.assertNotIn("<pre>", cand_section, "優先推薦不應使用 <pre> 包裹以免手機版中英破版")
 
     def test_discord_message_formatting(self):
@@ -162,9 +161,9 @@ class TestFormatter(unittest.TestCase):
             ai_summary=self.report_dict["ai_summary"]
         )
 
-        self.assertIn("**🚀 多維量化投資日報**", msg)
-        self.assertIn("**👑四重共振**", msg)
-        self.assertIn("**🏆三重共振**", msg)
+        self.assertIn("**多維量化投資日報**", msg)
+        self.assertIn("**【四重共振】**", msg)
+        self.assertIn("**【三重共振】**", msg)
         self.assertIn("• **2330.TW 台積電** `1,005.00`", msg)
         self.assertIn("> 今日盤勢處於全面多頭", msg)
 
