@@ -26,6 +26,7 @@ x-stock-service: &default-service
     - ./mcp_server.py:/app/mcp_server.py
     - ./skills:/app/skills
     - ./notifier_dual.py:/app/notifier_dual.py
+    - ./notifier.py:/app/notifier.py
     - ./database.py:/app/database.py
     - ./logger.py:/app/logger.py
     # 應用程式日誌
