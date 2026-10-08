@@ -8,6 +8,7 @@ Connects directly to the embedded DuckDB high-speed quantitative time-series dat
 
 import os
 import sys
+import time
 from typing import Optional, List, Dict, Any
 
 # Ensure project root is in sys.path
@@ -23,8 +24,9 @@ mcp = FastMCP(
     instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、🏆三重共振、👑四重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)"
 )
 
-# Global DuckDB Manager
+# Global DuckDB Manager & Rate Limiting state
 db = DuckDBManager()
+_mcp_decision_timestamps: List[float] = []
 
 
 @mcp.tool(
@@ -65,7 +67,7 @@ def get_triple_resonance_stocks(
 ) -> Dict[str, Any]:
     """
     Query Triple Resonance and multi-strategy intersection stock picks.
-    
+
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500', 或 None 代表全部)
         limit: 回傳標的數量上限 (預設: 20)
@@ -89,7 +91,7 @@ def get_xuantie_pullback_stocks(
 ) -> Dict[str, Any]:
     """
     Query XuanTie trend pullback technical buy points (MA60/120 support).
-    
+
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
         pullback_type: 均線回調類型篩選 (如 'MA60', 'MA120', 或 None)
@@ -114,7 +116,7 @@ def get_lstm_top_predictions(
 ) -> Dict[str, Any]:
     """
     Query LSTM price prediction rankings.
-    
+
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
         direction: 'bullish' (看漲排行) 或 'bearish' (看跌排行)
@@ -124,7 +126,7 @@ def get_lstm_top_predictions(
         records = db.get_top_bearish(index_name=index_name, limit=limit)
     else:
         records = db.get_top_bullish(index_name=index_name, limit=limit)
-        
+
     return {
         "success": True,
         "direction": direction,
@@ -144,7 +146,7 @@ def get_timesfm_top_predictions(
 ) -> Dict[str, Any]:
     """
     Query TimesFM foundation model price prediction rankings.
-    
+
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
         direction: 'bullish' (看漲排行) 或 'bearish' (看跌排行)
@@ -154,7 +156,7 @@ def get_timesfm_top_predictions(
         records = db.get_timesfm_top_bearish(index_name=index_name, limit=limit)
     else:
         records = db.get_timesfm_top_bullish(index_name=index_name, limit=limit)
-        
+
     return {
         "success": True,
         "direction": direction,
@@ -173,7 +175,7 @@ def get_stock_history(
 ) -> Dict[str, Any]:
     """
     Query historical prediction trajectory and metrics for a specific ticker.
-    
+
     Args:
         ticker: 股票代號 (如 '2330.TW', 'AAPL')
         limit: 歷史天數/筆數 (預設: 30)
@@ -211,7 +213,7 @@ def get_latest_market_snapshot(
 ) -> Dict[str, Any]:
     """
     Get latest full quantitative batch snapshot.
-    
+
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
         limit: 回傳數量 (預設: 50)
@@ -239,7 +241,7 @@ def get_top_institutional_flows(
 ) -> Dict[str, Any]:
     """
     Query top institutional net buyers/sellers from DuckDB.
-    
+
     Args:
         order_by: 排序欄位 ('total_net', 'foreign_net', 'trust_net', 'dealer_net')
         sort_dir: 排序方向 ('desc' 買超榜, 'asc' 賣超榜)
@@ -256,13 +258,13 @@ def get_top_institutional_flows(
             max_date = con.execute("SELECT MAX(date) FROM tw_institutional_daily").fetchone()[0]
             if not max_date:
                 return {"success": True, "count": 0, "data": []}
-            
+
             where_clauses = ["date = ?"]
             params = [str(max_date)]
             if market.upper() in ["TWSE", "TPEX"]:
                 where_clauses.append("market = ?")
                 params.append(market.upper())
-            
+
             where_sql = " AND ".join(where_clauses)
             sql = f"""
             SELECT date, ticker, raw_code, name, foreign_net, trust_net, dealer_net, total_net, foreign_ratio, market
@@ -294,7 +296,7 @@ def get_broker_trades_for_stock(
 ) -> Dict[str, Any]:
     """
     Query broker branches top buyers and sellers for a ticker.
-    
+
     Args:
         ticker: 股票代號 (例如 '2330.TW' 或 '2330')
         days: 統計天數 (預設: 20)
@@ -418,7 +420,67 @@ def get_polymarket_macro_sentiment(
     return PolymarketService.get_macro_sentiment(force_refresh=force_refresh, category=category)
 
 
+@mcp.tool(
+    name="get_clef_stock_verdict",
+    description="透過 Clef-Flash System One 決策大模型（3 級 Fallback：create360 / aiurl.tw / jev），對指定個股或候選特徵進行強類型直覺決策推論，輸出交易動作機率分佈（strong_buy / buy / hold_watch / avoid）、確信度評分（1~5 分）與勝率預期。"
+)
+def get_clef_stock_verdict(
+    ticker: str,
+    macro_regime: Optional[str] = "bull",
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Get Clef-Flash System One probabilistic decision verdict for a stock.
+
+    Args:
+        ticker: 股票代號 (如 '2330.TW', 'NVDA')
+        macro_regime: 當前宏觀市場情境 ('bull', 'pullback', 'defense', 'panic')
+        api_key: 選擇性 API 密鑰 (若伺服器設定 DECISION_API_KEY / CLEF_API_KEY 則必填)
+    """
+    # 1. Enforce access control if configured
+    required_key = os.getenv("DECISION_API_KEY") or os.getenv("CLEF_API_KEY")
+    if required_key:
+        if not api_key or api_key.strip() != required_key:
+            return {
+                "success": False,
+                "ticker": ticker,
+                "error": "Unauthorized: Missing or invalid API key for Clef decision inference. Provide 'api_key'."
+            }
+
+    # 2. Rate limiting check (Sliding Window 60s)
+    now = time.time()
+    max_rate = int(os.getenv("DECISION_RATE_LIMIT_PER_MIN", "60"))
+    _mcp_decision_timestamps[:] = [t for t in _mcp_decision_timestamps if now - t < 60]
+    if len(_mcp_decision_timestamps) >= max_rate:
+        return {
+            "success": False,
+            "ticker": ticker,
+            "error": f"Rate limit exceeded: maximum {max_rate} requests per minute."
+        }
+    _mcp_decision_timestamps.append(now)
+
+    # 3. Retrieve actual candidate metrics for specified ticker from DuckDB
+    cand = db.get_latest_candidate_snapshot(ticker)
+    if not cand:
+        candidates = db.get_resonance_candidates(limit=100)
+        cand = next((c for c in candidates if c.get("ticker") == ticker), None)
+
+    if not cand:
+        return {
+            "success": False,
+            "ticker": ticker,
+            "error": f"未在量化資料庫中找到標的 '{ticker}' 之歷史量化訊號與特徵，請確認代號是否正確或先執行策略分析管線。"
+        }
+
+    from data.clef_client import ClefDecisionClient
+    client = ClefDecisionClient()
+    verdict = client.evaluate_stock(cand, macro_regime=macro_regime)
+    return {
+        "success": verdict.success,
+        "ticker": ticker,
+        "verdict": verdict.to_dict()
+    }
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()
-

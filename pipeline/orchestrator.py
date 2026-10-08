@@ -165,6 +165,8 @@ class PipelineOrchestrator:
             "lstm_results": report.lstm_results,
             "timesfm_results": getattr(report, "timesfm_results", []),
             "overlap_results": report.overlap_results,
+            "overlap_candidates": getattr(report, "overlap_candidates", []),
+            "ranked_stocks": getattr(report, "ranked_stocks", []),
             "macro_state": macro_state,
             "candidates_map": candidates_map,
             "institutional_summaries": inst_summaries

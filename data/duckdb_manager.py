@@ -72,9 +72,14 @@ class DuckDBManager:
                     macro_regime VARCHAR,
                     trust_net_5d BIGINT,
                     foreign_net_5d BIGINT,
-                    tags VARCHAR
+                    tags VARCHAR,
+                    composite_score DOUBLE
                 );
                 """)
+                try:
+                    con.execute("ALTER TABLE predictions ADD COLUMN IF NOT EXISTS composite_score DOUBLE;")
+                except Exception:
+                    pass
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS macro_regimes (
                     date VARCHAR,
@@ -184,7 +189,7 @@ class DuckDBManager:
             "ma5", "ma10", "ma60", "ma120", "ma250",
             "pullback_type", "pe", "pb", "forward_pe", "ev_ebitda",
             "period", "timestamp", "macro_regime",
-            "trust_net_5d", "foreign_net_5d", "tags"
+            "trust_net_5d", "foreign_net_5d", "tags", "composite_score"
         ]
         for col in expected_cols:
             if col not in df.columns:
@@ -258,7 +263,8 @@ class DuckDBManager:
                     "macro_regime": macro_regime_str,
                     "trust_net_5d": inst.get("trust_net_5d"),
                     "foreign_net_5d": inst.get("foreign_net_5d"),
-                    "tags": tags_str
+                    "tags": tags_str,
+                    "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
                 })
 
         # 2. LSTM 預測結果
@@ -290,7 +296,8 @@ class DuckDBManager:
                 "macro_regime": macro_regime_str,
                 "trust_net_5d": inst.get("trust_net_5d"),
                 "foreign_net_5d": inst.get("foreign_net_5d"),
-                "tags": tags_str
+                "tags": tags_str,
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
             })
 
         # 2.5 TimesFM 預測結果
@@ -322,7 +329,8 @@ class DuckDBManager:
                 "macro_regime": macro_regime_str,
                 "trust_net_5d": inst.get("trust_net_5d"),
                 "foreign_net_5d": inst.get("foreign_net_5d"),
-                "tags": tags_str
+                "tags": tags_str,
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
             })
 
         # 3. 雙重/三重符合結果
@@ -358,7 +366,8 @@ class DuckDBManager:
                     "macro_regime": macro_regime_str,
                     "trust_net_5d": inst.get("trust_net_5d"),
                     "foreign_net_5d": inst.get("foreign_net_5d"),
-                    "tags": tags_str
+                    "tags": tags_str,
+                    "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
                 })
 
         return self.save_predictions_batch(all_data)
@@ -552,34 +561,46 @@ class DuckDBManager:
         }
 
     def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
-        """取得多策略重合 / 雙重符合 / 🏆 三重共振股票"""
-        where_clauses = [
-            "(model_name = '多維共振' OR strategy_type = '多維共振' OR tags LIKE '%共振%' OR tags LIKE '%雙重符合%' OR tags LIKE '%3重符合%')",
+        """取得多策略重合 / 雙重符合 / 🏆 三重共振股票 (鎖定指定指數之最新批次快照，排序前嚴格過濾共振列並排除看跌防守)"""
+        base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
         if index_name:
-            where_clauses.append("index_name = ?")
+            base_where.append("index_name = ?")
             params.append(index_name)
 
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        base_where_sql = f"WHERE {' AND '.join(base_where)}"
+        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
+        full_params = list(params) + list(params) + [limit]
+
         sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+        WITH latest_ts AS (
+            SELECT ticker, index_name, MAX(timestamp) as max_ts
             FROM predictions
-            {where_sql}
+            {base_where_sql}
+            GROUP BY ticker, index_name
+        ),
+        resonance_rows AS (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (PARTITION BY p.ticker ORDER BY p.potential DESC NULLS LAST) as rn
+            FROM predictions p
+            JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
+            WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%')
+              AND (COALESCE(p.tags, '') NOT LIKE '%防守%' AND COALESCE(p.tags, '') NOT LIKE '%深度防守%')
+              AND (p.potential IS NULL OR p.potential > -5.0)
+              {p_where_sql}
         )
         SELECT * EXCLUDE (rn)
-        FROM ranked
+        FROM resonance_rows
         WHERE rn = 1
         ORDER BY potential DESC NULLS LAST, ticker ASC
         LIMIT ?;
         """
-        params.append(limit)
-        df = self.query(sql, params)
+        df = self.query(sql, full_params)
         return self._clean_df_records(df)
 
     def get_xuantie_candidates(
@@ -763,6 +784,163 @@ class DuckDBManager:
         """
         df = self.query(sql, [ticker, limit])
         return self._clean_df_records(df)
+
+    def get_latest_candidate_snapshot(self, ticker: str) -> Optional[Dict[str, Any]]:
+        """
+        取得特定股票最新批次之完整策略合併快照。
+        將同批次中的玄鐵、LSTM、TimesFM、多維共振與法人籌碼資料合併為單一完整候選字典。
+        """
+        import re
+        ts_sql = """
+        SELECT timestamp
+        FROM predictions
+        WHERE ticker = ?
+          AND index_name NOT LIKE '%TEST%'
+          AND index_name NOT LIKE '%DEBUG%'
+          AND index_name NOT LIKE '%SERVICE_KEY%'
+        ORDER BY timestamp DESC
+        LIMIT 1;
+        """
+        ts_df = self.query(ts_sql, [ticker])
+        if ts_df.empty:
+            return None
+
+        latest_ts = ts_df.iloc[0]["timestamp"]
+
+        batch_sql = """
+        SELECT *
+        FROM predictions
+        WHERE ticker = ?
+          AND timestamp = ?
+          AND index_name NOT LIKE '%TEST%'
+          AND index_name NOT LIKE '%DEBUG%'
+          AND index_name NOT LIKE '%SERVICE_KEY%'
+        """
+        batch_df = self.query(batch_sql, [ticker, latest_ts])
+        if batch_df.empty:
+            return None
+
+        records = self._clean_df_records(batch_df)
+        if not records:
+            return None
+
+        merged_tags = set()
+        cand: Dict[str, Any] = {
+            "ticker": ticker,
+            "current_price": 0.0,
+            "lstm_potential": None,
+            "timesfm_potential": None,
+            "potential": None,
+            "predicted_price": None,
+            "timesfm_predicted_price": None,
+            "pullback_type": None,
+            "ma5": None,
+            "ma10": None,
+            "ma60": None,
+            "ma120": None,
+            "ma250": None,
+            "pe": None,
+            "pb": None,
+            "forward_pe": None,
+            "ev_ebitda": None,
+            "foreign_net_5d": None,
+            "trust_net_5d": None,
+            "composite_score": None,
+            "macro_regime": None,
+            "timestamp": latest_ts
+        }
+
+        for r in records:
+            if r.get("current_price") and not cand["current_price"]:
+                cand["current_price"] = float(r["current_price"])
+            if r.get("macro_regime") and not cand["macro_regime"]:
+                cand["macro_regime"] = r["macro_regime"]
+
+            # Technicals
+            for ma in ("ma5", "ma10", "ma60", "ma120", "ma250"):
+                if r.get(ma) is not None and cand[ma] is None:
+                    cand[ma] = float(r[ma])
+            if r.get("pullback_type") and not cand["pullback_type"]:
+                cand["pullback_type"] = r["pullback_type"]
+
+            # Fundamentals
+            for fund in ("pe", "pb", "forward_pe", "ev_ebitda"):
+                if r.get(fund) is not None and cand[fund] is None:
+                    cand[fund] = float(r[fund])
+
+            # Institutional
+            for inst in ("foreign_net_5d", "trust_net_5d"):
+                if r.get(inst) is not None and cand[inst] is None:
+                    cand[inst] = int(r[inst])
+
+            # Tags
+            raw_t = r.get("tags")
+            if raw_t:
+                if isinstance(raw_t, str):
+                    for tag_part in re.split(r"[|,]", raw_t):
+                        t_clean = tag_part.strip()
+                        if t_clean:
+                            merged_tags.add(t_clean)
+                elif isinstance(raw_t, list):
+                    for t_item in raw_t:
+                        t_clean = str(t_item).strip()
+                        if t_clean:
+                            merged_tags.add(t_clean)
+
+            # Strategy-specific metrics
+            m_name = (r.get("model_name") or "").upper()
+            s_type = (r.get("strategy_type") or "").upper()
+            pot = r.get("potential")
+            pred = r.get("predicted_price")
+
+            if "LSTM" in m_name or "LSTM" in s_type:
+                if pot is not None:
+                    cand["lstm_potential"] = float(pot)
+                if pred is not None:
+                    cand["predicted_price"] = float(pred)
+            elif "TIMESFM" in m_name or "TIMESFM" in s_type:
+                if pot is not None:
+                    cand["timesfm_potential"] = float(pot)
+                if pred is not None:
+                    cand["timesfm_predicted_price"] = float(pred)
+            elif "多維共振" in m_name or "多維共振" in s_type:
+                if pot is not None and cand["potential"] is None:
+                    cand["potential"] = float(pot)
+
+            # Composite score (preserve valid 0.0 scores from macro risk control)
+            c_score = r.get("composite_score")
+            if c_score is not None and not pd.isna(c_score):
+                curr_c = cand["composite_score"]
+                cand["composite_score"] = float(c_score) if curr_c is None else max(curr_c, float(c_score))
+
+        # Reconcile potential
+        if cand["potential"] is None:
+            cand["potential"] = cand["lstm_potential"] if cand["lstm_potential"] is not None else cand["timesfm_potential"]
+
+        # Synthetic composite score fallback ONLY if not explicitly stored in any record of this batch
+        if cand["composite_score"] is None:
+            calc_score = 50.0
+            l_pot = cand["lstm_potential"] or 0.0
+            t_pot = cand["timesfm_potential"] or 0.0
+            if l_pot > 0:
+                calc_score += min(20.0, l_pot * 1.5)
+            elif l_pot < 0:
+                calc_score -= min(30.0, abs(l_pot) * 2.0)
+            if t_pot > 0:
+                calc_score += min(15.0, t_pot * 1.5)
+            elif t_pot < 0:
+                calc_score -= min(20.0, abs(t_pot) * 1.5)
+            if cand.get("pullback_type"):
+                calc_score += 10.0
+            if (cand.get("trust_net_5d") or 0) > 0:
+                calc_score += 5.0
+            if (cand.get("foreign_net_5d") or 0) > 0:
+                calc_score += 5.0
+            cand["composite_score"] = round(max(0.0, min(100.0, calc_score)), 2)
+
+        cand["score"] = cand["composite_score"]
+        cand["tags"] = list(merged_tags)
+        return cand
 
     def resolve_ticker(self, value: str) -> Optional[Dict[str, Any]]:
         """Resolve a ticker or company name using explicit aliases and local metadata."""

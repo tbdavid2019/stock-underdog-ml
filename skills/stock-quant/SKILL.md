@@ -74,6 +74,7 @@ graph TD
 | `get_commodities_summary` | `force_refresh` | 關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油）實時行情 |
 | `resolve_stock_ticker` | `query` | 將中英文股票名稱模糊解析為標準交易代號（如台積電 ➔ 2330.TW） |
 | `get_polymarket_macro_sentiment` | `category`, `force_refresh` | Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率） |
+| `get_clef_stock_verdict` | `ticker`, `macro_regime` | Clef-Flash System One 決策大模型推論（strong_buy / buy / hold_watch / avoid 機率、確信度評分與勝率預期） |
 
 ---
 
@@ -81,8 +82,10 @@ graph TD
 
 - `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
 - `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (16 大量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (17 大量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
+- `POST /api/v1/decision/evaluate` - Clef-Flash System One 決策模型評估端點
+- `GET /api/v1/decision/health` - Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev)
 - `GET /api/v1/macro/latest` - 宏觀風控狀態與建議曝險
 - `GET /api/v1/macro/investing/summary` - 一站式總經數據彙整 (FedWatch、財報、大宗商品、日曆)
 - `GET /api/v1/macro/polymarket/sentiment` - Polymarket 宏觀情緒與聯準會降息真金白銀預測機率

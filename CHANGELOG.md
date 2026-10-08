@@ -6,6 +6,50 @@
 
 ---
 
+## 2026-10-08
+
+### Added
+- **⚡ Clef-Flash System One 決策大模型整合 (`data/clef_client.py`, `api/routes/decision.py`, `mcp_server.py`)**：
+  - 封裝 Clef-Flash System One 強類型決策客戶端，支援 3 級高可用 Fallback 架構：
+    - 主力節點（Primary）：`https://clef.create360.ai/v1/systemone`
+    - 備援節點 1（Fallback 1）：`https://clef.aiurl.tw/v1/systemone`
+    - 備援節點 2（Fallback 2）：`https://clef.create360.ai/v1/systemone`（Jev 相容模式）
+    - 本地降級：網路中斷或超時時自動平滑回退，確保系統 100% 高可用。
+  - 支援 Choice / Noul / Score 結構化機率推論，評估焦點標的交易動作（`strong_buy`, `buy`, `hold_watch`, `avoid`）、確信度評分（1~5 分）與勝率預期。
+  - 新增 REST 端點：
+    - `POST /api/v1/decision/evaluate`：傳入個股或候選字典進行即時決策推論。
+    - `GET /api/v1/decision/health`：即時檢測 Clef 主力與備援端點可用性。
+  - 擴充至 17 大標準量化 FastMCP / WebMCP 工具：
+    - 原生 FastMCP 工具新增第 17 號工具 `get_clef_stock_verdict`。
+    - `/.well-known/mcp.json`、`/mcp`、`/.webmcp/bridge.js`、`/llms.txt`、`/llms-full.txt` 全面升級至 17 工具宣告。
+  - 整合進 `skills/stock-quant/SKILL.md` 供 Agent 直接調用。
+  - 新增單元測試 `test/test_clef_client.py` 與 API 測試 `test/test_api_decision.py`，全數通過。
+
+### Fixed
+- **多維共振篩選與負潛力標的隔離防守門檻 (`evaluators/composite_evaluator.py`)**：
+  - 修復「⭐ 優先推薦 (多維共振)」將雙 ML 大幅看跌個股（如南亞 1303、南電 8046、台塑化 6505 等）誤判入榜之重大邏輯缺陷。
+  - 新增正向預期硬性閘門（Positive Potential Gate）：要求入選「優先推薦」之標的必須具備實質正向潛力（雙 ML 模型均看跌、雙模型平均潛力為負或單一模型深度破底標的均強制隔離淘汰）。
+  - 多維共振入榜資格必須具備實質方向性訊號（技術買點或 ML 看漲訊號），避免單純僅滿足法人與板塊但動能走空之個股入選。
+  - 排序邏輯重構：依共振層級（👑四重共振 > 🏆三重共振 > 🔮雙ML共振 > 🌟多維/雙重共振）、綜合評分與預期報酬進行層級排序，確保高勝率正向標的優先呈現。
+  - 針對看跌但滿足其他策略之標的，標記 `🔻防守` 或 `🔻深度防守` 並折減綜合評分，隔離於優先推薦名單之外。
+
+### Changed
+- **Web 首頁排版與 CJK 繁體中文字級階層重構 (`api/templates/index.html`, `test/test_typography_rwd.py`)**：
+  - 嚴格遵循 Impeccable 設計規範建立繁體中文（CJK）閱讀底線（Typography Floor）：全面根除過小之 `text-[10px]` 與 `text-[11px]` 等不合適字級，徽章、標籤與輔助資訊底線全面提高至 12px（`text-xs`）搭配 `font-semibold` / `font-bold`，確保複雜 CJK 漢字筆劃清晰辨識、不擠壓成團。
+  - 解決「字體呼大呼小」階層斷崖：重構建立和諧自然的字級比例階梯（卡片類別 13px~14px -> 核心現價/目標價 18px~20px -> 數值標籤 12px -> 策略標籤 12px~13px），避免從 24px 大字急遽跳崖至 10px/11px。
+  - 手機 RWD（360px ~ 420px 窄螢幕）響應式佈局優化：
+    - CSS 引入 `-webkit-text-size-adjust: 100%`、`optimizeLegibility` 與中文字型平滑抗鋸齒渲染，防止行動裝置瀏覽器自動膨脹字體造成破損。
+    - 個股卡片之估值指標（PE/PB/EV）、法人籌碼（5 日投信/外資進出）與標籤區塊增加 `flex-wrap gap-1`，窄螢幕下自動平順折行，杜絕文字水平碰撞與溢出。
+    - 扁平化價格區塊內嵌結構，去除生硬邊框容器，降低視覺雜訊。
+    - 修正總經區塊標題層級跳躍問題（`h1` -> `h2`），強化無障礙（a11y）結構語意。
+  - 新增字型大小與 RWD 自動化測試（`test/test_typography_rwd.py`），防止 sub-12px 字級回歸。
+- **Telegram / Discord / Email 多管道推播格式重構與視覺美化 (`evaluators/formatter.py`, `notifier_dual.py`)**：
+  - 徹底移除 Telegram 優先推薦與分項策略中單一巨大等寬代碼區塊 (`<pre>...</pre>`)，根除手機端 Telegram 中英文等寬破版、橫向捲動及閱讀障礙。
+  - 優先推薦全面改採結構化卡片排版，依共振層級清晰分組（👑四重共振、🏆三重共振、🔮雙ML共振、🌟多維共振）。
+  - 引入視覺指引表情符號與指標：🔺看漲 / 🔻看跌、📍均線支撐、🔒土洋合買、💼投信連買/買超、🧭主流板塊、🏷️低估值標籤。
+  - AI 操盤解讀採用 Telegram 原生 `<blockquote>` 引言框呈現，大幅提升閱讀體驗與視覺層次。
+  - Discord 與 Email 同步升級為對齊之結構化卡片排版。
+
 ## 2026-09-10
 
 ### Fixed

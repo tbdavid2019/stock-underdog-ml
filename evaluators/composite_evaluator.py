@@ -24,7 +24,7 @@ class CompositeEvaluator:
     """Evaluator that combines multiple strategy signals, institutional flows, and macro gates"""
 
     def __init__(
-        self, 
+        self,
         weights: Optional[Dict[str, float]] = None,
         min_overlap_count: int = 2
     ):
@@ -38,9 +38,9 @@ class CompositeEvaluator:
         self.min_overlap_count = min_overlap_count
 
     def evaluate(
-        self, 
-        index_name: str, 
-        strategy_outputs: Dict[str, List[StrategyResult]], 
+        self,
+        index_name: str,
+        strategy_outputs: Dict[str, List[StrategyResult]],
         fundamentals_map: Optional[Dict[str, Dict[str, Optional[float]]]] = None,
         macro_state: Optional[MacroState] = None
     ) -> EvaluationReport:
@@ -48,7 +48,7 @@ class CompositeEvaluator:
         Evaluate all strategy outputs for an index, computing composite scores and overlap.
         """
         fundamentals_map = fundamentals_map or {}
-        
+
         # 1. Index strategy results by ticker
         ticker_strat_map: Dict[str, Dict[str, StrategyResult]] = {}
         all_tickers = set()
@@ -142,7 +142,7 @@ class CompositeEvaluator:
             # Count hits and gather tags
             hits = [s for s in strats.values() if s.is_hit]
             hit_count = len(hits)
-            
+
             combined_tags = []
             for s in hits:
                 combined_tags.extend(s.tags)
@@ -158,7 +158,7 @@ class CompositeEvaluator:
                     combined_tags.append("低PE")
                 elif pe_val < 30.0:
                     fund_score += 5.0
-            
+
             if pb_val is not None and pb_val > 0:
                 if pb_val < 3.0:
                     fund_score += 10.0
@@ -183,7 +183,11 @@ class CompositeEvaluator:
                     combined_tags.append("高盈虧比")
 
             # Dual ML Resonance (雙ML共振: LSTM ∩ TimesFM)
-            if lstm_res and lstm_res.is_hit and timesfm_res and timesfm_res.is_hit:
+            is_dual_ml_resonance = bool(
+                lstm_res and lstm_res.is_hit and
+                timesfm_res and timesfm_res.is_hit
+            )
+            if is_dual_ml_resonance:
                 combined_tags.append("🔮雙ML共振")
 
             if inst_res:
@@ -199,20 +203,86 @@ class CompositeEvaluator:
                 if sec_meta.get("is_top_sector"):
                     combined_tags.append(f"主流板塊({sec_meta.get('sector', '')})")
 
+            hit_xuantie = bool(xuantie_res and xuantie_res.is_hit)
+            hit_inst = bool(inst_res and inst_res.is_hit)
+            hit_lstm = bool(lstm_res and lstm_res.is_hit)
+            hit_timesfm = bool(timesfm_res and timesfm_res.is_hit)
+            hit_sector = bool(sector_res and sector_res.is_hit)
+
+            hit_any_ml = hit_lstm or hit_timesfm
+            hit_both_ml = hit_lstm and hit_timesfm
+
             # Quadruple Resonance (四重共振): 玄鐵 + 法人 + LSTM + TimesFM
-            is_quad_resonance = (
-                xuantie_res and xuantie_res.is_hit and
-                inst_res and inst_res.is_hit and
-                lstm_res and lstm_res.is_hit and
-                timesfm_res and timesfm_res.is_hit
+            is_quad_resonance = hit_xuantie and hit_inst and hit_both_ml
+
+            # Triple Resonance (三重共振): 嚴格符合多策略共振組合（必須具備技術面玄鐵或籌碼面法人支撐）
+            # 1. 玄鐵 + 法人 + (LSTM 或 TimesFM)
+            # 2. 玄鐵 + 雙ML (LSTM + TimesFM)
+            # 3. 法人 + 雙ML (LSTM + TimesFM)
+            # 4. 板塊 + (玄鐵 或 法人) + (LSTM 或 TimesFM 或 另一方)
+            is_triple_resonance = False
+            if not is_quad_resonance:
+                if hit_xuantie and hit_inst and hit_any_ml:
+                    is_triple_resonance = True
+                elif hit_xuantie and hit_both_ml:
+                    is_triple_resonance = True
+                elif hit_inst and hit_both_ml:
+                    is_triple_resonance = True
+                elif hit_sector and ((hit_xuantie and hit_inst) or ((hit_xuantie or hit_inst) and hit_any_ml)):
+                    is_triple_resonance = True
+
+            # ML Potentials & Positive Gate Evaluation
+            lstm_pot = lstm_res.potential if (lstm_res and lstm_res.potential is not None) else None
+            timesfm_pot = timesfm_res.potential if (timesfm_res and timesfm_res.potential is not None) else None
+
+            ml_potentials = []
+            if lstm_pot is not None and not (isinstance(lstm_pot, float) and pd.isna(lstm_pot)):
+                ml_potentials.append(float(lstm_pot))
+            if timesfm_pot is not None and not (isinstance(timesfm_pot, float) and pd.isna(timesfm_pot)):
+                ml_potentials.append(float(timesfm_pot))
+
+            has_ml = len(ml_potentials) > 0
+            avg_ml_pot = sum(ml_potentials) / len(ml_potentials) if has_ml else 0.0
+
+            # Bearish check (防守門檻):
+            # 1. 雙 ML 均看跌 (<= 0) 絕對為看跌/防守
+            # 2. 雙 ML 平均潛力 <= 0 或任一模型嚴重破底 (<= -5.0%) 且無強力彌補
+            # 3. 單 ML 潛力 <= 0
+            is_ml_bearish = False
+            if has_ml:
+                if all(p <= 0.0 for p in ml_potentials):
+                    is_ml_bearish = True
+                elif len(ml_potentials) >= 2:
+                    if avg_ml_pot <= 0.0 or min(ml_potentials) <= -5.0:
+                        is_ml_bearish = True
+                elif len(ml_potentials) == 1 and ml_potentials[0] <= 0.0:
+                    is_ml_bearish = True
+
+            # Must have at least one primary directional signal (Technical buy or ML bullish hit)
+            has_primary_signal = bool(
+                (xuantie_res and xuantie_res.is_hit) or
+                (lstm_res and lstm_res.is_hit) or
+                (timesfm_res and timesfm_res.is_hit)
             )
 
-            # Triple Resonance (三重共振): 玄鐵 + 法人 + (LSTM 或 TimesFM)
-            is_triple_resonance = (
-                xuantie_res and xuantie_res.is_hit and
-                inst_res and inst_res.is_hit and
-                ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))
-            )
+            # Defensive tags for bearish stocks
+            if is_ml_bearish:
+                if any(p <= -10.0 for p in ml_potentials):
+                    combined_tags.append("🔻深度防守")
+                else:
+                    combined_tags.append("🔻防守")
+
+            # Determine Resonance Tier (Strictly exclude bearish/defensive stocks from resonance tiers)
+            resonance_tier = ""
+            if not is_ml_bearish:
+                if is_quad_resonance:
+                    resonance_tier = "👑四重共振"
+                elif is_triple_resonance:
+                    resonance_tier = "🏆三重共振"
+                elif is_dual_ml_resonance:
+                    resonance_tier = "🔮雙ML共振"
+                elif hit_count >= 2:
+                    resonance_tier = "🌟多維共振" if hit_count > 2 else "⭐雙重共振"
 
             # Calculate Weighted Composite Score (0~100)
             score_total = 0.0
@@ -225,6 +295,9 @@ class CompositeEvaluator:
                 elif s_name in strats:
                     score_total += strats[s_name].score * s_weight
                     weight_total += s_weight
+                elif s_name == "sector" and "sector_rotation" in strats:
+                    score_total += strats["sector_rotation"].score * s_weight
+                    weight_total += s_weight
 
             composite_score = round(score_total / weight_total, 2) if weight_total > 0 else 0.0
 
@@ -232,17 +305,32 @@ class CompositeEvaluator:
             if macro_state and macro_state.exposure < 1.0:
                 composite_score = round(composite_score * macro_state.exposure, 2)
 
+            # Bearish ML Penalty on composite score: prevent high ranking for negative stocks
+            if is_ml_bearish:
+                composite_score = round(composite_score * 0.5, 2)
+
             # Get current price from first available result
             curr_price = next(iter(strats.values())).current_price if strats else 0.0
 
-            # Deduplicate tags
+            # Deduplicate tags and prepend resonance tier
+            if is_ml_bearish:
+                # Strip out any resonance / overlap tags from bearish candidates so they never pollute DB or sinks
+                combined_tags = [t for t in combined_tags if "共振" not in t and "符合" not in t]
             final_tags = list(dict.fromkeys(combined_tags))
-            if is_quad_resonance:
-                final_tags.insert(0, "👑四重共振")
-            elif is_triple_resonance:
-                final_tags.insert(0, "🏆三重共振")
-            elif hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))):
-                final_tags.insert(0, "雙重符合" if hit_count == 2 else f"{hit_count}重符合")
+            if resonance_tier and resonance_tier not in final_tags:
+                final_tags.insert(0, resonance_tier)
+
+            # Resonance Overlap Condition:
+            # 1. 符合四重、三重、雙ML共振，或 2 個以上策略命中且具備主要方向性訊號
+            # 2. 嚴格過濾負值/大幅看跌標的 (not is_ml_bearish)
+            is_resonance = (
+                is_quad_resonance or
+                is_triple_resonance or
+                is_dual_ml_resonance or
+                (hit_count >= self.min_overlap_count and has_primary_signal)
+            )
+
+            is_valid_overlap = is_resonance and (not is_ml_bearish)
 
             entry = {
                 "ticker": ticker,
@@ -251,7 +339,10 @@ class CompositeEvaluator:
                 "hit_count": hit_count,
                 "hit_strategies": [s.strategy_name for s in hits],
                 "tags": final_tags,
-                "fundamentals": fund
+                "fundamentals": fund,
+                "resonance_tier": resonance_tier,
+                "is_ml_bearish": is_ml_bearish,
+                "avg_ml_pot": avg_ml_pot
             }
 
             if xuantie_res:
@@ -269,13 +360,28 @@ class CompositeEvaluator:
 
             ranked_stocks.append(entry)
 
-            # Check overlap threshold (2 or more hits, Quadruple, or Triple Resonance)
-            if is_quad_resonance or is_triple_resonance or hit_count >= self.min_overlap_count or (xuantie_res and xuantie_res.is_hit and ((lstm_res and lstm_res.is_hit) or (timesfm_res and timesfm_res.is_hit))):
+            # Check overlap threshold: only valid, positive-resonance candidates enter 優先推薦
+            if is_valid_overlap:
                 overlap_candidates.append(entry)
 
-        # Sort ranked stocks and overlaps
+        # Tier weights for sorting priority (四重 > 三重 > 雙ML > 多維/雙重)
+        tier_weights = {
+            "👑四重共振": 400.0,
+            "🏆三重共振": 300.0,
+            "🔮雙ML共振": 200.0,
+            "🌟多維共振": 150.0,
+            "⭐雙重共振": 100.0
+        }
+
+        def candidate_sort_key(c: Dict[str, Any]):
+            tier_val = tier_weights.get(c.get("resonance_tier", ""), 50.0)
+            score_val = c.get("composite_score", 0.0)
+            pot_val = max(0.0, c.get("avg_ml_pot", 0.0))
+            rr_val = c.get("risk_reward_ratio") or 1.0
+            return (tier_val, score_val, pot_val, rr_val)
+
+        overlap_candidates.sort(key=candidate_sort_key, reverse=True)
         ranked_stocks.sort(key=lambda x: x["composite_score"], reverse=True)
-        overlap_candidates.sort(key=lambda x: x["composite_score"], reverse=True)
 
         # Build legacy overlap_df
         overlap_legacy_rows = []
@@ -293,7 +399,11 @@ class CompositeEvaluator:
                 "pe": o["fundamentals"].get("pe"),
                 "pb": o["fundamentals"].get("pb"),
                 "forward_pe": o["fundamentals"].get("forward_pe"),
-                "ev_ebitda": o["fundamentals"].get("ev_ebitda")
+                "ev_ebitda": o["fundamentals"].get("ev_ebitda"),
+                "composite_score": o.get("composite_score", 0.0),
+                "tags": o.get("tags", []),
+                "resonance_tier": o.get("resonance_tier", ""),
+                "hit_strategies": o.get("hit_strategies", [])
             })
         overlap_df = pd.DataFrame(overlap_legacy_rows) if overlap_legacy_rows else pd.DataFrame()
 

@@ -96,6 +96,22 @@ class LLMConfig:
     FALLBACK2_API_KEY: Optional[str] = os.getenv("LLM_FALLBACK2_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 
+class ClefConfig:
+    """3-Tier Fallback Clef-Flash System One Typed Decision API settings"""
+    ENABLE_CLEF_DECISION: bool = os.getenv("ENABLE_CLEF_DECISION", "true").lower() in ("true", "1", "yes")
+    TIMEOUT: int = int(os.getenv("CLEF_TIMEOUT_SECONDS", "6"))
+    MAX_CANDIDATES: int = int(os.getenv("CLEF_MAX_CANDIDATES", "15"))
+
+    PRIMARY_NAME: str = os.getenv("CLEF_PRIMARY_NAME", "Clef-Create360")
+    PRIMARY_URL: str = os.getenv("CLEF_PRIMARY_URL", "https://clef.create360.ai/v1/systemone")
+
+    FALLBACK1_NAME: str = os.getenv("CLEF_FALLBACK1_NAME", "Clef-Aiurl")
+    FALLBACK1_URL: str = os.getenv("CLEF_FALLBACK1_URL", "https://clef.aiurl.tw/v1/systemone")
+
+    FALLBACK2_NAME: str = os.getenv("CLEF_FALLBACK2_NAME", "Clef-Jev")
+    FALLBACK2_URL: str = os.getenv("CLEF_FALLBACK2_URL", os.getenv("JEV_SYSTEMONE_URL", "https://jev.create360.ai/v1/systemone"))
+
+
 class SectorConfig:
     """7 大核心產業板塊分類與個股映射"""
     SECTOR_NAMES: List[str] = [
@@ -169,6 +185,7 @@ class Config:
     discord = DiscordConfig
     pipeline = PipelineConfig
     llm = LLMConfig
+    clef = ClefConfig
     sector = SectorConfig
 
     # Convenience properties for backward compatibility

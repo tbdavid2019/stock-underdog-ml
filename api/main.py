@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market
+from api.routes import predictions, macro, stats, market, decision
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -58,6 +58,7 @@ app.include_router(predictions.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
+app.include_router(decision.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 
@@ -135,7 +136,8 @@ def mcp_root_endpoint():
             "get_economic_calendar",
             "get_commodities_summary",
             "resolve_stock_ticker",
-            "get_polymarket_macro_sentiment"
+            "get_polymarket_macro_sentiment",
+            "get_clef_stock_verdict"
         ]
     })
 
@@ -160,7 +162,7 @@ def get_webmcp_manifest():
     """
     return JSONResponse(content={
         "name": "stock-quant-engine",
-        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)",
+        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場、Clef System One 決策大模型)",
         "version": APP_VERSION,
         "transport": "sse",
         "endpoints": {
@@ -183,7 +185,8 @@ def get_webmcp_manifest():
             "get_economic_calendar",
             "get_commodities_summary",
             "resolve_stock_ticker",
-            "get_polymarket_macro_sentiment"
+            "get_polymarket_macro_sentiment",
+            "get_clef_stock_verdict"
         ]
     })
 
@@ -255,6 +258,7 @@ def get_llms_txt():
 - `get_commodities_summary`: 透過 2MD 查詢黃金、原油、銅博士行情。
 - `resolve_stock_ticker`: 將模糊搜尋之公司名稱快速解析為標準交易代號。
 - `get_polymarket_macro_sentiment`: 透過 2MD/DoH 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒。
+- `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback）推論交易動作機率分佈、確信度評分與勝率預期。
 
 ## Agent & Developer Discovery Standards
 
@@ -369,7 +373,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (16 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`.
+- Tools (17 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -534,6 +538,31 @@ def get_webmcp_bridge():
                 let url = '/api/v1/macro/polymarket/sentiment?force_refresh=' + (args?.force_refresh ? 'true' : 'false');
                 if (args?.category && args.category !== 'all') url += '&category=' + encodeURIComponent(args.category);
                 return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_clef_stock_verdict',
+            description: '透過 Clef-Flash System One 決策模型推論交易動作機率、確信度評分與勝率預期',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    ticker: { type: 'string', description: '股票代號 (如 2330.TW, NVDA)' },
+                    macro_regime: { type: 'string', description: '宏觀情境 (bull, pullback, defense, panic)' },
+                    api_key: { type: 'string', description: '決策 API 授權金鑰 (若伺服器設定存取控制時提供)' }
+                },
+                required: ['ticker']
+            },
+            execute: async (args) => {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = (args && args.api_key) || (typeof window !== 'undefined' && (window.__DECISION_API_KEY__ || window.__API_KEY__ || localStorage.getItem('decision_api_key')));
+                if (token) {
+                    headers['X-API-Key'] = token;
+                }
+                return JSON.stringify(await (await fetch('/api/v1/decision/evaluate', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ ticker: args.ticker, macro_regime: args.macro_regime || 'bull' })
+                })).json());
             }
         }
     ];

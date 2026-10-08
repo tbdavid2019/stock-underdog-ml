@@ -3,13 +3,28 @@ Unit tests for data.cache
 """
 import unittest
 import os
+import tempfile
+import shutil
+from unittest.mock import patch
 import pandas as pd
+import data.cache as cache_module
 from data.cache import CacheManager
 
 
 class TestCacheManager(unittest.TestCase):
 
     def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.orig_stock_cache = cache_module.STOCK_DATA_CACHE_DIR
+        self.orig_fund_cache = cache_module.FUNDAMENTALS_CACHE_DIR
+        self.orig_index_cache = cache_module.INDEX_CACHE_FILE
+
+        cache_module.STOCK_DATA_CACHE_DIR = os.path.join(self.temp_dir, "stock_data")
+        cache_module.FUNDAMENTALS_CACHE_DIR = os.path.join(self.temp_dir, "fundamentals")
+        cache_module.INDEX_CACHE_FILE = os.path.join(self.temp_dir, "stock_lists.json")
+        os.makedirs(cache_module.STOCK_DATA_CACHE_DIR, exist_ok=True)
+        os.makedirs(cache_module.FUNDAMENTALS_CACHE_DIR, exist_ok=True)
+
         self.test_ticker = "TEST_CACHE_TICKER"
         self.test_df = pd.DataFrame({
             "Open": [100.0, 101.0],
@@ -20,13 +35,10 @@ class TestCacheManager(unittest.TestCase):
         })
 
     def tearDown(self):
-        # Clean up test files
-        p1 = CacheManager._get_stock_data_path(self.test_ticker, "1mo")
-        if os.path.exists(p1):
-            os.remove(p1)
-        p2 = CacheManager._get_fundamentals_path(self.test_ticker)
-        if os.path.exists(p2):
-            os.remove(p2)
+        cache_module.STOCK_DATA_CACHE_DIR = self.orig_stock_cache
+        cache_module.FUNDAMENTALS_CACHE_DIR = self.orig_fund_cache
+        cache_module.INDEX_CACHE_FILE = self.orig_index_cache
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_stock_data_cache_roundtrip(self):
         CacheManager.set_stock_data(self.test_ticker, "1mo", self.test_df)
