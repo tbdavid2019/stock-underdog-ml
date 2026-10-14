@@ -1888,7 +1888,7 @@ class DuckDBManager:
                            OR p.ticker IN (SELECT t_raw || '.TW' FROM target_tickers)
                            OR p.ticker IN (SELECT t_raw || '.TWO' FROM target_tickers)
                     )
-                    SELECT ticker, current_price, potential
+                    SELECT ticker, current_price, timestamp
                     FROM ranked
                     WHERE rn = 1;
                 """
@@ -1898,14 +1898,14 @@ class DuckDBManager:
                     for _, row in df.iterrows():
                         t = str(row["ticker"])
                         c_price = float(row["current_price"]) if row["current_price"] is not None and not pd.isna(row["current_price"]) else None
-                        pot = float(row["potential"]) if row["potential"] is not None and not pd.isna(row["potential"]) else 0.0
-                        direction = "up" if pot >= 0 else "down"
                         quote_obj = {
                             "ticker": t,
                             "name": t,
                             "price": c_price,
-                            "change_pct": round(pot, 2),
-                            "direction": direction
+                            "change_pct": None,
+                            "direction": "flat",
+                            "source": "quant_prediction_snapshot",
+                            "as_of": str(row["timestamp"]) if row["timestamp"] is not None else None,
                         }
                         res[t] = quote_obj
                         if "." in t:

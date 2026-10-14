@@ -147,7 +147,9 @@ class PodcastTickerPrice(BaseModel):
     name: Optional[str] = None
     price: Optional[float] = None
     change_pct: Optional[float] = None
-    direction: str = "up"  # up / down / flat
+    direction: str = "flat"  # up / down / flat
+    source: Optional[str] = None
+    as_of: Optional[str] = None
 
 
 class PodcastChannelItem(BaseModel):

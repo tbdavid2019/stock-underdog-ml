@@ -119,42 +119,6 @@ ENTITY_TICKER_MAP = {
     "輝瑞": "PFE"
 }
 
-# 標的基準價格與名稱對照快照 (行情離線降級快照)
-FALLBACK_TICKER_QUOTES = {
-    "NVDA": {"ticker": "NVDA", "name": "輝達", "price": 138.25, "change_pct": 1.45, "direction": "up"},
-    "MSFT": {"ticker": "MSFT", "name": "微軟", "price": 422.80, "change_pct": 0.35, "direction": "up"},
-    "GOOGL": {"ticker": "GOOGL", "name": "Alphabet (Google)", "price": 166.40, "change_pct": 0.16, "direction": "up"},
-    "AMZN": {"ticker": "AMZN", "name": "亞馬遜", "price": 188.50, "change_pct": -0.42, "direction": "down"},
-    "META": {"ticker": "META", "name": "Meta Platforms", "price": 595.60, "change_pct": 1.82, "direction": "up"},
-    "AAPL": {"ticker": "AAPL", "name": "蘋果", "price": 231.30, "change_pct": -0.28, "direction": "down"},
-    "TSLA": {"ticker": "TSLA", "name": "特斯拉", "price": 221.40, "change_pct": 3.12, "direction": "up"},
-    "2330.TW": {"ticker": "2330.TW", "name": "台積電", "price": 1050.0, "change_pct": 2.44, "direction": "up"},
-    "TSM": {"ticker": "TSM", "name": "台積電 ADR", "price": 192.50, "change_pct": 2.10, "direction": "up"},
-    "2454.TW": {"ticker": "2454.TW", "name": "聯發科", "price": 1305.0, "change_pct": 1.16, "direction": "up"},
-    "2317.TW": {"ticker": "2317.TW", "name": "鴻海", "price": 208.5, "change_pct": 0.72, "direction": "up"},
-    "2382.TW": {"ticker": "2382.TW", "name": "廣達", "price": 288.0, "change_pct": 1.58, "direction": "up"},
-    "ASML": {"ticker": "ASML", "name": "艾司摩爾", "price": 820.40, "change_pct": -1.15, "direction": "down"},
-    "AMD": {"ticker": "AMD", "name": "超微", "price": 158.60, "change_pct": 0.88, "direction": "up"},
-    "AVGO": {"ticker": "AVGO", "name": "博通", "price": 178.90, "change_pct": 1.62, "direction": "up"},
-    "ORCL": {"ticker": "ORCL", "name": "甲骨文", "price": 175.20, "change_pct": 0.65, "direction": "up"},
-    "3690.HK": {"ticker": "3690.HK", "name": "美團", "price": 192.4, "change_pct": 0.70, "direction": "up"},
-    "9988.HK": {"ticker": "9988.HK", "name": "阿里巴巴-SW", "price": 98.45, "change_pct": 0.92, "direction": "up"},
-    "PDD": {"ticker": "PDD", "name": "拼多多 (Temu)", "price": 128.60, "change_pct": 0.17, "direction": "up"},
-    "0700.HK": {"ticker": "0700.HK", "name": "騰訊控股", "price": 435.0, "change_pct": 1.12, "direction": "up"},
-    "BABA": {"ticker": "BABA", "name": "阿里巴巴", "price": 102.8, "change_pct": -0.55, "direction": "down"},
-    "MRNA": {"ticker": "MRNA", "name": "莫德納 (Moderna)", "price": 54.30, "change_pct": 0.54, "direction": "up"},
-    "AZN": {"ticker": "AZN", "name": "阿斯特捷利康", "price": 82.10, "change_pct": 2.67, "direction": "up"},
-    "NVS": {"ticker": "NVS", "name": "諾華製藥", "price": 112.50, "change_pct": 1.65, "direction": "up"},
-    "ARGX": {"ticker": "ARGX", "name": "argenx SE", "price": 586.20, "change_pct": 2.27, "direction": "up"},
-    "XOM": {"ticker": "XOM", "name": "艾克森美孚", "price": 124.50, "change_pct": 0.45, "direction": "up"},
-    "CVX": {"ticker": "CVX", "name": "雪佛龍", "price": 156.80, "change_pct": -0.32, "direction": "down"},
-    "VST": {"ticker": "VST", "name": "Vistra 核電能源", "price": 132.40, "change_pct": 3.85, "direction": "up"},
-    "CEG": {"ticker": "CEG", "name": "星座能源 (核能)", "price": 275.60, "change_pct": 2.94, "direction": "up"},
-    "QLENX": {"ticker": "QLENX", "name": "CTA 避險策略", "price": 31.85, "change_pct": 0.09, "direction": "up"},
-    "PFE": {"ticker": "PFE", "name": "輝瑞製藥", "price": 28.90, "change_pct": -0.15, "direction": "down"},
-}
-
-
 def _ensure_cache_dir():
     os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -230,22 +194,18 @@ class PodcastService:
         return sorted(list(found_entities)), sorted(list(found_tickers))
 
     def get_ticker_quote_badge(self, ticker: str, cached_quotes: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """組裝即時行情與漲跌幅 Badge 結構，優先從批次快取讀取"""
+        """組裝關聯標的資料快照 Badge；缺少可驗證行情時保持空值。"""
         if cached_quotes and ticker in cached_quotes:
             return cached_quotes[ticker]
-
-        # 降級使用基準對照字典
-        if ticker in FALLBACK_TICKER_QUOTES:
-            res = dict(FALLBACK_TICKER_QUOTES[ticker])
-            res["ticker"] = ticker
-            return res
 
         return {
             "ticker": ticker,
             "name": ticker,
             "price": None,
-            "change_pct": 0.0,
-            "direction": "up"
+            "change_pct": None,
+            "direction": "flat",
+            "source": "unavailable",
+            "as_of": None,
         }
 
     def enrich_episodes_batch(self, episodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

@@ -327,23 +327,27 @@
                 <div class="flex items-center justify-between text-xs sm:text-sm">
                     <span class="font-bold flex items-center space-x-1.5 text-amber-500">
                         <span class="material-symbols-outlined text-[16px] leading-none">trending_up</span>
-                        <span>提及概念股與即時行情 (點擊展開抽屜):</span>
+                        <span>提及概念股與資料快照 (點擊展開抽屜):</span>
                     </span>
-                    <span class="text-xs font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">連動個股籌碼</span>
+                    <span class="text-xs font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">預測基準價，非即時行情</span>
                 </div>
 
                 <!-- Ticker Badges Row -->
                 <div class="flex flex-wrap gap-2">
                     <button v-for="quote in (ep.ticker_prices || [])" :key="quote.ticker"
                             @click.stop="togglePodcastTicker(ep.id, quote.ticker)"
+                            :title="quote.as_of ? '資料時間: ' + quote.as_of : '目前沒有可用行情資料'"
                             class="px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-2 group shadow-sm hover:scale-105"
                             :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md ring-2 ring-amber-400/50' : (isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500 text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400 text-slate-900')">
                         <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ quote.ticker }}</span>
                         <span class="text-xs sm:text-sm" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/90 font-bold' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
                         <span v-if="quote.price" class="num-font font-bold text-xs sm:text-sm"
                               :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : (quote.direction === 'up' ? 'text-emerald-400' : (quote.direction === 'down' ? 'text-rose-500' : 'text-slate-400'))">
-                            {{ quote.direction === 'up' ? '↑' : (quote.direction === 'down' ? '↓' : '—') }}
-                            {{ quote.change_pct !== null ? Math.abs(quote.change_pct).toFixed(2) + '%' : '' }}
+                            <template v-if="quote.change_pct !== null && quote.change_pct !== undefined">
+                                {{ quote.direction === 'up' ? '↑' : (quote.direction === 'down' ? '↓' : '—') }}
+                                {{ Math.abs(quote.change_pct).toFixed(2) + '%' }}
+                            </template>
+                            <template v-else>快照</template>
                         </span>
                         <span class="material-symbols-outlined text-[14px] leading-none" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-400/80'">expand_more</span>
                     </button>
