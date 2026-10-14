@@ -6,7 +6,14 @@
 
 ---
 
-## 2026-10-14
+## 2026-10-14 (v2.4.1)
+
+### Fixed (Browser Cache Invalidation, Dynamic Asset Fingerprinting & Template Crash Safeguard)
+- **🐛 徹底修復前端版本快取殘留導致的白屏/黑屏例外（TypeError: formatFollowers is not a function）**：
+  - **根本原因診斷**：版本號先前固定為 `2.4.0`，當伺服器更新 HTML 模板時，Cloudflare 或使用者瀏覽器從本機快取了尚未包含 `formatFollowers` 的舊版 `app.js?v=2.4.0`，導致 Vue 3 在解析 Podcast 標籤時噴出 `TypeError: formatFollowers is not a function`，使 Vue 根實例掛載中斷，觸發 `[v-cloak]` 鎖死全黑畫面。
+  - **動態指紋快取破壞**：升級 `core/version.py` 至 `2.4.1`，並於 `api/main.py` 實作基於靜態腳本實體修改時間之動態資產指紋（`ASSET_FINGERPRINT`），確保日後任何代碼變更全網瀏覽器均能秒級取得最新腳本。
+  - **靜態檔案反快取標頭**：在 `/static` 路由回應中加入 `Cache-Control: no-cache, must-revalidate` 與 `Pragma: no-cache`，杜絕過期 ESM 模組殘留於 CDN 或瀏覽器磁碟。
+  - **防禦性模板與全局屬性兜底**：於 `api/templates/partials/tab_podcast.html` 導入防禦性型別檢查（`typeof formatFollowers === 'function'`），並於 `app.js` 掛載前將 `formatFollowers` 註冊至 `app.config.globalProperties` 與 `window`，從根本防範任何未定義例外。
 
 ### Redesigned & Fixed (Figma 5:36 Compact Orange Badge Logo & Obsidian Dark Terminal Default)
 - **🎨 依據 Figma 5:36 重構左上角品牌 Logo（亮橘底色純標誌徽章，消除冗長版號與副標）**：

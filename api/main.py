@@ -81,9 +81,19 @@ def _static_asset(filename: str) -> FileResponse:
     return FileResponse(os.path.join(STATIC_ASSET_DIR, filename))
 
 
+def get_asset_fingerprint() -> str:
+    """產生包含靜態腳本修改時間之指紋版本號，確保代碼更新時全網瀏覽器與 CDN 零快取殘留"""
+    try:
+        app_js_path = os.path.join(STATIC_ASSET_DIR, "js", "app.js")
+        mtime = int(os.path.getmtime(app_js_path))
+        return f"{APP_VERSION}.{mtime}"
+    except Exception:
+        return APP_VERSION
+
+
 @app.api_route("/static/{file_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
 def serve_static_fallback(file_path: str):
-    """Fallback static asset server to ensure ESM scripts are always served."""
+    """Fallback static asset server to ensure ESM scripts are always served with revalidation headers."""
     full_path = os.path.join(STATIC_ASSET_DIR, file_path)
     if os.path.exists(full_path) and os.path.isfile(full_path):
         media_type = None
@@ -95,7 +105,14 @@ def serve_static_fallback(file_path: str):
             media_type = "image/svg+xml"
         elif file_path.endswith(".png"):
             media_type = "image/png"
-        return FileResponse(full_path, media_type=media_type)
+        return FileResponse(
+            full_path,
+            media_type=media_type,
+            headers={
+                "Cache-Control": "no-cache, must-revalidate",
+                "Pragma": "no-cache"
+            }
+        )
     return PlainTextResponse("Static asset not found", status_code=404)
 
 
@@ -129,6 +146,7 @@ def _render_jinja_template(template_name: str = "index.html") -> str:
     Render template resolving partials while strictly avoiding collision with Vue {{ }} syntax.
     Tries native Jinja2 with custom delimiters [[ ]], falling back to recursive include expansion.
     """
+    fingerprint = get_asset_fingerprint()
     # 1. 優先嘗試 Jinja2 Environment 並以 [[ ]] 作為變數定界符，完全保護 Vue 的 {{ }}
     try:
         from jinja2 import Environment, FileSystemLoader
@@ -139,7 +157,7 @@ def _render_jinja_template(template_name: str = "index.html") -> str:
             autoescape=False
         )
         template = jinja_env.get_template(template_name)
-        return template.render(APP_VERSION=APP_VERSION).replace("__APP_VERSION__", APP_VERSION)
+        return template.render(APP_VERSION=fingerprint).replace("__APP_VERSION__", fingerprint)
     except Exception:
         pass
 
@@ -163,7 +181,7 @@ def _render_jinja_template(template_name: str = "index.html") -> str:
         return pattern.sub(_repl, text)
 
     resolved = _replace_includes(content)
-    return resolved.replace("__APP_VERSION__", APP_VERSION).replace("[[ APP_VERSION ]]", APP_VERSION)
+    return resolved.replace("__APP_VERSION__", fingerprint).replace("[[ APP_VERSION ]]", fingerprint)
 
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:

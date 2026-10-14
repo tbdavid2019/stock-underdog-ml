@@ -1088,5 +1088,21 @@ export const app = createApp({
     }
 });
 
+// Global helper registration to prevent any template rendering exceptions
+const globalFormatFollowers = (count) => {
+    if (!count) return '0';
+    const num = Number(count);
+    if (isNaN(num)) return String(count);
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(0) + 'K';
+    }
+    return num.toString();
+};
+app.config.globalProperties.formatFollowers = globalFormatFollowers;
+window.formatFollowers = globalFormatFollowers;
+
 // Auto-mount on load
 app.mount('#app');

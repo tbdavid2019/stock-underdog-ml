@@ -95,7 +95,7 @@
                             <span>·</span>
                             <span class="flex items-center space-x-0.5 text-rose-500 font-bold">
                                 <span class="material-symbols-outlined text-[13px] leading-none">play_circle</span>
-                                <span>{{ formatFollowers(ch.follower_count) }} 追蹤者</span>
+                                <span>{{ typeof formatFollowers === 'function' ? formatFollowers(ch.follower_count) : (ch.follower_count || '0') }} 追蹤者</span>
                             </span>
                         </div>
                         <div class="text-[11px] truncate max-w-[210px] mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
@@ -173,7 +173,7 @@
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900'">
                     <option value="ALL">全部收錄頻道 ({{ podcastChannels.length }})</option>
                     <option v-for="ch in podcastChannels" :key="ch.channel_id" :value="ch.channel_id">
-                        {{ ch.title }} ({{ formatFollowers(ch.follower_count) }})
+                        {{ ch.title }} ({{ typeof formatFollowers === 'function' ? formatFollowers(ch.follower_count) : (ch.follower_count || '') }})
                     </option>
                 </select>
                 <button v-if="podcastSelectedChannel !== 'ALL'" @click="setPodcastChannel('ALL')"
