@@ -75,6 +75,22 @@ export const app = createApp({
             historyError: '',
             historyRequestId: 0,
 
+            // Earnings Calls State (Task B)
+            upcomingEarningsCalls: [],
+            earningsLoading: false,
+            earningsMarket: 'ALL', // 'ALL' | 'TW' | 'US'
+            earningsWeightOnly: false,
+            drawerActiveSubTab: 'profile', // 'profile' | 'earnings'
+            drawerEarningsMap: {},
+            drawerEarningsLoading: false,
+            showEarningsModal: false,
+            calendarYear: new Date().getFullYear(),
+            calendarMonth: new Date().getMonth() + 1,
+            calendarData: [],
+            calendarLoading: false,
+            calendarTimezone: 'CST', // 'CST' | 'EST'
+            calendarSearch: '',
+
             // Toast
             toastMessage: '',
 
@@ -303,6 +319,11 @@ export const app = createApp({
             }
 
             this.expandedDrawerTicker = ticker;
+            this.drawerActiveSubTab = 'profile';
+
+            // Also load earnings call history for this ticker
+            this.loadTickerEarnings(ticker);
+
             if (this.companyProfileCache[ticker]) {
                 this.expandedDrawerData = this.companyProfileCache[ticker];
                 this.expandedDrawerLoading = false;
@@ -332,6 +353,107 @@ export const app = createApp({
                 if (this.expandedDrawerTicker === ticker) {
                     this.expandedDrawerLoading = false;
                 }
+            }
+        },
+        async loadUpcomingEarnings() {
+            this.earningsLoading = true;
+            try {
+                const res = await ApiClient.getUpcomingEarningsCalls({
+                    market: this.earningsMarket,
+                    days: 30,
+                    isWeightStock: this.earningsWeightOnly ? true : null,
+                    limit: 30
+                });
+                if (res && res.data) {
+                    this.upcomingEarningsCalls = res.data;
+                }
+            } catch (e) {
+                console.warn("Failed to load upcoming earnings calls:", e);
+            } finally {
+                this.earningsLoading = false;
+            }
+        },
+        setEarningsMarket(m) {
+            this.earningsMarket = m;
+            this.loadUpcomingEarnings();
+            if (this.showEarningsModal) {
+                this.loadCalendarData();
+            }
+        },
+        toggleEarningsWeightOnly() {
+            this.earningsWeightOnly = !this.earningsWeightOnly;
+            this.loadUpcomingEarnings();
+        },
+        async loadTickerEarnings(ticker) {
+            if (!ticker) return;
+            if (this.drawerEarningsMap[ticker]) return;
+            this.drawerEarningsLoading = true;
+            try {
+                const res = await ApiClient.getTickerEarningsCalls(ticker);
+                if (res && res.data) {
+                    this.drawerEarningsMap[ticker] = res.data;
+                } else {
+                    this.drawerEarningsMap[ticker] = [];
+                }
+            } catch (e) {
+                console.warn(`Failed to load earnings for ${ticker}:`, e);
+                this.drawerEarningsMap[ticker] = [];
+            } finally {
+                this.drawerEarningsLoading = false;
+            }
+        },
+        async openEarningsCalendar() {
+            this.showEarningsModal = true;
+            await this.loadCalendarData();
+        },
+        closeEarningsCalendar() {
+            this.showEarningsModal = false;
+        },
+        async changeCalendarMonth(delta) {
+            let m = this.calendarMonth + delta;
+            let y = this.calendarYear;
+            if (m > 12) {
+                m = 1;
+                y++;
+            } else if (m < 1) {
+                m = 12;
+                y--;
+            }
+            this.calendarMonth = m;
+            this.calendarYear = y;
+            await this.loadCalendarData();
+        },
+        async loadCalendarData() {
+            this.calendarLoading = true;
+            try {
+                const res = await ApiClient.getEarningsCalendar(
+                    this.calendarYear,
+                    this.calendarMonth,
+                    this.earningsMarket
+                );
+                if (res && res.data) {
+                    this.calendarData = res.data;
+                }
+            } catch (e) {
+                console.warn("Failed to load earnings calendar:", e);
+            } finally {
+                this.calendarLoading = false;
+            }
+        },
+        async syncEarningsNow() {
+            try {
+                this.showToast("正在背景觸發台美股法說會資料全量同步...");
+                const res = await fetch('/api/v1/earnings-call/sync', { method: 'POST' });
+                const json = await res.json();
+                if (json.success) {
+                    this.showToast("法說會同步任務已派發！");
+                    setTimeout(() => {
+                        this.loadUpcomingEarnings();
+                        if (this.showEarningsModal) this.loadCalendarData();
+                    }, 2500);
+                }
+            } catch (e) {
+                this.showToast("同步失敗：" + e.message);
             }
         },
         searchTickerHistory(ticker) {
@@ -749,6 +871,7 @@ export const app = createApp({
         this.loadStats();
         this.loadMarketStats();
         this.loadAvailableDates();
+        this.loadUpcomingEarnings();
 
         if (this.activeTab === 'institutional') {
             if (this.instSubTab === 'three_inst') {

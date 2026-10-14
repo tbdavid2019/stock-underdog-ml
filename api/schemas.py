@@ -89,3 +89,53 @@ class HealthResponse(BaseModel):
     timestamp: str
     version: str = APP_VERSION
     duckdb_records: int
+
+
+class EarningsCallItem(BaseModel):
+    id: str = Field(..., description="法說會唯一識別碼")
+    market: str = Field(..., description="市場類別 (TW 或 US)")
+    ticker: str = Field(..., description="股票代碼 (如 2330.TW, NVDA)")
+    name: str = Field(..., description="公司名稱")
+    call_date: str = Field(..., description="召開日期 (YYYY-MM-DD)")
+    call_time: Optional[str] = Field("14:00", description="召開時間 (HH:MM)")
+    timezone: str = Field("Asia/Taipei", description="原始時區")
+    datetime_cst: Optional[str] = Field(None, description="台灣時間 (CST)")
+    datetime_est: Optional[str] = Field(None, description="美東時間 (EST/EDT)")
+    countdown_days: Optional[int] = Field(None, description="距今剩餘天數 (負數為歷史)")
+    status: Optional[str] = Field("upcoming", description="狀態: upcoming / today / past")
+    meeting_type: Optional[str] = Field("online", description="會議形式 (online/physical/hybrid)")
+    location: Optional[str] = Field(None, description="會議地點或平台")
+    webcast_url: Optional[str] = Field(None, description="線上直播/影音回放網址")
+    presentation_url: Optional[str] = Field(None, description="法說會簡報下載網址 (PDF)")
+    transcript_url: Optional[str] = Field(None, description="逐字稿網址")
+    language: Optional[str] = Field("zh-TW", description="會議語言")
+    eps_estimate: Optional[float] = Field(None, description="預估 EPS")
+    eps_actual: Optional[float] = Field(None, description="實際 EPS")
+    revenue_estimate: Optional[float] = Field(None, description="預估營收")
+    revenue_actual: Optional[float] = Field(None, description="實際營收")
+    is_weight_stock: bool = Field(False, description="是否為重量級權值股")
+    remarks: Optional[str] = Field(None, description="備註與摘要")
+    source: Optional[str] = Field("TWSE", description="資料來源")
+
+
+class UpcomingCallsResponse(BaseModel):
+    success: bool = True
+    market: str
+    total_count: int
+    data: List[EarningsCallItem] = Field(default_factory=list)
+
+
+class EarningsCalendarItem(BaseModel):
+    call_date: str
+    total_calls: int
+    weight_stock_calls: int
+    summary_companies: Optional[str] = None
+
+
+class EarningsCalendarResponse(BaseModel):
+    success: bool = True
+    year: int
+    month: int
+    market: str
+    data: List[EarningsCalendarItem] = Field(default_factory=list)
+

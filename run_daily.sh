@@ -170,6 +170,16 @@ else
     exit 1
 fi
 
+# Step 2.5: 同步法人說明會 (Earnings Calls) 時程
+log ""
+log "[2.5/3] 同步台美股法說會時程與官方簡報..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python -m data.earnings_fetcher --sync 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC -m data.earnings_fetcher --sync 2>&1 | tee -a "$LOG_FILE"
+fi
+
+
 # Step 3: 清理舊日誌 (保留最近 30 天)
 log ""
 log "[3/3] 清理舊日誌..."

@@ -19,9 +19,23 @@
     - 操盤看板：大盤宏觀卡片、2MD/FedWatch/財報/Polymarket 緊湊網格，以及全新高密度量化訊號表（深黑表頭、等寬金融數字、彩色策略/法人 Badge 系統、Yahoo/Goodinfo 外部跳轉與點擊即時展開之公司簡介抽屜 Company Drawer），並支援卡片與表格雙重視圖切換。
     - 法人與券商主力雷達：三大法人買賣超排行 TOP 30 表格、TOP 8 目標券商累計走勢圖（霓虹色系多折線、深淺色自適應網格）與 TOP 15 買超/賣超分點雙欄比較清單。
     - 個股歷史：歷史量化預測紀錄、三大法人累計折線圖與逐日籌碼數據明細。
-- **🏛️ 台美雙軌法說會催化劑追蹤系統規劃 (`earnings-call-tracker`)**：
-  - 整合台灣證交所 TWSE OpenAPI (`t100sb02_1`)、櫃買中心 TPEx OpenAPI (`mopsfin_t100sb02_1`)、MOPS 重大訊息。
-  - 整合美股 SEC EDGAR 8-K/6-K、Yahoo Finance、Investing.com 科技巨頭法說時程，支援雙時區（台灣 CST / 美東 EST）與倒數雷達。
+- **🏛️ 台美雙軌法說會催化劑追蹤系統實作 (`earnings-call-tracker`)**：
+  - **資料庫與排程快取基礎建設**：
+    - 於 `data/duckdb_manager.py` 建立 `earnings_calls` 時序與日曆表，具備市場（TW/US）、標的代碼、雙時區（CST/EST）、簡報/影音網址、預估/公佈 EPS 指標與權值股標記，支援唯一複合鍵 upsert 去重與多條件時序索引。
+    - 建立 `cache/earnings/` 離線容錯快取機制，遵從「優先抓取最新、上游異常自動降級快取」鐵律。
+  - **跨市場資料擷取管道 (`data/earnings_fetcher.py`)**：
+    - 台股上市櫃抓取：解析 TWSE OpenAPI (`t100sb02_1`) 與 TPEx OpenAPI (`mopsfin_t100sb02_1`)，支援民國年/西元年自動雙向換算，提取法說會日期、時間、線上/實體會議地點與官方簡報連結。
+    - 美股科技巨頭與 S&P 500 行事曆：抓取 M7 與科技巨頭法說時程、EPS 預估值，並關聯官方 Investor Relations Webcast 直播與歷年簡報入口。
+    - 整合 `run_daily.sh` 每日定時背景同步指令（`python -m data.earnings_fetcher --sync`）。
+  - **後端 REST API 服務 (`api/routes/earnings_call.py`)**：
+    - `GET /api/v1/earnings-call/upcoming`：近期即將召開法說會清單，支援市場篩選（`ALL`/`TW`/`US`）、天數範圍與權值股（`is_weight_stock`）篩選，自動計算雙時區與倒數剩餘天數。
+    - `GET /api/v1/earnings-call/{ticker}`：個股法說會時序歷史與官方簡報 PDF、影音回放網址。
+    - `GET /api/v1/earnings-call/calendar`：月度法說會聚合場次日曆查詢。
+    - `POST /api/v1/earnings-call/sync`：非同步背景全量同步任務觸發。
+  - **前端終端介面與互動整合**：
+    - 操盤看板「🏛️ 台美法說會預警雷達」卡片：支援全部/台股/美股快速切換、權值股篩選、倒數 Badge（今天🔥/明天⚡/T-N天）、官方簡報 PDF 與直播 Webcast 直連。
+    - 個股詳情抽屜（Stock Drawer）：新增「🏛️ 法說會與簡報」分頁標籤，呈現特定個股歷次法說會日程、會議方式、EPS 預估與官方簡報下載。
+    - 全月法說會行事曆 Modal：高資訊密度日曆檢視，支援月度翻頁、雙時區（CST/EST）快速切換與公司關鍵字搜尋。
 - **🎙️ AI 財經與科技 Podcast 智慧雷達規劃 (`podcast-financial-radar`)**：
   - 規劃國際頂級財經/科技 Podcast 頻道庫、RSS/字幕自動解析與 LLM 摘要。
   - 自動提煉實體與股票代號映射（Ticker Mapping），並於單集卡片整合即時漲跌幅 Badge 連動個股抽屜。

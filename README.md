@@ -230,9 +230,11 @@ graph TD
 | `/api/v1/market/institutional/top` | `GET` | 三大法人買賣超焦點排行 |
 | `/api/v1/market/universe` | `GET` | 全球證券清冊、來源 snapshot 與 stale/cache freshness 狀態 |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
-| `/api/v1/market/company-profile` | `GET` | 2MD 個股繁體中文營運簡介與新聞 |
-| `/api/v1/market/company-profiles/batch` | `POST` | 並發非同步批次預載多支股票之公司營運摘要 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
+| `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美股即將召開之法人說明會、雙時區（CST/EST）與天數倒數 |
+| `/api/v1/earnings-call/{ticker}` | `GET` | 查詢單一標的之法說會歷程、官方簡報 PDF 與影音回放網址 |
+| `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次與權值股場次計數 |
+| `/api/v1/earnings-call/sync` | `POST` | 觸發非同步背景跨市場法說會資料全量同步 |
 
 ---
 

@@ -211,22 +211,108 @@
                 <div v-else class="text-xs text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
             </div>
 
-            <!-- Panel 2: US Earnings Calendar -->
+            <!-- Panel 2: Dual-Market Earnings Call Catalyst Radar (台美法說會預警雷達) -->
             <div class="p-4 rounded-xl border space-y-3"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-base">📅</span>
-                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">美股重量級財報日曆</span>
+                        <span class="text-base">🏛️</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">台美法說會預警雷達</span>
                     </div>
-                    <span class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                        {{ (macro.earnings_calendar || []).length }} 檔發布
-                    </span>
+                    <div class="flex items-center space-x-1.5">
+                        <button @click="openEarningsCalendar()"
+                                class="px-2 py-0.5 rounded text-xs font-bold border transition-colors flex items-center space-x-1"
+                                :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-400 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-700 hover:bg-amber-50'"
+                                title="查看全月法說會日曆">
+                            <span>📅 日曆</span>
+                        </button>
+                        <button @click="syncEarningsNow()"
+                                class="px-1.5 py-0.5 rounded text-xs border transition-colors"
+                                :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]'"
+                                title="即時同步公開資訊觀測站與美股行事曆">
+                            🔄
+                        </button>
+                    </div>
                 </div>
 
-                <div v-if="macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <!-- Market & Weight Stock Filter Pills -->
+                <div class="flex items-center justify-between text-xs pt-0.5 border-b pb-2"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                    <div class="flex items-center space-x-1">
+                        <button v-for="m in ['ALL', 'TW', 'US']" :key="m"
+                                @click="setEarningsMarket(m)"
+                                class="px-2 py-0.5 rounded text-xs font-bold transition-all"
+                                :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                            {{ m === 'ALL' ? '全部' : (m === 'TW' ? '🇹🇼 台股' : '🇺🇸 美股') }}
+                        </button>
+                    </div>
+                    <button @click="toggleEarningsWeightOnly()"
+                            class="px-2 py-0.5 rounded text-xs font-bold border transition-all"
+                            :class="earningsWeightOnly ? (isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-amber-100 text-amber-800 border-amber-300') : (isDark ? 'border-[#262626] text-slate-500 hover:text-slate-300' : 'border-[#E5E7EB] text-slate-400 hover:text-slate-600')">
+                        ⭐ 僅看權值股
+                    </button>
+                </div>
+
+                <!-- Dynamic Earnings Calls List -->
+                <div v-if="earningsLoading" class="py-6 text-center text-xs text-amber-400 animate-pulse">
+                    載入法說會時程中...
+                </div>
+                <div v-else-if="upcomingEarningsCalls && upcomingEarningsCalls.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <div v-for="(call, cIdx) in upcomingEarningsCalls.slice(0, 8)" :key="call.id || cIdx"
+                         class="p-2 rounded-lg border text-xs flex items-center justify-between transition-all"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
+                        <div class="space-y-0.5 truncate mr-2">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase"
+                                      :class="call.market === 'TW' ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-sky-950/70 text-sky-400 border border-sky-800/60'">
+                                    {{ call.market }}
+                                </span>
+                                <button @click.stop="searchTickerHistory(call.ticker)"
+                                        class="font-black num-font text-xs sm:text-sm text-amber-500 hover:underline"
+                                        :title="'速查 ' + call.ticker + ' 歷史走勢'">
+                                    {{ call.ticker }}
+                                </button>
+                                <span class="text-xs font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    {{ call.name }}
+                                </span>
+                                <span v-if="call.is_weight_stock" class="text-amber-400 text-xs" title="權值股">⭐</span>
+                            </div>
+                            <div class="text-[11px] flex items-center space-x-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                <span>{{ call.datetime_cst || (call.call_date + ' ' + (call.call_time || '')) }}</span>
+                                <span v-if="call.presentation_url">
+                                    <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline" title="下載官方法說會簡報">📑 簡報</a>
+                                </span>
+                                <span v-if="call.webcast_url">
+                                    <a :href="call.webcast_url" target="_blank" class="text-sky-400 hover:underline" title="官方影音回放/直播">🎙️ 影音</a>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 text-xs space-y-0.5">
+                            <div>
+                                <span v-if="call.countdown_days === 0" class="px-2 py-0.5 rounded text-[11px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
+                                    今天 🔥
+                                </span>
+                                <span v-else-if="call.countdown_days === 1" class="px-2 py-0.5 rounded text-[11px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                    明天 ⚡
+                                </span>
+                                <span v-else-if="call.countdown_days > 1" class="px-2 py-0.5 rounded text-[11px] font-bold num-font"
+                                      :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
+                                    T-{{ call.countdown_days }} 天
+                                </span>
+                                <span v-else class="text-[11px] text-slate-500">
+                                    已召開
+                                </span>
+                            </div>
+                            <div v-if="call.eps_estimate" class="text-[10px] num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                預估 EPS: <span class="text-emerald-400 font-bold">{{ call.eps_estimate }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Fallback to Macro Earnings Calendar if DB query has no entries -->
+                <div v-else-if="macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
                     <div v-for="(earn, eIdx) in macro.earnings_calendar.slice(0, 8)" :key="eIdx"
-                         class="p-2.5 rounded-lg border text-xs flex items-center justify-between"
+                         class="p-2 rounded-lg border text-xs flex items-center justify-between"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
                         <div class="space-y-0.5 truncate mr-2">
                             <div class="flex items-center space-x-1.5">
@@ -242,16 +328,13 @@
                             </div>
                         </div>
                         <div class="text-right shrink-0 text-xs">
-                            <div class="font-bold num-font" :class="isDark ? 'text-slate-200' : 'text-slate-700'">
-                                預估 EPS: <span class="text-emerald-400">{{ earn.eps_forecast || '—' }}</span>
-                            </div>
-                            <div class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                                營收: {{ earn.revenue_forecast || '—' }}
+                            <div class="font-bold num-font text-emerald-400">
+                                {{ earn.eps_forecast ? '預估 ' + earn.eps_forecast : '即將公布' }}
                             </div>
                         </div>
                     </div>
                 </div>
-                <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無重大美股財報公佈</div>
+                <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無台美法說會時程</div>
             </div>
 
             <!-- Panel 3: Commodities & Economic Events -->
@@ -572,7 +655,27 @@
                         <tr v-if="expandedDrawerTicker === item.ticker" class="transition-all"
                             :class="isDark ? 'bg-[#16181D]/80 border-b border-[#262626]' : 'bg-amber-50/40 border-b border-[#E5E7EB]'">
                             <td colspan="11" class="p-4 sm:p-6 space-y-4">
-                                <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <!-- Drawer Subtab Navigation -->
+                                <div class="flex items-center space-x-2 border-b pb-2"
+                                     :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                                    <button @click="drawerActiveSubTab = 'profile'"
+                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
+                                            :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                        🏢 基本面與新聞
+                                    </button>
+                                    <button @click="drawerActiveSubTab = 'earnings'"
+                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                                            :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                        <span>🏛️ 法說會與簡報</span>
+                                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black"
+                                              :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
+                                            {{ drawerEarningsMap[item.ticker].length }}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <!-- Subtab 1: Company Profile & News -->
+                                <div v-if="drawerActiveSubTab === 'profile'" class="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div class="space-y-2 max-w-3xl">
                                         <div class="flex items-center space-x-3">
                                             <span class="text-xl font-black num-font text-amber-500">{{ item.ticker }}</span>
@@ -626,6 +729,61 @@
                                                 class="px-3 py-1.5 rounded-xl text-xs font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20">
                                             查看時序歷史軌跡 ↗
                                         </button>
+                                    </div>
+                                </div>
+
+                                <!-- Subtab 2: Earnings Calls Information & Presentations -->
+                                <div v-if="drawerActiveSubTab === 'earnings'" class="space-y-3">
+                                    <div v-if="drawerEarningsLoading" class="py-4 text-center text-xs text-amber-400 animate-pulse">
+                                        載入法說會時程與官方簡報中...
+                                    </div>
+                                    <div v-else-if="drawerEarningsMap[item.ticker] && drawerEarningsMap[item.ticker].length" class="space-y-2">
+                                        <div v-for="(ec, ecIdx) in drawerEarningsMap[item.ticker]" :key="ec.id || ecIdx"
+                                             class="p-3 rounded-xl border text-xs flex flex-col md:flex-row md:items-center justify-between gap-3"
+                                             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="px-2 py-0.5 rounded text-[11px] font-black"
+                                                          :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')">
+                                                        {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
+                                                    </span>
+                                                    <span class="font-bold text-xs" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                        {{ ec.datetime_cst || (ec.call_date + ' ' + (ec.call_time || '')) }}
+                                                    </span>
+                                                    <span class="text-slate-400">({{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }})</span>
+                                                </div>
+                                                <div v-if="ec.location" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                    地點 / 方式: {{ ec.location }}
+                                                </div>
+                                                <div v-if="ec.remarks" class="text-xs text-amber-400/90">
+                                                    備註: {{ ec.remarks }}
+                                                </div>
+                                            </div>
+
+                                            <div class="flex items-center space-x-2 shrink-0">
+                                                <div v-if="ec.eps_estimate || ec.eps_actual" class="text-right mr-2 text-xs">
+                                                    <div v-if="ec.eps_estimate" class="num-font text-slate-400">
+                                                        預估: <span class="text-amber-400">{{ ec.eps_estimate }}</span>
+                                                    </div>
+                                                    <div v-if="ec.eps_actual" class="num-font font-bold text-emerald-400">
+                                                        公佈: {{ ec.eps_actual }}
+                                                    </div>
+                                                </div>
+                                                <a v-if="ec.presentation_url" :href="ec.presentation_url" target="_blank"
+                                                   class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center space-x-1"
+                                                   :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500' : 'bg-amber-50 border-amber-200 hover:bg-amber-100'">
+                                                    <span>📑 官方簡報</span>
+                                                </a>
+                                                <a v-if="ec.webcast_url" :href="ec.webcast_url" target="_blank"
+                                                   class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors flex items-center space-x-1"
+                                                   :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-sky-500' : 'bg-sky-50 border-sky-200 hover:bg-sky-100'">
+                                                    <span>🎙️ 直播回放</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-else class="py-6 text-center text-xs text-slate-400">
+                                        此標的近期尚無法說會或財報發布排程紀錄
                                     </div>
                                 </div>
                             </td>
@@ -749,6 +907,132 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ================= 6. FULL EARNINGS CALL CALENDAR MODAL ================= -->
+    <div v-if="showEarningsModal"
+         class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm transition-opacity"
+         @keydown.esc="closeEarningsCalendar()" tabindex="-1">
+        <div class="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-900'">
+
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b flex items-center justify-between"
+                 :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-[#E5E7EB] bg-[#F9FAFB]'">
+                <div class="flex items-center space-x-3">
+                    <span class="text-xl">📅</span>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-black tracking-tight">台美股法人說明會暨財報行事曆</h2>
+                        <p class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            彙整 TWSE、TPEx 與美股重量級科技巨頭法說會時程、官方簡報與影音回放
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button @click="syncEarningsNow()"
+                            class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
+                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
+                            title="立即重新抓取最新資料">
+                        <span>🔄 即時抓取</span>
+                    </button>
+                    <button @click="closeEarningsCalendar()"
+                            class="p-1.5 rounded-lg border text-slate-400 hover:text-white transition-colors"
+                            :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'"
+                            title="關閉行事曆 (Esc)">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controls Bar: Month Picker, Market Tabs & Timezone Switch -->
+            <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                 :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#E5E7EB] bg-white'">
+                <!-- Month Navigator -->
+                <div class="flex items-center space-x-2">
+                    <button @click="changeCalendarMonth(-1)"
+                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                        ◀ 上個月
+                    </button>
+                    <span class="px-3 py-1 font-black text-sm num-font text-amber-500">
+                        {{ calendarYear }} 年 {{ calendarMonth }} 月
+                    </span>
+                    <button @click="changeCalendarMonth(1)"
+                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                        下個月 ▶
+                    </button>
+                </div>
+
+                <!-- Market Pills -->
+                <div class="flex items-center space-x-1">
+                    <button v-for="m in ['ALL', 'TW', 'US']" :key="m"
+                            @click="setEarningsMarket(m)"
+                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
+                            :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                        {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '🇹🇼 台股' : '🇺🇸 美股') }}
+                    </button>
+                </div>
+
+                <!-- Timezone / Search -->
+                <div class="flex items-center space-x-2">
+                    <button @click="calendarTimezone = calendarTimezone === 'CST' ? 'EST' : 'CST'"
+                            class="px-2.5 py-1 rounded-lg border font-bold transition-colors"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-700'">
+                        🌐 {{ calendarTimezone === 'CST' ? '時區: 台灣 CST' : '時區: 美東 EST' }}
+                    </button>
+                    <input v-model="calendarSearch" type="text" placeholder="搜尋代號或名稱..."
+                           class="px-2.5 py-1 rounded-lg border text-xs outline-none focus:border-amber-500"
+                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-white placeholder-slate-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900 placeholder-slate-400'">
+                </div>
+            </div>
+
+            <!-- Calendar Content: Daily Breakdown -->
+            <div class="p-4 sm:p-6 overflow-y-auto max-h-[65vh] space-y-4">
+                <div v-if="calendarLoading" class="py-12 text-center text-amber-400 animate-pulse text-sm">
+                    載入法說會日曆資料中...
+                </div>
+                <div v-else-if="calendarData && calendarData.length" class="space-y-3">
+                    <div v-for="day in calendarData" :key="day.call_date"
+                         v-show="!calendarSearch || (day.summary_companies && day.summary_companies.toLowerCase().includes(calendarSearch.toLowerCase()))"
+                         class="p-4 rounded-xl border space-y-2 transition-all"
+                         :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500/40' : 'bg-[#F9FAFB] border-[#E5E7EB] hover:border-amber-300'">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="px-2.5 py-1 rounded-lg font-black text-xs num-font"
+                                      :class="isDark ? 'bg-[#0D0E11] text-amber-400 border border-[#262626]' : 'bg-white text-amber-700 border border-[#E5E7EB]'">
+                                    📅 {{ day.call_date }}
+                                </span>
+                                <span class="text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                    共 {{ day.total_calls }} 場法說會
+                                </span>
+                                <span v-if="day.weight_stock_calls > 0" class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                    ⭐ 權值股 {{ day.weight_stock_calls }} 場
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Summary of Companies for this date -->
+                        <div class="text-xs leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            <span class="font-bold text-amber-500">召開公司：</span>
+                            {{ day.summary_companies || '無' }}
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="py-16 text-center text-slate-400 text-xs">
+                    {{ calendarYear }} 年 {{ calendarMonth }} 月暫無法說會資料。可點擊上方「🔄 即時抓取」從證交所與美股更新。
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 sm:p-4 border-t flex items-center justify-between text-xs"
+                 :class="isDark ? 'border-[#262626] bg-[#16181D] text-[#9CA3AF]' : 'border-[#E5E7EB] bg-[#F9FAFB] text-slate-500'">
+                <span>資料來源: TWSE、TPEx OpenAPI、Yahoo Finance 與各公司 Investor Relations</span>
+                <button @click="closeEarningsCalendar()" class="px-4 py-1.5 rounded-lg bg-amber-500 text-black font-black hover:bg-amber-400 transition-colors">
+                    關閉
+                </button>
+            </div>
         </div>
     </div>
 

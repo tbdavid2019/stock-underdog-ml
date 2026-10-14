@@ -1,0 +1,185 @@
+"""
+api/routes/earnings_call.py - 法人說明會與財報催化劑 REST API 路由
+"""
+
+import datetime
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks
+
+from api.schemas import EarningsCallItem, UpcomingCallsResponse, EarningsCalendarResponse
+from data.duckdb_manager import DuckDBManager
+from data.earnings_fetcher import EarningsCallFetcher
+
+router = APIRouter(prefix="/earnings-call", tags=["Earnings Call 法人說明會"])
+
+duckdb_manager = DuckDBManager()
+
+
+def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCallItem:
+    """轉換資料庫字典為附帶雙時區與倒數之 Pydantic 物件"""
+    call_date_str = str(row.get("call_date", ""))
+    call_time_str = str(row.get("call_time", "14:00") or "14:00")
+    timezone_str = str(row.get("timezone", "Asia/Taipei"))
+
+    # 計算倒數天數
+    countdown = None
+    status = "upcoming"
+    try:
+        parts = [int(p) for p in call_date_str.split("-")]
+        c_date = datetime.date(parts[0], parts[1], parts[2])
+        diff = (c_date - today).days
+        countdown = diff
+        if diff == 0:
+            status = "today"
+        elif diff < 0:
+            status = "past"
+        else:
+            status = "upcoming"
+    except Exception:
+        pass
+
+    # 產生雙時區表示
+    datetime_cst = None
+    datetime_est = None
+    try:
+        if timezone_str == "America/New_York":
+            datetime_est = f"{call_date_str} {call_time_str} EDT"
+            # 粗估美東下午盤後為台灣次日清晨 (時差 +12/+13 小時)
+            datetime_cst = f"{call_date_str} {call_time_str} (美東時間，次日清晨)"
+        else:
+            datetime_cst = f"{call_date_str} {call_time_str} CST"
+            datetime_est = f"{call_date_str} (台灣時間下午)"
+    except Exception:
+        datetime_cst = f"{call_date_str} {call_time_str}"
+
+    return EarningsCallItem(
+        id=str(row.get("id", "")),
+        market=str(row.get("market", "TW")),
+        ticker=str(row.get("ticker", "")),
+        name=str(row.get("name", "")),
+        call_date=call_date_str,
+        call_time=call_time_str,
+        timezone=timezone_str,
+        datetime_cst=datetime_cst,
+        datetime_est=datetime_est,
+        countdown_days=countdown,
+        status=status,
+        meeting_type=row.get("meeting_type") or "online",
+        location=row.get("location"),
+        webcast_url=row.get("webcast_url"),
+        presentation_url=row.get("presentation_url"),
+        transcript_url=row.get("transcript_url"),
+        language=row.get("language") or "zh-TW",
+        eps_estimate=row.get("eps_estimate"),
+        eps_actual=row.get("eps_actual"),
+        revenue_estimate=row.get("revenue_estimate"),
+        revenue_actual=row.get("revenue_actual"),
+        is_weight_stock=bool(row.get("is_weight_stock", False)),
+        remarks=row.get("remarks"),
+        source=row.get("source") or "TWSE"
+    )
+
+
+@router.get("/upcoming", response_model=UpcomingCallsResponse, summary="取得台美股即將舉行的法說會清單")
+def get_upcoming_calls(
+    market: str = Query("ALL", description="市場篩選: ALL / TW / US"),
+    days: int = Query(14, ge=1, le=90, description="查詢未來天數範圍 (預設 14 天)"),
+    start_date: Optional[str] = Query(None, description="起始日期 (YYYY-MM-DD，若指定則優先於 days)"),
+    end_date: Optional[str] = Query(None, description="截止日期 (YYYY-MM-DD)"),
+    is_weight_stock: Optional[bool] = Query(None, description="是否僅顯示重量級權值股"),
+    limit: int = Query(50, ge=1, le=200, description="返回筆數上限")
+):
+    """
+    查詢近期即將召開之法人說明會，自動換算雙時區與倒數剩餘天數。
+    """
+    today = datetime.date.today()
+    s_date = start_date or today.strftime("%Y-%m-%d")
+    e_date = end_date or (today + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+
+    records = duckdb_manager.get_earnings_calls(
+        market=market,
+        start_date=s_date,
+        end_date=e_date,
+        is_weight_stock=is_weight_stock,
+        limit=limit
+    )
+
+    # 若資料庫目前無記錄，主動觸發一次抓取以提供即時資料
+    if not records:
+        fetcher = EarningsCallFetcher(duckdb_manager)
+        fetcher.fetch_all_and_sync()
+        records = duckdb_manager.get_earnings_calls(
+            market=market,
+            start_date=s_date,
+            end_date=e_date,
+            is_weight_stock=is_weight_stock,
+            limit=limit
+        )
+
+    enriched = [_enrich_call_item(r, today) for r in records]
+
+    return UpcomingCallsResponse(
+        success=True,
+        market=market.upper(),
+        total_count=len(enriched),
+        data=enriched
+    )
+
+
+@router.get("/calendar", response_model=EarningsCalendarResponse, summary="取得月度法說會日曆聚合場次")
+def get_earnings_calendar(
+    year: Optional[int] = Query(None, description="年份 (預設當前年)"),
+    month: Optional[int] = Query(None, description="月份 (預設當前月)"),
+    market: str = Query("ALL", description="市場: ALL / TW / US")
+):
+    """
+    查詢指定月之每日法說會場次計數，供行事曆檢視視覺化。
+    """
+    today = datetime.date.today()
+    y = year or today.year
+    m = month or today.month
+
+    data = duckdb_manager.get_earnings_calendar(year=y, month=m, market=market)
+    return EarningsCalendarResponse(
+        success=True,
+        year=y,
+        month=m,
+        market=market.upper(),
+        data=data
+    )
+
+
+@router.get("/{ticker}", response_model=UpcomingCallsResponse, summary="取得單一標的之法說會歷程與未來時程")
+def get_ticker_calls(
+    ticker: str = Path(..., description="股票代碼 (如 2330.TW 或 NVDA)"),
+    limit: int = Query(20, ge=1, le=100, description="最多返回場次")
+):
+    """
+    查詢特定個股之歷史與預約法說會資訊，包含歷次官方簡報 PDF 下載入口與影音回放。
+    """
+    today = datetime.date.today()
+    records = duckdb_manager.get_earnings_calls(
+        ticker=ticker,
+        limit=limit
+    )
+    enriched = [_enrich_call_item(r, today) for r in records]
+    return UpcomingCallsResponse(
+        success=True,
+        market="TICKER",
+        total_count=len(enriched),
+        data=enriched
+    )
+
+
+@router.post("/sync", summary="觸發跨市場法說會資料全量同步")
+def trigger_sync(background_tasks: BackgroundTasks):
+    """
+    手動或排程觸發法說會資訊同步 (TWSE/TPEx OpenAPI + 美股行事曆)。
+    """
+    fetcher = EarningsCallFetcher(duckdb_manager)
+    background_tasks.add_task(fetcher.fetch_all_and_sync)
+    return {
+        "success": True,
+        "message": "法說會資料同步已於背景排隊執行",
+        "timestamp": datetime.datetime.now().isoformat()
+    }

@@ -172,6 +172,35 @@ class DuckDBManager:
                     created_at VARCHAR
                 );
                 """)
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS earnings_calls (
+                    id VARCHAR PRIMARY KEY,
+                    market VARCHAR NOT NULL,
+                    ticker VARCHAR NOT NULL,
+                    name VARCHAR NOT NULL,
+                    call_date VARCHAR NOT NULL,
+                    call_time VARCHAR,
+                    timezone VARCHAR NOT NULL,
+                    timestamp_utc TIMESTAMP,
+                    meeting_type VARCHAR,
+                    location VARCHAR,
+                    webcast_url VARCHAR,
+                    presentation_url VARCHAR,
+                    transcript_url VARCHAR,
+                    language VARCHAR,
+                    eps_estimate DOUBLE,
+                    eps_actual DOUBLE,
+                    revenue_estimate DOUBLE,
+                    revenue_actual DOUBLE,
+                    is_weight_stock BOOLEAN DEFAULT FALSE,
+                    remarks VARCHAR,
+                    source VARCHAR,
+                    created_at VARCHAR,
+                    updated_at VARCHAR
+                );
+                CREATE INDEX IF NOT EXISTS idx_earnings_calls_mkt_date ON earnings_calls (market, call_date);
+                CREATE INDEX IF NOT EXISTS idx_earnings_calls_ticker_date ON earnings_calls (ticker, call_date);
+                """)
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
@@ -1389,3 +1418,124 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 統計 {ticker} 券商主力摘要失敗: {e}")
             return {"top_buyers": [], "top_sellers": []}
+
+    def save_earnings_calls_batch(self, records: List[Dict[str, Any]]) -> int:
+        """批次儲存或更新法說會 (Earnings Calls) 紀錄 (Upsert by id)"""
+        if not self.enabled or not records:
+            return 0
+        try:
+            now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+            df = pd.DataFrame(records)
+            expected_cols = [
+                "id", "market", "ticker", "name", "call_date", "call_time", "timezone",
+                "timestamp_utc", "meeting_type", "location", "webcast_url",
+                "presentation_url", "transcript_url", "language", "eps_estimate",
+                "eps_actual", "revenue_estimate", "revenue_actual", "is_weight_stock",
+                "remarks", "source", "created_at", "updated_at"
+            ]
+            for col in expected_cols:
+                if col not in df.columns:
+                    if col in ("eps_estimate", "eps_actual", "revenue_estimate", "revenue_actual"):
+                        df[col] = None
+                    elif col == "is_weight_stock":
+                        df[col] = False
+                    elif col in ("created_at", "updated_at"):
+                        df[col] = now_str
+                    elif col == "timestamp_utc":
+                        df[col] = None
+                    else:
+                        df[col] = ""
+            df["updated_at"] = now_str
+            df = df[expected_cols]
+
+            with self._get_connection() as con:
+                con.register("df_earnings_batch", df)
+                con.execute("""
+                INSERT OR REPLACE INTO earnings_calls
+                SELECT * FROM df_earnings_batch;
+                """)
+            logger.info(f"✅ 成功批次寫入/更新 {len(df)} 筆法說會資料")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 批次寫入法說會失敗: {e}")
+            return 0
+
+    def get_earnings_calls(
+        self,
+        market: str = "ALL",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        ticker: Optional[str] = None,
+        is_weight_stock: Optional[bool] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """查詢法說會時程與歷史清單"""
+        if not self.enabled:
+            return []
+        try:
+            query = "SELECT * FROM earnings_calls WHERE 1=1"
+            params = []
+            if market and market.upper() != "ALL":
+                query += " AND market = ?"
+                params.append(market.upper())
+            if start_date:
+                query += " AND call_date >= ?"
+                params.append(start_date)
+            if end_date:
+                query += " AND call_date <= ?"
+                params.append(end_date)
+            if ticker:
+                clean_t = ticker.strip().upper()
+                query += " AND (ticker = ? OR ticker LIKE ?)"
+                params.append(clean_t)
+                params.append(f"{clean_t}.%")
+            if is_weight_stock is not None:
+                query += " AND is_weight_stock = ?"
+                params.append(is_weight_stock)
+            
+            query += " ORDER BY call_date ASC, call_time ASC LIMIT ?"
+            params.append(limit)
+
+            with self._get_connection() as con:
+                df = con.execute(query, params).df()
+                if df.empty:
+                    return []
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"❌ 查詢法說會資料失敗: {e}")
+            return []
+
+    def get_earnings_calendar(
+        self,
+        year: int,
+        month: int,
+        market: str = "ALL"
+    ) -> List[Dict[str, Any]]:
+        """取得指定月份之每日法說會場次計數與摘要"""
+        if not self.enabled:
+            return []
+        try:
+            month_prefix = f"{year:04d}-{month:02d}-%"
+            query = """
+            SELECT 
+                call_date,
+                COUNT(*) as total_calls,
+                SUM(CASE WHEN is_weight_stock THEN 1 ELSE 0 END) as weight_stock_calls,
+                STRING_AGG(name || ' (' || ticker || ')', '、') as summary_companies
+            FROM earnings_calls
+            WHERE call_date LIKE ?
+            """
+            params = [month_prefix]
+            if market and market.upper() != "ALL":
+                query += " AND market = ?"
+                params.append(market.upper())
+            query += " GROUP BY call_date ORDER BY call_date ASC;"
+
+            with self._get_connection() as con:
+                df = con.execute(query, params).df()
+                if df.empty:
+                    return []
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"❌ 取得法說會日曆彙總失敗: {e}")
+            return []

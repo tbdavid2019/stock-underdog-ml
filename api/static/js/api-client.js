@@ -204,6 +204,42 @@ export const ApiClient = {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
+    },
+
+    /**
+     * Upcoming earnings calls
+     */
+    async getUpcomingEarningsCalls({ market = 'ALL', days = 14, isWeightStock = null, limit = 30 } = {}) {
+        const params = new URLSearchParams();
+        if (market) params.set('market', market);
+        if (days) params.set('days', days.toString());
+        if (isWeightStock !== null && isWeightStock !== undefined) params.set('is_weight_stock', isWeightStock ? 'true' : 'false');
+        if (limit) params.set('limit', limit.toString());
+        const res = await fetch(`/api/v1/earnings-call/upcoming?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Ticker specific earnings calls
+     */
+    async getTickerEarningsCalls(ticker) {
+        const res = await fetch(`/api/v1/earnings-call/${encodeURIComponent(ticker)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Monthly earnings calls calendar summary
+     */
+    async getEarningsCalendar(year, month, market = 'ALL') {
+        const params = new URLSearchParams();
+        if (year) params.set('year', year.toString());
+        if (month) params.set('month', month.toString());
+        if (market) params.set('market', market);
+        const res = await fetch(`/api/v1/earnings-call/calendar?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
     }
 };
 
@@ -211,3 +247,4 @@ export const ApiClient = {
 if (typeof window !== 'undefined') {
     window.ApiClient = ApiClient;
 }
+
