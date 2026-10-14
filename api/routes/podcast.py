@@ -25,7 +25,7 @@ duckdb_manager = DuckDBManager()
 podcast_service = PodcastService(duckdb_manager)
 
 
-@router.get("/episodes", response_model=PodcastEpisodesResponse, summary="取得 Podcast 單集情報列表與即時行情 Badge")
+@router.get("/episodes", response_model=PodcastEpisodesResponse, summary="取得 Podcast 單集情報列表與量化資料快照")
 def get_episodes(
     topic: Optional[str] = Query(None, description="依實體或主題篩選 (例如 Claude, OpenAI, NVIDIA, TSMC)"),
     ticker: Optional[str] = Query(None, description="依股票代號篩選 (例如 NVDA, 2330.TW)"),

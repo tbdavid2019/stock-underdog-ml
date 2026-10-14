@@ -108,6 +108,7 @@ graph TD
   - 夜間時段嚴格停止台股運算，避免重複消耗 CPU 與記憶體資源。
 * **🇺🇸 美股開盤前指南 (每日 20:30 執行 / UTC 12:30，時段 13:30~05:00 派發)**：
   - 於美股 21:30 (夏令) / 22:30 (冬令) 開盤前 1 小時產出 S&P 500 多維量化決策與 Google TimesFM 預測。
+  - SP500 分析集合保留太空主題擴充標的：`SPCX`、`DXYZ`、`ASTS`、`RKLB`；這些標的屬於策略擴充，不代表目前正式 S&P 500 成分資格。
   - 白天時段嚴格停止美股重複運算。
 * **🔧 yfinance 自動巡檢 (每日 07:30 執行 / UTC 23:30)**：
   - 於台股盤前排程前自動檢測 PyPI 最新版本並驗證 API 相容性。
@@ -151,7 +152,7 @@ graph TD
 啟動後直接瀏覽 `http://localhost:8088/` 或線上站點 [https://stockdata.david888.com](https://stockdata.david888.com)：
 * **彭博終端視覺與雙主題切換**：全面升級曜石黑 (`#030302`)、深黑卡片 (`#0D0E11`)、琥珀金 (`#F59E0B`) 與淺色灰白雙主題，頂部提供膠囊藥丸 Tab（`Tab / Large`）與狀態文字切換開關（`顯示: 深色模式` / `顯示: 淺色模式`）。
 * **高密度量化訊號表 (Signal Table)**：支援高密度表格與情報卡片雙重視圖，具備等寬金融數字（JetBrains Mono `tabular-nums`）、彩色策略/法人 Badge 系統、外部門戶跳轉（Yahoo 股市 / Goodinfo），以及點擊即時展開之公司簡介抽屜 (Company Drawer)。
-* **宏觀風控與總經日曆**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態、建議曝險比例、CME FedWatch 降息監控、美股重量級財報日曆與 Polymarket 預測市場。
+* **宏觀風控與總經日曆**：在上游資料可用時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態、建議曝險比例、CME FedWatch 降息監控、美股重量級財報日曆與 Polymarket 預測市場；資料缺失時 API 明確回傳不可用狀態。
 * **法人籌碼與券商主力雷達**：三大法人淨買賣超排行 TOP 30 表格、TOP 8 目標券商多折線走勢圖（霓虹色系、深淺色自適應網格）與 TOP 15 主力買超/賣超分點雙欄比較清單。
 * **個股歷史時序查詢**：輸入代號或名稱（如 `2330.TW`、`NVDA`、`台積電`、`聯發科`），即時檢索歷次量化預測目標價、均線買點、三大法人累計折線圖與逐日籌碼數據。
 * **前端原生模組化架構**：樣板解耦為 Jinja2 partials，腳本抽取為原生 ES 模組（`api-client.js`, `chart-manager.js`, `app.js`），維持免 Node.js build step 輕量極速特性。
@@ -235,10 +236,10 @@ graph TD
 | `/api/v1/earnings-call/{ticker}` | `GET` | 查詢單一標的之法說會歷程、官方簡報 PDF 與影音回放網址 |
 | `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次與權值股場次計數 |
 | `/api/v1/earnings-call/sync` | `POST` | 觸發非同步背景跨市場法說會資料全量同步 |
-| `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、AI 繁中 TL;DR 與關聯股票即時行情 Badge |
-| `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表 |
+| `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、AI 繁中 TL;DR 與關聯股票量化資料快照；快照不等同即時行情 |
+| `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表；metadata 來源標記為 `seed_snapshot` |
 | `/api/v1/podcast/topics` | `GET` | 取得熱門科技實體與話題標籤頻次聚合排行榜 |
-| `/api/v1/podcast/sync` | `POST` | 觸發非同步背景 Podcast 串流與單集情報全量同步 |
+| `/api/v1/podcast/sync` | `POST` | 觸發非同步背景 Podcast 最新 RSS 抓取與單集 raw metadata 同步 |
 
 ---
 

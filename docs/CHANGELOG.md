@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-10-14 (v2.4.3)
+
+### Fixed (Transparent Data Availability and Fallback Semantics)
+- **🛡️ 宏觀資料缺失改為明確不可用**：yfinance 無資料或資料不完整時，宏觀 API 回傳 `exposure=null`、指標 `null` 與「資料不足」，停止以 VIX 20、100% 曝險或站穩均線作為替代值。
+- **📅 移除未驗證美股法說會預置排程**：沒有可驗證的上游或本地快取時回傳空集合，不再產生推測日期、EPS 與 `YAHOO/IR` 假來源。
+- **📉 修正 Podcast 行情語意**：移除固定行情快照；模型預測基準價不再當作即時漲跌幅，資料缺失時顯示空值並附來源時間。
+- **📊 修正總經補充資料 fallback**：商品、FedWatch、Polymarket 無資料時不再顯示 `+0.0%` 或 0% 機率。
+- **🧮 移除 synthetic composite score**：資料庫缺少正式綜合分數時保留 `null`，明確儲存的 0 分仍維持原值。
+- **🎙️ RSS metadata 保持原始狀態**：缺少時長、語言或摘要時保留空值，單集標記為 `raw`；Podcast 同步端點正式啟用最新 RSS 抓取。
+- **🧭 UI 移除固定統計 fallback**：法人筆數、日期與頻道集數缺失時顯示「資料不足」；頻道 metadata 標記為 `seed_snapshot`。
+- **🚀 保留 SP500 太空概念擴充**：`SPCX`、`DXYZ`、`ASTS`、`RKLB` 維持納入 SP500 分析集合，作為策略性的太空主題擴充標的，並保留既有名稱映射。
+
+---
+
 ## 2026-10-14 (v2.4.2)
 
 ### Added & Expanded (Full 100 BigGo Finance Podcast Channels & 200 Real AI Intelligence Episodes)

@@ -272,6 +272,9 @@ class PodcastService:
             except Exception as e:
                 logger.error(f"讀取 seed_episodes 失敗: {e}")
 
+        logger.warning("⚠️ 種子 Podcast 配置檔缺失，略過未驗證的預置單集")
+        return 0
+
         now = datetime.datetime.now(datetime.timezone.utc)
         episodes = [
             {
