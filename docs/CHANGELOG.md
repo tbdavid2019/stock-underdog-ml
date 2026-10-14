@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-10-14 (v2.4.2)
+
+### Added & Expanded (Full 100 BigGo Finance Podcast Channels & 200 Real AI Intelligence Episodes)
+- **🎙️ 全量收錄 BigGo Finance 推薦之完整 100 個 Podcast 頻道（由 36 個擴增至完整 100 個）**：
+  - 串接 BigGo 官方上游資料源（`https://api.biggo.com/api/v1/finance/podcast/sources`），完整匯入全部 **100 個全球頂級科技、宏觀財經與商業投資頻道**。
+  - 頻道目錄全面涵蓋：
+    - **前沿 AI 與科技（64 個）**：Founders, Lex Fridman, The Verge, Y Combinator Startup Podcast, Dwarkesh, AI Engineer, Lenny's Podcast, Theo - t3.gg, The Pragmatic Engineer, Peter Diamandis, Training Data, 42章經, Latent Space, Eye on A.I., Huberman Lab, Hard Fork, Lexman Artificial...
+    - **宏觀金融與商業（20 個）**：The Economist, The Plain Bagel, All-In, My First Million, Starter Story, The Prof G Pod, Bloomberg Businessweek, Odd Lots, Trumponomics, Capital Group, The Knowledge Project, Acquired, Invest Like the Best, Barron's Live, FT News Briefing...
+    - **創投、商業史與大師訪談（11 個）**：20VC with Harry Stebbings, How I Built This with Guy Raz, Masters in Business, The a16z Podcast, BG2 Pod (Bill Gurley & Brad Gerstner)...
+    - **華語深度與生技科學（5 個）**：小Lin說, CLS同學, 股癌 Gooaye, 硅谷101, 瘋投圈, Citeline Podcasts, BioCentury This Week, Top Traders Unplugged...
+  - **頻道官方 Artwork 頭像支援**：三欄響應式頻道卡片升級支援顯示高解析度頻道 Logo / 頭像（含優雅的加載錯誤與預設 fallback），打造與 BigGo Finance 完全一致的精品級視覺質感。
+- **🤖 匯入 200 篇真實 AI 精煉單集情報與即時股票概念聯動（config/podcast_seed_episodes.json）**：
+  - 串接 BigGo 單集情報流（`https://api.biggo.com/api/v1/finance/podcast/list?limit=100`），收錄 200 篇由 AI 生成之深度繁中 TL;DR、關鍵商務洞察（Business Highlights）、實體標籤與關聯上市公司代號（Ticker）。
+  - 單集即時行情 Badge 與操盤看板、個股抽屜全面連動，點擊股票標籤即可即時展開時序預測與籌碼分析。
+- **⚡ 後端自動同步與查詢上限擴展**：
+  - `api/routes/podcast.py` `/channels` 上限由 100 擴大至預設 200，並新增 `refresh=True` 支援。
+  - `api/static/js/api-client.js` `getPodcastChannels` 預設查詢上限調整為 200，保證全量 100 頻道一次性完整渲染。
+  - 自動冷啟動同步機制：當單集數少於 50 筆或頻道數少於種子清單時，自動於背景執行無縫增量同步。
+
+---
+
 ## 2026-10-14 (v2.4.1)
 
 ### Fixed (Browser Cache Invalidation, Dynamic Asset Fingerprinting & Template Crash Safeguard)

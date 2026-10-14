@@ -262,7 +262,7 @@ export const ApiClient = {
     /**
      * Podcast subscribed channels list
      */
-    async getPodcastChannels(limit = 100) {
+    async getPodcastChannels(limit = 200) {
         const res = await fetch(`/api/v1/podcast/channels?limit=${limit}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();

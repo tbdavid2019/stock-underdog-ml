@@ -46,9 +46,9 @@ def get_episodes(
         offset=offset
     )
 
-    # 僅在資料庫完全為空且無任何篩選條件時，進行初次冷啟動同步
-    if not episodes and not any([topic, ticker, channel_id]) and (not lang or lang.upper() == "ALL") and offset == 0:
-        if duckdb_manager.get_total_episodes_count() == 0:
+    # 僅在資料庫完全為空或少於配置種子數時，進行冷啟動同步
+    if not any([topic, ticker, channel_id]) and (not lang or lang.upper() == "ALL") and offset == 0:
+        if duckdb_manager.get_total_episodes_count() < 50:
             podcast_service.sync_all()
             episodes = duckdb_manager.get_podcast_episodes(
                 topic=topic,
@@ -71,20 +71,21 @@ def get_episodes(
 
 @router.get("/channels", response_model=PodcastChannelsResponse, summary="取得收錄之頂級財經與科技 Podcast 頻道清單")
 def get_channels(
-    limit: int = Query(100, ge=1, le=200, description="最多返回頻道數")
+    limit: int = Query(200, ge=1, le=500, description="最多返回頻道數"),
+    refresh: bool = Query(False, description="強制重新同步種子頻道元數據")
 ):
     """
     取得已收錄的國際頂級科技、宏觀金融與商業頻道庫元數據。
     """
     channels = duckdb_manager.get_podcast_channels(limit=limit)
     seed_channels = podcast_service.get_seed_channels()
-    if len(channels) < len(seed_channels):
+    if refresh or len(channels) < len(seed_channels):
         podcast_service.sync_seed_channels()
         channels = duckdb_manager.get_podcast_channels(limit=limit)
 
     return PodcastChannelsResponse(
         success=True,
-        total_count=len(channels),
+        total_count=duckdb_manager.get_podcast_channels_count() or len(channels),
         data=channels
     )
 

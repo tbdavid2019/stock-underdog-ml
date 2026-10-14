@@ -300,6 +300,18 @@ class PodcastService:
         初始化高價值精煉單集（對齊 BigGo Finance 推薦核心內容）
         讓系統在冷啟動時立即具備豐富情報與實體連動。
         """
+        seed_episodes_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "podcast_seed_episodes.json")
+        if os.path.exists(seed_episodes_path):
+            try:
+                with open(seed_episodes_path, "r", encoding="utf-8") as f:
+                    episodes_cfg = json.load(f)
+                    if episodes_cfg:
+                        saved = self.db.save_podcast_episodes_batch(episodes_cfg)
+                        logger.info(f"🎉 成功寫入 {saved} 筆種子 Podcast 情報單集 (來自配置檔)")
+                        return saved
+            except Exception as e:
+                logger.error(f"讀取 seed_episodes 失敗: {e}")
+
         now = datetime.datetime.now(datetime.timezone.utc)
         episodes = [
             {
