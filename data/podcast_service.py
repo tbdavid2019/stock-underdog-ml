@@ -290,7 +290,7 @@ class PodcastService:
 
     def seed_initial_curated_episodes(self) -> int:
         """
-        初始化高價值精煉單集（對齊 BigGo Finance 推薦核心內容）
+        初始化高價值精煉單集（對齊全球頂級財經與科技音訊核心內容）
         讓系統在冷啟動時立即具備豐富情報與實體連動。
         """
         seed_episodes_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "podcast_seed_episodes.json")

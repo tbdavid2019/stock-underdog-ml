@@ -2,7 +2,7 @@
 
 ## Context
 
-金融與科技領域的深度對話（如 All-In Podcast、Lex Fridman、Dwarkesh Patel、Bloomberg Odd Lots 等）蘊含前瞻性的產業變革線索與企業戰略意圖。目前市場公開產品（如 BigGo Finance Podcast 推薦）展示了結合話題標籤與摘要的價值，但尚未將音訊逐字稿實體直接對齊量化交易系統的「時序行情」與「籌碼共振」。
+金融與科技領域的深度對話（如 All-In Podcast、Lex Fridman、Dwarkesh Patel、Bloomberg Odd Lots 等）蘊含前瞻性的產業變革線索與企業戰略意圖。目前市場公開產品展示了結合話題標籤與摘要的價值，但尚未將音訊逐字稿實體直接對齊量化交易系統的「時序行情」與「籌碼共振」。
 
 本專案現有架構具備：
 1. `core/config.py` 中的 `LLMConfig` 具備 3-Tier Fallback（Gemini 2.5 Flash、DeepSeek-V3、OpenAI-Mini）。

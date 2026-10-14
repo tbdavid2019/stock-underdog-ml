@@ -11,17 +11,27 @@
 
 ---
 
-## 📸 系統介面預覽 (Live Platform Showcase)
+## 📸 系統介面全景展示 (Live Platform Showcase)
 
-> 🌐 **線上即時體驗**：[https://stockdata.david888.com](https://stockdata.david888.com)（支援桌面 Bloomberg 專業寬螢幕與手機端高密度 RWD 混合卡片排版）
+> 🌐 **線上即時體驗**：[https://stockdata.david888.com](https://stockdata.david888.com)  
+> 專業彭博終端風格 · 深淺雙主題適配 · 桌面旗艦寬螢幕與手機端 RWD 雙層架構零死角體驗
 
-| 操盤看板 (Bloomberg Terminal 桌面版) | Podcast 財經與科技情報雷達 (100 頻道 · 100 篇情報) |
-| :---: | :---: |
-| ![操盤看板桌面版](docs/screenshots/dashboard_desktop.png) | ![Podcast 財經情報雷達](docs/screenshots/podcast_radar.png) |
+### 🖥️ 操盤看板 (Bloomberg Terminal 桌面旗艦版)
+高密度量化佈局、全球宏觀大盤風控、四大共振極選矩陣與個股深度分析抽屜：
+![操盤看板桌面版](docs/screenshots/dashboard_desktop.png)
 
-| 行動端 RWD 表格自動轉譯卡片 (Mobile Hybrid Cards) | 行動端高密度量化情報卡片 (Mobile Card View) |
-| :---: | :---: |
-| ![行動端 RWD 混合卡片](docs/screenshots/mobile_rwd_cards.png) | ![行動端卡片檢視](docs/screenshots/mobile_card_view.png) |
+### 🎙️ AI Podcast 財經與科技情報雷達 (100 頂級頻道 · 100 篇實體情報流)
+全量收錄全球 100 大頂級科技與宏觀財經頻道，AI 繁中精華 TL;DR 萃取，即時關聯上市公司股票代號行情 Badge：
+![Podcast 財經情報雷達](docs/screenshots/podcast_radar.png)
+
+### 📱 行動端雙層響應式體驗 (Mobile Hybrid Quant Experience)
+<p align="center">
+  <img src="docs/screenshots/mobile_rwd_cards.png" width="48%" alt="行動端 RWD 混合卡片" />
+  <img src="docs/screenshots/mobile_card_view.png" width="48%" alt="行動端卡片檢視" />
+</p>
+<p align="center">
+  <em>左：表格模式在手機端自動平滑轉譯為高密度量化卡片（杜絕文字擠壓折行） ｜ 右：觸控友善之單欄情報卡片視圖（Card View）</em>
+</p>
 
 ---
 
@@ -114,7 +124,7 @@ graph TD
 * 提供 REST 端點 `POST /api/v1/decision/evaluate`、`GET /api/v1/decision/health` 與原生 FastMCP / WebMCP 工具 `get_clef_stock_verdict`。
 
 ### 11. 🎙️ Podcast 財經與科技情報雷達 (AI Financial & Tech Podcast Radar)
-* 直連 [BigGo Finance 推薦頻道庫](https://finance.biggo.com.tw/podcast)，即時收錄國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**）。
+* 匯聚國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**），即時收錄全球深度對話。
 * **AI 結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
 * **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
 * **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。

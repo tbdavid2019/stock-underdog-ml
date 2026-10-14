@@ -58,7 +58,7 @@
         </button>
     </div>
 
-    <!-- VIEW A: ALL CHANNELS DIRECTORY GRID (BigGo Recommend Reference) -->
+    <!-- VIEW A: ALL CHANNELS DIRECTORY GRID -->
     <div v-if="podcastSubView === 'channels'" class="space-y-4 animate-fadeIn">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl border"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
@@ -68,7 +68,7 @@
                     <span>全部頻道庫</span>
                 </h2>
                 <p class="text-xs sm:text-sm mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
-                    追蹤頻道建立專屬內容，涵蓋 BigGo 財經與全球頂級總體經濟、科技 AI、生技與量化交易頻道
+                    追蹤頻道建立專屬內容，涵蓋全球頂級總體經濟、科技 AI、生技與量化交易頻道
                 </p>
             </div>
             <div class="flex items-center space-x-2">
@@ -131,7 +131,7 @@
     <!-- VIEW B: EPISODE INTELLIGENCE FEED -->
     <div v-show="podcastSubView === 'episodes'" class="space-y-6">
 
-        <!-- 2. Horizontal Entity Filter Slider (Killer Feature from BigGo Finance) -->
+        <!-- 2. Horizontal Entity Filter Slider (AI Entity Fast Filter) -->
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border space-y-3">
             <div class="flex items-center justify-between text-sm sm:text-base">

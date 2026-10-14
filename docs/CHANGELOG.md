@@ -15,10 +15,10 @@
 - **🎙️ Podcast 財經雷達全量 100 頻道去重與 100 篇情報端到端同步**：
   - **診斷痛點**：
     1. 頻道下拉選單出現重複頻道名稱（如 In a Nutshell、The Joe Rogan Experience、Dwarkesh Podcast 等重複出現兩次）。
-    2. 頂部狀態列顯示「收錄 50 頻道 · 30 篇情報」，未完整展現 BigGo Finance 上游最新收錄的完整 100 篇情報。
+    2. 頂部狀態列顯示「收錄 50 頻道 · 30 篇情報」，未完整展現上游最新收錄的完整 100 篇情報。
   - **根本原因與架構修復**：
-    1. **資料庫去重與舊頻道淘汰 (`data/podcast_service.py`)**：早期 Mock 測試資料保留了舊頻道 ID（如 `kurzgesagt`, `joe-rogan`, `dwarkesh` 等），與後續 BigGo 爬蟲標準 Slug ID 共存於 DuckDB 中。本次加入自動清理遷移機制，將舊 episode 自動映射至標準 ID，並以 `DELETE FROM podcast_channels WHERE channel_id NOT IN (...)` 徹底清除不在 100 種子清單中的 19 個舊頻道；API 路由層面進一步加入不分大小寫的標題嚴格去重，確保下拉選單 100% 乾淨無重複。
-    2. **端到端放寬情報容量上限（20/30 -> 100 篇）**：將 `api/routes/podcast.py` 預設 limit 由 20 提升至 100，`api-client.js` 由 20 提升至 100，`app.js` 由 30 提升至 100，使前端首頁直接呈現「收錄 100 頻道 · 100 篇情報」，完整對齊 BigGo Finance 即時情報庫。
+    1. **資料庫去重與舊頻道淘汰 (`data/podcast_service.py`)**：早期 Mock 測試資料保留了舊頻道 ID（如 `kurzgesagt`, `joe-rogan`, `dwarkesh` 等），與後續標準 Slug ID 共存於 DuckDB 中。本次加入自動清理遷移機制，將舊 episode 自動映射至標準 ID，並以 `DELETE FROM podcast_channels WHERE channel_id NOT IN (...)` 徹底清除不在 100 種子清單中的 19 個舊頻道；API 路由層面進一步加入不分大小寫的標題嚴格去重，確保下拉選單 100% 乾淨無重複。
+    2. **端到端放寬情報容量上限（20/30 -> 100 篇）**：將 `api/routes/podcast.py` 預設 limit 由 20 提升至 100，`api-client.js` 由 20 提升至 100，`app.js` 由 30 提升至 100，使前端首頁直接呈現「收錄 100 頻道 · 100 篇情報」，完整對齊 888 即時深度情報庫。
 
 ---
 
@@ -94,17 +94,17 @@
 
 ## 2026-10-14 (v2.4.2)
 
-### Added & Expanded (Full 100 BigGo Finance Podcast Channels & 200 Real AI Intelligence Episodes)
-- **🎙️ 全量收錄 BigGo Finance 推薦之完整 100 個 Podcast 頻道（由 36 個擴增至完整 100 個）**：
-  - 串接 BigGo 官方上游資料源（`https://api.biggo.com/api/v1/finance/podcast/sources`），完整匯入全部 **100 個全球頂級科技、宏觀財經與商業投資頻道**。
+### Added & Expanded (Full 100 Premier Podcast Channels & 200 Real AI Intelligence Episodes)
+- **🎙️ 全量收錄頂級財經與科技推薦之完整 100 個 Podcast 頻道（由 36 個擴增至完整 100 個）**：
+  - 串接頂級財經與科技上游資料源，完整匯入全部 **100 個全球頂級科技、宏觀財經與商業投資頻道**。
   - 頻道目錄全面涵蓋：
     - **前沿 AI 與科技（64 個）**：Founders, Lex Fridman, The Verge, Y Combinator Startup Podcast, Dwarkesh, AI Engineer, Lenny's Podcast, Theo - t3.gg, The Pragmatic Engineer, Peter Diamandis, Training Data, 42章經, Latent Space, Eye on A.I., Huberman Lab, Hard Fork, Lexman Artificial...
     - **宏觀金融與商業（20 個）**：The Economist, The Plain Bagel, All-In, My First Million, Starter Story, The Prof G Pod, Bloomberg Businessweek, Odd Lots, Trumponomics, Capital Group, The Knowledge Project, Acquired, Invest Like the Best, Barron's Live, FT News Briefing...
     - **創投、商業史與大師訪談（11 個）**：20VC with Harry Stebbings, How I Built This with Guy Raz, Masters in Business, The a16z Podcast, BG2 Pod (Bill Gurley & Brad Gerstner)...
     - **華語深度與生技科學（5 個）**：小Lin說, CLS同學, 股癌 Gooaye, 硅谷101, 瘋投圈, Citeline Podcasts, BioCentury This Week, Top Traders Unplugged...
-  - **頻道官方 Artwork 頭像支援**：三欄響應式頻道卡片升級支援顯示高解析度頻道 Logo / 頭像（含優雅的加載錯誤與預設 fallback），打造與 BigGo Finance 完全一致的精品級視覺質感。
+  - **頻道官方 Artwork 頭像支援**：三欄響應式頻道卡片升級支援顯示高解析度頻道 Logo / 頭像（含優雅的加載錯誤與預設 fallback），打造頂級專業金融資訊終端的一致精品級視覺質感。
 - **🤖 匯入 200 篇真實 AI 精煉單集情報與即時股票概念聯動（config/podcast_seed_episodes.json）**：
-  - 串接 BigGo 單集情報流（`https://api.biggo.com/api/v1/finance/podcast/list?limit=100`），收錄 200 篇由 AI 生成之深度繁中 TL;DR、關鍵商務洞察（Business Highlights）、實體標籤與關聯上市公司代號（Ticker）。
+  - 串接全球即時單集情報流，收錄 200 篇由 AI 生成之深度繁中 TL;DR、關鍵商務洞察（Business Highlights）、實體標籤與關聯上市公司代號（Ticker）。
   - 單集即時行情 Badge 與操盤看板、個股抽屜全面連動，點擊股票標籤即可即時展開時序預測與籌碼分析。
 - **⚡ 後端自動同步與查詢上限擴展**：
   - `api/routes/podcast.py` `/channels` 上限由 100 擴大至預設 200，並新增 `refresh=True` 支援。
@@ -141,20 +141,20 @@
   - 診斷出使用者因本地瀏覽器歷史快取或舊版預設而造訪淺色模式（`#EEEEEE` 灰底白卡片），導致誤認整體風格未依據 Figma 20261013 進行深邃金融終端重塑。
   - 導入新版獨立主題狀態鍵 `theme_v20261013`，預設全面啟用深色曜石黑終端（Obsidian Black Terminal，`#030302` 深邃底色、`#0D0E11` 卡片與 `#F59E0B` 琥珀金點綴），並在 `<head>` 注入防白閃預載入腳本，確保首次開啟或重新整理均能完美呈現 Figma 20261013 彭博終端風貌。
 
-### Added & Expanded (Full BigGo Finance Podcast Recommendation Directory & 36 Top Channels)
-- **🎙️ 全面擴充收錄 BigGo 財經推薦頻道庫（由 12 個大幅擴增至 36 個全球頂級頻道）**：
-  - 完整收錄 `https://finance.biggo.com.tw/podcast/recommend` 與使用者提供之推薦頻道目錄：
+#### Added & Expanded (Full Premier Podcast Recommendation Directory & 36 Top Channels)
+- **🎙️ 全面擴充收錄全球頂級財經推薦頻道庫（由 12 個大幅擴增至 36 個全球頂級頻道）**：
+  - 完整收錄全球指標性財經、商業與科技深度訪談頻道目錄：
     - **科普與大眾對話**：In a Nutshell (Kurzgesagt, 25.7M 追蹤者)、The Joe Rogan Experience (21.1M 追蹤者)、The Diary of a CEO (Steven Bartlett, 20.4M 追蹤者)、ColdFusion (5.3M 追蹤者)。
     - **前沿 AI 與科技趨勢**：Lex Fridman Podcast (5.1M)、The Verge (3.5M)、Y Combinator Startup Podcast (2.4M)、Dwarkesh Podcast (1.4M)、AI Engineer (673K)、Lenny's Podcast (644K)、Theo - t3.gg (571K)、The Pragmatic Engineer (541K)、Peter Diamandis (538K)、Training Data (410K)、42章經 (310K)。
     - **宏觀金融、商業巨擘與投資大師**：The Economist (4.2M)、The Plain Bagel (1.2M)、All-In (1.2M)、My First Million (963K)、Starter Story (886K)、The Prof G Pod (Scott Galloway, 823K)、Bloomberg Businessweek (591K)、Odd Lots (591K)、Trumponomics (591K)、Capital Group (527K)、The Knowledge Project (456K)、Acquired (1.25M)、Invest Like the Best (890K)。
     - **華語與生技/量化領域**：小Lin說 (2.8M)、CLS同學 (1.1M)、股癌 Gooaye (1.68M)、硅谷101 (472K)、瘋投圈 (395K)、Citeline Podcasts (260K)、Top Traders Unplugged (340K)、BioCentury This Week (180K)。
   - **資料持久化與自動增量同步**：更新 `config/podcast_seed_channels.json`、`data/podcast_service.py` 與 `api/routes/podcast.py`，當資料庫收錄頻道數少於種子頻道清單時自動執行 DuckDB `ON CONFLICT` 增量寫入，確保無需手動重置即時更新全量 36 頻道。
 - **📺 新增「全部頻道庫 (Channels Directory)」3 欄響應式網格視圖**：
-  - 於 `api/templates/partials/tab_podcast.html` 導入與 BigGo 推薦目錄一致的雙重視圖切換：
+  - 於 `api/templates/partials/tab_podcast.html` 導入雙重視圖切換：
     - `[ 深度情報單集 (Episodes) ]`：瀏覽由 AI 繁中精華 TL;DR 萃取之單集情報卡、即時股票漲跌幅 Badge、內嵌 YouTube/MP3 播放器。
     - `[ 全部收錄頻道 (Channels Directory) ]`：以 3 欄高密度卡片完整呈現 36 個頻道之頭像圖示、總單集數、追蹤者數量（如 25.7M、5.1M、1.2M）、領域標籤與作者介紹，並支援一鍵點擊「查看單集」直達該頻道專屬情報篩選。
 - **📈 擴充真實精煉單集情報庫與股票行情映射白名單**：
-  - 對齊 BigGo 最新情報流，新增 Training Data（DeepMind David Silver 與 Lasse Espeholt 對談）、瘋投圈（149 抖省省突襲美團到店業務）、Citeline（Scrip 2026 最新生技要聞與名人代言）、Top Traders Unplugged（第421集 CTA 走向主流）、BioCentury（Ep. 392 生技市場與 Moderna 軋空）、42章經（Personal Agent 創業者思考）、Bloomberg Businessweek（川普與普丁柴油交易、單座資料中心天價成本）、Acquired（台積電與 NVIDIA 史詩歷史）、股癌（EP480 CoWoS 與科技股多空解讀）。
+  - 對齊最新國際深度情報流，新增 Training Data（DeepMind David Silver 與 Lasse Espeholt 對談）、瘋投圈（149 抖省省突襲美團到店業務）、Citeline（Scrip 2026 最新生技要聞與名人代言）、Top Traders Unplugged（第421集 CTA 走向主流）、BioCentury（Ep. 392 生技市場與 Moderna 軋空）、42章經（Personal Agent 創業者思考）、Bloomberg Businessweek（川普與普丁柴油交易、單座資料中心天價成本）、Acquired（台積電與 NVIDIA 史詩歷史）、股癌（EP480 CoWoS 與科技股多空解讀）。
   - 新增美團（3690.HK）、阿里巴巴（9988.HK / BABA）、拼多多（PDD）、莫德納（MRNA）、阿斯特捷利康（AZN）、諾華（NVS）、argenx（ARGX）、埃克森美孚（XOM）、雪佛龍（CVX）、Vistra 核電（VST）、星座能源（CEG）與 CTA（QLENX）之行情降級與實體白名單映射。
 - **🐛 修復 DuckDB 頻道單集數統計錯誤**：
   - 修正 `data/duckdb_manager.py` 中 `COALESCE` 在子查詢返回 0 時無法回退至種子頻道 `episode_count` 的 SQL 邏輯缺陷，改採 `CASE WHEN ... > 0` 條件判斷，確保全部頻道均正確顯示真實集數。

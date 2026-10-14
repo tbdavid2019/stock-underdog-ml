@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS earnings_calls (
   - 新增「法說會資訊」Tab。
   - 列出歷次法說會時間、營運指引重點、簡報下載按鈕 (PDF) 與直播連結。
 - **獨立法說會行事曆視圖 (Dedicated Calendar View)**：
-  - 參考 BigGo Earnings Call 與 Bloomberg Terminal 排版。
+  - 參考專業 Earnings Call 行事曆與 Bloomberg Terminal 排版。
   - 頂部包含三向開關（`全部 ALL` / `台股 TW` / `美股 US`）與時區開關（`CST` / `EST`）。
   - 卡片式與清單式兩種視圖切換，呈現公司標誌、代號、時間、EPS Surprise 對比柱狀圖與簡報下載按鈕。
 
