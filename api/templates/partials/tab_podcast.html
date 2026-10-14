@@ -30,7 +30,7 @@
             <div class="px-3.5 py-1.5 rounded-full border text-xs font-bold transition-colors flex items-center space-x-2"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700 shadow-sm'">
                 <span class="w-2 h-2 rounded-full" :class="podcastLoading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'"></span>
-                <span>{{ podcastLoading ? '情報提煉中…' : '收錄 ' + podcastChannels.length + ' 頻道 · ' + podcastEpisodes.length + ' 篇情報' }}</span>
+                <span>{{ (podcastLoading && (!podcastEpisodes || !podcastEpisodes.length)) ? '情報提煉中…' : '收錄 ' + podcastChannels.length + ' 頻道 · ' + podcastEpisodes.length + ' 篇情報' }}</span>
             </div>
             <button @click="syncPodcastNow()"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1.5 border shadow-sm"
@@ -231,7 +231,7 @@
         </div>
 
     <!-- 4. Episode Intelligence Cards Grid (High-Density Financial Terminal Style) -->
-    <div v-if="podcastLoading" class="py-16 text-center text-amber-400 animate-pulse text-sm">
+    <div v-if="podcastLoading && (!podcastEpisodes || !podcastEpisodes.length)" class="py-16 text-center text-amber-400 animate-pulse text-sm">
         正在連線情報資料庫與計算即時股票行情中...
     </div>
     <div v-else-if="podcastEpisodes && podcastEpisodes.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">

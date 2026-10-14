@@ -166,16 +166,25 @@ class DecisionService:
     # 2. Podcast Intelligence Decision Engine
     # =========================================================================
 
-    def evaluate_podcast_episode(self, episode: Dict[str, Any]) -> PodcastDecisionVerdict:
+    def evaluate_podcast_episode(
+        self,
+        episode: Dict[str, Any],
+        allow_remote: bool = True,
+        local_only: bool = False
+    ) -> PodcastDecisionVerdict:
         """
         Evaluate a single podcast episode with 5-tier fallback:
         Tier 1 (Clef Primary) -> Tier 2 (Clef Aiurl) -> Tier 3 (JEV) -> Tier 4 (OpenAI) -> Tier 5 (Local Rules)
         Guaranteed to return a valid PodcastDecisionVerdict even if all remote models fail.
+        If local_only is True, executes in <0.2ms via Tier 5 deterministic rules.
         """
         episode_id = str(episode.get("id") or episode.get("episode_id") or "UNKNOWN")
         tickers = episode.get("tickers") or []
         if isinstance(tickers, str):
             tickers = [t.strip() for t in tickers.split(",") if t.strip()]
+
+        if local_only or not allow_remote:
+            return self._evaluate_local_podcast_rules(episode_id, episode, tickers)
 
         state = {
             "channel_title": str(episode.get("channel_title") or episode.get("author") or ""),

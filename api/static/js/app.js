@@ -96,10 +96,31 @@ export const app = createApp({
             calendarTimezone: 'CST', // 'CST' | 'EST'
             calendarSearch: '',
 
-            // Podcast Radar State (Task C)
-            podcastEpisodes: [],
-            podcastChannels: [],
-            podcastTopics: [],
+            // Podcast Radar State (Task C) - Persistent Cache Hydration (SWR)
+            podcastEpisodes: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_podcast_episodes_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            podcastChannels: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_podcast_channels_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            podcastTopics: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_podcast_topics_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
             podcastLoading: false,
             podcastSelectedTopic: '',
             podcastSelectedChannel: 'ALL',
@@ -523,7 +544,10 @@ export const app = createApp({
             }
         },
         async loadPodcastEpisodes() {
-            this.podcastLoading = true;
+            // 若本地已具有快取資料，則不進入全螢幕空白 loading 阻斷，改在背景靜默更新 (SWR)
+            if (!this.podcastEpisodes || !this.podcastEpisodes.length) {
+                this.podcastLoading = true;
+            }
             try {
                 const res = await ApiClient.getPodcastEpisodes({
                     topic: this.podcastSelectedTopic || null,
@@ -533,6 +557,12 @@ export const app = createApp({
                 });
                 if (res && res.data) {
                     this.podcastEpisodes = res.data;
+                    // 當為首頁預設篩選時，自動存入 localStorage 提供下次瞬間 0ms 冷啟動
+                    if (!this.podcastSelectedTopic && (!this.podcastSelectedChannel || this.podcastSelectedChannel === 'ALL') && (!this.podcastSelectedLang || this.podcastSelectedLang === 'ALL')) {
+                        try {
+                            localStorage.setItem('stock_quant_podcast_episodes_cache', JSON.stringify(res.data.slice(0, 100)));
+                        } catch (e) {}
+                    }
                 }
             } catch (e) {
                 console.warn("Failed to load podcast episodes:", e);
@@ -545,6 +575,9 @@ export const app = createApp({
                 const res = await ApiClient.getPodcastChannels(150);
                 if (res && res.data) {
                     this.podcastChannels = res.data;
+                    try {
+                        localStorage.setItem('stock_quant_podcast_channels_cache', JSON.stringify(res.data));
+                    } catch (e) {}
                 }
             } catch (e) {
                 console.warn("Failed to load podcast channels:", e);
@@ -555,6 +588,9 @@ export const app = createApp({
                 const res = await ApiClient.getPodcastTopics(25);
                 if (res && res.data) {
                     this.podcastTopics = res.data;
+                    try {
+                        localStorage.setItem('stock_quant_podcast_topics_cache', JSON.stringify(res.data));
+                    } catch (e) {}
                 }
             } catch (e) {
                 console.warn("Failed to load podcast topics:", e);

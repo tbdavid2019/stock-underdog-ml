@@ -132,6 +132,7 @@ graph TD
 * 匯聚國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**），即時收錄全球深度對話。
 * **AI 結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
 * **⚡ AI 催化重要性評級與標的多空推論**：透過 5 級決策鏈推論市場催化強度（⭐ 重磅 / ⚡ 重要 / 📰 關注）以及上市公司股票的多空姿態（`↑ 看多`、`↓ 看空`、`↔ 持平`），並提供專屬快篩開關。
+* **💾 DuckDB 全量持久化與 0ms SWR 水合**：所有收錄頻道、單集情報與 AI 決策重要性評級全量持久化於本地 DuckDB，前端支援 Stale-While-Revalidate (SWR) 本地端即時水合，開啟網頁瞬間 0ms 秒級呈現，杜絕重複請求與等待延遲。
 * **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
 * **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。
 

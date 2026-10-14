@@ -266,6 +266,7 @@ class PodcastService:
         cached_quotes = self.db.get_latest_quotes_batch(list(all_tickers)) if hasattr(self.db, "get_latest_quotes_batch") else {}
 
         # 3. 在記憶體中進行組裝、時長格式化與 AI 決策重要性附加
+        pending_db_updates = []
         for ep in episodes:
             # 展開 JSON 欄位
             for fld in ("key_takeaways", "topic_tags", "tickers"):
@@ -290,8 +291,9 @@ class PodcastService:
                 ticker_sentiments = {}
 
             if imp_score is None:
-                # 尚未評估過：調用 5-Tier 決策鏈（若遠端全掛，自動於 2ms 內執行本地確定性規則）
-                verdict = self.decision_service.evaluate_podcast_episode(ep)
+                # 尚未評估過：為了保證 GET 查詢在數毫秒內極速響應，直接使用確定性本地啟發式決策規則推論 (<0.2ms)
+                # 並寫入 pending_db_updates 批次存入 DuckDB，永不再重複評估
+                verdict = self.decision_service.evaluate_podcast_episode(ep, local_only=True)
                 ep["importance_score"] = verdict.importance_score
                 ep["importance_level"] = verdict.importance_level
                 ep["importance_badge"] = verdict.importance_badge
@@ -299,6 +301,14 @@ class PodcastService:
                 ep["decision_slot"] = verdict.source_slot
                 ticker_sentiments = verdict.ticker_sentiments
                 ep["ticker_sentiments"] = ticker_sentiments
+
+                pending_db_updates.append({
+                    "id": ep.get("id"),
+                    "importance_score": verdict.importance_score,
+                    "importance_level": verdict.importance_level,
+                    "ticker_sentiments": ticker_sentiments,
+                    "decision_slot": verdict.source_slot
+                })
             else:
                 score_num = float(imp_score)
                 ep["importance_score"] = score_num
@@ -332,6 +342,14 @@ class PodcastService:
             # 格式化時長
             dur_sec = ep.get("duration_seconds")
             ep["duration_formatted"] = format_duration(dur_sec)
+
+        # 批次持久化決策結果至 DuckDB，避免下次開啟網頁或重新查詢時重複推論
+        if pending_db_updates and hasattr(self.db, "update_podcast_episodes_decisions_batch"):
+            try:
+                self.db.update_podcast_episodes_decisions_batch(pending_db_updates)
+                logger.info(f"💾 成功將 {len(pending_db_updates)} 筆單集決策評級持久化存入 DuckDB")
+            except Exception as pe:
+                logger.warning(f"⚠️ 單集決策持久化存入 DuckDB 失敗: {pe}")
 
         return episodes
 
@@ -896,6 +914,47 @@ class PodcastService:
 
         return episodes
 
+    def backfill_unevaluated_episodes(self, limit: int = 500) -> int:
+        """為資料庫中尚未評估決策等級的單集進行確定性本地規則回填持久化"""
+        try:
+            with self.db._get_connection() as con:
+                df = con.execute("""
+                    SELECT * FROM podcast_episodes
+                    WHERE importance_score IS NULL
+                    LIMIT ?;
+                """, [limit]).df()
+                if df.empty:
+                    return 0
+                records = df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"❌ 查詢待回填單集失敗: {e}")
+            return 0
+
+        updates = []
+        for r in records:
+            # 展開欄位
+            for fld in ("key_takeaways", "topic_tags", "tickers"):
+                val = r.get(fld)
+                if isinstance(val, str):
+                    try:
+                        r[fld] = json.loads(val)
+                    except Exception:
+                        r[fld] = []
+            verdict = self.decision_service.evaluate_podcast_episode(r, local_only=True)
+            updates.append({
+                "id": r.get("id"),
+                "importance_score": verdict.importance_score,
+                "importance_level": verdict.importance_level,
+                "ticker_sentiments": verdict.ticker_sentiments,
+                "decision_slot": verdict.source_slot
+            })
+
+        if updates and hasattr(self.db, "update_podcast_episodes_decisions_batch"):
+            saved = self.db.update_podcast_episodes_decisions_batch(updates)
+            logger.info(f"✅ 成功為 {saved} 筆歷史單集回填決策評級至 DuckDB")
+            return saved
+        return 0
+
     def sync_all(self, fetch_live_rss: bool = False) -> int:
         """執行全量頻道與情報單集同步"""
         ch_count = self.sync_seed_channels()
@@ -909,7 +968,8 @@ class PodcastService:
                     fetched = self.fetch_rss_episodes(rss_url, ch.get("channel_id"), limit=3)
                     if fetched:
                         rss_ep_count += self.db.save_podcast_episodes_batch(fetched)
-        return ch_count + ep_count + rss_ep_count
+        backfilled = self.backfill_unevaluated_episodes()
+        return ch_count + ep_count + rss_ep_count + backfilled
 
 
 if __name__ == "__main__":

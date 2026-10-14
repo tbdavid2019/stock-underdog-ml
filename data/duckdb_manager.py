@@ -1811,6 +1811,42 @@ class DuckDBManager:
             logger.error(f"❌ 更新 Podcast 單集決策失敗 ({episode_id}): {e}")
             return False
 
+    def update_podcast_episodes_decisions_batch(self, updates: List[Dict[str, Any]]) -> int:
+        """批量更新 Podcast 單集之 AI 決策重要性、評級與個股多空評估結果至 DuckDB"""
+        if not self.enabled or not updates:
+            return 0
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        updated_count = 0
+        try:
+            with self._get_connection() as con:
+                for r in updates:
+                    ep_id = r.get("id") or r.get("episode_id")
+                    if not ep_id:
+                        continue
+                    ts_val = r.get("ticker_sentiments", {})
+                    ts_str = json.dumps(ts_val, ensure_ascii=False) if isinstance(ts_val, dict) else str(ts_val or "{}")
+                    con.execute("""
+                        UPDATE podcast_episodes
+                        SET importance_score = ?,
+                            importance_level = ?,
+                            ticker_sentiments = ?,
+                            decision_slot = ?,
+                            updated_at = ?
+                        WHERE id = ?;
+                    """, [
+                        float(r.get("importance_score", 3.0)),
+                        str(r.get("importance_level", "watch")),
+                        ts_str,
+                        str(r.get("decision_slot", "local_rules")),
+                        now_str,
+                        str(ep_id)
+                    ])
+                    updated_count += 1
+            return updated_count
+        except Exception as e:
+            logger.error(f"❌ 批量更新單集決策失敗: {e}")
+            return updated_count
+
     def get_podcast_episodes(
         self,
         topic: Optional[str] = None,

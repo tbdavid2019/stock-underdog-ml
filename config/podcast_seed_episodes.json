@@ -30,7 +30,17 @@
     "tickers": [
       "PGHH"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "PGHH": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5af4e1e353c166b5",
@@ -66,7 +76,37 @@
       "UMC",
       "PHG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2330": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "000660": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "UMC": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PHG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "298dae6773e26210",
@@ -105,7 +145,47 @@
       "BXMT",
       "DPZ"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "KRSOX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "JPM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "WFC": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "C": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "BXMT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "DPZ": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "bc9dd93dca27d56d",
@@ -143,7 +223,47 @@
       "2317",
       "BE"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2330": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2317": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "BE": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e83232c98cab3630",
@@ -174,7 +294,11 @@
       "硬體與致動器"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "2b5768badc1cf5d8",
@@ -203,7 +327,11 @@
       "自建內部軟體"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "5bce72dfda579ee4",
@@ -235,7 +363,17 @@
     "tickers": [
       "NFLX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NFLX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "a07787bfb295657a",
@@ -264,7 +402,11 @@
       "開發者層級的 Token 研究"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "584701923c1477e2",
@@ -295,7 +437,11 @@
       "可稽核決策日誌"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "8b8c11e1abd40f65",
@@ -328,7 +474,17 @@
     "tickers": [
       "GOOGL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "d1ecb0fd2222a24e",
@@ -360,7 +516,22 @@
       "GOOGL",
       "ACN"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ACN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "9581443e19bb01a5",
@@ -393,7 +564,27 @@
       "SND",
       "066570"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SND": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "066570": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "ab428b077a3f5a74",
@@ -424,7 +615,11 @@
       "無 GPS 環境"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "264e074eb87ce398",
@@ -456,7 +651,22 @@
       "GS",
       "AMZN"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "edf2430347b33382",
@@ -487,7 +697,11 @@
       "商業建築投保不足"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "ea4fef6e51b246f9",
@@ -520,7 +734,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "957887fbacc12b69",
@@ -553,7 +777,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "6cd3d1491575cd09",
@@ -582,7 +816,11 @@
       "獨立驗證代理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "4c100a22575a6c55",
@@ -616,7 +854,32 @@
       "4165",
       "DIS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NFLX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "4165": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "DIS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "3524803466d9ee07",
@@ -650,7 +913,17 @@
     "tickers": [
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "bc8e008245012726",
@@ -679,7 +952,11 @@
       "在疫情期間創立經紀公司"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "c317cac032231ccc",
@@ -711,7 +988,22 @@
       "GOOGL",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "7712c91e8298f68e",
@@ -746,7 +1038,27 @@
       "9988",
       "PDD"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "3690": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "9988": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PDD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "affc60675a16b153",
@@ -777,7 +1089,11 @@
       "罕病研發線"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "bc9d5dc45fe3eaca",
@@ -808,7 +1124,11 @@
       "AI 於藥物開發的應用"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b2014b0c78290b9f",
@@ -839,7 +1159,17 @@
     "tickers": [
       "QLENX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "QLENX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e743b51ac27ac701",
@@ -877,7 +1207,32 @@
       "NVS",
       "ARGX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MRNA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ARGX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "3cee26778b0f91aa",
@@ -910,7 +1265,17 @@
     "tickers": [
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "944517f5aa892e26",
@@ -941,7 +1306,11 @@
       "飛彈防禦系統"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "c0545f7d85f087a3",
@@ -975,7 +1344,22 @@
       "META",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "f358a4c83aa1d30c",
@@ -1011,7 +1395,32 @@
       "AVGO",
       "ORCL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AVGO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ORCL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "a27578183bbf79e5",
@@ -1046,7 +1455,17 @@
     "tickers": [
       "LMT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "LMT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "986680d0c4b9bd16",
@@ -1077,7 +1496,11 @@
       "自動駕駛與人類控制權"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "f724bd7100a67219",
@@ -1110,7 +1533,27 @@
       "AMZN",
       "GTLB"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "FLYW": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GTLB": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "8b543b1bbf71477a",
@@ -1141,7 +1584,11 @@
       "私有 LLM 部署"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "372021a34d1fa625",
@@ -1175,7 +1622,22 @@
       "NVDA",
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "1275b60f6221c37c",
@@ -1205,7 +1667,11 @@
       "跨模型先驗交集"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "80a6b82c6f9850ef",
@@ -1238,7 +1704,17 @@
     "tickers": [
       "IQV"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "IQV": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "77f087048fe2318e",
@@ -1268,7 +1744,11 @@
       "驗證迴圈"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "75a859f9c7fed9d4",
@@ -1297,7 +1777,11 @@
       "獎勵駭客（reward hacking）"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "2c9381f94d9024fc",
@@ -1328,7 +1812,11 @@
       "推測解碼訊號"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "155460d1913625cd",
@@ -1357,7 +1845,11 @@
       "創辦人的能量與倦怠"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "05f84893cf58eb1c",
@@ -1392,7 +1884,27 @@
       "GOOGL",
       "OKTA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SNOW": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "OKTA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "7a88539d1364833d",
@@ -1426,7 +1938,22 @@
       "NVDA",
       "AAPL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9999999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "0a8839066e85c577",
@@ -1457,7 +1984,22 @@
       "CMG",
       "HUBS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CMG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "HUBS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e01662345819217d",
@@ -1487,7 +2029,11 @@
       "本地部署與開源模型"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "92c190584b57c9e8",
@@ -1520,7 +2066,17 @@
     "tickers": [
       "2330"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "2330": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "10060aa75bd93af4",
@@ -1549,7 +2105,11 @@
       "幾何統一理論"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "41d89d9af27235f0",
@@ -1580,7 +2140,11 @@
       "Wi-Fi 與場地後勤"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "e8887fe141d3b81d",
@@ -1614,7 +2178,22 @@
       "AMZN",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "43ed895d83ecddd4",
@@ -1646,7 +2225,11 @@
       "長時間運行工作階段"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "bd69f264b46e27d8",
@@ -1677,7 +2260,17 @@
     "tickers": [
       "TEAM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "TEAM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "eb9e8fcb9b307883",
@@ -1711,7 +2304,22 @@
       "IBM",
       "DASH"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "IBM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "DASH": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "53cd51b56daa7696",
@@ -1742,7 +2350,11 @@
       "在 Console 中打造代理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "f2c9de19bfc548b2",
@@ -1774,7 +2386,22 @@
       "NET",
       "CRM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CRM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "fe2c718fde98e783",
@@ -1806,7 +2433,22 @@
       "CBRS",
       "AMD"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CBRS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "ecb8396cb3ff6d7e",
@@ -1836,7 +2478,11 @@
       "遠端程式開發代理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "340e7dd79d305586",
@@ -1867,7 +2513,11 @@
       "開發者生產力"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b88b545957b90998",
@@ -1901,7 +2551,22 @@
       "DDOG",
       "8S0"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "DDOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "8S0": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "d38ba5564002fa59",
@@ -1932,7 +2597,11 @@
       "大宗商品交易代理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "83189e3b8315c01d",
@@ -1966,7 +2635,22 @@
       "GSK",
       "GILD"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GSK": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GILD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "80545e9c7805f17a",
@@ -1999,7 +2683,17 @@
     "tickers": [
       "MSFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5b7505265946585d",
@@ -2030,7 +2724,11 @@
       "推測解碼（speculative decoding）"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "3c617435c0f7a849",
@@ -2061,7 +2759,11 @@
       "代理程式編碼協定"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "11e1955a39ffca53",
@@ -2092,7 +2794,17 @@
     "tickers": [
       "MSFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "fa6f8a5ef4d303de",
@@ -2126,7 +2838,22 @@
       "NVDA",
       "AMD"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "8621fca098a8e274",
@@ -2159,7 +2886,17 @@
     "tickers": [
       "SHOP"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SHOP": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "93a19d3792ebb2fc",
@@ -2191,7 +2928,17 @@
     "tickers": [
       "PYPL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "PYPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5fff3a502aa7f449",
@@ -2222,7 +2969,11 @@
       "代理橋接整合"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "c67d86f0535df5fc",
@@ -2253,7 +3004,11 @@
       "AI 物料清單"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "77ba97d81b13e342",
@@ -2285,7 +3040,11 @@
       "推論成本比較"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "47a0c52d1bcf47bf",
@@ -2318,7 +3077,17 @@
     "tickers": [
       "GTLB"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GTLB": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "868e75502932f8aa",
@@ -2352,7 +3121,22 @@
       "NVDA",
       "TATAMOTORS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "TATAMOTORS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "6717156a7b0b5d5d",
@@ -2382,7 +3166,11 @@
       "透過 CLI 進行生產部署"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "e51bf3451dd2ac90",
@@ -2412,7 +3200,11 @@
       "離線資料集與實驗"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "2889a06733870359",
@@ -2444,7 +3236,22 @@
       "DDOG",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "DDOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "055f479ada9eb8a4",
@@ -2475,7 +3282,11 @@
       "內容發布節奏"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "3bce7f91d3f06bab",
@@ -2506,7 +3317,17 @@
     "tickers": [
       "CRWV"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CRWV": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "c1bc6489b687180d",
@@ -2537,7 +3358,11 @@
       "代理沙箱化"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "d555d6a3879ecbf8",
@@ -2569,7 +3394,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "1ae51940d2edb9f6",
@@ -2599,7 +3434,11 @@
       "自動化 PR 程式碼審查"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "5b7e869fccc920db",
@@ -2630,7 +3469,17 @@
     "tickers": [
       "DDOG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "DDOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "3b56bb28bd8e5502",
@@ -2660,7 +3509,11 @@
       "多模態即時 API"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "d25e273779a87ced",
@@ -2691,7 +3544,11 @@
       "多輪對話"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "47d6262dd9476f2a",
@@ -2724,7 +3581,17 @@
     "tickers": [
       "TEAM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "TEAM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "adbb40bcd5348e18",
@@ -2755,7 +3622,17 @@
     "tickers": [
       "AKAM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AKAM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "60787ce88c7dffbe",
@@ -2785,7 +3662,11 @@
       "氛圍編碼風險"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "84d9ebd9c4df2314",
@@ -2816,7 +3697,11 @@
       "HNSW 與量化"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "5916eb6943e6d54a",
@@ -2855,7 +3740,37 @@
       "SPCX",
       "LITE"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MU": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "C": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SPCX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "LITE": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "a19df6a5ceef71f7",
@@ -2884,7 +3799,11 @@
       "模型基準測試的批判"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b8b1468c881c181d",
@@ -2914,7 +3833,11 @@
       "以 TreeSitter 進行確定性解析"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b29d81498e74dcfe",
@@ -2945,7 +3868,11 @@
       "模型路由"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "66e75c6f3f6d948e",
@@ -2978,7 +3905,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "012cac6591a78042",
@@ -3016,7 +3953,42 @@
       "SHOP",
       "ETSY"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "WMT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AKAM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SHOP": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ETSY": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "c8d692ef2735e4b4",
@@ -3047,7 +4019,11 @@
       "相似度搜尋工具"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "9f9b7fadaf0510b0",
@@ -3077,7 +4053,17 @@
     "tickers": [
       "8S0"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "8S0": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e78daf2923a81ad1",
@@ -3113,7 +4099,42 @@
       "KER",
       "DEO"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MC": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "RMS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "RIU1": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "LULU": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "KER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "DEO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5655dbb4c4c82eaf",
@@ -3141,7 +4162,11 @@
       "暴露後預防性投藥"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "0d6f6f22655ba31d",
@@ -3172,7 +4197,11 @@
       "語音代理評測"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "bd308e63c0f20113",
@@ -3201,7 +4230,11 @@
       "員工的所有權"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "ffa3ac08790071fb",
@@ -3234,7 +4267,17 @@
     "tickers": [
       "OKTA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "OKTA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "95158f5d4624c008",
@@ -3265,7 +4308,17 @@
     "tickers": [
       "0100"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "0100": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e4c1f7a6c70cc076",
@@ -3294,7 +4347,11 @@
       "MCP 工具管理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "32804df758009ae3",
@@ -3327,7 +4384,11 @@
       "以上下文降低成本"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "06f7f32dee0f6318",
@@ -3356,7 +4417,11 @@
       "Vercel AI SDK 代理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "af0b09e8f894592f",
@@ -3391,7 +4456,17 @@
     "tickers": [
       "MSFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "38abdbb1c90a3916",
@@ -3426,7 +4501,27 @@
       "CRM",
       "AMZN"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CRM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "767d9927cf0ab4ca",
@@ -3464,7 +4559,42 @@
       "9888",
       "9868"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "TSLA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PONY": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "STLA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "9888": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "9868": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "7a937f3b283d22ec",
@@ -3495,7 +4625,11 @@
       "銷售週期壓縮"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "9d43a05225f56cad",
@@ -3530,7 +4664,27 @@
       "MS",
       "GOOG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MRNA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "d85a28cac27779d3",
@@ -3564,7 +4718,22 @@
       "NET",
       "MSFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "9690f5c9f47c8483",
@@ -3594,7 +4763,11 @@
       "潛在思維鏈"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "8a7d5c0c33e331ec",
@@ -3622,7 +4795,11 @@
       "流感季與疫苗"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "c0a91c03775d0073",
@@ -3652,7 +4829,11 @@
       "軟體智慧財產權商品化"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "27d5849ba0665506",
@@ -3682,7 +4863,11 @@
       "網路介面瓶頸"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "9f261408b9f0cd37",
@@ -3715,7 +4900,17 @@
     "tickers": [
       "GOOG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e1fae8bdf1e76e78",
@@ -3746,7 +4941,11 @@
       "獎勵訊號設計"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "c4111acd283488b2",
@@ -3779,7 +4978,11 @@
       "衍生情境"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b0eb0cfb4b70324e",
@@ -3812,7 +5015,11 @@
       "對科技的實體掌控"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "0a7acc3f7fc31d03",
@@ -3848,7 +5055,32 @@
       "T",
       "VZ"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SPCX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "TMUS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "T": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "VZ": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "b38b577ad6e80b46",
@@ -3878,7 +5110,11 @@
       "深度研究工具"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "0a2ebc8f381aac9d",
@@ -3917,7 +5153,57 @@
       "2330",
       "NBIS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CRWV": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ORCL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AVGO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2330": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NBIS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5082e05cdfeba70d",
@@ -3948,7 +5234,17 @@
     "tickers": [
       "TWR"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "TWR": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "6606ddf3c1ba722b",
@@ -3979,7 +5275,11 @@
       "回饋與評估迴圈"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "6d22db4eebc77e06",
@@ -4010,7 +5310,17 @@
     "tickers": [
       "SPOT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SPOT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "2223d3615e58da09",
@@ -4039,7 +5349,11 @@
       "AI 地緣政治與基礎建設"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "507bb3973b89c37a",
@@ -4070,7 +5384,17 @@
     "tickers": [
       "HUBS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "HUBS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "2864cf3ee80eac1f",
@@ -4101,7 +5425,11 @@
       "FDA 員工士氣"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "517184f4b3725594",
@@ -4130,7 +5458,11 @@
       "學校退學與 NEET"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "fcee0007e6338406",
@@ -4164,7 +5496,22 @@
       "NVDA",
       "SPCX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SPCX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "00332c08be3d8c96",
@@ -4197,7 +5544,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "c5d616e20eddda99",
@@ -4227,7 +5584,11 @@
       "Token 定價與加成"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "834abe5f2d8c5b50",
@@ -4258,7 +5619,11 @@
       "客戶端整合"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "7bab1aacae4906ba",
@@ -4289,7 +5654,11 @@
       "為 AI 代理打造的虛擬化"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "cfa8edb53ecbfcdd",
@@ -4322,7 +5691,17 @@
     "tickers": [
       "LYFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "LYFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "6e17bccdea629159",
@@ -4352,7 +5731,11 @@
       "暴躁工程師的政策審查"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "87e198c712532c54",
@@ -4388,7 +5771,42 @@
       "MSFT",
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NFLX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "06ef81ba7c111581",
@@ -4422,7 +5840,22 @@
       "MKKGY",
       "PFE"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MKKGY": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PFE": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "f532f0fa19e384f0",
@@ -4460,7 +5893,42 @@
       "SKYD",
       "CMCSA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "PSKY": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "WBD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NFLX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ORCL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SKYD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CMCSA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "552fb7e9c8dba55b",
@@ -4489,7 +5957,11 @@
       "Hester Peirce 離職"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "0a6ea5467111f51a",
@@ -4522,7 +5994,27 @@
       "NVO",
       "MRNA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MRNA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "f6f440d7b101f382",
@@ -4553,7 +6045,11 @@
       "電腦操作能力"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "8c13da2678676c98",
@@ -4586,7 +6082,11 @@
       "開發者生產力"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "8f25a552139d4f6e",
@@ -4620,7 +6120,22 @@
       "HTZ",
       "AMZN"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "HTZ": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "12ed591210434d4f",
@@ -4654,7 +6169,22 @@
       "SHOP",
       "AMZN"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SHOP": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5f64ff156349dd64",
@@ -4685,7 +6215,11 @@
       "技能目錄"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "39018580dba9ad50",
@@ -4716,7 +6250,11 @@
       "工作流程編排"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "06e68bf4d856bf65",
@@ -4746,7 +6284,11 @@
       "情境圖譜的新鮮度"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "3bc1cb7cb5012b6c",
@@ -4776,7 +6318,17 @@
     "tickers": [
       "MS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "bdb047ac33aef8bc",
@@ -4808,7 +6360,11 @@
       "技能治理"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "146df4a43e7f4687",
@@ -4840,7 +6396,22 @@
       "AMZN",
       "AAPL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "118b2729130c1049",
@@ -4880,7 +6451,52 @@
       "MU",
       "KLAC"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "ASML": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2330": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMAT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AFX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "005930": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MU": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "KLAC": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "4d528ac1c1e8a33f",
@@ -4911,7 +6527,11 @@
       "研究人力衝擊"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "69bca4378df1c29f",
@@ -4941,7 +6561,11 @@
       "中國影視行業困境"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "e1009e214ed004d9",
@@ -4974,7 +6598,17 @@
     "tickers": [
       "DT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "DT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "1d7861502d126c11",
@@ -5005,7 +6639,11 @@
       "學術研究資料隱私"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "f55cfb07215525db",
@@ -5036,7 +6674,11 @@
       "自我精進的代理迴路"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "894ae57c71df7d05",
@@ -5065,7 +6707,11 @@
       "COVID 疫苗爭論"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "89e9c22881f58207",
@@ -5102,7 +6748,27 @@
       "OKTA",
       "SNOW"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "OKTA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SNOW": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5bb835c4a562d90e",
@@ -5136,7 +6802,22 @@
       "CSCO",
       "2603"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CSCO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "2603": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "4c7cebbc65a417f0",
@@ -5170,7 +6851,22 @@
       "AMZN",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "ead2bb5915ca09c3",
@@ -5206,7 +6902,32 @@
       "META",
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "MDB": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CRM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "f0987d06c3277d1e",
@@ -5234,7 +6955,11 @@
       "史前暴力"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "492c461da0e00841",
@@ -5264,7 +6989,11 @@
       "金融服務代理的語氣"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "633384e6722a91a8",
@@ -5299,7 +7028,27 @@
       "TWR",
       "DUOL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "COIN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "TWR": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "DUOL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "cdc2885acb3e1fc6",
@@ -5332,7 +7081,17 @@
     "tickers": [
       "UBER"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "38721aba1f00dd37",
@@ -5364,7 +7123,22 @@
       "AVD",
       "GOOG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "AVD": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "dc65147811d9966f",
@@ -5400,7 +7174,32 @@
       "CMG",
       "YUM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SBUX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PGHH": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "CMG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "YUM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "8866efc94cf7a11c",
@@ -5435,7 +7234,37 @@
       "8058",
       "005930"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "BSP": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "HUBS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "BRK-B": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "8058": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "005930": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "4a83ee290005a737",
@@ -5468,7 +7297,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "9fde51c2b95812cd",
@@ -5498,7 +7337,17 @@
     "tickers": [
       "NVDA"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NVDA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "ba9315831866a1c5",
@@ -5529,7 +7378,11 @@
       "機器人實驗室自動化"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "e920e9e3a4c16739",
@@ -5560,7 +7413,11 @@
       "多代理上下文隔離"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "8e160a19d31c916f",
@@ -5597,7 +7454,27 @@
       "AAPL",
       "GOOGL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "QCOM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "661973071f237c25",
@@ -5632,7 +7509,27 @@
       "TSLA",
       "PLTR"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "SPCX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "TSLA": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "PLTR": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "c83cc163e9f6d06f",
@@ -5663,7 +7560,11 @@
       "降低誤報"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "9fe82f21e002b9aa",
@@ -5700,7 +7601,37 @@
       "GOOGL",
       "SNAP"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AMZN": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SNAP": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "031ad5b20d9217bd",
@@ -5734,7 +7665,17 @@
     "tickers": [
       "NET"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "173039423dab79be",
@@ -5767,7 +7708,22 @@
       "META",
       "0100"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "0100": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "ef168bca7c85d5ab",
@@ -5802,7 +7758,17 @@
     "tickers": [
       "CBRS"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CBRS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "eb4c80b0e5b3a1f7",
@@ -5831,7 +7797,11 @@
       "諾貝爾獎光遺傳學"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "557667303e6aa8ad",
@@ -5863,7 +7833,22 @@
       "UBER",
       "MSFT"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "8ce08d35198803b1",
@@ -5898,7 +7883,37 @@
       "066570",
       "005930"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "6758": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "AAPL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "MSFT": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "066570": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "005930": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "124d024abf878d1e",
@@ -5923,7 +7938,17 @@
     "tickers": [
       "GOOGL"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4499999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOGL": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "9fee9c8718b51ead",
@@ -5955,7 +7980,17 @@
     "tickers": [
       "GOOG"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GOOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "cc6dcadd31491470",
@@ -5984,7 +8019,11 @@
       "代理的應用場景"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "6e998ccc0672ccb0",
@@ -6015,7 +8054,17 @@
     "tickers": [
       "CRM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "CRM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "10f8e0ff0c95d212",
@@ -6043,7 +8092,11 @@
       "古代近東"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "638947a97f7c0c61",
@@ -6077,7 +8130,22 @@
       "HUBS",
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.8499999999999996,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "HUBS": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "83c098ca65ecf46d",
@@ -6108,7 +8176,11 @@
       "AI Studio 小程式"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.55,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "b4bfc2e735711e40",
@@ -6142,7 +8214,27 @@
       "NFLX",
       "NET"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NFLX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NET": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "95936ff96486f8bd",
@@ -6177,7 +8269,27 @@
       "NVO",
       "SITE"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.9,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "LLY": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "NVO": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "SITE": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "e89ce4121542c733",
@@ -6211,7 +8323,32 @@
       "GOOG",
       "META"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 4.05,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "GTLB": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "UBER": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "GOOG": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "META": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "5a556dff5ae2413d",
@@ -6242,7 +8379,17 @@
     "tickers": [
       "VRTX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "VRTX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "328df17acc9a0b22",
@@ -6273,7 +8420,11 @@
       "商業擴張計畫"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "5d880f0eb846de47",
@@ -6303,7 +8454,11 @@
       "模型商品化下的護城河"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "215af7acbad6a805",
@@ -6332,7 +8487,11 @@
       "礦工生活與艱辛"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   },
   {
     "id": "2e07792c7ed117e6",
@@ -6365,7 +8524,17 @@
     "tickers": [
       "ANGX"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "ANGX": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "700e03cae0fa4a20",
@@ -6399,7 +8568,22 @@
       "IPB",
       "ADM"
     ],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.6999999999999997,
+    "importance_level": "important",
+    "ticker_sentiments": {
+      "IPB": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      },
+      "ADM": {
+        "stance": "neutral",
+        "confidence": 0.55,
+        "label": "↔ 中立"
+      }
+    },
+    "decision_slot": "local_rules"
   },
   {
     "id": "c9057f23dc89946e",
@@ -6430,6 +8614,10 @@
       "內在價值評估"
     ],
     "tickers": [],
-    "status": "extracted"
+    "status": "extracted",
+    "importance_score": 3.4,
+    "importance_level": "important",
+    "ticker_sentiments": {},
+    "decision_slot": "local_rules"
   }
 ]
