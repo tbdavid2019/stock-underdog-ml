@@ -106,6 +106,7 @@ export const app = createApp({
             podcastDrawerLoading: false,
             podcastActiveAudioId: null,
             podcastActiveVideoId: null,
+            podcastSubView: 'episodes', // 'episodes' | 'channels'
 
             // Toast
             toastMessage: '',
@@ -545,6 +546,25 @@ export const app = createApp({
             } catch (e) {
                 console.warn("Failed to load podcast topics:", e);
             }
+        },
+        togglePodcastSubView(view) {
+            this.podcastSubView = view;
+        },
+        formatFollowers(count) {
+            if (!count) return '0';
+            if (count >= 1000000) {
+                return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            }
+            if (count >= 1000) {
+                return (count / 1000).toFixed(0) + 'K';
+            }
+            return count.toString();
+        },
+        selectChannelAndFilter(channelId) {
+            this.podcastSelectedChannel = channelId;
+            this.podcastSubView = 'episodes';
+            this.updateUrl();
+            this.loadPodcastEpisodes();
         },
         setPodcastTopic(topic) {
             if (this.podcastSelectedTopic === topic) {

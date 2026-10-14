@@ -1660,7 +1660,7 @@ class DuckDBManager:
             logger.error(f"❌ 寫入 Podcast 頻道失敗: {e}")
             return 0
 
-    def get_podcast_channels(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_podcast_channels(self, limit: int = 100) -> List[Dict[str, Any]]:
         """取得收錄的 Podcast 頻道列表"""
         if not self.enabled:
             return []
@@ -1669,7 +1669,10 @@ class DuckDBManager:
                 df = con.execute("""
                     SELECT c.channel_id, c.title, c.author, c.description, c.image_url,
                            c.rss_url, c.youtube_channel_url, c.follower_count,
-                           COALESCE((SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id), c.episode_count) as episode_count,
+                           CASE WHEN (SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id) > 0 
+                                THEN (SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id)
+                                ELSE c.episode_count 
+                           END as episode_count,
                            c.category, c.language, c.is_subscribed, c.created_at, c.updated_at
                     FROM podcast_channels c 
                     ORDER BY c.follower_count DESC 

@@ -38,89 +38,175 @@
         </div>
     </section>
 
-    <!-- 2. Horizontal Entity Filter Slider (Killer Feature from BigGo Finance) -->
-    <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-4 sm:p-5 rounded-2xl border space-y-3">
-        <div class="flex items-center justify-between text-sm sm:text-base">
-            <div class="flex items-center space-x-2 font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                <span class="material-symbols-outlined text-[18px] text-amber-500 leading-none">local_fire_department</span>
-                <span>熱門實體與關鍵標籤快篩:</span>
+    <!-- Sub-View Switcher: Episodes vs Channel Directory -->
+    <div class="flex items-center space-x-2 border-b pb-3" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+        <button @click="togglePodcastSubView('episodes')"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center space-x-2"
+                :class="podcastSubView === 'episodes' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
+            <span class="material-symbols-outlined text-[18px] leading-none">article</span>
+            <span>深度情報單集 ({{ podcastEpisodes.length }})</span>
+        </button>
+        <button @click="togglePodcastSubView('channels')"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center space-x-2"
+                :class="podcastSubView === 'channels' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
+            <span class="material-symbols-outlined text-[18px] leading-none">hub</span>
+            <span>全部收錄頻道 ({{ podcastChannels.length }})</span>
+        </button>
+    </div>
+
+    <!-- VIEW A: ALL CHANNELS DIRECTORY GRID (BigGo Recommend Reference) -->
+    <div v-if="podcastSubView === 'channels'" class="space-y-4 animate-fadeIn">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl border"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+            <div>
+                <h2 class="text-lg font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span class="material-symbols-outlined text-[20px] text-amber-500">podcasts</span>
+                    <span>全部頻道庫</span>
+                </h2>
+                <p class="text-xs sm:text-sm mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
+                    追蹤頻道建立專屬內容，涵蓋 BigGo 財經與全球頂級總體經濟、科技 AI、生技與量化交易頻道
+                </p>
             </div>
-            <span class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                點擊一秒聚焦相關討論與關聯概念股
-            </span>
+            <div class="flex items-center space-x-2">
+                <span class="px-3.5 py-1.5 rounded-full text-xs font-bold font-mono border"
+                      :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'">
+                    共收錄 {{ podcastChannels.length }} 個頻道
+                </span>
+            </div>
         </div>
 
-        <!-- Entity Pill Rail with Smooth Horizontal Scroll -->
-        <div class="flex items-center space-x-2.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
-            <!-- "All" Pill -->
-            <button @click="setPodcastTopic('')"
-                    class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
-                    :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
-                <span class="material-symbols-outlined text-[16px] leading-none">auto_awesome</span>
-                <span>全部話題</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
-                      :class="!podcastSelectedTopic ? 'bg-black/20 text-white' : (isDark ? 'bg-[#262626] text-slate-400' : 'bg-slate-200 text-slate-600')">
-                    {{ podcastEpisodes.length }}
-                </span>
-            </button>
+        <!-- 3-Column Responsive Grid of Channels -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            <div v-for="ch in podcastChannels" :key="ch.channel_id"
+                 class="p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 hover:border-amber-500/50 shadow-sm"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                
+                <div class="flex items-center space-x-3.5 min-w-0">
+                    <div class="w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center font-black text-base border shadow-inner"
+                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'">
+                        <span class="material-symbols-outlined text-[26px]">podcasts</span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-sm sm:text-base truncate" :class="isDark ? 'text-white' : 'text-slate-900'" :title="ch.title">
+                            {{ ch.title }}
+                        </div>
+                        <div class="text-xs font-medium flex items-center space-x-2 mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            <span>共 {{ ch.episode_count || 12 }} 集</span>
+                            <span>·</span>
+                            <span class="flex items-center space-x-0.5 text-rose-500 font-bold">
+                                <span class="material-symbols-outlined text-[13px] leading-none">play_circle</span>
+                                <span>{{ formatFollowers(ch.follower_count) }} 追蹤者</span>
+                            </span>
+                        </div>
+                        <div class="text-[11px] truncate max-w-[210px] mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            {{ ch.author || ch.description }}
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Dynamic Aggregated Topic Pills -->
-            <button v-for="t in podcastTopics" :key="t.topic"
-                    @click="setPodcastTopic(t.topic)"
-                    class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
-                    :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
-                <span>{{ t.topic }}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
-                      :class="podcastSelectedTopic === t.topic ? 'bg-black/25 text-white' : (isDark ? 'bg-[#262626] text-amber-400' : 'bg-amber-100 text-amber-800')">
-                    {{ t.count }}
-                </span>
-            </button>
+                <div class="shrink-0 flex flex-col items-end gap-1.5">
+                    <button @click="selectChannelAndFilter(ch.channel_id)"
+                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
+                            :class="isDark ? 'bg-[#16181D] hover:bg-amber-500 hover:text-black text-amber-400 border border-[#262626]' : 'bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-800 border border-amber-200'"
+                            title="查看此頻道所有精煉情報">
+                        <span>查看單集</span>
+                        <span class="material-symbols-outlined text-[13px] leading-none">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 3. Channel & Language Filter Toolbar -->
-    <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
+    <!-- VIEW B: EPISODE INTELLIGENCE FEED -->
+    <div v-show="podcastSubView === 'episodes'" class="space-y-6">
 
-        <!-- Channel Filter Selector -->
-        <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
-            <span class="font-bold shrink-0 text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">頻道篩選:</span>
-            <select v-model="podcastSelectedChannel" @change="setPodcastChannel(podcastSelectedChannel)"
-                    class="px-3 py-2 rounded-xl border font-medium text-sm outline-none transition-colors"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900'">
-                <option value="ALL">全部收錄頻道 ({{ podcastChannels.length }})</option>
-                <option v-for="ch in podcastChannels" :key="ch.channel_id" :value="ch.channel_id">
-                    {{ ch.title }}
-                </option>
-            </select>
+        <!-- 2. Horizontal Entity Filter Slider (Killer Feature from BigGo Finance) -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border space-y-3">
+            <div class="flex items-center justify-between text-sm sm:text-base">
+                <div class="flex items-center space-x-2 font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                    <span class="material-symbols-outlined text-[18px] text-amber-500 leading-none">local_fire_department</span>
+                    <span>熱門實體與關鍵標籤快篩:</span>
+                </div>
+                <span class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    點擊一秒聚焦相關討論與關聯概念股
+                </span>
+            </div>
+
+            <!-- Entity Pill Rail with Smooth Horizontal Scroll -->
+            <div class="flex items-center space-x-2.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
+                <!-- "All" Pill -->
+                <button @click="setPodcastTopic('')"
+                        class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
+                        :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
+                    <span class="material-symbols-outlined text-[16px] leading-none">auto_awesome</span>
+                    <span>全部話題</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-bold"
+                          :class="!podcastSelectedTopic ? 'bg-black/20 text-white' : (isDark ? 'bg-[#262626] text-slate-400' : 'bg-slate-200 text-slate-600')">
+                        {{ podcastEpisodes.length }}
+                    </span>
+                </button>
+
+                <!-- Dynamic Aggregated Topic Pills -->
+                <button v-for="t in podcastTopics" :key="t.topic"
+                        @click="setPodcastTopic(t.topic)"
+                        class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
+                        :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
+                    <span>{{ t.topic }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
+                          :class="podcastSelectedTopic === t.topic ? 'bg-black/25 text-white' : (isDark ? 'bg-[#262626] text-amber-400' : 'bg-amber-100 text-amber-800')">
+                        {{ t.count }}
+                    </span>
+                </button>
+            </div>
         </div>
 
-        <!-- Language Switcher & Live Keyword Search -->
-        <div class="flex items-center space-x-2.5 shrink-0">
-            <!-- Language Pills -->
-            <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
-                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                <button v-for="l in [{ id: 'ALL', label: '全部' }, { id: 'en', label: '英文' }, { id: 'zh', label: '華語' }]" :key="l.id"
-                        @click="setPodcastLang(l.id)"
-                        class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
-                        :class="podcastSelectedLang === l.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                    {{ l.label }}
+        <!-- 3. Channel & Language Filter Toolbar -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
+
+            <!-- Channel Filter Selector -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+                <span class="font-bold shrink-0 text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">頻道篩選:</span>
+                <select v-model="podcastSelectedChannel" @change="setPodcastChannel(podcastSelectedChannel)"
+                        class="px-3 py-2 rounded-xl border font-medium text-sm outline-none transition-colors max-w-[280px] sm:max-w-xs"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900'">
+                    <option value="ALL">全部收錄頻道 ({{ podcastChannels.length }})</option>
+                    <option v-for="ch in podcastChannels" :key="ch.channel_id" :value="ch.channel_id">
+                        {{ ch.title }} ({{ formatFollowers(ch.follower_count) }})
+                    </option>
+                </select>
+                <button v-if="podcastSelectedChannel !== 'ALL'" @click="setPodcastChannel('ALL')"
+                        class="text-xs text-amber-500 underline hover:text-amber-400 shrink-0">
+                    清除篩選
                 </button>
             </div>
 
-            <!-- Instant Search Input -->
-            <div class="relative flex items-center">
-                <input v-model="podcastSearchQuery" type="text" placeholder="快速搜尋標題或嘉賓..."
-                       class="px-3 py-2 rounded-xl border text-sm outline-none focus:border-amber-500 transition-colors w-44 sm:w-60"
-                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-white placeholder-slate-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900 placeholder-slate-400'">
-                <span v-if="podcastSearchQuery" @click="podcastSearchQuery = ''"
-                      class="absolute right-2.5 text-slate-400 cursor-pointer hover:text-white flex items-center">
-                    <span class="material-symbols-outlined text-[16px]">close</span>
-                </span>
+            <!-- Language Switcher & Live Keyword Search -->
+            <div class="flex items-center space-x-2.5 shrink-0">
+                <!-- Language Pills -->
+                <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
+                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                    <button v-for="l in [{ id: 'ALL', label: '全部' }, { id: 'en', label: '英文' }, { id: 'zh', label: '華語' }]" :key="l.id"
+                            @click="setPodcastLang(l.id)"
+                            class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
+                            :class="podcastSelectedLang === l.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                        {{ l.label }}
+                    </button>
+                </div>
+
+                <!-- Instant Search Input -->
+                <div class="relative flex items-center">
+                    <input v-model="podcastSearchQuery" type="text" placeholder="快速搜尋標題或嘉賓..."
+                           class="px-3 py-2 rounded-xl border text-sm outline-none focus:border-amber-500 transition-colors w-44 sm:w-60"
+                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-white placeholder-slate-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900 placeholder-slate-400'">
+                    <span v-if="podcastSearchQuery" @click="podcastSearchQuery = ''"
+                          class="absolute right-2.5 text-slate-400 cursor-pointer hover:text-white flex items-center">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                    </span>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- 4. Episode Intelligence Cards Grid (High-Density Financial Terminal Style) -->
     <div v-if="podcastLoading" class="py-16 text-center text-amber-400 animate-pulse text-sm">
@@ -442,4 +528,7 @@
         <p class="text-sm font-medium text-slate-400">可嘗試切換話題標籤，或點擊上方「即時同步」從種子頻道獲取最新情報</p>
     </div>
 
+    </div> <!-- End of podcastSubView === 'episodes' -->
+
 </div>
+

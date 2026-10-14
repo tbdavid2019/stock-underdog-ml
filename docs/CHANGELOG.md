@@ -8,6 +8,25 @@
 
 ## 2026-10-14
 
+### Added & Expanded (Full BigGo Finance Podcast Recommendation Directory & 36 Top Channels)
+- **🎙️ 全面擴充收錄 BigGo 財經推薦頻道庫（由 12 個大幅擴增至 36 個全球頂級頻道）**：
+  - 完整收錄 `https://finance.biggo.com.tw/podcast/recommend` 與使用者提供之推薦頻道目錄：
+    - **科普與大眾對話**：In a Nutshell (Kurzgesagt, 25.7M 追蹤者)、The Joe Rogan Experience (21.1M 追蹤者)、The Diary of a CEO (Steven Bartlett, 20.4M 追蹤者)、ColdFusion (5.3M 追蹤者)。
+    - **前沿 AI 與科技趨勢**：Lex Fridman Podcast (5.1M)、The Verge (3.5M)、Y Combinator Startup Podcast (2.4M)、Dwarkesh Podcast (1.4M)、AI Engineer (673K)、Lenny's Podcast (644K)、Theo - t3.gg (571K)、The Pragmatic Engineer (541K)、Peter Diamandis (538K)、Training Data (410K)、42章經 (310K)。
+    - **宏觀金融、商業巨擘與投資大師**：The Economist (4.2M)、The Plain Bagel (1.2M)、All-In (1.2M)、My First Million (963K)、Starter Story (886K)、The Prof G Pod (Scott Galloway, 823K)、Bloomberg Businessweek (591K)、Odd Lots (591K)、Trumponomics (591K)、Capital Group (527K)、The Knowledge Project (456K)、Acquired (1.25M)、Invest Like the Best (890K)。
+    - **華語與生技/量化領域**：小Lin說 (2.8M)、CLS同學 (1.1M)、股癌 Gooaye (1.68M)、硅谷101 (472K)、瘋投圈 (395K)、Citeline Podcasts (260K)、Top Traders Unplugged (340K)、BioCentury This Week (180K)。
+  - **資料持久化與自動增量同步**：更新 `config/podcast_seed_channels.json`、`data/podcast_service.py` 與 `api/routes/podcast.py`，當資料庫收錄頻道數少於種子頻道清單時自動執行 DuckDB `ON CONFLICT` 增量寫入，確保無需手動重置即時更新全量 36 頻道。
+- **📺 新增「全部頻道庫 (Channels Directory)」3 欄響應式網格視圖**：
+  - 於 `api/templates/partials/tab_podcast.html` 導入與 BigGo 推薦目錄一致的雙重視圖切換：
+    - `[ 深度情報單集 (Episodes) ]`：瀏覽由 AI 繁中精華 TL;DR 萃取之單集情報卡、即時股票漲跌幅 Badge、內嵌 YouTube/MP3 播放器。
+    - `[ 全部收錄頻道 (Channels Directory) ]`：以 3 欄高密度卡片完整呈現 36 個頻道之頭像圖示、總單集數、追蹤者數量（如 25.7M、5.1M、1.2M）、領域標籤與作者介紹，並支援一鍵點擊「查看單集」直達該頻道專屬情報篩選。
+- **📈 擴充真實精煉單集情報庫與股票行情映射白名單**：
+  - 對齊 BigGo 最新情報流，新增 Training Data（DeepMind David Silver 與 Lasse Espeholt 對談）、瘋投圈（149 抖省省突襲美團到店業務）、Citeline（Scrip 2026 最新生技要聞與名人代言）、Top Traders Unplugged（第421集 CTA 走向主流）、BioCentury（Ep. 392 生技市場與 Moderna 軋空）、42章經（Personal Agent 創業者思考）、Bloomberg Businessweek（川普與普丁柴油交易、單座資料中心天價成本）、Acquired（台積電與 NVIDIA 史詩歷史）、股癌（EP480 CoWoS 與科技股多空解讀）。
+  - 新增美團（3690.HK）、阿里巴巴（9988.HK / BABA）、拼多多（PDD）、莫德納（MRNA）、阿斯特捷利康（AZN）、諾華（NVS）、argenx（ARGX）、埃克森美孚（XOM）、雪佛龍（CVX）、Vistra 核電（VST）、星座能源（CEG）與 CTA（QLENX）之行情降級與實體白名單映射。
+- **🐛 修復 DuckDB 頻道單集數統計錯誤**：
+  - 修正 `data/duckdb_manager.py` 中 `COALESCE` 在子查詢返回 0 時無法回退至種子頻道 `episode_count` 的 SQL 邏輯缺陷，改採 `CASE WHEN ... > 0` 條件判斷，確保全部頻道均正確顯示真實集數。
+
+
 ### Improved (Full Material Symbols Outlined Icon System & Minimalist Header Controls)
 - **✨ 全面導入 Google Material Symbols Outlined 圖示系統（徹底汰除 Emoji）**：
   - 依據 Impeccable 工藝標準規範，杜絕以 Unicode Emoji 作為 UI 圖示的不一致混雜質感；全站引入 Google Material Symbols Outlined 向量字體圖示系統（`font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24`）。

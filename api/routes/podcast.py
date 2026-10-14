@@ -71,13 +71,14 @@ def get_episodes(
 
 @router.get("/channels", response_model=PodcastChannelsResponse, summary="取得收錄之頂級財經與科技 Podcast 頻道清單")
 def get_channels(
-    limit: int = Query(50, ge=1, le=100, description="最多返回頻道數")
+    limit: int = Query(100, ge=1, le=200, description="最多返回頻道數")
 ):
     """
     取得已收錄的國際頂級科技、宏觀金融與商業頻道庫元數據。
     """
     channels = duckdb_manager.get_podcast_channels(limit=limit)
-    if not channels and duckdb_manager.get_podcast_channels_count() == 0:
+    seed_channels = podcast_service.get_seed_channels()
+    if len(channels) < len(seed_channels):
         podcast_service.sync_seed_channels()
         channels = duckdb_manager.get_podcast_channels(limit=limit)
 
