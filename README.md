@@ -11,6 +11,20 @@
 
 ---
 
+## 📸 系統介面預覽 (Live Platform Showcase)
+
+> 🌐 **線上即時體驗**：[https://stockdata.david888.com](https://stockdata.david888.com)（支援桌面 Bloomberg 專業寬螢幕與手機端高密度 RWD 混合卡片排版）
+
+| 操盤看板 (Bloomberg Terminal 桌面版) | Podcast 財經與科技情報雷達 (100 頻道 · 100 篇情報) |
+| :---: | :---: |
+| ![操盤看板桌面版](docs/screenshots/dashboard_desktop.png) | ![Podcast 財經情報雷達](docs/screenshots/podcast_radar.png) |
+
+| 行動端 RWD 表格自動轉譯卡片 (Mobile Hybrid Cards) | 行動端高密度量化情報卡片 (Mobile Card View) |
+| :---: | :---: |
+| ![行動端 RWD 混合卡片](docs/screenshots/mobile_rwd_cards.png) | ![行動端卡片檢視](docs/screenshots/mobile_card_view.png) |
+
+---
+
 ## 🏗️ 系統架構圖 (Architecture Overview)
 
 ```mermaid
@@ -99,7 +113,18 @@ graph TD
 * 與生成式 `AINarrativeEngine`（System 2 慢思考文字研報）互補，形成「Clef 算機率決策 ➔ LLM 解讀研報」的雙 AI 體系。
 * 提供 REST 端點 `POST /api/v1/decision/evaluate`、`GET /api/v1/decision/health` 與原生 FastMCP / WebMCP 工具 `get_clef_stock_verdict`。
 
-### 11. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
+### 11. 🎙️ Podcast 財經與科技情報雷達 (AI Financial & Tech Podcast Radar)
+* 直連 [BigGo Finance 推薦頻道庫](https://finance.biggo.com.tw/podcast)，即時收錄國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**）。
+* **AI 結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
+* **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
+* **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。
+
+### 12. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
+* **智慧裝置自適應**：手機直向螢幕（`< 768px`）自動預設為單欄式高密度情報卡片（`Card View`），觸控人體工學友善，手動切換狀態自動同步至 `localStorage`。
+* **表格模式 RWD 混合轉譯 (Hybrid Table-to-Card)**：當使用者在手機上選擇表格模式時，自動轉譯為**「高密度行動量化卡片」**，保留 # 排名、代號、現價、目標價、PE/PB、法人籌碼與抽屜展開，文字絕不垂直擠壓折行。
+* **桌面彭博寬表格**：平板與桌面端（`>= 768px`）提供專業級寬表格，賦予 `min-w-[980px]` 與所有欄位 `whitespace-nowrap`，保障橫向滑動體驗流暢穩固。
+
+### 13. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
 本系統核心定位為**「開盤前的進場買進指南（Pre-Market Buy Guide）」**，所有計算與數據抓取均嚴格在市場開盤前完成，並透過 `--market auto` 實施智慧時段防護（白天專注台股、夜間專注美股，非手動指定全市場時杜絕資源浪費）：
 
 * **🇹🇼 台股開盤前指南 (每日 08:00 執行 / UTC 00:00，時段 05:00~13:30 派發)**：
