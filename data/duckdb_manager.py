@@ -1680,7 +1680,7 @@ class DuckDBManager:
                 """, [limit]).df()
                 if df.empty:
                     return []
-                return df.to_dict(orient="records")
+                return self._clean_df_records(df)
         except Exception as e:
             logger.error(f"❌ 查詢 Podcast 頻道失敗: {e}")
             return []
@@ -1817,7 +1817,7 @@ class DuckDBManager:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
-                return df.to_dict(orient="records")
+                return self._clean_df_records(df)
         except Exception as e:
             logger.error(f"❌ 查詢 Podcast 單集失敗: {e}")
             return []
