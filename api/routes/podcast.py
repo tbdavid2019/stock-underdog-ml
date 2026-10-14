@@ -114,7 +114,7 @@ def trigger_podcast_sync(background_tasks: BackgroundTasks):
     """
     手動或排程觸發最新 Podcast RSS Feed 擷取與 AI 萃取。
     """
-    background_tasks.add_task(podcast_service.sync_all)
+    background_tasks.add_task(podcast_service.sync_all, fetch_live_rss=True)
     return PodcastSyncResponse(
         success=True,
         message="Podcast 頻道與單集同步任務已於背景排隊執行",

@@ -687,6 +687,28 @@ class PodcastService:
                 if enclosure is not None:
                     audio_url = enclosure.attrib.get("url", "")
 
+                duration_seconds = None
+                for child in item.iter():
+                    if child.tag.rsplit("}", 1)[-1] == "duration" and child.text:
+                        raw_duration = child.text.strip()
+                        try:
+                            parts = [int(part) for part in raw_duration.split(":")]
+                            if len(parts) == 3:
+                                duration_seconds = parts[0] * 3600 + parts[1] * 60 + parts[2]
+                            elif len(parts) == 2:
+                                duration_seconds = parts[0] * 60 + parts[1]
+                            else:
+                                duration_seconds = int(raw_duration)
+                        except ValueError:
+                            duration_seconds = None
+                        break
+
+                language = (
+                    item.findtext("language")
+                    or channel.findtext("language")
+                    or "unknown"
+                ).strip()
+
                 combined_text = f"{title} {clean_desc}"
                 entities, tickers = self.extract_entities_and_tickers(combined_text)
 
@@ -701,19 +723,15 @@ class PodcastService:
                     "published_at": pub_date_str,
                     "audio_url": audio_url or link,
                     "youtube_url": link if ("youtube.com" in link or "youtu.be" in link) else None,
-                    "duration_seconds": 3600,
-                    "language": "en",
+                    "duration_seconds": duration_seconds,
+                    "language": language,
                     "host": None,
                     "guest": None,
-                    "tldr_zh_tw": clean_desc[:250] + ("..." if len(clean_desc) > 250 else "") if clean_desc else "本集內容涵蓋前沿科技與金融宏觀趨勢討論。",
-                    "key_takeaways": [
-                        f"探討重點核心包含：{', '.join(entities[:3]) if entities else '產業脈動'}",
-                        "關聯標的即時估值與技術指標持續連動。",
-                        "詳細觀點可點擊收聽完整音訊或原創節目連結。"
-                    ],
-                    "topic_tags": entities if entities else ["科技", "財經"],
+                    "tldr_zh_tw": clean_desc[:250] + ("..." if len(clean_desc) > 250 else "") if clean_desc else None,
+                    "key_takeaways": [],
+                    "topic_tags": entities,
                     "tickers": tickers,
-                    "status": "extracted"
+                    "status": "raw"
                 })
         except Exception as e:
             logger.debug(f"RSS 解析失敗 ({rss_url}): {e}")
