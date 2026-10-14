@@ -276,7 +276,9 @@ def get_webmcp_manifest():
             "get_commodities_summary",
             "resolve_stock_ticker",
             "get_polymarket_macro_sentiment",
-            "get_clef_stock_verdict"
+            "get_clef_stock_verdict",
+            "get_upcoming_earnings_calls",
+            "get_ticker_earnings_calls"
         ]
     })
 
@@ -329,9 +331,17 @@ def get_llms_txt():
 - [Company Profile & Live News](/api/v1/market/company-profile?ticker=2330.TW): 整合 2MD 提取個股繁體中文公司簡介、核心業務、市值與即時新聞
 - [Batch Company Profiles](/api/v1/market/company-profiles/batch): 並發非同步批次預載多支股票之公司營運摘要
 
+## Global Corporate Earnings Calls & Guidance Intelligence (法說會與官方指引)
+
+整合 BigGo 財經 (finance.biggo.com.tw) 與公開資訊觀測站 (MOPS) 官方後端 API，涵蓋台灣 (TWSE/TPEx)、美股 (US)、日股 (JP)、韓股 (KR) 與全球重點市場，秒級聚合跨市場法說會時程、高管營收/毛利率/資本支出官方財測指引 (Guidance)、法說簡報 PDF 原始下載、Webcast 直播回放與機構問答精華：
+- [Upcoming Earnings Calls](/api/v1/earnings-call/upcoming?market=ALL&days=14): 查詢近期跨市場即將召開之法說會清單，支援市場篩選 (`market: ALL / TW / US / JP / KR / OTHER`)、權值股篩選 (`is_weight_stock: true`) 與天數範圍 (`days`)，自動換算雙時區 (CST/EST) 與倒數日。
+- [Monthly Earnings Calendar](/api/v1/earnings-call/calendar?year=2026&month=10&market=ALL): 查詢指定月之每日法說會召開場次聚合統計與公司清單。
+- [Stock Earnings History & Presentation](/api/v1/earnings-call/2330.TW): 查詢特定標的 (如 2330.TW、NVDA、7203.T) 歷史與未來法說會日程、歷次官方簡報 PDF、影音回放與管理層指引。
+- [Trigger Full Sync](/api/v1/earnings-call/sync): 觸發後台執行 6 視窗並行多市場法說會資料抓取並全量寫入 DuckDB。
+
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 16 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 19 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙ML共振焦點股。
 - `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日漲跌幅排行與盈虧比。
@@ -349,6 +359,8 @@ def get_llms_txt():
 - `resolve_stock_ticker`: 將模糊搜尋之公司名稱快速解析為標準交易代號。
 - `get_polymarket_macro_sentiment`: 透過 2MD/DoH 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒。
 - `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback）推論交易動作機率分佈、確信度評分與勝率預期。
+- `get_upcoming_earnings_calls`: 查詢跨市場 (台/美/日/韓/全球) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放。
+- `get_ticker_earnings_calls`: 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載。
 
 ## Agent & Developer Discovery Standards
 
@@ -430,6 +442,8 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
   `date` (DATE), `ticker` (VARCHAR), `broker_name` (VARCHAR), `buy_shares` (BIGINT), `sell_shares` (BIGINT), `net_shares` (BIGINT)
 - `predictions`:
   `index_name` (VARCHAR), `model_name` (VARCHAR), `strategy_type` (VARCHAR), `ticker` (VARCHAR), `current_price` (DOUBLE), `predicted_price` (DOUBLE), `potential` (DOUBLE), `ma5` (DOUBLE), `ma10` (DOUBLE), `ma60` (DOUBLE), `ma120` (DOUBLE), `ma250` (DOUBLE), `pullback_type` (VARCHAR), `pe` (DOUBLE), `pb` (DOUBLE), `forward_pe` (DOUBLE), `ev_ebitda` (DOUBLE), `period` (VARCHAR), `timestamp` (TIMESTAMP), `macro_regime` (VARCHAR), `trust_net_5d` (DOUBLE), `foreign_net_5d` (DOUBLE), `tags` (VARCHAR)
+- `earnings_calls`:
+  `id` (VARCHAR), `market` (VARCHAR: TW/US/JP/KR/OTHER), `ticker` (VARCHAR), `name` (VARCHAR), `call_date` (VARCHAR: YYYY-MM-DD), `call_time` (VARCHAR), `timezone` (VARCHAR), `meeting_type` (VARCHAR), `location` (VARCHAR), `webcast_url` (VARCHAR), `presentation_url` (VARCHAR), `transcript_url` (VARCHAR), `language` (VARCHAR), `eps_estimate` (DOUBLE), `eps_actual` (DOUBLE), `revenue_estimate` (DOUBLE), `revenue_actual` (DOUBLE), `is_weight_stock` (BOOLEAN), `financial_period` (VARCHAR), `guidance_summary` (VARCHAR), `guidance_outlook` (VARCHAR), `guidance_margin` (VARCHAR), `guidance_capex` (VARCHAR), `guidance_qa` (VARCHAR), `source` (VARCHAR)
 
 ## 4. REST API Endpoints Specification
 
@@ -459,11 +473,17 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - `GET /api/v1/market/company-profile?ticker=2330.TW`: 2MD 繁體中文公司簡介與即時新聞。
 - `POST /api/v1/market/company-profiles/batch`: 並發批次預載多支股票之公司營運摘要。
 
+### 4.4 Global Corporate Earnings Calls & Guidance (法說會與官方指引)
+- `GET /api/v1/earnings-call/upcoming?market=ALL&days=14&is_weight_stock=true&limit=50`: 查詢近期跨市場法說會，支援 market (ALL/TW/US/JP/KR/OTHER)、雙時區換算與倒數天數。
+- `GET /api/v1/earnings-call/calendar?year=2026&month=10&market=ALL`: 月度法說會日程聚合統計與每日公司摘要。
+- `GET /api/v1/earnings-call/{ticker}?limit=20`: 個股歷史法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報 PDF 原始連結。
+- `POST /api/v1/earnings-call/sync`: 觸發背景非同步多視窗跨市場全量法說會同步。
+
 ## 5. Model Context Protocol (MCP) Server
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (17 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`.
+- Tools (19 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -653,6 +673,40 @@ def get_webmcp_bridge():
                     headers: headers,
                     body: JSON.stringify({ ticker: args.ticker, macro_regime: args.macro_regime || 'bull' })
                 })).json());
+            }
+        },
+        {
+            name: 'get_upcoming_earnings_calls',
+            description: '查詢近期跨市場 (台/美/日/韓/全球) 即將召開之法人說明會時程、雙時區與簡報 PDF',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    market: { type: 'string', description: '市場類別 (ALL, TW, US, JP, KR, OTHER)' },
+                    days: { type: 'integer', description: '查詢未來天數範圍' },
+                    is_weight_stock: { type: 'boolean', description: '是否僅顯示權值股' },
+                    limit: { type: 'integer', description: '返回上限筆數' }
+                }
+            },
+            execute: async (args) => {
+                let url = '/api/v1/earnings-call/upcoming?market=' + encodeURIComponent(args?.market || 'ALL') + '&days=' + (args?.days || 14) + '&limit=' + (args?.limit || 50);
+                if (typeof args?.is_weight_stock === 'boolean') url += '&is_weight_stock=' + args.is_weight_stock;
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_ticker_earnings_calls',
+            description: '查詢個股 (如 2330.TW, NVDA, 7203.T) 歷史與未來法說會、官方財測指引與簡報下載',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    ticker: { type: 'string', description: '股票代號 (如 2330.TW, NVDA)' },
+                    limit: { type: 'integer', description: '返回上限場次' }
+                },
+                required: ['ticker']
+            },
+            execute: async (args) => {
+                let url = '/api/v1/earnings-call/' + encodeURIComponent(args.ticker) + '?limit=' + (args?.limit || 20);
+                return JSON.stringify(await (await fetch(url)).json());
             }
         }
     ];

@@ -93,8 +93,8 @@ class HealthResponse(BaseModel):
 
 class EarningsCallItem(BaseModel):
     id: str = Field(..., description="法說會唯一識別碼")
-    market: str = Field(..., description="市場類別 (TW 或 US)")
-    ticker: str = Field(..., description="股票代碼 (如 2330.TW, NVDA)")
+    market: str = Field(..., description="市場類別 (TW / US / JP / KR / OTHER)")
+    ticker: str = Field(..., description="股票代碼 (如 2330.TW, NVDA, 7203.T, 005930.KS)")
     name: str = Field(..., description="公司名稱")
     call_date: str = Field(..., description="召開日期 (YYYY-MM-DD)")
     call_time: Optional[str] = Field("14:00", description="召開時間 (HH:MM)")
@@ -102,7 +102,7 @@ class EarningsCallItem(BaseModel):
     datetime_cst: Optional[str] = Field(None, description="台灣時間 (CST)")
     datetime_est: Optional[str] = Field(None, description="美東時間 (EST/EDT)")
     countdown_days: Optional[int] = Field(None, description="距今剩餘天數 (負數為歷史)")
-    status: Optional[str] = Field("upcoming", description="狀態: upcoming / today / past")
+    status: Optional[str] = Field("upcoming", description="狀態: upcoming / today / past / live")
     meeting_type: Optional[str] = Field("online", description="會議形式 (online/physical/hybrid)")
     location: Optional[str] = Field(None, description="會議地點或平台")
     webcast_url: Optional[str] = Field(None, description="線上直播/影音回放網址")
@@ -115,7 +115,13 @@ class EarningsCallItem(BaseModel):
     revenue_actual: Optional[float] = Field(None, description="實際營收")
     is_weight_stock: bool = Field(False, description="是否為重量級權值股")
     remarks: Optional[str] = Field(None, description="備註與摘要")
-    source: Optional[str] = Field("TWSE", description="資料來源")
+    financial_period: Optional[str] = Field(None, description="財政季度 (如 FY2026 Q3)")
+    guidance_summary: Optional[str] = Field(None, description="管理層執行摘要")
+    guidance_outlook: Optional[str] = Field(None, description="營收/財測展望")
+    guidance_margin: Optional[str] = Field(None, description="毛利率目標指引")
+    guidance_capex: Optional[str] = Field(None, description="資本支出規劃")
+    guidance_qa: Optional[str] = Field(None, description="機構法人 Q&A 核心要點")
+    source: Optional[str] = Field("BigGo / MOPS", description="資料來源")
 
 
 class UpcomingCallsResponse(BaseModel):

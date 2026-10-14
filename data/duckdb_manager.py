@@ -195,13 +195,28 @@ class DuckDBManager:
                     revenue_actual DOUBLE,
                     is_weight_stock BOOLEAN DEFAULT FALSE,
                     remarks VARCHAR,
+                    financial_period VARCHAR,
+                    guidance_summary VARCHAR,
+                    guidance_outlook VARCHAR,
+                    guidance_margin VARCHAR,
+                    guidance_capex VARCHAR,
+                    guidance_qa VARCHAR,
                     source VARCHAR,
                     created_at VARCHAR,
                     updated_at VARCHAR
                 );
                 CREATE INDEX IF NOT EXISTS idx_earnings_calls_mkt_date ON earnings_calls (market, call_date);
                 CREATE INDEX IF NOT EXISTS idx_earnings_calls_ticker_date ON earnings_calls (ticker, call_date);
+                """)
 
+                # 確保舊版資料庫自動遷移新欄位 (financial_period, guidance_*)
+                for g_col in ["financial_period", "guidance_summary", "guidance_outlook", "guidance_margin", "guidance_capex", "guidance_qa"]:
+                    try:
+                        con.execute(f"ALTER TABLE earnings_calls ADD COLUMN IF NOT EXISTS {g_col} VARCHAR;")
+                    except Exception:
+                        pass
+
+                con.execute("""
                 CREATE TABLE IF NOT EXISTS podcast_channels (
                     channel_id VARCHAR PRIMARY KEY,
                     title VARCHAR NOT NULL,
@@ -1481,7 +1496,9 @@ class DuckDBManager:
                 "timestamp_utc", "meeting_type", "location", "webcast_url",
                 "presentation_url", "transcript_url", "language", "eps_estimate",
                 "eps_actual", "revenue_estimate", "revenue_actual", "is_weight_stock",
-                "remarks", "source", "created_at", "updated_at"
+                "remarks", "financial_period", "guidance_summary", "guidance_outlook",
+                "guidance_margin", "guidance_capex", "guidance_qa", "source",
+                "created_at", "updated_at"
             ]
             for col in expected_cols:
                 if col not in df.columns:
@@ -1492,6 +1509,8 @@ class DuckDBManager:
                     elif col in ("created_at", "updated_at"):
                         df[col] = now_str
                     elif col == "timestamp_utc":
+                        df[col] = None
+                    elif col in ("financial_period", "guidance_summary", "guidance_outlook", "guidance_margin", "guidance_capex", "guidance_qa"):
                         df[col] = None
                     else:
                         df[col] = ""

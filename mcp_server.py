@@ -481,6 +481,46 @@ def get_clef_stock_verdict(
         "verdict": verdict.to_dict()
     }
 
+
+@mcp.tool(
+    name="get_upcoming_earnings_calls",
+    description="查詢近期跨市場 (台股 TW、美股 US、日股 JP、韓股 KR、全球 ALL) 即將召開之法人說明會 (Earnings Calls) 時程、雙時區對齊、倒數天數、官方簡報下載與視訊直播回放連結。"
+)
+def get_upcoming_earnings_calls(
+    market: str = "ALL",
+    days: int = 14,
+    is_weight_stock: Optional[bool] = None,
+    limit: int = 50
+) -> Dict[str, Any]:
+    """
+    Fetch upcoming corporate earnings calls across markets (TW, US, JP, KR, ALL).
+    """
+    from api.routes.earnings_call import get_upcoming_calls
+    res = get_upcoming_calls(
+        market=market,
+        days=days,
+        is_weight_stock=is_weight_stock,
+        limit=limit
+    )
+    return res.model_dump()
+
+
+@mcp.tool(
+    name="get_ticker_earnings_calls",
+    description="查詢指定個股 (如 2330.TW, NVDA, 7203.T, 005930.KS) 之歷次法人說明會歷程、官方財測指引 (Guidance: 營收/毛利率/資本支出)、官方簡報 PDF 與影音回放連結。"
+)
+def get_ticker_earnings_calls(
+    ticker: str,
+    limit: int = 20
+) -> Dict[str, Any]:
+    """
+    Fetch earnings calls history, executive guidance highlights, and presentation decks for a specific stock symbol.
+    """
+    from api.routes.earnings_call import get_ticker_calls
+    res = get_ticker_calls(ticker=ticker, limit=limit)
+    return res.model_dump()
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

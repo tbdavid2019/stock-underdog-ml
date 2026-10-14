@@ -8,6 +8,10 @@ from data.earnings_fetcher import (
     normalize_tw_ticker,
     is_tw_weight_stock,
     is_us_weight_stock,
+    is_weight_stock,
+    parse_biggo_stock_metadata,
+    parse_biggo_guidance,
+    extract_financial_period,
     generate_date_windows,
     parse_roc_date
 )
@@ -121,6 +125,124 @@ class TestEarningsCallFetcher(unittest.TestCase):
         self.assertEqual(r["timezone"], "America/New_York")
         self.assertTrue(r["is_weight_stock"])
         self.assertEqual(r["source"], "BigGo / US IR")
+
+    def test_parse_biggo_stock_metadata_jp_and_kr(self):
+        # 日本股市
+        jp_item1 = {"stock_id": "7203.T", "region": "jp"}
+        meta_jp1 = parse_biggo_stock_metadata(jp_item1)
+        self.assertEqual(meta_jp1["market"], "JP")
+        self.assertEqual(meta_jp1["symbol"], "7203.T")
+        self.assertEqual(meta_jp1["timezone"], "Asia/Tokyo")
+
+        jp_item2 = {"stock_id": "9984", "region": "jp"}
+        meta_jp2 = parse_biggo_stock_metadata(jp_item2)
+        self.assertEqual(meta_jp2["market"], "JP")
+        self.assertEqual(meta_jp2["symbol"], "9984.T")
+
+        # 韓國股市
+        kr_item = {"stock_id": "005930.KS", "region": "kr"}
+        meta_kr = parse_biggo_stock_metadata(kr_item)
+        self.assertEqual(meta_kr["market"], "KR")
+        self.assertEqual(meta_kr["symbol"], "005930.KS")
+        self.assertEqual(meta_kr["timezone"], "Asia/Seoul")
+
+    def test_extract_financial_period(self):
+        self.assertEqual(extract_financial_period("台積電 2026年第三季法說會", "2026-10-14"), "FY2026 Q3")
+        self.assertEqual(extract_financial_period("NVIDIA Q3 FY2027 Earnings Call", "2026-11-18"), "FY2027 Q3")
+        self.assertEqual(extract_financial_period("聯發科 法人說明會", "2026-10-25"), "2026 Q4")
+
+    def test_parse_biggo_guidance(self):
+        detail = {
+            "outlook": "營收：446億至458億美元\n毛利率：65%至67%\n資本支出：600至640億美元",
+            "summary": "台積電公佈強勁財報，各項財務數據符合預期。",
+            "qa_highlights": "Q: N2 量產進度？\nA: 按計畫於 2026 年底量產。"
+        }
+        g = parse_biggo_guidance(detail)
+        self.assertIn("446億", g["outlook"])
+        self.assertIn("65%", g["margin"])
+        self.assertIn("600至640億", g["capex"])
+        self.assertIn("強勁財報", g["summary"])
+        self.assertIn("N2", g["qa"])
+
+    def test_duckdb_earnings_calls_persistence(self):
+        from data.duckdb_manager import DuckDBManager
+        db = DuckDBManager()
+        test_records = [
+            {
+                "id": "TEST_JP_7203_20261014",
+                "market": "JP",
+                "ticker": "7203.T",
+                "name": "Toyota Motor",
+                "call_date": "2026-10-14",
+                "call_time": "15:00",
+                "timezone": "Asia/Tokyo",
+                "meeting_type": "online",
+                "location": "Online",
+                "webcast_url": "https://toyota.jp",
+                "presentation_url": "https://toyota.jp/slides.pdf",
+                "transcript_url": "",
+                "language": "ja",
+                "eps_estimate": None,
+                "eps_actual": None,
+                "revenue_estimate": None,
+                "revenue_actual": None,
+                "is_weight_stock": True,
+                "remarks": "FY2027 Q2 Earnings Call",
+                "financial_period": "FY2027 Q2",
+                "guidance_summary": "Toyota reports steady Q2",
+                "guidance_outlook": "Revenue +8%",
+                "guidance_margin": "Operating margin 10%",
+                "guidance_capex": "CapEx 1.2T JPY",
+                "guidance_qa": "EV investments update",
+                "source": "BigGo / JP IR"
+            },
+            {
+                "id": "TEST_KR_005930_20261014",
+                "market": "KR",
+                "ticker": "005930.KS",
+                "name": "Samsung Electronics",
+                "call_date": "2026-10-14",
+                "call_time": "14:00",
+                "timezone": "Asia/Seoul",
+                "meeting_type": "online",
+                "location": "Online",
+                "webcast_url": "https://samsung.com",
+                "presentation_url": "https://samsung.com/deck.pdf",
+                "transcript_url": "",
+                "language": "ko",
+                "eps_estimate": None,
+                "eps_actual": None,
+                "revenue_estimate": None,
+                "revenue_actual": None,
+                "is_weight_stock": True,
+                "remarks": "Samsung 2026 Q3 Earnings Call",
+                "financial_period": "2026 Q3",
+                "guidance_summary": "HBM3E memory ramping up",
+                "guidance_outlook": "Memory shipments up 15%",
+                "guidance_margin": "Gross margin 42%",
+                "guidance_capex": "CapEx 50T KRW",
+                "guidance_qa": "HBM roadmap Q&A",
+                "source": "BigGo / KR IR"
+            }
+        ]
+
+        # 寫入
+        saved = db.save_earnings_calls_batch(test_records)
+        self.assertEqual(saved, 2)
+
+        # 查詢 JP
+        jp_calls = db.get_earnings_calls(market="JP", start_date="2026-10-14", end_date="2026-10-14")
+        self.assertTrue(any(c["ticker"] == "7203.T" for c in jp_calls))
+
+        # 查詢 KR
+        kr_calls = db.get_earnings_calls(market="KR", start_date="2026-10-14", end_date="2026-10-14")
+        self.assertTrue(any(c["ticker"] == "005930.KS" for c in kr_calls))
+
+        # 查詢 ALL
+        all_calls = db.get_earnings_calls(market="ALL", start_date="2026-10-14", end_date="2026-10-14")
+        tickers = {c["ticker"] for c in all_calls}
+        self.assertIn("7203.T", tickers)
+        self.assertIn("005930.KS", tickers)
 
 
 if __name__ == "__main__":

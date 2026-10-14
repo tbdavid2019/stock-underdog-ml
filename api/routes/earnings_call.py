@@ -15,6 +15,29 @@ router = APIRouter(prefix="/earnings-call", tags=["Earnings Call 法人說明會
 duckdb_manager = DuckDBManager()
 
 
+def _clean_str(val: Any) -> Optional[str]:
+    """將資料庫/Pandas回傳值安全轉為字串，自動清除 NaN、None 與空字串"""
+    if val is None:
+        return None
+    if isinstance(val, float) and (val != val):
+        return None
+    s = str(val).strip()
+    return s if s else None
+
+
+def _clean_float(val: Any) -> Optional[float]:
+    """將資料庫/Pandas回傳值安全轉為浮點數，自動清除 NaN 與非數值"""
+    if val is None:
+        return None
+    if isinstance(val, float):
+        return None if (val != val) else val
+    try:
+        f = float(val)
+        return None if (f != f) else f
+    except (ValueError, TypeError):
+        return None
+
+
 def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCallItem:
     """轉換資料庫字典為附帶雙時區與倒數之 Pydantic 物件"""
     call_date_str = str(row.get("call_date", ""))
@@ -77,24 +100,30 @@ def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCall
         countdown_days=countdown,
         status=status,
         meeting_type=row.get("meeting_type") or "online",
-        location=row.get("location"),
-        webcast_url=row.get("webcast_url"),
-        presentation_url=row.get("presentation_url"),
-        transcript_url=row.get("transcript_url"),
-        language=row.get("language") or "zh-TW",
-        eps_estimate=row.get("eps_estimate"),
-        eps_actual=row.get("eps_actual"),
-        revenue_estimate=row.get("revenue_estimate"),
-        revenue_actual=row.get("revenue_actual"),
+        location=_clean_str(row.get("location")),
+        webcast_url=_clean_str(row.get("webcast_url")),
+        presentation_url=_clean_str(row.get("presentation_url")),
+        transcript_url=_clean_str(row.get("transcript_url")),
+        language=_clean_str(row.get("language")) or "zh-TW",
+        eps_estimate=_clean_float(row.get("eps_estimate")),
+        eps_actual=_clean_float(row.get("eps_actual")),
+        revenue_estimate=_clean_float(row.get("revenue_estimate")),
+        revenue_actual=_clean_float(row.get("revenue_actual")),
         is_weight_stock=bool(row.get("is_weight_stock", False)),
-        remarks=row.get("remarks"),
-        source=row.get("source") or "TWSE"
+        remarks=_clean_str(row.get("remarks")),
+        financial_period=_clean_str(row.get("financial_period")),
+        guidance_summary=_clean_str(row.get("guidance_summary")),
+        guidance_outlook=_clean_str(row.get("guidance_outlook")),
+        guidance_margin=_clean_str(row.get("guidance_margin")),
+        guidance_capex=_clean_str(row.get("guidance_capex")),
+        guidance_qa=_clean_str(row.get("guidance_qa")),
+        source=_clean_str(row.get("source")) or "BigGo / MOPS"
     )
 
 
-@router.get("/upcoming", response_model=UpcomingCallsResponse, summary="取得台美股即將舉行的法說會清單")
+@router.get("/upcoming", response_model=UpcomingCallsResponse, summary="取得全球跨市場 (台/美/日/韓) 即將舉行的法說會清單")
 def get_upcoming_calls(
-    market: str = Query("ALL", description="市場篩選: ALL / TW / US"),
+    market: str = Query("ALL", description="市場篩選: ALL / TW / US / JP / KR / OTHER"),
     days: int = Query(14, ge=1, le=90, description="查詢未來天數範圍 (預設 14 天)"),
     start_date: Optional[str] = Query(None, description="起始日期 (YYYY-MM-DD，若指定則優先於 days)"),
     end_date: Optional[str] = Query(None, description="截止日期 (YYYY-MM-DD)"),
@@ -149,7 +178,7 @@ def get_upcoming_calls(
 def get_earnings_calendar(
     year: Optional[int] = Query(None, description="年份 (預設當前年)"),
     month: Optional[int] = Query(None, ge=1, le=12, description="月份 (1-12，預設當前月)"),
-    market: str = Query("ALL", description="市場: ALL / TW / US")
+    market: str = Query("ALL", description="市場: ALL / TW / US / JP / KR / OTHER")
 ):
     """
     查詢指定月之每日法說會場次計數，供行事曆檢視視覺化。

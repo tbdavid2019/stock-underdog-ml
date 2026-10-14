@@ -217,13 +217,13 @@
                 <div v-else class="text-xs text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
             </div>
 
-            <!-- Panel 2: Dual-Market Earnings Calls (台美法說會) -->
+            <!-- Panel 2: Dual-Market Earnings Calls (法人說明會) -->
             <div class="p-4 rounded-xl border space-y-3"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span class="material-symbols-outlined text-[20px] text-amber-500">calendar_month</span>
-                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">台美法說會</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">法人說明會</span>
                     </div>
                     <div class="flex items-center space-x-1.5">
                         <button @click="openEarningsCalendar()"
@@ -236,7 +236,7 @@
                         <button @click="syncEarningsNow()"
                                 class="p-1 rounded-lg text-xs border transition-colors flex items-center justify-center"
                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]'"
-                                title="即時同步公開資訊觀測站與美股行事曆">
+                                title="即時同步公開資訊觀測站與跨市場法說會">
                             <span class="material-symbols-outlined text-[16px]">sync</span>
                         </button>
                     </div>
@@ -246,11 +246,11 @@
                 <div class="flex items-center justify-between text-xs pt-0.5 border-b pb-2"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <div class="flex items-center space-x-1">
-                        <button v-for="m in ['ALL', 'TW', 'US']" :key="m"
+                        <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                class="px-2 py-1 rounded-lg text-xs font-bold transition-all"
                                 :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                            {{ m === 'ALL' ? '全部' : (m === 'TW' ? '台股' : '美股') }}
+                            {{ m === 'ALL' ? '全部' : (m === 'TW' ? '台股' : (m === 'US' ? '美股' : (m === 'JP' ? '日股' : '韓股'))) }}
                         </button>
                     </div>
                     <button @click="toggleEarningsWeightOnly()"
@@ -271,8 +271,8 @@
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
                         <div class="space-y-1 truncate mr-2">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-0.5 rounded text-xs font-black uppercase"
-                                      :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300')">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
+                                      :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (call.market === 'US' ? (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300') : (call.market === 'JP' ? (isDark ? 'bg-rose-950/70 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-300') : (call.market === 'KR' ? (isDark ? 'bg-purple-950/70 text-purple-400 border border-purple-800/60' : 'bg-purple-100 text-purple-800 border border-purple-300') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'))))">
                                     {{ call.market }}
                                 </span>
                                 <button @click.stop="searchTickerHistory(call.ticker)"
@@ -325,8 +325,8 @@
                         </div>
                     </div>
                 </div>
-                <!-- Fallback to Macro Earnings Calendar only for ALL/US if DB query has no entries -->
-                <div v-else-if="earningsMarket !== 'TW' && macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <!-- Fallback to Macro Earnings Calendar only for US if DB query has no entries -->
+                <div v-else-if="earningsMarket === 'US' && macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
                     <div v-for="(earn, eIdx) in macro.earnings_calendar.slice(0, 8)" :key="eIdx"
                          class="p-2 rounded-lg border text-xs flex items-center justify-between"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
@@ -350,7 +350,7 @@
                         </div>
                     </div>
                 </div>
-                <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無{{ earningsMarket === 'TW' ? '台股' : (earningsMarket === 'US' ? '美股' : '台美') }}法說會時程</div>
+                <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無{{ earningsMarket === 'ALL' ? '' : (earningsMarket === 'TW' ? '台股' : (earningsMarket === 'US' ? '美股' : (earningsMarket === 'JP' ? '日股' : '韓股'))) }}法說會時程</div>
             </div>
 
             <!-- Panel 3: Commodities & Economic Events -->
@@ -1233,11 +1233,11 @@
 
                 <!-- Market Pills -->
                 <div class="flex items-center space-x-1">
-                    <button v-for="m in ['ALL', 'TW', 'US']" :key="m"
+                    <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                             @click="setEarningsMarket(m)"
                             class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
                             :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                        {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '台股' : '美股') }}
+                        {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '台股' : (m === 'US' ? '美股' : (m === 'JP' ? '日股' : '韓股'))) }}
                     </button>
                 </div>
 

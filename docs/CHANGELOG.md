@@ -4,6 +4,37 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.13)
+
+### Added & Enhanced (Global Multi-Market Earnings Calls, Guidance Extraction, DuckDB Persistence & LLM/MCP Integration)
+- **🌍 全維度跨市場法說會情報系統（Global Multi-Market Earnings Calls Architecture）**：
+  - **診斷痛點**：先前法說會僅涵蓋部分台股與美股，缺乏日本（JP / 東京證券交易所 TSE）與韓國（KR / 韓國交易所 KRX）標的，且未對接完整的 BigGo Finance 全球官方資料來源。
+  - **頂級量化終端工藝升級**：
+    1. **6 視窗並行秒級滑動抓取**：對齊 BigGo API 單次 7 日跨度限制，將日期區間切分為 6 個並行視窗（過去 18 天至未來 18 天），秒級並行抓取並去重彙整 170+ 場以上跨市場（台股 91 場、美股 114 場、日股 20 場、韓股等）最新法人說明會日程與歷史回放。
+    2. **智慧多市場識別與代碼正規化**：精準解析台股（`2330.TW`、`6126.TWO`）、美股（`NVDA`、`AAPL`）、日股（`7203.T`、`9984.T`）與韓股（`005930.KS`、`000660.KS`），並自動映射對應標準時區（`Asia/Taipei`、`America/New_York`、`Asia/Tokyo`、`Asia/Seoul`）與雙時區對齊。
+    3. **高管指引 (Guidance) 與官方簡報 PDF 深度萃取**：
+       - 自動並行調用 `/detail` 提取管理層營收展望、毛利率目標、資本支出（CapEx）官方財測指引與機構投行 Q&A 核心要點。
+       - 調用 `/file?type=slides` 提取官方簡報原始 signed S3 PDF 直連。
+       - 調用 `/file?type=video` 提取官方視訊/錄音串流與 WebPro 直播回放。
+
+- **💾 DuckDB 全維度持久化入庫與無痛自動遷移（DuckDB Persistence & Zero-Downtime Migration）**：
+  - **擴充資料表結構**：為 `earnings_calls` 資料表新增 `financial_period`、`guidance_summary`、`guidance_outlook`、`guidance_margin`、`guidance_capex`、`guidance_qa` 欄位。
+  - **自動向後相容遷移**：啟動時自動透過 `ALTER TABLE earnings_calls ADD COLUMN IF NOT EXISTS ...` 執行無痛平滑遷移，保障既有資料不遺失。
+  - **Pandas/Pydantic 型別防禦**：解決 DataFrame `to_dict()` 將空值轉為 float `nan` 造成 Pydantic 驗證失敗的典型缺陷，新增 `_clean_str` 與 `_clean_float` 安全過濾器。
+
+- **🤖 LLM 文本與標準 FastMCP 工具完整對接（llms.txt, llms-full.txt & 19 Native MCP Tools）**：
+  - **`llms.txt` 規格同步**：正式增設 `## Global Corporate Earnings Calls & Guidance Intelligence` 專區，清楚定義 `/api/v1/earnings-call/upcoming`、`/calendar`、`/{ticker}`、`/sync` 端點與多市場篩選參數。
+  - **`llms-full.txt` 深度規格**：補齊 `earnings_calls` DuckDB 資料字典與完整 REST 端點契約。
+  - **FastMCP、WebMCP Manifest 與 Dynamic Bridge 同步暴露**：新增 `get_upcoming_earnings_calls` 與 `get_ticker_earnings_calls` 兩大原生工具，MCP 工具總數升級為 19 大原生工具。
+
+- **🎨 操盤看板極簡工藝與多市場篩選切換（Clean UI Header & Market Pills）**：
+  - **去除冗餘綴詞**：將卡片標題精煉為「**法人說明會**」，徹底杜絕繁雜點綴詞。
+  - **市場切換膠囊升級**：支援 `全部` (`ALL`)、`台股` (`TW`)、`美股` (`US`)、`日股` (`JP`)、`韓股` (`KR`) 五大市場一鍵切換。
+  - **各市場專屬質感徽章**：台股（Emerald）、美股（Sky）、日股（Rose）、韓股（Purple）。
+  - **日曆抽屜同步**：月度法說會日曆彈窗亦支援五大市場過濾。
+
+---
+
 ## 2026-10-14 (v2.4.12)
 
 ### Fixed & Enhanced (Taiwan & US Earnings Call BigGo Aggregation & Clean UI Facelift)
