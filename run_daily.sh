@@ -179,6 +179,16 @@ else
     $PYTHON_EXEC -m data.earnings_fetcher --sync 2>&1 | tee -a "$LOG_FILE"
 fi
 
+# Step 2.6: 同步 Podcast 智慧情報雷達
+log ""
+log "[2.6/3] 同步頂級科技與財經 Podcast 情報與實體行情..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python -m data.podcast_service --sync 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC -m data.podcast_service --sync 2>&1 | tee -a "$LOG_FILE"
+fi
+
+
 
 # Step 3: 清理舊日誌 (保留最近 30 天)
 log ""

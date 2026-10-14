@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -24,6 +24,7 @@ app = FastAPI(
     * 🌐 **美股宏觀門檻**：S&P 500 / VIX / 費城半導體 即時曝險評估
     * 🦆 **DuckDB 引擎**：支援 560,000+ 歷史時序與籌碼數據零拷貝秒級查詢
     * 🏛️ **法說會催化劑**：台美雙軌法人說明會 (TWSE/TPEx + 美股巨頭) 時程與簡報追蹤
+    * 🎙️ **Podcast 情報雷達**：頂級科技/財經 Podcast AI 繁中精煉與上市公司實體行情連動
     """,
     version=APP_VERSION,
     docs_url="/docs",
@@ -61,6 +62,7 @@ app.include_router(stats.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(decision.router, prefix="/api/v1")
 app.include_router(earnings_call.router, prefix="/api/v1")
+app.include_router(podcast.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")

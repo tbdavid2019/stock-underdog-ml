@@ -91,6 +91,16 @@ export const app = createApp({
             calendarTimezone: 'CST', // 'CST' | 'EST'
             calendarSearch: '',
 
+            // Podcast Radar State (Task C)
+            podcastEpisodes: [],
+            podcastChannels: [],
+            podcastTopics: [],
+            podcastLoading: false,
+            podcastSelectedTopic: '',
+            podcastSelectedChannel: 'ALL',
+            podcastSelectedLang: 'ALL',
+            podcastSearchQuery: '',
+
             // Toast
             toastMessage: '',
 
@@ -481,6 +491,83 @@ export const app = createApp({
                 if (this.searchTicker && !this.historyRecords.length) {
                     this.loadHistory();
                 }
+            } else if (tab === 'podcast') {
+                this.loadPodcastEpisodes();
+                this.loadPodcastChannels();
+                this.loadPodcastTopics();
+            }
+        },
+        async loadPodcastEpisodes() {
+            this.podcastLoading = true;
+            try {
+                const res = await ApiClient.getPodcastEpisodes({
+                    topic: this.podcastSelectedTopic || null,
+                    channelId: this.podcastSelectedChannel,
+                    lang: this.podcastSelectedLang,
+                    limit: 30
+                });
+                if (res && res.data) {
+                    this.podcastEpisodes = res.data;
+                }
+            } catch (e) {
+                console.warn("Failed to load podcast episodes:", e);
+            } finally {
+                this.podcastLoading = false;
+            }
+        },
+        async loadPodcastChannels() {
+            try {
+                const res = await ApiClient.getPodcastChannels();
+                if (res && res.data) {
+                    this.podcastChannels = res.data;
+                }
+            } catch (e) {
+                console.warn("Failed to load podcast channels:", e);
+            }
+        },
+        async loadPodcastTopics() {
+            try {
+                const res = await ApiClient.getPodcastTopics(25);
+                if (res && res.data) {
+                    this.podcastTopics = res.data;
+                }
+            } catch (e) {
+                console.warn("Failed to load podcast topics:", e);
+            }
+        },
+        setPodcastTopic(topic) {
+            if (this.podcastSelectedTopic === topic) {
+                this.podcastSelectedTopic = '';
+            } else {
+                this.podcastSelectedTopic = topic;
+            }
+            this.updateUrl();
+            this.loadPodcastEpisodes();
+        },
+        setPodcastChannel(channelId) {
+            this.podcastSelectedChannel = channelId;
+            this.updateUrl();
+            this.loadPodcastEpisodes();
+        },
+        setPodcastLang(lang) {
+            this.podcastSelectedLang = lang;
+            this.updateUrl();
+            this.loadPodcastEpisodes();
+        },
+        async syncPodcastNow() {
+            try {
+                this.showToast("正在背景觸發 Podcast 情報雷達全量同步...");
+                const res = await ApiClient.syncPodcast();
+                if (res && res.success) {
+                    this.showToast("Podcast 同步任務已派發！");
+                    setTimeout(() => {
+                        this.loadPodcastEpisodes();
+                        this.loadPodcastTopics();
+                        this.loadPodcastChannels();
+                    }, 2500);
+                }
+            } catch (e) {
+                this.showToast("同步失敗：" + e.message);
             }
         },
         setStrategy(stratId) {
@@ -525,6 +612,16 @@ export const app = createApp({
                     if (this.searchTicker) {
                         params.set('ticker', this.searchTicker);
                     }
+                } else if (this.activeTab === 'podcast') {
+                    if (this.podcastSelectedTopic) {
+                        params.set('topic', this.podcastSelectedTopic);
+                    }
+                    if (this.podcastSelectedChannel && this.podcastSelectedChannel !== 'ALL') {
+                        params.set('channel', this.podcastSelectedChannel);
+                    }
+                    if (this.podcastSelectedLang && this.podcastSelectedLang !== 'ALL') {
+                        params.set('lang', this.podcastSelectedLang);
+                    }
                 }
                 const queryStr = params.toString();
                 const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
@@ -543,7 +640,7 @@ export const app = createApp({
             try {
                 const params = new URLSearchParams(window.location.search);
                 const tab = params.get('tab');
-                if (tab && ['dashboard', 'institutional', 'history', 'agent_hub'].includes(tab)) {
+                if (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) {
                     this.activeTab = tab;
                 }
                 const strat = params.get('strategy');
@@ -578,6 +675,18 @@ export const app = createApp({
                 if (ticker) {
                     this.searchTicker = ticker;
                 }
+                const topic = params.get('topic');
+                if (topic) {
+                    this.podcastSelectedTopic = topic;
+                }
+                const channel = params.get('channel');
+                if (channel) {
+                    this.podcastSelectedChannel = channel;
+                }
+                const lang = params.get('lang');
+                if (lang) {
+                    this.podcastSelectedLang = lang;
+                }
             } catch (e) {
                 console.debug("Parse URL params error:", e);
             }
@@ -596,6 +705,10 @@ export const app = createApp({
                 if (this.searchTicker) {
                     this.loadHistory();
                 }
+            } else if (this.activeTab === 'podcast') {
+                this.loadPodcastEpisodes();
+                this.loadPodcastChannels();
+                this.loadPodcastTopics();
             }
         },
         copyShareLink() {
@@ -883,6 +996,10 @@ export const app = createApp({
             if (this.searchTicker) {
                 this.loadHistory();
             }
+        } else if (this.activeTab === 'podcast') {
+            this.loadPodcastEpisodes();
+            this.loadPodcastChannels();
+            this.loadPodcastTopics();
         } else {
             this.loadData();
         }

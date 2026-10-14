@@ -36,9 +36,26 @@
     - 操盤看板「🏛️ 台美法說會預警雷達」卡片：支援全部/台股/美股快速切換、權值股篩選、倒數 Badge（今天🔥/明天⚡/T-N天）、官方簡報 PDF 與直播 Webcast 直連。
     - 個股詳情抽屜（Stock Drawer）：新增「🏛️ 法說會與簡報」分頁標籤，呈現特定個股歷次法說會日程、會議方式、EPS 預估與官方簡報下載。
     - 全月法說會行事曆 Modal：高資訊密度日曆檢視，支援月度翻頁、雙時區（CST/EST）快速切換與公司關鍵字搜尋。
-- **🎙️ AI 財經與科技 Podcast 智慧雷達規劃 (`podcast-financial-radar`)**：
-  - 規劃國際頂級財經/科技 Podcast 頻道庫、RSS/字幕自動解析與 LLM 摘要。
-  - 自動提煉實體與股票代號映射（Ticker Mapping），並於單集卡片整合即時漲跌幅 Badge 連動個股抽屜。
+- **🎙️ AI 財經與科技 Podcast 智慧情報雷達實作 (`podcast-financial-radar`)**：
+  - **資料庫與種子頻道庫 (`data/duckdb_manager.py`, `config/podcast_seed_channels.json`)**：
+    - 新增 `podcast_channels` 與 `podcast_episodes` 表結構，支援頻道元數據、單集主客標記、繁中 TL;DR、觀點標籤、股票 Ticker 陣列與即時行情快照。
+    - 建立 `config/podcast_seed_channels.json` 預置 12 大全球頂級科技與總經頻道（All-In, Lex Fridman, Bloomberg Odd Lots, Dwarkesh, 小Lin說, 硅谷101 等）。
+  - **多源採集、實體映射與情報管線 (`data/podcast_service.py`)**：
+    - 實作金融與科技實體（Claude, OpenAI, NVIDIA, Google, Cursor, Meta, TSMC, ASML, AMD, 聯發科, 鴻海等）至上市公司代號（NVDA, GOOGL, MSFT, META, 2330.TW, 2454.TW, 2317.TW 等）白名單校驗器。
+    - 即時行情增強引擎：自動對比 DuckDB 最新的量化預測價、現價與漲跌幅，為單集即時生成高對比行情 Badge。
+    - 預置高價值精煉情報庫（Sam Altman 訪談、祖克柏 Llama 3、台積電先進封裝壟斷、Dario Amodei 訪談、小Lin說半導體百年史、硅谷101 Cursor 革命），確保零網路延遲開箱即用。
+  - **後端 REST API 服務 (`api/routes/podcast.py`)**：
+    - `GET /api/v1/podcast/episodes`：支援實體話題（`topic`）、股票代碼（`ticker`）、頻道 ID（`channel_id`）與語言篩選，附加即時行情與時長格式化。
+    - `GET /api/v1/podcast/channels`：取得收錄頻道庫列表與單集統計。
+    - `GET /api/v1/podcast/topics`：取得熱門實體與話題標籤頻次聚合排行榜。
+    - `POST /api/v1/podcast/sync`：非同步背景排隊全量同步。
+  - **前端 Impeccable 頂級工藝介面 (`api/templates/partials/tab_podcast.html`, `app.js`)**：
+    - 導覽列新增「🎙️ Podcast 雷達」膠囊藥丸 Tab，雙向同步 URL Query 參數。
+    - 頂部熱門實體橫向滑動快篩軌（Horizontal Entity Rail）：包含話題頻次徽章，支援點擊一秒聚焦相關討論。
+    - 單集深度情報卡片：收錄頻道頭像、時長、語言、主客標記、AI 繁中精華觀點（TL;DR）與 3 點核心 Takeaways。
+    - 即時股票 Badge 閉環連動：單集即時渲染關聯股價與漲跌幅，點擊直接滑出個股時序與籌碼抽屜（Stock Drawer），實現「情報聽取 ➔ 概念股映射 ➔ 量化籌碼決策」一體化閉環。
+  - **自動排程整合 (`run_daily.sh`)**：
+    - 加入 Step 2.6，定時於每日盤前增量同步 Podcast 最新單集與 AI 萃取。
 
 ## 2026-10-08
 

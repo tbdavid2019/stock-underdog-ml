@@ -240,6 +240,50 @@ export const ApiClient = {
         const res = await fetch(`/api/v1/earnings-call/calendar?${params.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
+    },
+
+    /**
+     * Podcast Radar episodes with stock quote enrichment
+     */
+    async getPodcastEpisodes({ topic = null, ticker = null, channelId = null, lang = 'ALL', limit = 20, offset = 0 } = {}) {
+        const params = new URLSearchParams();
+        if (topic) params.set('topic', topic);
+        if (ticker) params.set('ticker', ticker);
+        if (channelId && channelId !== 'ALL') params.set('channel_id', channelId);
+        if (lang && lang !== 'ALL') params.set('lang', lang);
+        if (limit) params.set('limit', limit.toString());
+        if (offset) params.set('offset', offset.toString());
+
+        const res = await fetch(`/api/v1/podcast/episodes?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Podcast subscribed channels list
+     */
+    async getPodcastChannels(limit = 50) {
+        const res = await fetch(`/api/v1/podcast/channels?limit=${limit}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Podcast aggregated hot topics/entities frequency list
+     */
+    async getPodcastTopics(limit = 30) {
+        const res = await fetch(`/api/v1/podcast/topics?limit=${limit}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Trigger background synchronization of podcast feeds
+     */
+    async syncPodcast() {
+        const res = await fetch('/api/v1/podcast/sync', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
     }
 };
 
@@ -247,4 +291,5 @@ export const ApiClient = {
 if (typeof window !== 'undefined') {
     window.ApiClient = ApiClient;
 }
+
 

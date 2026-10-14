@@ -64,6 +64,12 @@
                     <span>🔍</span>
                     <span>個股歷史</span>
                 </button>
+                <button @click="setTab('podcast')" :aria-current="activeTab === 'podcast' ? 'page' : undefined"
+                        :class="activeTab === 'podcast' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span>🎙️</span>
+                    <span>Podcast 雷達</span>
+                </button>
             </nav>
 
             <!-- Share URL Button -->

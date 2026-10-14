@@ -200,6 +200,46 @@ class DuckDBManager:
                 );
                 CREATE INDEX IF NOT EXISTS idx_earnings_calls_mkt_date ON earnings_calls (market, call_date);
                 CREATE INDEX IF NOT EXISTS idx_earnings_calls_ticker_date ON earnings_calls (ticker, call_date);
+
+                CREATE TABLE IF NOT EXISTS podcast_channels (
+                    channel_id VARCHAR PRIMARY KEY,
+                    title VARCHAR NOT NULL,
+                    author VARCHAR,
+                    description VARCHAR,
+                    image_url VARCHAR,
+                    rss_url VARCHAR,
+                    youtube_channel_url VARCHAR,
+                    follower_count BIGINT DEFAULT 0,
+                    episode_count INTEGER DEFAULT 0,
+                    category VARCHAR,
+                    language VARCHAR,
+                    is_subscribed BOOLEAN DEFAULT TRUE,
+                    created_at VARCHAR,
+                    updated_at VARCHAR
+                );
+
+                CREATE TABLE IF NOT EXISTS podcast_episodes (
+                    id VARCHAR PRIMARY KEY,
+                    channel_id VARCHAR NOT NULL,
+                    title VARCHAR NOT NULL,
+                    published_at VARCHAR NOT NULL,
+                    audio_url VARCHAR,
+                    youtube_url VARCHAR,
+                    duration_seconds INTEGER,
+                    language VARCHAR,
+                    host VARCHAR,
+                    guest VARCHAR,
+                    tldr_zh_tw VARCHAR,
+                    key_takeaways VARCHAR,
+                    topic_tags VARCHAR,
+                    tickers VARCHAR,
+                    ticker_prices_json VARCHAR,
+                    status VARCHAR DEFAULT 'extracted',
+                    created_at VARCHAR,
+                    updated_at VARCHAR
+                );
+                CREATE INDEX IF NOT EXISTS idx_podcast_episodes_pub ON podcast_episodes (published_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_podcast_episodes_channel ON podcast_episodes (channel_id);
                 """)
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
@@ -1539,3 +1579,230 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 取得法說會日曆彙總失敗: {e}")
             return []
+
+    # ==================== Podcast Radar Methods ====================
+
+    def save_podcast_channels_batch(self, channels: List[Dict[str, Any]]) -> int:
+        """批次寫入或更新 Podcast 頻道元數據"""
+        if not self.enabled or not channels:
+            return 0
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        saved = 0
+        try:
+            with self._get_connection() as con:
+                for ch in channels:
+                    con.execute("""
+                        INSERT INTO podcast_channels (
+                            channel_id, title, author, description, image_url,
+                            rss_url, youtube_channel_url, follower_count, episode_count,
+                            category, language, is_subscribed, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (channel_id) DO UPDATE SET
+                            title = EXCLUDED.title,
+                            author = EXCLUDED.author,
+                            description = EXCLUDED.description,
+                            image_url = EXCLUDED.image_url,
+                            rss_url = EXCLUDED.rss_url,
+                            youtube_channel_url = EXCLUDED.youtube_channel_url,
+                            follower_count = EXCLUDED.follower_count,
+                            episode_count = EXCLUDED.episode_count,
+                            category = EXCLUDED.category,
+                            language = EXCLUDED.language,
+                            updated_at = EXCLUDED.updated_at;
+                    """, [
+                        str(ch.get("channel_id", "")),
+                        str(ch.get("title", "")),
+                        ch.get("author"),
+                        ch.get("description"),
+                        ch.get("image_url"),
+                        ch.get("rss_url"),
+                        ch.get("youtube_channel_url"),
+                        int(ch.get("follower_count") or 0),
+                        int(ch.get("episode_count") or 0),
+                        ch.get("category"),
+                        ch.get("language") or "en",
+                        bool(ch.get("is_subscribed", True)),
+                        ch.get("created_at") or now_str,
+                        now_str
+                    ])
+                    saved += 1
+            return saved
+        except Exception as e:
+            logger.error(f"❌ 寫入 Podcast 頻道失敗: {e}")
+            return 0
+
+    def get_podcast_channels(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """取得收錄的 Podcast 頻道列表"""
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection() as con:
+                df = con.execute("""
+                    SELECT c.*, 
+                           COALESCE((SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id), 0) as real_episode_count
+                    FROM podcast_channels c 
+                    ORDER BY c.follower_count DESC 
+                    LIMIT ?;
+                """, [limit]).df()
+                if df.empty:
+                    return []
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"❌ 查詢 Podcast 頻道失敗: {e}")
+            return []
+
+    def save_podcast_episodes_batch(self, records: List[Dict[str, Any]]) -> int:
+        """批次寫入或更新單集 AI 萃取情報"""
+        if not self.enabled or not records:
+            return 0
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        saved = 0
+        try:
+            with self._get_connection() as con:
+                for r in records:
+                    tt = r.get("topic_tags")
+                    if isinstance(tt, list):
+                        tt_str = json.dumps(tt, ensure_ascii=False)
+                    else:
+                        tt_str = str(tt) if tt else "[]"
+
+                    kt = r.get("key_takeaways")
+                    if isinstance(kt, list):
+                        kt_str = json.dumps(kt, ensure_ascii=False)
+                    else:
+                        kt_str = str(kt) if kt else "[]"
+
+                    tk = r.get("tickers")
+                    if isinstance(tk, list):
+                        tk_str = json.dumps(tk, ensure_ascii=False)
+                    else:
+                        tk_str = str(tk) if tk else "[]"
+
+                    con.execute("""
+                        INSERT INTO podcast_episodes (
+                            id, channel_id, title, published_at, audio_url,
+                            youtube_url, duration_seconds, language, host, guest,
+                            tldr_zh_tw, key_takeaways, topic_tags, tickers,
+                            ticker_prices_json, status, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (id) DO UPDATE SET
+                            title = EXCLUDED.title,
+                            published_at = EXCLUDED.published_at,
+                            audio_url = EXCLUDED.audio_url,
+                            youtube_url = EXCLUDED.youtube_url,
+                            duration_seconds = EXCLUDED.duration_seconds,
+                            language = EXCLUDED.language,
+                            host = EXCLUDED.host,
+                            guest = EXCLUDED.guest,
+                            tldr_zh_tw = EXCLUDED.tldr_zh_tw,
+                            key_takeaways = EXCLUDED.key_takeaways,
+                            topic_tags = EXCLUDED.topic_tags,
+                            tickers = EXCLUDED.tickers,
+                            ticker_prices_json = EXCLUDED.ticker_prices_json,
+                            status = EXCLUDED.status,
+                            updated_at = EXCLUDED.updated_at;
+                    """, [
+                        str(r.get("id", "")),
+                        str(r.get("channel_id", "")),
+                        str(r.get("title", "")),
+                        str(r.get("published_at", "")),
+                        r.get("audio_url"),
+                        r.get("youtube_url"),
+                        int(r.get("duration_seconds") or 0),
+                        r.get("language") or "en",
+                        r.get("host"),
+                        r.get("guest"),
+                        r.get("tldr_zh_tw"),
+                        kt_str,
+                        tt_str,
+                        tk_str,
+                        r.get("ticker_prices_json") or "{}",
+                        r.get("status") or "extracted",
+                        r.get("created_at") or now_str,
+                        now_str
+                    ])
+                    saved += 1
+            return saved
+        except Exception as e:
+            logger.error(f"❌ 批次寫入 Podcast 單集失敗: {e}")
+            return 0
+
+    def get_podcast_episodes(
+        self,
+        topic: Optional[str] = None,
+        ticker: Optional[str] = None,
+        channel_id: Optional[str] = None,
+        lang: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """多維度查詢 Podcast 單集情報列表"""
+        if not self.enabled:
+            return []
+        try:
+            query = """
+                SELECT e.*, c.title as channel_title, c.image_url as channel_image_url, c.author as channel_author
+                FROM podcast_episodes e
+                LEFT JOIN podcast_channels c ON e.channel_id = c.channel_id
+                WHERE 1=1
+            """
+            params = []
+
+            if topic:
+                query += " AND (e.topic_tags LIKE ? OR e.title LIKE ? OR e.tldr_zh_tw LIKE ?)"
+                topic_pat = f"%{topic}%"
+                params.extend([topic_pat, topic_pat, topic_pat])
+
+            if ticker:
+                query += " AND e.tickers LIKE ?"
+                params.append(f"%{ticker}%")
+
+            if channel_id and channel_id.upper() != "ALL":
+                query += " AND e.channel_id = ?"
+                params.append(channel_id)
+
+            if lang and lang.upper() != "ALL":
+                query += " AND e.language = ?"
+                params.append(lang.lower())
+
+            query += " ORDER BY e.published_at DESC LIMIT ? OFFSET ?;"
+            params.extend([limit, offset])
+
+            with self._get_connection() as con:
+                df = con.execute(query, params).df()
+                if df.empty:
+                    return []
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"❌ 查詢 Podcast 單集失敗: {e}")
+            return []
+
+    def get_podcast_topics_aggregation(self, limit: int = 30) -> List[Dict[str, Any]]:
+        """取得熱門實體與主題標籤聚合排行榜"""
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection() as con:
+                # 統計各 topic_tags 的出現次數
+                df = con.execute("SELECT topic_tags FROM podcast_episodes WHERE topic_tags IS NOT NULL;").df()
+                if df.empty:
+                    return []
+                
+                counts: Dict[str, int] = {}
+                for row in df["topic_tags"].dropna():
+                    try:
+                        tags = json.loads(row) if isinstance(row, str) else row
+                        if isinstance(tags, list):
+                            for t in tags:
+                                t_clean = str(t).strip()
+                                if t_clean and len(t_clean) > 1:
+                                    counts[t_clean] = counts.get(t_clean, 0) + 1
+                    except Exception:
+                        pass
+
+                sorted_topics = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+                return [{"topic": t, "count": c} for t, c in sorted_topics]
+        except Exception as e:
+            logger.error(f"❌ 聚合熱門 Podcast 主題失敗: {e}")
+            return []
+

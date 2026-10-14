@@ -139,3 +139,80 @@ class EarningsCalendarResponse(BaseModel):
     market: str
     data: List[EarningsCalendarItem] = Field(default_factory=list)
 
+
+# ==================== Podcast Radar Schemas ====================
+
+class PodcastTickerPrice(BaseModel):
+    ticker: str
+    name: Optional[str] = None
+    price: Optional[float] = None
+    change_pct: Optional[float] = None
+    direction: str = "up"  # up / down / flat
+
+
+class PodcastChannelItem(BaseModel):
+    channel_id: str
+    title: str
+    author: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    rss_url: Optional[str] = None
+    youtube_channel_url: Optional[str] = None
+    follower_count: int = 0
+    episode_count: int = 0
+    category: Optional[str] = None
+    language: str = "en"
+
+
+class PodcastEpisodeItem(BaseModel):
+    id: str
+    channel_id: str
+    channel_title: Optional[str] = None
+    channel_image_url: Optional[str] = None
+    channel_author: Optional[str] = None
+    title: str
+    published_at: str
+    audio_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    duration_formatted: Optional[str] = None
+    language: str = "en"
+    host: Optional[str] = None
+    guest: Optional[str] = None
+    tldr_zh_tw: Optional[str] = None
+    key_takeaways: List[str] = Field(default_factory=list)
+    topic_tags: List[str] = Field(default_factory=list)
+    tickers: List[str] = Field(default_factory=list)
+    ticker_prices: List[PodcastTickerPrice] = Field(default_factory=list)
+    status: str = "extracted"
+
+
+class PodcastTopicItem(BaseModel):
+    topic: str
+    count: int
+
+
+class PodcastEpisodesResponse(BaseModel):
+    success: bool = True
+    total_count: int
+    data: List[PodcastEpisodeItem] = Field(default_factory=list)
+
+
+class PodcastChannelsResponse(BaseModel):
+    success: bool = True
+    total_count: int
+    data: List[PodcastChannelItem] = Field(default_factory=list)
+
+
+class PodcastTopicsResponse(BaseModel):
+    success: bool = True
+    total_count: int
+    data: List[PodcastTopicItem] = Field(default_factory=list)
+
+
+class PodcastSyncResponse(BaseModel):
+    success: bool = True
+    message: str
+    timestamp: str
+
+

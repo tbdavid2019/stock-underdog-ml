@@ -235,6 +235,10 @@ graph TD
 | `/api/v1/earnings-call/{ticker}` | `GET` | 查詢單一標的之法說會歷程、官方簡報 PDF 與影音回放網址 |
 | `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次與權值股場次計數 |
 | `/api/v1/earnings-call/sync` | `POST` | 觸發非同步背景跨市場法說會資料全量同步 |
+| `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、AI 繁中 TL;DR 與關聯股票即時行情 Badge |
+| `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表 |
+| `/api/v1/podcast/topics` | `GET` | 取得熱門科技實體與話題標籤頻次聚合排行榜 |
+| `/api/v1/podcast/sync` | `POST` | 觸發非同步背景 Podcast 串流與單集情報全量同步 |
 
 ---
 
