@@ -4,6 +4,19 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.11)
+
+### Fixed & Enhanced (Eliminated Desktop Table Horizontal Scrollbar & Compact Density Optimization)
+- **🖥️ 操盤看板彭博表格橫向滾動條徹底消除與高密度緊湊排版優化（Zero-Scrollbar Compact Quant Table）**：
+  - **診斷痛點**：桌機版在部分筆電（如 13"/14" MacBook、1080p 視窗）因先前設定的 `min-w-[1040px]` 限制與每格 `p-3`（水平 24px padding，11 欄累積達 264px 內距），導致在視窗寬度 < 1200px 時底部持續出現橫向滾動條（Scrollbar），且右側「策略共振標籤」與「操作」欄位被遮蔽或切斷。
+  - **頂級量化終端工藝修正**：
+    1. **移除硬性最小寬度約束 (`min-w-[1040px]` -> `w-full`)**：改為純流式響應 `w-full`，讓表格完美貼合容器寬度，徹底消除常駐橫向滾動條。
+    2. **內距瘦身與文字密度最佳化 (`p-3` -> `py-2.5 px-2`)**：將每格內距由 24px 精準縮減至 16px，單是內距即節省 88px 橫向空間；文字採用緊湊 `text-xs`，精簡欄位標題（如「標的 / 名稱」、「目標價 / 均線」、「潛力」、「5日籌碼」）。
+    3. **策略共振標籤雙徽章精煉 (`slice(0, 2)` + `+N`)**：主列表格呈現前 2 枚核心共振標籤（搭配緊湊內距 `px-1.5 py-0.5` 與小圖示），超過 2 枚自動呈現 `+N` 膠囊；將標籤欄寬由 285px 收斂至 ~160px，節省 120px+。懸停時完整浮動提示（`title`）與展開抽屜依然保留全量標籤。
+    4. **全表內容量縮至 940px 以內**：在任何標準螢幕（1024px、1080p、1200px、1440p）均 100% 完整容納全部 11 欄與操作按鈕，底部零滾動條。
+
+---
+
 ## 2026-10-14 (v2.4.10)
 
 ### Fixed & Enhanced (Desktop Bloomberg Quant Table Layout & Tag Row Height Alignment)

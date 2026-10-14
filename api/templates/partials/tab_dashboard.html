@@ -716,71 +716,71 @@
         <div class="hidden md:block rounded-2xl border overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
             <div class="overflow-x-auto">
-                <table class="min-w-[1040px] w-full text-left text-xs sm:text-sm border-collapse whitespace-nowrap">
+                <table class="w-full text-left text-xs border-collapse whitespace-nowrap">
                     <!-- Deep Obsidian Table Header -->
                     <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                         <tr>
-                            <th class="p-3 font-bold num-font text-center w-12 whitespace-nowrap">#</th>
-                            <th class="p-3 font-bold w-40 whitespace-nowrap">標的代號 / 名稱</th>
-                            <th class="p-3 font-bold text-center w-24 whitespace-nowrap">市場</th>
-                            <th class="p-3 font-bold w-24 whitespace-nowrap">策略模型</th>
-                            <th class="p-3 font-bold text-right num-font w-24 whitespace-nowrap">現價</th>
-                            <th class="p-3 font-bold text-right num-font w-28 whitespace-nowrap">預測目標價 / 均線</th>
-                            <th class="p-3 font-bold text-right num-font w-20 whitespace-nowrap">預期潛力</th>
-                            <th class="p-3 font-bold text-center num-font w-24 whitespace-nowrap">PE / PB</th>
-                            <th class="p-3 font-bold text-right num-font w-32 whitespace-nowrap">5日法人籌碼 (張)</th>
-                            <th class="p-3 font-bold min-w-[220px] whitespace-nowrap">策略共振標籤</th>
-                            <th class="p-3 font-bold text-center w-24 whitespace-nowrap">操作</th>
+                            <th class="py-2.5 px-2 font-bold num-font text-center w-8 whitespace-nowrap">#</th>
+                            <th class="py-2.5 px-2 font-bold whitespace-nowrap">標的 / 名稱</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">市場</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">策略模型</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">現價</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">目標價 / 均線</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">潛力</th>
+                            <th class="py-2.5 px-2 font-bold text-center num-font whitespace-nowrap">PE / PB</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">5日籌碼 (張)</th>
+                            <th class="py-2.5 px-2 font-bold whitespace-nowrap">策略共振標籤</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">操作</th>
                         </tr>
                     </thead>
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                     <template v-for="(item, idx) in records" :key="item.ticker + (item.model_name || '') + idx">
                         <!-- Primary Row -->
-                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-12"
+                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-11"
                             :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
                             @click="toggleRowDrawer(item.ticker)">
-                            <td class="p-3 font-black num-font text-center opacity-60 whitespace-nowrap">{{ idx + 1 }}</td>
-                            <td class="p-3 whitespace-nowrap">
+                            <td class="py-2.5 px-2 font-black num-font text-center opacity-60 whitespace-nowrap">{{ idx + 1 }}</td>
+                            <td class="py-2.5 px-2 whitespace-nowrap">
                                 <div class="flex items-center space-x-1.5">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
-                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base shrink-0"
+                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm shrink-0"
                                             :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
                                         {{ item.ticker }}
                                     </button>
-                                    <span v-if="item.name" class="font-bold text-xs truncate max-w-[85px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name">
+                                    <span v-if="item.name" class="font-bold text-xs truncate max-w-[80px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name">
                                         {{ item.name }}
                                     </span>
                                 </div>
                             </td>
-                            <td class="p-3 text-center whitespace-nowrap">
-                                <span class="px-2 py-0.5 text-xs sm:text-sm font-semibold rounded-md border font-sans"
+                            <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                                <span class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans"
                                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
                                     {{ item.index_name || '綜合' }}
                                 </span>
                             </td>
-                            <td class="p-3 font-bold text-xs sm:text-sm whitespace-nowrap">
+                            <td class="py-2.5 px-2 text-center font-bold text-xs whitespace-nowrap">
                                 <span>{{ stripEmojis(item.strategy_type || item.model_name) }}</span>
                             </td>
-                            <td class="p-3 text-right font-black num-font text-sm sm:text-base whitespace-nowrap">
+                            <td class="py-2.5 px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
                                 ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
                             </td>
-                            <td class="p-3 text-right font-black num-font text-amber-500 text-sm sm:text-base whitespace-nowrap">
+                            <td class="py-2.5 px-2 text-right font-black num-font text-amber-500 text-xs sm:text-sm whitespace-nowrap">
                                 <span v-if="item.predicted_price">${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
-                                <span v-else-if="item.pullback_type" class="text-xs sm:text-sm font-bold text-amber-500">{{ item.pullback_type }}</span>
+                                <span v-else-if="item.pullback_type" class="text-xs font-bold text-amber-500">{{ item.pullback_type }}</span>
                                 <span v-else class="text-xs text-slate-400">-</span>
                             </td>
-                            <td class="p-3 text-right font-black num-font text-sm sm:text-base whitespace-nowrap">
+                            <td class="py-2.5 px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
                                 <span v-if="item.potential !== null && item.potential !== undefined"
                                       :class="item.potential >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-600 font-bold') : 'text-rose-500 font-bold'">
                                     {{ item.potential >= 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%
                                 </span>
                                 <span v-else class="text-slate-400">-</span>
                             </td>
-                            <td class="p-3 text-center num-font text-xs sm:text-sm whitespace-nowrap">
+                            <td class="py-2.5 px-2 text-center num-font text-xs whitespace-nowrap">
                                 <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }} / {{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                             </td>
-                            <td class="p-3 text-right num-font text-xs sm:text-sm whitespace-nowrap">
-                                <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1.5 font-bold">
+                            <td class="py-2.5 px-2 text-right num-font text-xs whitespace-nowrap">
+                                <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1 font-bold">
                                     <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
                                         投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
                                     </span>
@@ -790,36 +790,36 @@
                                 </span>
                                 <span v-else class="text-slate-400">-</span>
                             </td>
-                            <td class="p-3 whitespace-nowrap">
-                                <div class="flex items-center gap-1.5 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
-                                    <span v-for="tag in parseTags(item.tags).slice(0, 3)" :key="tag.label"
+                            <td class="py-2.5 px-2 whitespace-nowrap">
+                                <div class="flex items-center gap-1 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
+                                    <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
                                           :class="getTagClass(tag)"
-                                          class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm">
+                                          class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm">
                                         <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
                                         <span>{{ tag.label }}</span>
                                     </span>
-                                    <span v-if="parseTags(item.tags).length > 3"
+                                    <span v-if="parseTags(item.tags).length > 2"
                                           class="px-1.5 py-0.5 text-[11px] font-bold rounded-md border shrink-0 cursor-help transition-colors whitespace-nowrap shadow-sm"
                                           :class="isDark ? 'bg-[#16181D] text-amber-400 border-[#262626] hover:border-amber-500/50' : 'bg-slate-100 text-amber-600 border-slate-200 hover:border-amber-400'"
-                                          :title="'其餘標籤: ' + parseTags(item.tags).slice(3).map(t => t.label).join(', ')">
-                                        +{{ parseTags(item.tags).length - 3 }}
+                                          :title="'其餘標籤: ' + parseTags(item.tags).slice(2).map(t => t.label).join(', ')">
+                                        +{{ parseTags(item.tags).length - 2 }}
                                     </span>
                                 </div>
                             </td>
-                            <td class="p-3 text-center whitespace-nowrap" @click.stop>
-                                <div class="flex items-center justify-center space-x-1.5">
+                            <td class="py-2.5 px-2 text-center whitespace-nowrap" @click.stop>
+                                <div class="flex items-center justify-center space-x-1">
                                     <button @click="toggleRowDrawer(item.ticker)"
-                                            class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
+                                            class="px-2 py-0.5 rounded-lg border text-xs font-bold transition-all flex items-center space-x-0.5"
                                             :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
                                             :title="expandedDrawerTicker === item.ticker ? '收合簡介抽屜' : '展開公司簡介抽屜'">
                                         <span>{{ expandedDrawerTicker === item.ticker ? '收合' : '詳情' }}</span>
-                                        <span class="material-symbols-outlined text-[14px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
+                                        <span class="material-symbols-outlined text-[13px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
                                     </button>
                                     <button @click="searchTickerHistory(item.ticker)"
                                             class="p-1 rounded-lg border text-xs font-bold transition-all flex items-center justify-center"
                                             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
                                             title="查詢時序歷史">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">timeline</span>
+                                        <span class="material-symbols-outlined text-[15px] leading-none">timeline</span>
                                     </button>
                                 </div>
                             </td>
