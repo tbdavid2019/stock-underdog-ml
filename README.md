@@ -147,12 +147,15 @@ graph TD
 
 本平台內建現代化 FastAPI 高效能對外服務（預設連接埠 `8088`），同時提供「人類操盤視覺化儀表板」、「Anthropic Claude Desktop MCP 工具伺服器」以及「AI Agent Skill」：
 
-### 1. 📊 現代化量化操盤首頁 (Web Dashboard)
-啟動後直接瀏覽 `http://localhost:8088/` 或 `http://10.9.0.99:8088/`：
-* **宏觀風控看板**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態與建議曝險比例。
-* **策略即時切換**：快速瀏覽 🏆 三重共振焦點股、玄鐵 MA60/120 回調買點、LSTM 看漲/看跌榜、🔮 TimesFM 預測 TOP 看漲榜與 🛡️ TimesFM 避險榜。
-* **個股歷史查詢**：可輸入股票代號或公司名稱（如 `2330.TW`、`NVDA`、`特斯拉`、`聯華電子`）；系統會先解析為標準代號，查無法辨識或查無資料時明確提示，不會沿用上一筆結果。
-* **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼。
+### 1. 📊 現代化量化操盤首頁 (Web Dashboard - Figma 外觀拉皮 v.1)
+啟動後直接瀏覽 `http://localhost:8088/` 或線上站點 [https://stockdata.david888.com](https://stockdata.david888.com)：
+* **彭博終端視覺與雙主題切換**：全面升級曜石黑 (`#030302`)、深黑卡片 (`#0D0E11`)、琥珀金 (`#F59E0B`) 與淺色灰白雙主題，頂部提供膠囊藥丸 Tab（`Tab / Large`）與狀態文字切換開關（`顯示: 深色模式` / `顯示: 淺色模式`）。
+* **高密度量化訊號表 (Signal Table)**：支援高密度表格與情報卡片雙重視圖，具備等寬金融數字（JetBrains Mono `tabular-nums`）、彩色策略/法人 Badge 系統、外部門戶跳轉（Yahoo 股市 / Goodinfo），以及點擊即時展開之公司簡介抽屜 (Company Drawer)。
+* **宏觀風控與總經日曆**：即時掌握 VIX 恐慌指數、S&P 500、費城半導體均線狀態、建議曝險比例、CME FedWatch 降息監控、美股重量級財報日曆與 Polymarket 預測市場。
+* **法人籌碼與券商主力雷達**：三大法人淨買賣超排行 TOP 30 表格、TOP 8 目標券商多折線走勢圖（霓虹色系、深淺色自適應網格）與 TOP 15 主力買超/賣超分點雙欄比較清單。
+* **個股歷史時序查詢**：輸入代號或名稱（如 `2330.TW`、`NVDA`、`台積電`、`聯發科`），即時檢索歷次量化預測目標價、均線買點、三大法人累計折線圖與逐日籌碼數據。
+* **前端原生模組化架構**：樣板解耦為 Jinja2 partials，腳本抽取為原生 ES 模組（`api-client.js`, `chart-manager.js`, `app.js`），維持免 Node.js build step 輕量極速特性。
+* **Agent & MCP 中心**：提供一鍵複製 Claude Desktop、Cursor 與 Python 串接代碼及 llms.txt 標準規格。
 
 ### 2. 🤖 Model Context Protocol (MCP) 原生工具伺服器
 提供符合 Anthropic 官方標準的 FastMCP 伺服器（[`mcp_server.py`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/mcp_server.py)），可直接掛載至 Claude Desktop、Cursor、Antigravity：

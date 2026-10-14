@@ -1,0 +1,205 @@
+<!-- ================= TAB: 三大法人與主力籌碼 (FIGMA FACELIFT V.1) ================= -->
+<div v-if="activeTab === 'institutional'" class="space-y-6">
+
+    <!-- Sub-tab Navigation (Three Inst vs Broker) -->
+    <div class="flex items-center space-x-2">
+        <button @click="instSubTab = 'three_inst'"
+                :class="instSubTab === 'three_inst' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
+                class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
+            <span>🏛️</span>
+            <span>三大法人籌碼與持股</span>
+        </button>
+        <button @click="instSubTab = 'broker'; if(!brokerDates.length) loadBrokerTrend()"
+                :class="instSubTab === 'broker' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
+                class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
+            <span>🏦</span>
+            <span>券商分點主力追蹤</span>
+        </button>
+    </div>
+
+    <!-- SUB-TAB 1: 三大法人籌碼 (THREE INST) -->
+    <div v-if="instSubTab === 'three_inst'" class="space-y-6">
+        <!-- Header Banner Card -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-6 rounded-2xl border space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span>🏛️ 台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm mt-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
+                        追蹤全市場 <strong class="num-font font-black text-amber-500">512,000+ 筆</strong> 上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 官方 OpenAPI 自動更新。
+                    </p>
+                </div>
+
+                <!-- Mini Stats Pills -->
+                <div class="flex flex-wrap items-center gap-2 text-xs num-font">
+                    <span class="px-3 py-1.5 rounded-xl border font-bold"
+                          :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'">
+                        📊 歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}
+                    </span>
+                    <span class="px-3 py-1.5 rounded-xl border font-bold"
+                          :class="isDark ? 'bg-[#16181D] border-[#262626] text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'">
+                        📅 最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Filter & Sort Toolbar -->
+            <div class="flex flex-wrap items-center gap-3 pt-3 border-t"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+
+                <!-- Order By -->
+                <div class="flex items-center space-x-1.5 text-xs">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">排序依據:</span>
+                    <div class="inline-flex rounded-xl border p-0.5"
+                         :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                        <button v-for="opt in [{id: 'total_net', label: '三大法人合計'}, {id: 'foreign_net', label: '外資淨買賣'}, {id: 'trust_net', label: '投信淨買賣'}, {id: 'dealer_net', label: '自營商'}]"
+                                :key="opt.id"
+                                @click="instOrderBy = opt.id; loadInstitutionalFlows()"
+                                :class="instOrderBy === opt.id ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                                class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                            {{ opt.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Direction -->
+                <div class="flex items-center space-x-1.5 text-xs">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">方向:</span>
+                    <div class="inline-flex rounded-xl border p-0.5"
+                         :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                        <button @click="instSortDir = 'desc'; loadInstitutionalFlows()"
+                                :class="instSortDir === 'desc' ? (isDark ? 'bg-emerald-600 text-white font-black' : 'bg-emerald-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                                class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                            🔥 買超榜
+                        </button>
+                        <button @click="instSortDir = 'asc'; loadInstitutionalFlows()"
+                                :class="instSortDir === 'asc' ? (isDark ? 'bg-rose-600 text-white font-black' : 'bg-rose-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                                class="px-2.5 py-1 rounded-lg transition-all text-xs">
+                            ❄️ 賣超榜
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Market -->
+                <div class="flex items-center space-x-1.5 text-xs">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">市場:</span>
+                    <select v-model="instMarket" @change="loadInstitutionalFlows()"
+                            class="border rounded-xl px-3 py-1 text-xs font-bold focus:outline-none transition-all cursor-pointer"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-800 shadow-sm'">
+                        <option value="ALL">全部 (上市 + 上櫃)</option>
+                        <option value="TWSE">上市 (TWSE)</option>
+                        <option value="TPEX">上櫃 (TPEX)</option>
+                    </select>
+                </div>
+
+                <!-- Date Picker -->
+                <div class="flex items-center space-x-1.5 text-xs">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">歷史日期:</span>
+                    <select v-model="instSelectedDate" @change="loadInstitutionalFlows()"
+                            class="border rounded-xl px-3 py-1 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer text-amber-500"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+                        <option value="">最新出表 ({{ marketStats.latest_institutional_date || '最新' }})</option>
+                        <option v-for="d in availableDates" :key="d" :value="d">{{ d }}</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Institutional Table Results -->
+        <div v-if="instLoading" class="text-center py-16 space-y-2">
+            <div class="inline-block animate-spin text-2xl">⏳</div>
+            <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在載入法人籌碼數據庫...</p>
+        </div>
+
+        <div v-else-if="institutionalFlows.length > 0"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border overflow-x-auto space-y-3">
+
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span>{{ instSortDir === 'desc' ? '🔥 三大法人淨買超排行榜' : '❄️ 三大法人淨賣超排行榜' }}</span>
+                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full border num-font"
+                          :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'">
+                        TOP {{ institutionalFlows.length }}
+                    </span>
+                </h3>
+            </div>
+
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
+                    <tr>
+                        <th class="p-3 font-bold num-font text-center w-12">#</th>
+                        <th class="p-3 font-bold">股票代號 / 名稱</th>
+                        <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
+                        <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
+                        <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
+                        <th class="p-3 font-bold text-right num-font">三大法人合計 (張)</th>
+                        <th class="p-3 font-bold text-center num-font">外資持股比率</th>
+                        <th class="p-3 font-bold text-center">市場</th>
+                        <th class="p-3 font-bold text-center w-24">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
+                    <tr v-for="(item, idx) in institutionalFlows" :key="item.ticker"
+                        class="transition-colors hover:bg-amber-500/5">
+                        <td class="p-3 font-black num-font text-center opacity-60">{{ idx + 1 }}</td>
+                        <td class="p-3">
+                            <div class="flex items-center space-x-2">
+                                <button @click="searchTickerHistory(item.ticker)"
+                                        class="font-black num-font hover:underline transition-colors text-amber-500">
+                                    {{ item.ticker }}
+                                </button>
+                                <span class="font-bold text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ item.name }}</span>
+                            </div>
+                        </td>
+                        <td class="p-3 text-right num-font font-bold"
+                            :class="item.foreign_net > 0 ? 'text-emerald-400' : (item.foreign_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                            {{ item.foreign_net > 0 ? '+' : '' }}{{ Number(item.foreign_net).toLocaleString() }}
+                        </td>
+                        <td class="p-3 text-right num-font font-bold"
+                            :class="item.trust_net > 0 ? 'text-emerald-400' : (item.trust_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                            {{ item.trust_net > 0 ? '+' : '' }}{{ Number(item.trust_net).toLocaleString() }}
+                        </td>
+                        <td class="p-3 text-right num-font font-bold"
+                            :class="item.dealer_net > 0 ? 'text-emerald-400' : (item.dealer_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                            {{ item.dealer_net > 0 ? '+' : '' }}{{ Number(item.dealer_net).toLocaleString() }}
+                        </td>
+                        <td class="p-3 text-right num-font font-black">
+                            <span class="px-2 py-0.5 rounded-md border text-xs"
+                                  :class="item.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-black') : (item.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200 font-black') : '')">
+                                {{ item.total_net > 0 ? '+' : '' }}{{ Number(item.total_net).toLocaleString() }}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center num-font font-bold">
+                            {{ item.foreign_ratio ? Number(item.foreign_ratio).toFixed(2) + '%' : '—' }}
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md border"
+                                  :class="item.market === 'TWSE' ? (isDark ? 'bg-[#16181D] text-sky-400 border-[#262626]' : 'bg-blue-50 text-blue-700 border-blue-200') : (isDark ? 'bg-[#16181D] text-purple-400 border-[#262626]' : 'bg-purple-50 text-purple-700 border-purple-200')">
+                                {{ item.market || 'TWSE' }}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button @click="searchTickerHistory(item.ticker)"
+                                    class="text-xs font-bold px-2.5 py-1 rounded-lg border transition-all text-amber-500 hover:text-amber-400"
+                                    :class="isDark ? 'bg-[#16181D] border-[#262626] hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] hover:bg-[#F4F4F6] shadow-sm'">
+                                分析 ↗
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-else class="text-center py-16 space-y-2">
+            <p class="text-sm font-bold" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">查無符合條件之法人籌碼數據。</p>
+        </div>
+    </div>
+
+    <!-- SUB-TAB 2: 券商分點主力追蹤 (BROKER MAIN FORCE) -->
+    {% include 'partials/tab_broker.html' %}
+
+</div>

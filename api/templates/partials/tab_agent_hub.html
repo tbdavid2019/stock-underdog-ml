@@ -1,0 +1,216 @@
+<!-- ================= TAB 3: AGENT & MCP 對接中心 (FIGMA FACELIFT V.1) ================= -->
+<div v-if="activeTab === 'agent_hub'" class="space-y-6">
+
+    <!-- Hub Header Banner -->
+    <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-6 rounded-2xl border space-y-2">
+        <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+            <span>🤖 Agent & MCP 協議對接中心</span>
+        </h2>
+        <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
+            本量化引擎原生支援 <strong>Anthropic Model Context Protocol (MCP)</strong>、<strong>WebMCP</strong> 以及標準 <strong>OpenAPI 3.1 規範</strong>。<br>
+            Claude Desktop、Cursor、Antigravity、Open-WebUI、LangChain 等任何代理系統皆可直接將本平台掛載為量化決策工具。
+        </p>
+    </div>
+
+    <!-- 4 Major Integration Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        <!-- 1. Claude Desktop MCP Config -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span class="text-lg">🟣</span>
+                        <span>Claude Desktop 設定 (MCP)</span>
+                    </h3>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg num-font font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                        stdio
+                    </span>
+                </div>
+                <p class="text-xs mt-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    將以下配置直接加入你的 <code class="num-font font-bold">claude_desktop_config.json</code>：
+                </p>
+
+                <pre class="mt-3 p-3 rounded-xl text-xs num-font overflow-x-auto border"
+                     :class="isDark ? 'bg-[#030302] border-[#262626] text-amber-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-amber-300'"><code>{
+  "mcpServers": {
+    "stock-quant": {
+      "command": "python",
+      "args": [
+        "/home/david/stock-underdog-ml/mcp_server.py"
+      ]
+    }
+  }
+}</code></pre>
+            </div>
+
+            <button @click="copyText(claudeMcpConfig, 'Claude Desktop 配置已複製！')"
+                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-2"
+                    :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
+                <span>📋 一鍵複製 Claude MCP 設定</span>
+            </button>
+        </div>
+
+        <!-- 2. Agent Skill (SKILL.md) -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span class="text-lg">⚡</span>
+                        <span>Agent Skill 規範檔 (SKILL.md)</span>
+                    </h3>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg num-font font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                        Skill Spec
+                    </span>
+                </div>
+                <p class="text-xs mt-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    包含標準 4 步操盤工作流、選股指標規則與停損防守邏輯：
+                </p>
+
+                <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
+                     :class="isDark ? 'bg-[#030302] border-[#262626] text-slate-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-stone-200'">
+                    <div>📁 本地路徑: <code>skills/stock-quant/SKILL.md</code></div>
+                    <div>🛠️ 工具數量: <code>17 大原生量化 MCP 函數 (含 Clef & Polymarket)</code></div>
+                    <div>🏆 因子支援: <code>👑四重共振 / 🏆三重共振 / 🔮雙ML共振 / TimesFM / 玄鐵均線 / 法人連買</code></div>
+                </div>
+            </div>
+
+            <a href="/skill" target="_blank"
+               class="w-full py-2.5 text-black bg-amber-500 hover:bg-amber-400 rounded-xl text-xs font-bold text-center transition-all shadow-md shadow-amber-500/20">
+                📖 線上檢視 SKILL.md 完整規格
+            </a>
+        </div>
+
+        <!-- 3. WebMCP (SSE) & OpenAPI Spec -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span class="text-lg">🌐</span>
+                        <span>WebMCP (SSE) / OpenAPI</span>
+                    </h3>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg num-font font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                        SSE & OpenAPI
+                    </span>
+                </div>
+                <p class="text-xs mt-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    供遠端 Agent (SSE 串流)、GPT Actions 或自動化系統即時掛載：
+                </p>
+
+                <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
+                     :class="isDark ? 'bg-[#030302] border-[#262626] text-amber-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-amber-300'">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-emerald-400">WebMCP (SSE):</span>
+                        <a href="/mcp/sse" target="_blank" class="hover:underline font-bold">/mcp/sse ↗</a>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>WebMCP Manifest:</span>
+                        <a href="/.well-known/mcp.json" target="_blank" class="hover:underline">/.well-known/mcp.json ↗</a>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>OpenAPI 3.1:</span>
+                        <a href="/openapi.json" target="_blank" class="hover:underline">/openapi.json ↗</a>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Plugin Manifest:</span>
+                        <a href="/.well-known/ai-plugin.json" target="_blank" class="hover:underline">/.well-known/ai-plugin.json ↗</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button @click="copyText(window.location.origin + '/mcp/sse', 'WebMCP SSE URL 已複製！')"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-emerald-400 border-[#262626]' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
+                    <span>⚡ 複製 WebMCP SSE</span>
+                </button>
+                <button @click="copyText(window.location.origin + '/openapi.json', 'OpenAPI URL 已複製！')"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
+                    <span>📋 複製 OpenAPI</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Python Query Snippet -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span class="text-lg">💻</span>
+                        <span>Python 快速調用範例</span>
+                    </h3>
+                    <span class="text-xs px-2.5 py-0.5 rounded-lg num-font font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                        Python 3
+                    </span>
+                </div>
+
+                <pre class="mt-3 p-3 rounded-xl text-xs num-font overflow-x-auto border"
+                     :class="isDark ? 'bg-[#030302] border-[#262626] text-emerald-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-emerald-300'"><code>import requests
+
+# 取得 🏆 三重共振焦點推薦標的
+res = requests.get(f"{window.location.origin}/api/v1/predictions/resonance")
+picks = res.json().get("data", [])
+for p in picks:
+    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")</code></pre>
+            </div>
+
+            <button @click="copyText(pythonSnippet, 'Python 代碼範例已複製！')"
+                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-2"
+                    :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
+                <span>📋 複製 Python 腳本</span>
+            </button>
+        </div>
+
+        <!-- 5. LLMs.txt & LLMs-Full.txt (llmstxt.org Standard) -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-4 flex flex-col justify-between md:col-span-2">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <span class="text-lg">📄</span>
+                        <span>llms.txt / llms-full.txt</span>
+                    </h3>
+                    <a href="https://llmstxt.org" target="_blank" class="text-xs px-2.5 py-0.5 rounded-lg num-font font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:underline">
+                        llmstxt.org ↗
+                    </a>
+                </div>
+                <p class="text-xs mt-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    遵循 <a href="https://llmstxt.org" target="_blank" class="underline font-bold text-amber-500">llmstxt.org</a> 標準，專為 LLM 系統提示詞、AI 爬蟲與 Agent 快速擷取設計：
+                </p>
+
+                <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
+                     :class="isDark ? 'bg-[#030302] border-[#262626] text-emerald-400' : 'bg-[#1E1E1C] border-[#2D2A26] text-emerald-300'">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-emerald-400">Summary (精簡摘要):</span>
+                        <a href="/llms.txt" target="_blank" class="hover:underline font-bold text-amber-400">/llms.txt ↗</a>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold">Full Context (完整規格):</span>
+                        <a href="/llms-full.txt" target="_blank" class="hover:underline font-bold text-amber-400">/llms-full.txt ↗</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button @click="copyText(window.location.origin + '/llms.txt', 'llms.txt URL 已複製！')"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-emerald-400 border-[#262626]' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
+                    <span>📋 複製 llms.txt</span>
+                </button>
+                <button @click="copyText(window.location.origin + '/llms-full.txt', 'llms-full.txt URL 已複製！')"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
+                    <span>📚 複製 full.txt</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>

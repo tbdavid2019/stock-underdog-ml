@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-10-13
+
+### Added
+- **🎨 前端單一檔案架構模組化與外觀拉皮 v.1 (`frontend-facelift-and-modularization`)**：
+  - **樣板與腳本模組化拆分**：解耦 3,011 行之龐大樣板 `api/templates/index.html`，縮減為輕量外殼（165 行），並拆解為 7 大 Jinja2 partials（`header.html`, `tab_dashboard.html`, `tab_institutional.html`, `tab_broker.html`, `tab_history.html`, `tab_agent_hub.html`, `footer.html`）。
+  - **原生 ES 模組解耦**：建立 `api/static/js/` 模組庫，包含 `api-client.js`（封裝後端 FastAPI 請求與錯誤重試）、`chart-manager.js`（Chart.js 生命週期、防記憶體洩漏 instances 字典與主題連動更新）、`app.js`（Vue 3 根應用、狀態響應、URL 同步與 WebMCP 工具註冊），完全保持零 Node.js build step 之輕量與秒級啟動特性。
+  - **FastAPI 靜態資源與模板渲染防護**：於 `api/main.py` 掛載 `/static` 目錄與靜態備援路由，首頁模板採用自訂定界符 (`[[ ]]`) 與正則備援展開，杜絕 Jinja2 衝突 Vue `{{ }}` 語法。
+  - **Figma 外觀拉皮 v.1 視覺規範落地**：
+    - 色彩系統：實作曜石黑 (`#030302`)、深黑卡片 (`#0D0E11` / `#16181D`)、邊框 (`#262626`)、琥珀金亮點 (`#F59E0B`) 與高對比淺色 (`#EEEEEE` / `#FFFFFF`) 雙主題切換，支援 localStorage 狀態持久化。
+    - 頂部導覽列：實作膠囊藥丸 Tab（`Tab / Large`）與具狀態文字之「顯示: 深色模式」/「顯示: 淺色模式」切換開關，雙向同步 URL Query 參數。
+    - 操盤看板：大盤宏觀卡片、2MD/FedWatch/財報/Polymarket 緊湊網格，以及全新高密度量化訊號表（深黑表頭、等寬金融數字、彩色策略/法人 Badge 系統、Yahoo/Goodinfo 外部跳轉與點擊即時展開之公司簡介抽屜 Company Drawer），並支援卡片與表格雙重視圖切換。
+    - 法人與券商主力雷達：三大法人買賣超排行 TOP 30 表格、TOP 8 目標券商累計走勢圖（霓虹色系多折線、深淺色自適應網格）與 TOP 15 買超/賣超分點雙欄比較清單。
+    - 個股歷史：歷史量化預測紀錄、三大法人累計折線圖與逐日籌碼數據明細。
+- **🏛️ 台美雙軌法說會催化劑追蹤系統規劃 (`earnings-call-tracker`)**：
+  - 整合台灣證交所 TWSE OpenAPI (`t100sb02_1`)、櫃買中心 TPEx OpenAPI (`mopsfin_t100sb02_1`)、MOPS 重大訊息。
+  - 整合美股 SEC EDGAR 8-K/6-K、Yahoo Finance、Investing.com 科技巨頭法說時程，支援雙時區（台灣 CST / 美東 EST）與倒數雷達。
+- **🎙️ AI 財經與科技 Podcast 智慧雷達規劃 (`podcast-financial-radar`)**：
+  - 規劃國際頂級財經/科技 Podcast 頻道庫、RSS/字幕自動解析與 LLM 摘要。
+  - 自動提煉實體與股票代號映射（Ticker Mapping），並於單集卡片整合即時漲跌幅 Badge 連動個股抽屜。
+
 ## 2026-10-08
 
 ### Added

@@ -1,0 +1,90 @@
+<!-- ================= TOP NAVIGATION BAR (FIGMA FACELIFT V.1) ================= -->
+<header class="sticky top-0 z-50 border-b transition-colors duration-200"
+        :class="isDark ? 'bg-[#0D0E11]/95 backdrop-blur-md border-[#262626]' : 'bg-white/95 backdrop-blur-md border-[#E5E7EB] shadow-sm'">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
+
+        <!-- Brand Title (Single Line, Never Wraps) -->
+        <div class="flex items-center space-x-3 cursor-pointer select-none shrink-0" @click="setTab('dashboard')">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg font-black text-lg transition-transform hover:scale-105"
+                 :class="isDark ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-black shadow-amber-500/20' : 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-amber-500/25'">
+                <span>⚡</span>
+            </div>
+            <div class="flex flex-col">
+                <div class="flex items-center space-x-2">
+                    <span class="text-base sm:text-lg font-black tracking-tight num-font whitespace-nowrap"
+                          :class="isDark ? 'text-white' : 'text-slate-900'">
+                        888 · Stock Quant
+                    </span>
+                    <span class="px-2 py-0.5 text-xs font-bold num-font rounded-full border whitespace-nowrap"
+                          :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'">
+                        v__APP_VERSION__
+                    </span>
+                </div>
+                <p class="text-xs font-medium leading-normal mt-0.5 whitespace-nowrap"
+                   :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    多維量化交易決策平台
+                </p>
+            </div>
+        </div>
+
+        <!-- Global Macro Pill (Hidden on Narrow Screens) -->
+        <div class="hidden xl:flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full border text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 transition-colors"
+             :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700'">
+            <span class="w-2 h-2 rounded-full animate-pulse"
+                  :class="macro.exposure === null || macro.exposure === undefined ? 'bg-slate-400' : (macro.exposure >= 0.8 ? 'bg-emerald-500' : 'bg-amber-500')"></span>
+            <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">大盤風控:</span>
+            <span class="font-bold">{{ macro.regime_name || '評估中...' }}</span>
+            <span class="opacity-30">|</span>
+            <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">建議曝險:</span>
+            <span class="font-black num-font text-sm sm:text-base text-amber-500">
+                {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
+            </span>
+        </div>
+
+        <!-- Navigation Tabs & Theme Toggle -->
+        <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            <!-- Capsule Pill Tab Group (Tab / Large) -->
+            <nav class="flex items-center space-x-1 p-1 rounded-full border transition-colors"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                <button @click="setTab('dashboard')" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
+                        :class="activeTab === 'dashboard' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span>📊</span>
+                    <span>操盤看板</span>
+                </button>
+                <button @click="setTab('institutional')" :aria-current="activeTab === 'institutional' ? 'page' : undefined"
+                        :class="activeTab === 'institutional' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span>🏛️</span>
+                    <span>法人籌碼</span>
+                </button>
+                <button @click="setTab('history')" :aria-current="activeTab === 'history' ? 'page' : undefined"
+                        :class="activeTab === 'history' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span>🔍</span>
+                    <span>個股歷史</span>
+                </button>
+            </nav>
+
+            <!-- Share URL Button -->
+            <button @click="copyShareLink()"
+                    class="px-3 py-1.5 rounded-full border text-xs font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap shadow-sm"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626] hover:text-amber-300' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
+                    title="複製目前頁面完整分享連結" aria-label="分享連結">
+                <span>🔗</span>
+                <span class="hidden sm:inline">分享</span>
+            </button>
+
+            <!-- Dark / Light Mode Switcher with Status Text -->
+            <button @click="toggleTheme()"
+                    class="px-3 py-1.5 rounded-full border transition-all text-xs font-bold flex items-center space-x-2 shadow-sm select-none"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'"
+                    :title="isDark ? '切換為淺色模式' : '切換為曜石黑深色模式'"
+                    :aria-label="isDark ? '顯示: 深色模式' : '顯示: 淺色模式'">
+                <span class="text-sm">{{ isDark ? '🌙' : '☀️' }}</span>
+                <span class="hidden md:inline">{{ isDark ? '顯示: 深色模式' : '顯示: 淺色模式' }}</span>
+            </button>
+        </div>
+
+    </div>
+</header>

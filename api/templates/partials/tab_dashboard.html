@@ -1,0 +1,755 @@
+<!-- ================= TAB 1: 操盤看板 (FIGMA FACELIFT V.1) ================= -->
+<div v-if="activeTab === 'dashboard'" class="space-y-6">
+
+    <!-- Section Header Banner -->
+    <section class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4" aria-labelledby="daily-report-title">
+        <div class="max-w-2xl">
+            <h1 id="daily-report-title" class="text-2xl sm:text-3xl font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
+                今日量化訊號
+            </h1>
+            <p class="mt-1.5 text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
+                先看總體大盤風險門檻，再依多維量化策略檢視每日計算出的候選標的與時序預測軌跡。
+            </p>
+        </div>
+        <div class="flex items-center gap-2 self-start lg:self-auto px-3.5 py-1.5 rounded-full border text-xs sm:text-sm font-bold transition-colors"
+             :class="loadError ? (isDark ? 'bg-rose-950/40 border-rose-900 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-200' : 'bg-white border-[#E5E7EB] text-slate-700 shadow-sm')"
+             role="status" aria-live="polite">
+            <span class="w-2 h-2 rounded-full" :class="loadError ? 'bg-rose-500' : (loading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')"></span>
+            <span>{{ loadError ? '日報載入失敗' : (loading ? '日報計算載入中' : (batchDate ? '最新日報 ' + batchDate : '最近日報快照')) }}</span>
+        </div>
+    </section>
+
+    <!-- 1. Macro Regime Overview Cards (4 等分高密度金融卡片) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Market Regime -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
+            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span>美股宏觀環境</span>
+                <span class="text-base">🌍</span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black tracking-tight truncate my-1" :class="isDark ? 'text-white' : 'text-slate-900'">
+                {{ macro.regime_name || '評估中…' }}
+            </div>
+            <div class="pt-2.5 border-t flex items-center justify-between text-xs"
+                 :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                <span class="font-medium">建議曝險:</span>
+                <span class="text-sm sm:text-base font-black num-font text-amber-500">
+                    {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
+                </span>
+            </div>
+        </div>
+
+        <!-- VIX Card -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
+            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span>VIX 恐慌指數</span>
+                <span class="text-base">⚡</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black num-font my-1"
+                 :class="macro.vix === null || macro.vix === undefined ? (isDark ? 'text-slate-300' : 'text-slate-500') : (macro.vix > 20 ? 'text-amber-500' : 'text-emerald-500')">
+                {{ macro.vix !== null && macro.vix !== undefined ? Number(macro.vix).toFixed(1) : '—' }}
+            </div>
+            <div class="pt-2.5 border-t text-xs flex items-center space-x-1.5"
+                 :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                <span class="w-2 h-2 rounded-full shrink-0" :class="macro.vix === null || macro.vix === undefined ? 'bg-slate-400' : (macro.vix > 20 ? 'bg-amber-500' : 'bg-emerald-500')"></span>
+                <span class="truncate font-medium">{{ macro.vix === null || macro.vix === undefined ? '等待總經資料' : (macro.vix < 20 ? '低恐慌 (市場情緒穩定)' : '情緒波動偏高，注意風控') }}</span>
+            </div>
+        </div>
+
+        <!-- Benchmarks (SPY / SOX) -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
+            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span>標普 / 費半均線狀態</span>
+                <span class="text-base">📊</span>
+            </div>
+            <div class="space-y-1.5 text-xs font-semibold my-1">
+                <div class="flex items-center justify-between">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">SPY 標普:</span>
+                    <span v-if="macro.spy_above_ma60 !== null && macro.spy_above_ma60 !== undefined" :class="macro.spy_above_ma60 ? 'text-emerald-400' : 'text-rose-500'">
+                        {{ macro.spy_above_ma60 ? '站穩 MA60 ✓' : '跌破季線 ✗' }}
+                    </span>
+                    <span v-else class="text-slate-400">讀取中…</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">SOX 費半:</span>
+                    <span v-if="macro.sox_above_ma60 !== null && macro.sox_above_ma60 !== undefined" :class="macro.sox_above_ma60 ? 'text-emerald-400' : 'text-amber-500'">
+                        {{ macro.sox_above_ma60 ? '站穩季線 ✓' : '破季線 (科技半倉)' }}
+                    </span>
+                    <span v-else class="text-slate-400">讀取中…</span>
+                </div>
+            </div>
+            <div class="pt-2.5 border-t text-xs flex items-center justify-between"
+                 :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                <span class="font-medium">科技股上限:</span>
+                <span class="num-font font-black text-sm text-amber-500">
+                    {{ macro.tech_exposure_cap !== null && macro.tech_exposure_cap !== undefined ? (macro.tech_exposure_cap * 100).toFixed(0) + '%' : '—' }}
+                </span>
+            </div>
+        </div>
+
+        <!-- DuckDB In-Memory Engine Stats -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
+            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span>歷史報告資料</span>
+                <span class="text-base">🦆</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black num-font my-1 flex items-baseline text-amber-500">
+                {{ stats.total_records !== null && stats.total_records !== undefined ? Number(stats.total_records).toLocaleString() : '—' }}
+                <span class="text-xs font-bold ml-1.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">筆</span>
+            </div>
+            <div class="pt-2.5 border-t flex items-center justify-between text-xs"
+                 :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                <span class="font-medium">標的檔數:</span>
+                <span class="font-bold num-font">{{ stats.distinct_tickers !== null && stats.distinct_tickers !== undefined ? stats.distinct_tickers : '—' }} 檔</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1.1 Macro Catalysts, FedWatch & US Calendars (Investing.com via 2MD) -->
+    <div v-if="macro.fed_rate || (macro.catalyst_alerts && macro.catalyst_alerts.length) || (macro.earnings_calendar && macro.earnings_calendar.length) || macro.commodities"
+         class="rounded-2xl border p-4 sm:p-5 space-y-3 transition-all"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+
+        <!-- Header Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div class="flex items-center space-x-2.5">
+                <span class="text-xl">🏛️</span>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-base sm:text-lg font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
+                            總經流動性與重磅行事曆
+                        </h2>
+                        <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                              :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'">
+                            Investing.com via 2MD
+                        </span>
+                    </div>
+                    <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                        CME FedWatch 聯準會利率預期 · 美股財報行事曆 · 原油/黃金/期銅 · 總經催化劑
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2 self-end sm:self-auto">
+                <button @click="refreshMacro()" :disabled="macroRefreshing"
+                        class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
+                        title="強制刷新 Investing.com 宏觀數據">
+                    <span :class="{'animate-spin inline-block': macroRefreshing}">🔄</span>
+                    <span class="hidden sm:inline">{{ macroRefreshing ? '更新中...' : '即時更新' }}</span>
+                </button>
+                <button @click="showMacroDetails = !showMacroDetails"
+                        class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                        :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'">
+                    <span>{{ showMacroDetails ? '收合日曆 ▲' : '展開完整行事曆 ▼' }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Catalyst Alerts Pills -->
+        <div v-if="macro.catalyst_alerts && macro.catalyst_alerts.length" class="flex flex-wrap gap-2 pt-1">
+            <div v-for="(alert, idx) in macro.catalyst_alerts" :key="idx"
+                 class="text-xs px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900'">
+                <span>{{ alert }}</span>
+            </div>
+        </div>
+
+        <!-- Detailed Grid (Collapsible) -->
+        <div v-show="showMacroDetails" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 pt-2">
+
+            <!-- Panel 1: FedWatch Rate Monitor -->
+            <div class="p-4 rounded-xl border space-y-3"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">🎯</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">FedWatch 降息監控</span>
+                    </div>
+                    <span v-if="macro.fed_rate && macro.fed_rate.meeting_date" class="text-xs font-bold num-font text-amber-500">
+                        {{ macro.fed_rate.meeting_date }}
+                    </span>
+                </div>
+
+                <div v-if="macro.fed_rate" class="space-y-2">
+                    <div class="p-2.5 rounded-lg border text-xs"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700'">
+                        <div class="font-bold mb-1 text-emerald-400">
+                            {{ macro.fed_rate.summary || 'FOMC 利率預期' }}
+                        </div>
+                        <div v-if="macro.fed_rate.countdown" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            會議倒數: <span class="font-bold">{{ macro.fed_rate.countdown }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Probability Bars -->
+                    <div class="space-y-2 pt-1">
+                        <div v-for="rate in (macro.fed_rate.target_rates || []).slice(0, 4)" :key="rate.rate_range"
+                             class="text-xs space-y-1">
+                            <div class="flex justify-between items-center text-xs font-medium">
+                                <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">目標利率 {{ rate.rate_range }}%</span>
+                                <span class="font-bold num-font" :class="rate.probability_value >= 30 ? 'text-amber-500' : (isDark ? 'text-[#9CA3AF]' : 'text-slate-500')">
+                                    {{ rate.current_probability }}
+                                    <span class="font-normal text-xs opacity-75">(前日 {{ rate.previous_day }})</span>
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div class="h-1.5 rounded-full transition-all duration-500"
+                                     :class="rate.probability_value >= 50 ? 'bg-amber-500' : (rate.probability_value >= 25 ? 'bg-sky-500' : 'bg-slate-400')"
+                                     :style="{ width: Math.min(100, Math.max(2, rate.probability_value || 0)) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="text-xs text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
+            </div>
+
+            <!-- Panel 2: US Earnings Calendar -->
+            <div class="p-4 rounded-xl border space-y-3"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">📅</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">美股重量級財報日曆</span>
+                    </div>
+                    <span class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                        {{ (macro.earnings_calendar || []).length }} 檔發布
+                    </span>
+                </div>
+
+                <div v-if="macro.earnings_calendar && macro.earnings_calendar.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <div v-for="(earn, eIdx) in macro.earnings_calendar.slice(0, 8)" :key="eIdx"
+                         class="p-2.5 rounded-lg border text-xs flex items-center justify-between"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
+                        <div class="space-y-0.5 truncate mr-2">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="font-black num-font text-xs sm:text-sm text-amber-500">
+                                    {{ earn.ticker }}
+                                </span>
+                                <span class="text-xs font-medium truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    {{ earn.name }}
+                                </span>
+                            </div>
+                            <div class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                {{ earn.date }} {{ earn.time || '' }}
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 text-xs">
+                            <div class="font-bold num-font" :class="isDark ? 'text-slate-200' : 'text-slate-700'">
+                                預估 EPS: <span class="text-emerald-400">{{ earn.eps_forecast || '—' }}</span>
+                            </div>
+                            <div class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                營收: {{ earn.revenue_forecast || '—' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="text-xs text-slate-400 py-6 text-center">近期暫無重大美股財報公佈</div>
+            </div>
+
+            <!-- Panel 3: Commodities & Economic Events -->
+            <div class="p-4 rounded-xl border space-y-3"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">🛢️</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">關鍵大宗商品 & 總經事件</span>
+                    </div>
+                    <span class="text-xs font-bold" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">通膨與流動性</span>
+                </div>
+
+                <!-- Commodities -->
+                <div v-if="macro.commodities" class="space-y-1.5">
+                    <div v-for="(item, cKey) in macro.commodities" :key="cKey"
+                         class="p-2.5 rounded-lg border text-xs flex items-center justify-between"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ item.name }}</div>
+                            <div class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">{{ item.indicator }}</div>
+                        </div>
+                        <div class="text-right space-y-0.5">
+                            <div class="font-bold num-font text-xs"
+                                 :class="item.daily_change && item.daily_change.startsWith('-') ? 'text-rose-500' : 'text-emerald-400'">
+                                日 {{ item.daily_change || '—' }}
+                            </div>
+                            <div class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                週 {{ item.weekly_change || '—' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next High-Impact Economic Event -->
+                <div v-if="macro.economic_calendar && macro.economic_calendar.length" class="pt-1 border-t"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                    <div class="text-xs font-bold mb-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">即將到來焦點數據:</div>
+                    <div class="space-y-1 max-h-24 overflow-y-auto">
+                        <div v-for="(evt, evIdx) in macro.economic_calendar.slice(0, 3)" :key="evIdx"
+                             class="text-xs flex items-center justify-between py-0.5"
+                             :class="evt.is_high_impact ? 'text-amber-400 font-bold' : (isDark ? 'text-slate-400' : 'text-slate-600')">
+                            <span class="truncate mr-1">[{{ evt.country }}] {{ evt.event }}</span>
+                            <span class="shrink-0 num-font">{{ evt.time }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Polymarket Real-Money Sentiment -->
+            <div class="p-4 rounded-xl border space-y-3"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">🎲</span>
+                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">Polymarket 預測市場</span>
+                    </div>
+                    <span v-if="macro.polymarket && macro.polymarket.source" class="text-xs font-medium num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                        {{ macro.polymarket.source === 'doh_direct' ? 'DoH 直連' : (macro.polymarket.source === '2md_reader' ? '2MD 快線' : '真金白銀') }}
+                    </span>
+                </div>
+
+                <div v-if="macro.polymarket" class="space-y-2">
+                    <!-- Fed Odds Highlights from Polymarket -->
+                    <div v-if="macro.polymarket.fed_real_money_odds" class="p-2.5 rounded-lg border text-xs"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700'">
+                        <div class="font-bold mb-1 flex items-center justify-between text-amber-500">
+                            <span class="text-xs">真金白銀降息定價</span>
+                            <span class="text-xs num-font font-normal text-slate-400">大盤預期</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-xs pt-0.5">
+                            <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                                <span class="text-slate-400">降息 1 碼</span>
+                                <span class="font-bold num-font text-emerald-400">{{ Math.round(macro.polymarket.fed_real_money_odds.cut_25bps || 0) }}%</span>
+                            </div>
+                            <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                                <span class="text-slate-400">按兵不動</span>
+                                <span class="font-bold num-font text-sky-400">{{ Math.round(macro.polymarket.fed_real_money_odds.pause || 0) }}%</span>
+                            </div>
+                            <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                                <span class="text-slate-400">降息 2 碼</span>
+                                <span class="font-bold num-font text-amber-400">{{ Math.round(macro.polymarket.fed_real_money_odds.cut_50bps || 0) }}%</span>
+                            </div>
+                            <div class="flex justify-between px-1.5 py-0.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                                <span class="text-slate-400">升息 1 碼</span>
+                                <span class="font-bold num-font text-rose-500">{{ Math.round(macro.polymarket.fed_real_money_odds.hike_25bps || 0) }}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Markets Scrollable List -->
+                    <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        <div v-for="(m, mIdx) in (macro.polymarket.markets || []).slice(0, 6)" :key="mIdx"
+                             class="p-2 rounded-lg border text-xs space-y-1"
+                             :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
+                            <div class="flex items-start justify-between gap-1.5">
+                                <div class="font-medium text-xs leading-snug line-clamp-2" :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="m.question">
+                                    {{ m.question }}
+                                </div>
+                                <span class="shrink-0 text-xs font-bold px-2 py-0.5 rounded"
+                                      :class="m.probability >= 50 ? (isDark ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700')">
+                                    {{ Math.round(m.probability || 0) }}% {{ m.top_outcome || 'Yes' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                <span class="capitalize">{{ m.category }}</span>
+                                <span class="num-font">24h量: ${{ Math.round((m.volume_24h || 0)).toLocaleString() }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="text-xs text-slate-400 py-6 text-center">暫無 Polymarket 預測數據</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. Strategy Filter Bar & View Mode Selector -->
+    <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+
+        <!-- Strategy Buttons -->
+        <div class="flex items-center space-x-2 overflow-x-auto pb-1.5 lg:pb-0">
+            <button v-for="strat in strategyOptions" :key="strat.id"
+                    @click="setStrategy(strat.id)"
+                    :aria-pressed="selectedStrategy === strat.id"
+                    :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
+                    class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 border">
+                <span>{{ strat.icon }}</span>
+                <span>{{ strat.label }}</span>
+            </button>
+        </div>
+
+        <!-- Right: View Mode, Market Selector & Refresh -->
+        <div class="flex items-center space-x-2.5 self-end lg:self-auto shrink-0">
+            <!-- View Mode Switcher -->
+            <div class="inline-flex rounded-xl border p-0.5"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                <button @click="viewMode = 'table'"
+                        :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                        title="高密度表格檢視">
+                    <span>📋</span>
+                    <span class="hidden sm:inline">表格</span>
+                </button>
+                <button @click="viewMode = 'card'"
+                        :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                        title="卡片情報檢視">
+                    <span>🗂️</span>
+                    <span class="hidden sm:inline">卡片</span>
+                </button>
+            </div>
+
+            <!-- Market Index Dropdown -->
+            <select v-model="selectedIndex" @change="setIndex()"
+                    class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
+                <option value="">🌐 全部市場 (All)</option>
+                <option value="台灣50">🇹🇼 台灣50 (TW0050)</option>
+                <option value="台灣中型100">🇹🇼 台灣中型100 (TW0051)</option>
+                <option value="SP500">🇺🇸 S&P 500 (美股標普)</option>
+                <option value="太空概念 (SpaceX)">🚀 太空概念 (SpaceX)</option>
+            </select>
+
+            <button @click="loadData()"
+                    class="p-2 sm:p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-center"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
+                    title="重新整理" aria-label="重新整理日報">
+                🔄
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Batch Header & Count Indicator -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm px-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+        <div class="flex items-center space-x-3">
+            <span>日報批次: <strong class="num-font font-bold text-amber-500">{{ batchDate || '最近批次' }}</strong></span>
+            <span v-if="batchTimestamp" class="num-font">運算時間: {{ batchTimestamp }}</span>
+            <span v-if="batchStale" class="font-bold text-amber-500">資料需更新</span>
+        </div>
+        <div>共篩選出 <strong class="num-font font-bold text-amber-500">{{ records.length }}</strong> 檔標的</div>
+    </div>
+
+    <!-- 3. Loading & Error States -->
+    <div v-if="loading" class="p-12 text-center space-y-3" aria-label="日報載入中" aria-busy="true">
+        <div class="inline-block animate-spin text-3xl">⏳</div>
+        <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在透過 DuckDB 引擎快速運算多維量化指標...</p>
+    </div>
+
+    <div v-else-if="loadError"
+         class="text-center py-14 rounded-2xl border space-y-3"
+         :class="isDark ? 'bg-[#0D0E11] border-rose-900/60' : 'bg-rose-50/60 border-rose-200'"
+         role="alert">
+        <div class="text-3xl">⚠️</div>
+        <div class="text-base font-bold" :class="isDark ? 'text-rose-200' : 'text-rose-800'">{{ loadError }}</div>
+        <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white transition-all bg-amber-500 hover:bg-amber-600">
+            重新整理
+        </button>
+    </div>
+
+    <div v-else-if="records.length === 0"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="text-center py-16 rounded-2xl border space-y-2">
+        <div class="text-4xl">🎯</div>
+        <div class="text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">當前篩選條件下無符合標的</div>
+        <p class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">請嘗試切換其他策略或選擇全部市場</p>
+    </div>
+
+    <!-- 4. VIEW MODE: HIGH-DENSITY BLOOMBERG QUANT SIGNAL TABLE -->
+    <div v-else-if="viewMode === 'table'"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="rounded-2xl border overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <!-- Deep Obsidian Table Header -->
+                <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
+                    <tr>
+                        <th class="p-3 font-bold num-font text-center w-12">#</th>
+                        <th class="p-3 font-bold">標的代號 / 名稱</th>
+                        <th class="p-3 font-bold text-center">市場</th>
+                        <th class="p-3 font-bold">策略模型</th>
+                        <th class="p-3 font-bold text-right num-font">現價</th>
+                        <th class="p-3 font-bold text-right num-font">預測目標價 / 均線</th>
+                        <th class="p-3 font-bold text-right num-font">預期潛力</th>
+                        <th class="p-3 font-bold text-center num-font">PE / PB</th>
+                        <th class="p-3 font-bold text-right num-font">5日法人籌碼 (張)</th>
+                        <th class="p-3 font-bold">策略共振標籤</th>
+                        <th class="p-3 font-bold text-center w-28">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
+                    <template v-for="(item, idx) in records" :key="item.ticker + (item.model_name || '') + idx">
+                        <!-- Primary Row -->
+                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer"
+                            :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
+                            @click="toggleRowDrawer(item.ticker)">
+                            <td class="p-3 font-black num-font text-center opacity-60">{{ idx + 1 }}</td>
+                            <td class="p-3">
+                                <div class="flex items-center space-x-2">
+                                    <button @click.stop="searchTickerHistory(item.ticker)"
+                                            class="font-black num-font hover:underline transition-colors text-amber-500"
+                                            :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
+                                        {{ item.ticker }}
+                                    </button>
+                                    <span v-if="item.name" class="font-bold text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                        {{ item.name }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="p-3 text-center">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans"
+                                      :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
+                                    {{ item.index_name || '綜合' }}
+                                </span>
+                            </td>
+                            <td class="p-3 font-bold text-xs">
+                                <span>{{ item.strategy_type || item.model_name }}</span>
+                            </td>
+                            <td class="p-3 text-right font-black num-font">
+                                ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
+                            </td>
+                            <td class="p-3 text-right font-black num-font text-amber-500">
+                                <span v-if="item.predicted_price">${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
+                                <span v-else-if="item.pullback_type" class="text-xs font-bold text-amber-500">{{ item.pullback_type }}</span>
+                                <span v-else class="text-xs text-slate-400">-</span>
+                            </td>
+                            <td class="p-3 text-right font-black num-font">
+                                <span v-if="item.potential !== null && item.potential !== undefined"
+                                      :class="item.potential >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-600 font-bold') : 'text-rose-500 font-bold'">
+                                    {{ item.potential >= 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%
+                                </span>
+                                <span v-else class="text-slate-400">-</span>
+                            </td>
+                            <td class="p-3 text-center num-font text-xs">
+                                <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }} / {{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
+                            </td>
+                            <td class="p-3 text-right num-font text-xs">
+                                <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1.5 font-bold">
+                                    <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                                        投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
+                                    </span>
+                                    <span v-if="item.foreign_net_5d !== null" :class="item.foreign_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                                        外:{{ item.foreign_net_5d > 0 ? '+' : '' }}{{ item.foreign_net_5d }}
+                                    </span>
+                                </span>
+                                <span v-else class="text-slate-400">-</span>
+                            </td>
+                            <td class="p-3">
+                                <div class="flex flex-wrap gap-1">
+                                    <span v-for="tag in parseTags(item.tags)" :key="tag"
+                                          :class="tag.includes('共振') ? (isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300 font-bold') : (tag.includes('合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]'))"
+                                          class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight">
+                                        {{ tag }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="p-3 text-center" @click.stop>
+                                <div class="flex items-center justify-center space-x-1">
+                                    <button @click="toggleRowDrawer(item.ticker)"
+                                            class="p-1 rounded-lg border text-xs font-bold transition-all"
+                                            :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                                            :title="expandedDrawerTicker === item.ticker ? '收合簡介抽屜' : '展開公司簡介抽屜'">
+                                        {{ expandedDrawerTicker === item.ticker ? '收合 ▲' : '詳情 ▼' }}
+                                    </button>
+                                    <button @click="searchTickerHistory(item.ticker)"
+                                            class="p-1 rounded-lg border text-xs font-bold transition-all"
+                                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
+                                            title="查詢時序歷史">
+                                        📈
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Expandable Company Details Drawer Row -->
+                        <tr v-if="expandedDrawerTicker === item.ticker" class="transition-all"
+                            :class="isDark ? 'bg-[#16181D]/80 border-b border-[#262626]' : 'bg-amber-50/40 border-b border-[#E5E7EB]'">
+                            <td colspan="11" class="p-4 sm:p-6 space-y-4">
+                                <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                    <div class="space-y-2 max-w-3xl">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-xl font-black num-font text-amber-500">{{ item.ticker }}</span>
+                                            <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                {{ expandedDrawerData?.name || item.name || item.ticker }}
+                                            </span>
+                                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md border"
+                                                  :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
+                                                {{ expandedDrawerData?.industry || '綜合產業' }}
+                                            </span>
+                                            <span v-if="expandedDrawerData?.market_cap" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                市值: {{ expandedDrawerData.market_cap }}
+                                            </span>
+                                            <span v-if="expandedDrawerData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                董座: {{ expandedDrawerData.chairman }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Business Overview -->
+                                        <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                            {{ expandedDrawerData?.business_summary || '正在連線 2md 即時爬取公司基本資料與新聞...' }}
+                                        </p>
+
+                                        <!-- Recent News -->
+                                        <div v-if="expandedDrawerData?.recent_news && expandedDrawerData.recent_news.length > 0" class="pt-2 space-y-1.5">
+                                            <div class="text-xs font-bold text-amber-500">📰 即時最新動態:</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <a v-for="(news, nidx) in expandedDrawerData.recent_news.slice(0, 3)" :key="nidx"
+                                                   :href="news.url" target="_blank"
+                                                   class="px-2.5 py-1 rounded-lg border text-xs leading-normal transition-all hover:underline"
+                                                   :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-800 hover:border-amber-400'">
+                                                    • {{ news.title }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right: External Portals & Shortcuts -->
+                                    <div class="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 self-start">
+                                        <a v-if="expandedDrawerData?.links?.yahoo" :href="expandedDrawerData.links.yahoo" target="_blank"
+                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm"
+                                           :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
+                                            Yahoo 奇摩股市 ↗
+                                        </a>
+                                        <a v-if="expandedDrawerData?.links?.goodinfo" :href="expandedDrawerData.links.goodinfo" target="_blank"
+                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm"
+                                           :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
+                                            Goodinfo 台灣股市 ↗
+                                        </a>
+                                        <button @click="searchTickerHistory(item.ticker)"
+                                                class="px-3 py-1.5 rounded-xl text-xs font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20">
+                                            查看時序歷史軌跡 ↗
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 5. VIEW MODE: HIGH-DENSITY QUANT CARDS GRID -->
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div v-for="item in records" :key="item.ticker + (item.model_name || '') + item.timestamp"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-500/50 shadow-sm'"
+             class="p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3.5 sm:space-y-4">
+
+            <!-- Top Header: Ticker, Market Index & Potential % -->
+            <div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2.5">
+                            <span class="text-xl sm:text-2xl font-black num-font tracking-wide cursor-pointer hover:underline transition-colors text-amber-500"
+                                  @mouseenter="showCompanyHover($event, item.ticker)"
+                                  @mouseleave="hideCompanyHover()"
+                                  @click="searchTickerHistory(item.ticker)"
+                                  :title="'滑鼠停留查看 ' + item.ticker + ' 公司介紹與即時新聞'">
+                                {{ item.ticker }}
+                            </span>
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-lg border font-sans"
+                                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
+                                {{ item.index_name }}
+                            </span>
+                        </div>
+                        <div class="text-xs sm:text-sm font-medium mt-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            策略: <strong :class="isDark ? 'text-slate-200' : 'text-slate-900'">{{ item.strategy_type || item.model_name }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Potential Badge -->
+                    <div v-if="item.potential !== null && item.potential !== undefined"
+                         :class="item.potential >= 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-300') : (isDark ? 'bg-rose-950/80 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-300')"
+                         class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black num-font border flex items-center space-x-1.5 shadow-sm">
+                        <span>{{ item.potential >= 0 ? '▲' : '▼' }}</span>
+                        <span>{{ item.potential > 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%</span>
+                    </div>
+                </div>
+
+                <!-- Price Grid -->
+                <div class="mt-3 p-3 sm:p-3.5 rounded-xl grid grid-cols-2 gap-2 sm:gap-3"
+                     :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                    <div>
+                        <div class="text-xs font-bold tracking-normal" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">當前現價</div>
+                        <div class="text-lg sm:text-xl font-black num-font truncate" :class="isDark ? 'text-slate-100' : 'text-slate-900'">
+                            ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
+                        </div>
+                    </div>
+
+                    <div v-if="item.predicted_price">
+                        <div class="text-xs font-bold tracking-normal text-amber-500">預測目標價</div>
+                        <div class="text-lg sm:text-xl font-black num-font truncate text-amber-500">
+                            ${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                        </div>
+                    </div>
+                    <div v-else-if="item.pullback_type">
+                        <div class="text-xs font-bold text-amber-500">均線買點</div>
+                        <div class="text-xs sm:text-sm font-bold text-amber-500 truncate">
+                            {{ item.pullback_type }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Valuation Metrics & Institutional Flows -->
+            <div class="space-y-2 text-xs sm:text-sm">
+                <!-- Valuation Row -->
+                <div class="flex items-center justify-between flex-wrap gap-1 pb-1.5 border-b text-xs sm:text-sm"
+                     :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                    <span class="font-medium">估值指標:</span>
+                    <span class="num-font font-semibold text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-900'">
+                        PE: <span class="font-bold text-amber-500">{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}</span> |
+                        PB: <span class="font-bold text-amber-500">{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
+                        <span v-if="item.ev_ebitda" class="hidden sm:inline"> | EV: {{ Number(item.ev_ebitda).toFixed(1) }}</span>
+                    </span>
+                </div>
+
+                <!-- Chips Row -->
+                <div v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null"
+                     class="flex items-center justify-between flex-wrap gap-1 pb-1.5 border-b text-xs sm:text-sm"
+                     :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                    <span class="font-medium">法人籌碼 (5日):</span>
+                    <span class="num-font font-semibold text-xs sm:text-sm flex items-center flex-wrap gap-x-2">
+                        <span v-if="item.trust_net_5d !== null"
+                              :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-400'">
+                            投信 {{ item.trust_net_5d > 0 ? '+' : '' }}{{ Number(item.trust_net_5d).toLocaleString() }}張
+                        </span>
+                        <span v-if="item.foreign_net_5d !== null"
+                              :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-400'">
+                            外資 {{ item.foreign_net_5d > 0 ? '+' : '' }}{{ Number(item.foreign_net_5d).toLocaleString() }}張
+                        </span>
+                    </span>
+                </div>
+
+                <!-- Tags Pills -->
+                <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
+                    <span v-for="tag in parseTags(item.tags)" :key="tag"
+                          :class="tag.includes('共振') ? (isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300 font-bold') : (tag.includes('合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]'))"
+                          class="px-2.5 py-1 text-xs font-semibold rounded-lg border font-sans tracking-wide">
+                        {{ tag }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="pt-3 border-t flex items-center justify-between text-xs"
+                 :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                <span class="num-font font-medium">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
+                <button @click="searchTickerHistory(item.ticker)"
+                        class="font-bold flex items-center space-x-1 transition-all text-amber-500 hover:text-amber-400"
+                        :aria-label="'查看 ' + item.ticker + ' 歷史軌跡'">
+                    <span>歷史軌跡 ↗</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+</div>

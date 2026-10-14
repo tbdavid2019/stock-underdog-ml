@@ -61,11 +61,38 @@ app.include_router(market.router, prefix="/api/v1")
 app.include_router(decision.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+# 掛載靜態檔案路由提供 /static/js/ 等靜態模組
+try:
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/static", StaticFiles(directory=STATIC_ASSET_DIR), name="static")
+except Exception as e:
+    import logging
+    logging.getLogger("stock_app.api").warning(f"⚠️ StaticFiles 掛載略過: {e}")
 
 
 def _static_asset(filename: str) -> FileResponse:
     """Serve a small public branding asset used by crawlers and home screens."""
     return FileResponse(os.path.join(STATIC_ASSET_DIR, filename))
+
+
+@app.api_route("/static/{file_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+def serve_static_fallback(file_path: str):
+    """Fallback static asset server to ensure ESM scripts are always served."""
+    full_path = os.path.join(STATIC_ASSET_DIR, file_path)
+    if os.path.exists(full_path) and os.path.isfile(full_path):
+        media_type = None
+        if file_path.endswith(".js"):
+            media_type = "application/javascript; charset=utf-8"
+        elif file_path.endswith(".css"):
+            media_type = "text/css; charset=utf-8"
+        elif file_path.endswith(".svg"):
+            media_type = "image/svg+xml"
+        elif file_path.endswith(".png"):
+            media_type = "image/png"
+        return FileResponse(full_path, media_type=media_type)
+    return PlainTextResponse("Static asset not found", status_code=404)
 
 
 @app.api_route("/favicon.svg", methods=["GET", "HEAD"], include_in_schema=False)
@@ -91,6 +118,48 @@ def og_image():
 @app.api_route("/site.webmanifest", methods=["GET", "HEAD"], include_in_schema=False)
 def site_webmanifest():
     return _static_asset("site.webmanifest")
+
+
+def _render_jinja_template(template_name: str = "index.html") -> str:
+    """
+    Render template resolving partials while strictly avoiding collision with Vue {{ }} syntax.
+    Tries native Jinja2 with custom delimiters [[ ]], falling back to recursive include expansion.
+    """
+    # 1. 優先嘗試 Jinja2 Environment 並以 [[ ]] 作為變數定界符，完全保護 Vue 的 {{ }}
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATES_DIR),
+            variable_start_string="[[",
+            variable_end_string="]]",
+            autoescape=False
+        )
+        template = jinja_env.get_template(template_name)
+        return template.render(APP_VERSION=APP_VERSION).replace("__APP_VERSION__", APP_VERSION)
+    except Exception:
+        pass
+
+    # 2. 備援處理：以正則表達式遞迴解析 {% include 'partials/...' %}
+    import re
+    template_path = os.path.join(TEMPLATES_DIR, template_name)
+    if not os.path.exists(template_path):
+        return ""
+    with open(template_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    def _replace_includes(text: str) -> str:
+        pattern = re.compile(r"{%\s*include\s+['\"]([^'\"]+)['\"]\s*%}")
+        def _repl(match):
+            sub_name = match.group(1)
+            sub_path = os.path.join(TEMPLATES_DIR, sub_name)
+            if os.path.exists(sub_path):
+                with open(sub_path, "r", encoding="utf-8") as sf:
+                    return _replace_includes(sf.read())
+            return ""
+        return pattern.sub(_repl, text)
+
+    resolved = _replace_includes(content)
+    return resolved.replace("__APP_VERSION__", APP_VERSION).replace("[[ APP_VERSION ]]", APP_VERSION)
 
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:
@@ -147,10 +216,9 @@ def root():
     """
     量化決策平台首頁：提供即時操盤儀表板與 Agent / MCP 對接指南。
     """
-    template_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
-    if os.path.exists(template_path):
-        with open(template_path, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read().replace("__APP_VERSION__", APP_VERSION))
+    content = _render_jinja_template("index.html")
+    if content:
+        return HTMLResponse(content=content)
     return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
 
 

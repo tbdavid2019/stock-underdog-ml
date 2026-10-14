@@ -1,0 +1,141 @@
+<!-- ================= SUB-TAB 2: 券商分點主力進出雷達 (FIGMA FACELIFT V.1) ================= -->
+<div v-if="instSubTab === 'broker'" class="space-y-6">
+
+    <!-- Broker Toolbar Card -->
+    <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-5 rounded-2xl border space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span>🏦 券商分點主力進出雷達</span>
+                </h3>
+                <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    穿透個別券商分點（外資高盛、摩根士丹利、瑞銀，本土元大台北、凱基台北）之多空建倉時間序列
+                </p>
+            </div>
+
+            <!-- Search & Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center space-x-1.5">
+                    <span class="text-xs font-bold" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">股票代號:</span>
+                    <input type="text" v-model="brokerSearchTicker" @keyup.enter="loadBrokerTrend()"
+                           placeholder="例如 2330"
+                           class="w-24 sm:w-28 px-3 py-1.5 text-xs font-bold num-font rounded-xl border focus:outline-none transition-all uppercase"
+                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
+                </div>
+                <select v-model="brokerDays" @change="loadBrokerTrend()"
+                        class="border rounded-xl px-3 py-1.5 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-800 shadow-sm'">
+                    <option :value="10">10 個交易日</option>
+                    <option :value="20">20 個交易日</option>
+                    <option :value="30">30 個交易日</option>
+                    <option :value="60">60 個交易日</option>
+                </select>
+                <button @click="loadBrokerTrend()"
+                        class="px-4 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20">
+                    分析分點
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broker Loading -->
+    <div v-if="brokerLoading" class="text-center py-16 space-y-2">
+        <div class="inline-block animate-spin text-2xl">⏳</div>
+        <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在計算券商分點主力建倉時序...</p>
+    </div>
+
+    <!-- Broker Trend Chart Card -->
+    <div v-else-if="brokerSeries.length > 0"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-5 rounded-2xl border space-y-4">
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span>📈 <span class="num-font text-amber-500">{{ brokerSearchTicker.toUpperCase() }}</span> TOP 8 目標券商累計買賣超走勢</span>
+                </h3>
+                <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    統計區間: {{ brokerSummary.start_date }} ~ {{ brokerSummary.end_date }} (共 {{ brokerSummary.days }} 個交易日)
+                </p>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="w-full h-72 sm:h-96 relative pt-2">
+            <canvas id="brokerChartCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Top 15 Buyers vs Top 15 Sellers Double-Column Cards -->
+    <div v-if="brokerSummary.top_buyers && brokerSummary.top_buyers.length > 0"
+         class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <!-- Top Buyers -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-3">
+            <h4 class="text-sm font-black text-emerald-400 flex items-center space-x-2">
+                <span>🔥 主力買超券商分點 TOP 15</span>
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead :class="isDark ? 'bg-[#16181D] text-slate-300' : 'bg-[#F4F4F6] text-slate-700'">
+                        <tr>
+                            <th class="p-2.5 font-bold">券商分點</th>
+                            <th class="p-2.5 font-bold text-right num-font">累計買進 (張)</th>
+                            <th class="p-2.5 font-bold text-right num-font">累計賣出 (張)</th>
+                            <th class="p-2.5 font-bold text-right num-font">淨買超 (張)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
+                        <tr v-for="b in brokerSummary.top_buyers" :key="b.broker_name"
+                            class="transition-colors hover:bg-emerald-500/5">
+                            <td class="p-2.5 font-bold">{{ b.broker_name }}</td>
+                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_buy.toLocaleString() }}</td>
+                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_sell.toLocaleString() }}</td>
+                            <td class="p-2.5 text-right font-black num-font text-emerald-400">+{{ b.total_net.toLocaleString() }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Sellers -->
+        <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             class="p-5 rounded-2xl border space-y-3">
+            <h4 class="text-sm font-black text-rose-500 flex items-center space-x-2">
+                <span>❄️ 主力賣超券商分點 TOP 15</span>
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead :class="isDark ? 'bg-[#16181D] text-slate-300' : 'bg-[#F4F4F6] text-slate-700'">
+                        <tr>
+                            <th class="p-2.5 font-bold">券商分點</th>
+                            <th class="p-2.5 font-bold text-right num-font">累計買進 (張)</th>
+                            <th class="p-2.5 font-bold text-right num-font">累計賣出 (張)</th>
+                            <th class="p-2.5 font-bold text-right num-font">淨賣超 (張)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
+                        <tr v-for="b in brokerSummary.top_sellers" :key="b.broker_name"
+                            class="transition-colors hover:bg-rose-500/5">
+                            <td class="p-2.5 font-bold">{{ b.broker_name }}</td>
+                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_buy.toLocaleString() }}</td>
+                            <td class="p-2.5 text-right num-font opacity-70">{{ b.total_sell.toLocaleString() }}</td>
+                            <td class="p-2.5 text-right font-black num-font text-rose-500">{{ b.total_net.toLocaleString() }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div v-else-if="!brokerLoading"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="text-center py-12 rounded-2xl border space-y-1">
+        <div class="text-3xl">🔎</div>
+        <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ brokerSearchTicker }}</strong> 的券商分點主力時序資料</div>
+    </div>
+
+</div>
