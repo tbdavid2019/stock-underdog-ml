@@ -12,6 +12,10 @@
                 <span class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     全球頂級音訊逐字稿 × 實體行情映射
                 </span>
+                <span class="text-xs px-2 py-0.5 rounded border"
+                      :class="isDark ? 'text-slate-400 border-[#262626]' : 'text-slate-500 border-[#E5E7EB]'">
+                    頻道 metadata：seed 快照
+                </span>
             </div>
             <h1 id="podcast-radar-title" class="text-2xl sm:text-3xl font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
                 Podcast 財經與科技情報雷達
@@ -31,7 +35,7 @@
             <button @click="syncPodcastNow()"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1.5 border shadow-sm"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:border-amber-500 hover:text-amber-300' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
-                    title="立即檢查最新 RSS 串流並進行 AI 提煉">
+                    title="立即抓取最新 RSS 串流">
                 <span class="material-symbols-outlined text-[16px] leading-none">sync</span>
                 <span>即時同步</span>
             </button>
@@ -98,7 +102,7 @@
                             {{ ch.title }}
                         </div>
                         <div class="text-xs font-medium flex items-center space-x-2 mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span>共 {{ ch.episode_count || 12 }} 集</span>
+                            <span>共 {{ ch.episode_count !== null && ch.episode_count !== undefined ? ch.episode_count + ' 集' : '資料不足' }}</span>
                             <span>·</span>
                             <span class="flex items-center space-x-0.5 text-rose-500 font-bold">
                                 <span class="material-symbols-outlined text-[13px] leading-none">play_circle</span>
@@ -536,7 +540,7 @@
             <span class="material-symbols-outlined text-[32px]">podcasts</span>
         </div>
         <div class="font-bold text-base sm:text-lg" :class="isDark ? 'text-white' : 'text-slate-900'">暫無符合篩選條件的 Podcast 單集</div>
-        <p class="text-sm font-medium text-slate-400">可嘗試切換話題標籤，或點擊上方「即時同步」從種子頻道獲取最新情報</p>
+        <p class="text-sm font-medium text-slate-400">可嘗試切換話題標籤，或點擊上方「即時同步」抓取種子頻道的最新 RSS 單集</p>
     </div>
 
     </div> <!-- End of podcastSubView === 'episodes' -->

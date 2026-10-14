@@ -29,7 +29,7 @@
                         <span>台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
                     </h2>
                     <p class="text-xs sm:text-sm mt-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
-                        追蹤全市場 <strong class="num-font font-black text-amber-500">512,000+ 筆</strong> 上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 官方 OpenAPI 自動更新。
+                        追蹤上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 由官方 OpenAPI 更新。
                     </p>
                 </div>
 
@@ -38,12 +38,12 @@
                     <span class="px-3 py-1.5 rounded-xl border font-bold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'">
                         <span class="material-symbols-outlined text-[14px] leading-none">bar_chart</span>
-                        <span>歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}</span>
+                        <span>歷史籌碼: {{ marketStats.total_institutional_records !== null && marketStats.total_institutional_records !== undefined ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '資料不足' }}</span>
                     </span>
                     <span class="px-3 py-1.5 rounded-xl border font-bold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'">
                         <span class="material-symbols-outlined text-[14px] leading-none">calendar_today</span>
-                        <span>最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}</span>
+                        <span>最新出表: {{ marketStats.latest_institutional_date || '資料不足' }}</span>
                     </span>
                 </div>
             </div>

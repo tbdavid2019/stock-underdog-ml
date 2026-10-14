@@ -83,6 +83,10 @@ def get_channels(
         podcast_service.sync_seed_channels()
         channels = duckdb_manager.get_podcast_channels(limit=limit)
 
+    # Channel counts and follower counts come from the checked-in BigGo seed snapshot.
+    for channel in channels:
+        channel["source"] = "seed_snapshot"
+
     return PodcastChannelsResponse(
         success=True,
         total_count=duckdb_manager.get_podcast_channels_count() or len(channels),

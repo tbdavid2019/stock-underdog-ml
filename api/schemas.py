@@ -164,6 +164,7 @@ class PodcastChannelItem(BaseModel):
     episode_count: int = 0
     category: Optional[str] = None
     language: str = "en"
+    source: Optional[str] = None
 
 
 class PodcastEpisodeItem(BaseModel):

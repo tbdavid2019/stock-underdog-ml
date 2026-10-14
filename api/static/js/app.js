@@ -555,6 +555,7 @@ export const app = createApp({
             this.podcastSubView = view;
         },
         formatFollowers(count) {
+            if (count === null || count === undefined) return '資料不足';
             if (!count) return '0';
             if (count >= 1000000) {
                 return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -1090,6 +1091,7 @@ export const app = createApp({
 
 // Global helper registration to prevent any template rendering exceptions
 const globalFormatFollowers = (count) => {
+    if (count === null || count === undefined) return '資料不足';
     if (!count) return '0';
     const num = Number(count);
     if (isNaN(num)) return String(count);
