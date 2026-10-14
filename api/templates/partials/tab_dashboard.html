@@ -716,38 +716,38 @@
         <div class="hidden md:block rounded-2xl border overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
             <div class="overflow-x-auto">
-                <table class="min-w-[980px] w-full text-left text-xs sm:text-sm border-collapse whitespace-nowrap">
+                <table class="min-w-[1040px] w-full text-left text-xs sm:text-sm border-collapse whitespace-nowrap">
                     <!-- Deep Obsidian Table Header -->
                     <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                         <tr>
                             <th class="p-3 font-bold num-font text-center w-12 whitespace-nowrap">#</th>
-                            <th class="p-3 font-bold whitespace-nowrap">標的代號 / 名稱</th>
-                            <th class="p-3 font-bold text-center whitespace-nowrap">市場</th>
-                            <th class="p-3 font-bold whitespace-nowrap">策略模型</th>
-                            <th class="p-3 font-bold text-right num-font whitespace-nowrap">現價</th>
-                            <th class="p-3 font-bold text-right num-font whitespace-nowrap">預測目標價 / 均線</th>
-                            <th class="p-3 font-bold text-right num-font whitespace-nowrap">預期潛力</th>
-                            <th class="p-3 font-bold text-center num-font whitespace-nowrap">PE / PB</th>
-                            <th class="p-3 font-bold text-right num-font whitespace-nowrap">5日法人籌碼 (張)</th>
-                            <th class="p-3 font-bold whitespace-nowrap">策略共振標籤</th>
-                            <th class="p-3 font-bold text-center w-28 whitespace-nowrap">操作</th>
+                            <th class="p-3 font-bold w-40 whitespace-nowrap">標的代號 / 名稱</th>
+                            <th class="p-3 font-bold text-center w-24 whitespace-nowrap">市場</th>
+                            <th class="p-3 font-bold w-24 whitespace-nowrap">策略模型</th>
+                            <th class="p-3 font-bold text-right num-font w-24 whitespace-nowrap">現價</th>
+                            <th class="p-3 font-bold text-right num-font w-28 whitespace-nowrap">預測目標價 / 均線</th>
+                            <th class="p-3 font-bold text-right num-font w-20 whitespace-nowrap">預期潛力</th>
+                            <th class="p-3 font-bold text-center num-font w-24 whitespace-nowrap">PE / PB</th>
+                            <th class="p-3 font-bold text-right num-font w-32 whitespace-nowrap">5日法人籌碼 (張)</th>
+                            <th class="p-3 font-bold min-w-[220px] whitespace-nowrap">策略共振標籤</th>
+                            <th class="p-3 font-bold text-center w-24 whitespace-nowrap">操作</th>
                         </tr>
                     </thead>
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                     <template v-for="(item, idx) in records" :key="item.ticker + (item.model_name || '') + idx">
                         <!-- Primary Row -->
-                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer"
+                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-12"
                             :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
                             @click="toggleRowDrawer(item.ticker)">
                             <td class="p-3 font-black num-font text-center opacity-60 whitespace-nowrap">{{ idx + 1 }}</td>
                             <td class="p-3 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
+                                <div class="flex items-center space-x-1.5">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
-                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base"
+                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base shrink-0"
                                             :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
                                         {{ item.ticker }}
                                     </button>
-                                    <span v-if="item.name" class="font-bold text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                    <span v-if="item.name" class="font-bold text-xs truncate max-w-[85px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name">
                                         {{ item.name }}
                                     </span>
                                 </div>
@@ -758,7 +758,7 @@
                                     {{ item.index_name || '綜合' }}
                                 </span>
                             </td>
-                            <td class="p-3 font-bold text-sm whitespace-nowrap">
+                            <td class="p-3 font-bold text-xs sm:text-sm whitespace-nowrap">
                                 <span>{{ stripEmojis(item.strategy_type || item.model_name) }}</span>
                             </td>
                             <td class="p-3 text-right font-black num-font text-sm sm:text-base whitespace-nowrap">
@@ -791,19 +791,25 @@
                                 <span v-else class="text-slate-400">-</span>
                             </td>
                             <td class="p-3 whitespace-nowrap">
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                                <div class="flex items-center gap-1.5 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
+                                    <span v-for="tag in parseTags(item.tags).slice(0, 3)" :key="tag.label"
                                           :class="getTagClass(tag)"
-                                          class="px-2 py-0.5 text-xs sm:text-sm font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
-                                        <span v-if="tag.icon" class="material-symbols-outlined text-[14px] leading-none shrink-0">{{ tag.icon }}</span>
+                                          class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm">
+                                        <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
                                         <span>{{ tag.label }}</span>
+                                    </span>
+                                    <span v-if="parseTags(item.tags).length > 3"
+                                          class="px-1.5 py-0.5 text-[11px] font-bold rounded-md border shrink-0 cursor-help transition-colors whitespace-nowrap shadow-sm"
+                                          :class="isDark ? 'bg-[#16181D] text-amber-400 border-[#262626] hover:border-amber-500/50' : 'bg-slate-100 text-amber-600 border-slate-200 hover:border-amber-400'"
+                                          :title="'其餘標籤: ' + parseTags(item.tags).slice(3).map(t => t.label).join(', ')">
+                                        +{{ parseTags(item.tags).length - 3 }}
                                     </span>
                                 </div>
                             </td>
                             <td class="p-3 text-center whitespace-nowrap" @click.stop>
-                                <div class="flex items-center justify-center space-x-1">
+                                <div class="flex items-center justify-center space-x-1.5">
                                     <button @click="toggleRowDrawer(item.ticker)"
-                                            class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
+                                            class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
                                             :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
                                             :title="expandedDrawerTicker === item.ticker ? '收合簡介抽屜' : '展開公司簡介抽屜'">
                                         <span>{{ expandedDrawerTicker === item.ticker ? '收合' : '詳情' }}</span>
@@ -861,6 +867,16 @@
                                             </span>
                                             <span v-if="expandedDrawerData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 董座: {{ expandedDrawerData.chairman }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Full Resonance Tags in Drawer -->
+                                        <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
+                                            <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                                                  :class="getTagClass(tag)"
+                                                  class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
+                                                <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
+                                                <span>{{ tag.label }}</span>
                                             </span>
                                         </div>
 
