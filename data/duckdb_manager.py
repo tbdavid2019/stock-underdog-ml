@@ -510,6 +510,16 @@ class DuckDBManager:
     # REST API & MCP 專用高吞吐量化分析查詢接口
     # =========================================================================
 
+    @staticmethod
+    def _clean_index_name(index_name: Optional[str]) -> Optional[str]:
+        """清洗並標準化市場指數名稱，將 ALL/全部市場安全視為無篩選"""
+        if not index_name:
+            return None
+        val = str(index_name).strip()
+        if not val or val.upper() in ("ALL", "NONE", "NULL", "全部", "全部市場"):
+            return None
+        return val
+
     def get_latest_predictions(
         self, 
         index_name: Optional[str] = None, 
@@ -523,6 +533,7 @@ class DuckDBManager:
         預設 (batch_only=True) 僅鎖定最新執行批次（例如 24 小時內或最新批次日期），
         並計算 analysis_date, data_as_of, age_hours, is_stale。
         """
+        index_name = self._clean_index_name(index_name)
         now = datetime.datetime.now(TZ_TAIPEI)
 
         where_clauses = [
@@ -632,6 +643,7 @@ class DuckDBManager:
 
     def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得多策略重合 / 雙重符合 / 🏆 三重共振股票 (鎖定指定指數之最新批次快照，排序前嚴格過濾共振列並排除看跌防守)"""
+        index_name = self._clean_index_name(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
@@ -680,6 +692,7 @@ class DuckDBManager:
         limit: int = 50
     ) -> List[Dict[str, Any]]:
         """取得玄鐵重劍技術買點 (MA60/120 回調) 股票"""
+        index_name = self._clean_index_name(index_name)
         where_clauses = [
             "(model_name = '玄鐵重劍' OR strategy_type = '玄鐵重劍' OR pullback_type IS NOT NULL)",
             "index_name NOT LIKE '%TEST%'",
@@ -714,6 +727,7 @@ class DuckDBManager:
 
     def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測漲幅最大 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'LSTM'",
@@ -746,6 +760,7 @@ class DuckDBManager:
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 LSTM 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'LSTM'",
@@ -778,6 +793,7 @@ class DuckDBManager:
 
     def get_timesfm_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測漲幅最大 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'TimesFM'",
@@ -810,6 +826,7 @@ class DuckDBManager:
 
     def get_timesfm_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'TimesFM'",

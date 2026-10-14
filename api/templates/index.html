@@ -122,17 +122,24 @@
             color: #F9FAFB;
         }
 
+        html {
+            font-size: 16px; /* 12pt standard typographical baseline */
+        }
+
         html:not(.dark) {
             background-color: #EEEEEE;
             color: #111827;
         }
 
         body {
+            font-size: 1rem; /* 16px = 12pt baseline */
+            line-height: 1.6;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
+            font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Segoe UI", Roboto, sans-serif;
         }
 
         .num-font {

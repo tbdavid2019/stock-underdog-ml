@@ -8,6 +8,24 @@
 
 ## 2026-10-14
 
+### Fixed & Improved (Impeccable UI Layout Equilibrium, Chinese Typography Overhaul & Stock Recommendation Bug Fix)
+- **⚖️ 導覽列三欄平衡重構（消除偏右擠壓與不平衡問題）**：
+  - 重構 `api/templates/partials/header.html` 為經典穩定的三欄對稱架構：
+    - 左欄：品牌標誌與主標題（`shrink-0`，緊湊不換行）。
+    - 中欄：四大核心 Tab 置中對齊（`flex-1 justify-center`），徹底消除導覽列向右凸出擠壓與中間大片空白之不平衡視覺缺陷。
+    - 右欄：系統狀態、分享連結與主題切換控制項。
+  - 行動端適配：窄螢幕自動將四大 Tab 移至獨立置中子導覽列（Mobile Nav Sub-bar），按鈕字級提升至 `text-sm font-bold`，確保觸控熱區與閱讀體驗。
+- **✍️ 中文字體排版全面依循 Impeccable 標準升級（嚴格遵守最小 12pt / 16px 規範）**：
+  - **根字級標準化**：於 `api/templates/index.html` 將 `html { font-size: 16px; }`（96 DPI 下之 12pt 印刷基準）設為全站基底，並開啟 `-webkit-font-smoothing: antialiased` 與 `text-rendering: optimizeLegibility`。
+  - **徹底撲滅微小字體**：全站搜尋並完全移除所有 `text-[10px]` 與 `text-[11px]` 極小字級，避免中文字複雜筆畫（如「聽」、「講」、「總」、「結」、「觀」、「薦」、「籌」、「碼」）模糊失真。
+  - **內文與摘要工藝提升**：
+    - Podcast AI TL;DR 深度觀點精煉內文提升至 `text-base leading-relaxed`（標準 16px / 12pt）。
+    - 關鍵觀點條目（Takeaways）與個股抽屜業務概述提升至 `text-[15px] sm:text-base leading-relaxed`。
+    - 實體標籤、股票名稱與操作按鈕全面提升至 `text-sm font-semibold`（14px），數值與英文代號採用等寬數字字體（JetBrains Mono `num-font`）。
+- **🎯 根除操盤看板「0 檔標的」空名單錯誤**：
+  - **修復前端預設值傳參偏差**：修正 `api/static/js/app.js` 與 `api-client.js`，當 URL 缺乏 `index` 參數或為「全部市場」時，不再向後端傳遞字串 `'ALL'`，避免 DuckDB 執行無效的 `WHERE index_name = 'ALL'` 查詢。
+  - **後端指數名稱容錯清洗**：於 `data/duckdb_manager.py` 新增 `_clean_index_name` 安全清洗方法，將 `'ALL'`、`'NONE'`、`''`、`'全部市場'` 自動標準化為 `None`（全域查詢），並應用於多策略共振、玄鐵重劍、LSTM、TimesFM 等全部量化查詢接口，確保操盤看板隨時穩定產出推薦標的。
+
 ### Fixed & Improved (Podcast Live Playback & Media Player Integration)
 - **🎙️ 修復 Podcast 情報單集連結無效問題並全面升級為站內雙模態播放器**：
   - **全面替換假資料連結為 100% 驗證之真實有效媒體**：

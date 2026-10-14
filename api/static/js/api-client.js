@@ -105,7 +105,7 @@ export const ApiClient = {
             url = '/api/v1/predictions/timesfm/top-bearish?limit=' + limit;
         }
 
-        if (indexName) {
+        if (indexName && indexName !== 'ALL' && indexName !== '全部市場') {
             url += (url.includes('?') ? '&' : '?') + 'index_name=' + encodeURIComponent(indexName);
         }
 

@@ -259,51 +259,51 @@
                 </div>
                 <div v-else-if="upcomingEarningsCalls && upcomingEarningsCalls.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
                     <div v-for="(call, cIdx) in upcomingEarningsCalls.slice(0, 8)" :key="call.id || cIdx"
-                         class="p-2 rounded-lg border text-xs flex items-center justify-between transition-all"
+                         class="p-2.5 rounded-xl border text-xs sm:text-sm flex items-center justify-between transition-all"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
-                        <div class="space-y-0.5 truncate mr-2">
-                            <div class="flex items-center space-x-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
+                        <div class="space-y-1 truncate mr-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 rounded text-xs font-black uppercase"
                                       :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300')">
                                     {{ call.market }}
                                 </span>
                                 <button @click.stop="searchTickerHistory(call.ticker)"
-                                        class="font-black num-font text-xs sm:text-sm text-amber-500 hover:underline"
+                                        class="font-black num-font text-sm text-amber-500 hover:underline"
                                         :title="'速查 ' + call.ticker + ' 歷史走勢'">
                                     {{ call.ticker }}
                                 </button>
-                                <span class="text-xs font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="text-sm font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                     {{ call.name }}
                                 </span>
                                 <span v-if="call.is_weight_stock" class="text-amber-400 text-xs" title="權值股">⭐</span>
                             </div>
-                            <div class="text-[11px] flex items-center space-x-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            <div class="text-xs flex items-center space-x-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 <span>{{ call.datetime_cst || (call.call_date + ' ' + (call.call_time || '')) }}</span>
                                 <span v-if="call.presentation_url">
-                                    <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline" title="下載官方法說會簡報">📑 簡報</a>
+                                    <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline font-semibold" title="下載官方法說會簡報">📑 簡報</a>
                                 </span>
                                 <span v-if="call.webcast_url">
-                                    <a :href="call.webcast_url" target="_blank" class="text-sky-400 hover:underline" title="官方影音回放/直播">🎙️ 影音</a>
+                                    <a :href="call.webcast_url" target="_blank" class="text-sky-400 hover:underline font-semibold" title="官方影音回放/直播">🎙️ 影音</a>
                                 </span>
                             </div>
                         </div>
-                        <div class="text-right shrink-0 text-xs space-y-0.5">
+                        <div class="text-right shrink-0 text-xs space-y-1">
                             <div>
-                                <span v-if="call.countdown_days === 0" class="px-2 py-0.5 rounded text-[11px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
+                                <span v-if="call.countdown_days === 0" class="px-2.5 py-1 rounded-md text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
                                     今天 🔥
                                 </span>
-                                <span v-else-if="call.countdown_days === 1" class="px-2 py-0.5 rounded text-[11px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                <span v-else-if="call.countdown_days === 1" class="px-2.5 py-1 rounded-md text-xs font-black bg-amber-500/20 text-amber-400 border border-amber-500/40">
                                     明天 ⚡
                                 </span>
-                                <span v-else-if="call.countdown_days > 1" class="px-2 py-0.5 rounded text-[11px] font-bold num-font"
+                                <span v-else-if="call.countdown_days > 1" class="px-2 py-0.5 rounded-md text-xs font-bold num-font"
                                       :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                                     T-{{ call.countdown_days }} 天
                                 </span>
-                                <span v-else class="text-[11px] text-slate-500">
+                                <span v-else class="text-xs text-slate-500">
                                     已召開
                                 </span>
                             </div>
-                            <div v-if="call.eps_estimate" class="text-[10px] num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                            <div v-if="call.eps_estimate" class="text-xs num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                 預估 EPS: <span class="text-emerald-400 font-bold">{{ call.eps_estimate }}</span>
                             </div>
                         </div>
@@ -664,10 +664,10 @@
                                         🏢 基本面與新聞
                                     </button>
                                     <button @click="drawerActiveSubTab = 'earnings'"
-                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span>🏛️ 法說會與簡報</span>
-                                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black"
+                                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                                               :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
                                             {{ drawerEarningsMap[item.ticker].length }}
                                         </span>
@@ -743,14 +743,14 @@
                                              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
                                             <div class="space-y-1">
                                                 <div class="flex items-center space-x-2">
-                                                    <span class="px-2 py-0.5 rounded text-[11px] font-black"
+                                                    <span class="px-2.5 py-0.5 rounded text-xs font-black"
                                                           :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')">
                                                         {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                                     </span>
-                                                    <span class="font-bold text-xs" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                    <span class="font-bold text-xs sm:text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                         {{ ec.datetime_cst || (ec.call_date + ' ' + (ec.call_time || '')) }}
                                                     </span>
-                                                    <span class="text-slate-400">({{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }})</span>
+                                                    <span class="text-xs sm:text-sm text-slate-400">({{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }})</span>
                                                 </div>
                                                 <div v-if="ec.location" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                     地點 / 方式: {{ ec.location }}
@@ -1059,11 +1059,11 @@
                                       :class="isDark ? 'bg-[#0D0E11] text-amber-400 border border-[#262626]' : 'bg-white text-amber-700 border border-[#E5E7EB]'">
                                     📅 {{ day.call_date }}
                                 </span>
-                                <span class="text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                     共 {{ day.total_calls }} 場法說會
-                                    <span class="text-[10px] font-normal text-slate-500">({{ calendarTimezone === 'CST' ? '依當地/台灣工作日' : '依美東營業日' }})</span>
+                                    <span class="text-xs font-normal text-slate-400">({{ calendarTimezone === 'CST' ? '依當地/台灣工作日' : '依美東營業日' }})</span>
                                 </span>
-                                <span v-if="day.weight_stock_calls > 0" class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                <span v-if="day.weight_stock_calls > 0" class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                                     ⭐ 權值股 {{ day.weight_stock_calls }} 場
                                 </span>
                             </div>

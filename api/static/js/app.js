@@ -725,7 +725,7 @@ export const app = createApp({
                 this.selectedStrategy = (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
 
                 const idx = params.get('index');
-                this.selectedIndex = (idx !== null && idx !== '') ? idx : 'ALL';
+                this.selectedIndex = (idx && idx !== 'ALL') ? idx : '';
 
                 const sub = params.get('sub');
                 this.instSubTab = (sub && ['three_inst', 'broker'].includes(sub)) ? sub : 'three_inst';

@@ -40,25 +40,25 @@
 
     <!-- 2. Horizontal Entity Filter Slider (Killer Feature from BigGo Finance) -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-3.5 sm:p-4 rounded-2xl border space-y-2.5">
-        <div class="flex items-center justify-between text-xs">
-            <div class="flex items-center space-x-1.5 font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+         class="p-4 sm:p-5 rounded-2xl border space-y-3">
+        <div class="flex items-center justify-between text-sm sm:text-base">
+            <div class="flex items-center space-x-2 font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                 <span>🔥</span>
                 <span>熱門實體與關鍵標籤快篩:</span>
             </div>
-            <span class="text-[11px]" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+            <span class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 點擊一秒聚焦相關討論與關聯概念股
             </span>
         </div>
 
         <!-- Entity Pill Rail with Smooth Horizontal Scroll -->
-        <div class="flex items-center space-x-2 overflow-x-auto pb-1 pt-0.5 custom-scrollbar">
+        <div class="flex items-center space-x-2.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
             <!-- "All" Pill -->
             <button @click="setPodcastTopic('')"
-                    class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
+                    class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
                     :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                 <span>✨ 全部話題</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full"
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
                       :class="!podcastSelectedTopic ? 'bg-black/20 text-white' : (isDark ? 'bg-[#262626] text-slate-400' : 'bg-slate-200 text-slate-600')">
                     {{ podcastEpisodes.length }}
                 </span>
@@ -67,10 +67,10 @@
             <!-- Dynamic Aggregated Topic Pills -->
             <button v-for="t in podcastTopics" :key="t.topic"
                     @click="setPodcastTopic(t.topic)"
-                    class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
+                    class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
                     :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                 <span>{{ t.topic }}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono"
+                <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
                       :class="podcastSelectedTopic === t.topic ? 'bg-black/25 text-white' : (isDark ? 'bg-[#262626] text-amber-400' : 'bg-amber-100 text-amber-800')">
                     {{ t.count }}
                 </span>
@@ -80,13 +80,13 @@
 
     <!-- 3. Channel & Language Filter Toolbar -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+         class="p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
 
         <!-- Channel Filter Selector -->
         <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
-            <span class="font-bold shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">頻道篩選:</span>
+            <span class="font-bold shrink-0 text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">頻道篩選:</span>
             <select v-model="podcastSelectedChannel" @change="setPodcastChannel(podcastSelectedChannel)"
-                    class="px-2.5 py-1.5 rounded-xl border font-medium outline-none transition-colors"
+                    class="px-3 py-2 rounded-xl border font-medium text-sm outline-none transition-colors"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900'">
                 <option value="ALL">全部收錄頻道 ({{ podcastChannels.length }})</option>
                 <option v-for="ch in podcastChannels" :key="ch.channel_id" :value="ch.channel_id">
@@ -96,13 +96,13 @@
         </div>
 
         <!-- Language Switcher & Live Keyword Search -->
-        <div class="flex items-center space-x-2 shrink-0">
+        <div class="flex items-center space-x-2.5 shrink-0">
             <!-- Language Pills -->
-            <div class="flex items-center space-x-1 p-0.5 rounded-lg border"
+            <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
                 <button v-for="l in [{ id: 'ALL', label: '全部' }, { id: 'en', label: '🇺🇸 英文' }, { id: 'zh', label: '🇹🇼 華語' }]" :key="l.id"
                         @click="setPodcastLang(l.id)"
-                        class="px-2 py-1 rounded-md font-bold transition-all text-xs"
+                        class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
                         :class="podcastSelectedLang === l.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                     {{ l.label }}
                 </button>
@@ -111,10 +111,10 @@
             <!-- Instant Search Input -->
             <div class="relative">
                 <input v-model="podcastSearchQuery" type="text" placeholder="快速搜尋標題或嘉賓..."
-                       class="px-3 py-1.5 rounded-xl border text-xs outline-none focus:border-amber-500 transition-colors w-40 sm:w-56"
+                       class="px-3 py-2 rounded-xl border text-sm outline-none focus:border-amber-500 transition-colors w-44 sm:w-60"
                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-white placeholder-slate-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900 placeholder-slate-400'">
                 <span v-if="podcastSearchQuery" @click="podcastSearchQuery = ''"
-                      class="absolute right-2.5 top-1.5 text-slate-400 cursor-pointer hover:text-white">✕</span>
+                      class="absolute right-3 top-2 text-slate-400 cursor-pointer hover:text-white">✕</span>
             </div>
         </div>
     </div>
@@ -133,28 +133,28 @@
             <!-- Top Row: Channel Meta & Badges -->
             <div class="flex items-center justify-between gap-2 border-b pb-3"
                  :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                <div class="flex items-center space-x-2.5 truncate">
-                    <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border"
+                <div class="flex items-center space-x-3 truncate">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border"
                          :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'">
                         <span>🎙️</span>
                     </div>
                     <div class="truncate">
-                        <div class="font-bold text-xs truncate" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <div class="font-bold text-sm sm:text-base truncate" :class="isDark ? 'text-white' : 'text-slate-900'">
                             {{ ep.channel_title || ep.channel_id }}
                         </div>
-                        <div class="text-[11px] truncate" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                        <div class="text-xs sm:text-sm font-medium truncate" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                             {{ ep.channel_author || ep.host || '專題對話' }}
                         </div>
                     </div>
                 </div>
 
                 <!-- Right Badges: Duration & Language -->
-                <div class="flex items-center space-x-1.5 shrink-0 text-xs">
-                    <span class="px-2 py-0.5 rounded text-[11px] font-mono font-semibold"
+                <div class="flex items-center space-x-2 shrink-0">
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold"
                           :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                         ⏱️ {{ ep.duration_formatted || '1h+' }}
                     </span>
-                    <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
+                    <span class="px-2 py-1 rounded-lg text-xs font-black uppercase"
                           :class="ep.language === 'zh' ? (isDark ? 'bg-rose-950/60 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-200') : (isDark ? 'bg-sky-950/60 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-200')">
                         {{ ep.language }}
                     </span>
@@ -162,26 +162,26 @@
             </div>
 
             <!-- Episode Title -->
-            <div class="space-y-1.5">
+            <div class="space-y-2">
                 <h3 class="text-base sm:text-lg font-black leading-snug tracking-tight transition-colors hover:text-amber-500"
                     :class="isDark ? 'text-white' : 'text-slate-900'">
                     <a v-if="ep.youtube_url" :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-baseline gap-1 group/title"
                        title="在 YouTube 開啟此單集完整影片">
                         <span class="group-hover/title:underline">{{ ep.title }}</span>
-                        <span class="text-xs text-amber-500 shrink-0 opacity-80 group-hover/title:opacity-100">↗</span>
+                        <span class="text-sm text-amber-500 shrink-0 opacity-80 group-hover/title:opacity-100">↗</span>
                     </a>
                     <span v-else>{{ ep.title }}</span>
                 </h3>
 
                 <!-- Host & Guest Structured Tags -->
-                <div class="flex flex-wrap items-center gap-2 text-xs pt-0.5">
-                    <div v-if="ep.guest" class="flex items-center space-x-1 px-2 py-0.5 rounded-lg border font-semibold"
+                <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                    <div v-if="ep.guest" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border font-semibold text-xs sm:text-sm"
                          :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-800 border-amber-200'">
                         <span>🌟 來賓:</span>
                         <span class="font-bold">{{ ep.guest }}</span>
                     </div>
-                    <div v-if="ep.host" class="flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs"
+                    <div v-if="ep.host" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium"
                          :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                         <span>主持:</span>
                         <span>{{ ep.host }}</span>
@@ -190,96 +190,96 @@
             </div>
 
             <!-- AI 繁體中文摘要 (TL;DR) -->
-            <div class="p-3.5 rounded-xl border text-xs leading-relaxed space-y-2"
+            <div class="p-4 sm:p-5 rounded-2xl border space-y-3"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200' : 'bg-[#F9FAFB] border-[#E5E7EB] text-slate-800'">
-                <div class="flex items-center justify-between text-[11px] font-bold text-amber-500">
-                    <span class="flex items-center space-x-1">
+                <div class="flex items-center justify-between text-sm font-bold text-amber-500">
+                    <span class="flex items-center space-x-1.5">
                         <span>🤖</span>
                         <span>AI 深度觀點精煉 (TL;DR)</span>
                     </span>
-                    <span class="text-[10px] num-font text-slate-400">Gemini 2.5 Flash</span>
+                    <span class="text-xs num-font text-slate-400">Gemini 2.5 Flash</span>
                 </div>
-                <p class="text-xs sm:text-sm leading-relaxed">
+                <p class="text-base leading-relaxed font-normal">
                     {{ ep.tldr_zh_tw }}
                 </p>
 
                 <!-- Key Takeaway Bullets -->
-                <ul v-if="ep.key_takeaways && ep.key_takeaways.length" class="space-y-1.5 pt-2 border-t text-xs"
+                <ul v-if="ep.key_takeaways && ep.key_takeaways.length" class="space-y-2 pt-3 border-t text-[15px] sm:text-base leading-relaxed"
                     :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <li v-for="(point, pIdx) in ep.key_takeaways" :key="pIdx" class="flex items-start space-x-2">
-                        <span class="text-amber-500 font-bold shrink-0">•</span>
+                        <span class="text-amber-500 font-bold shrink-0 mt-0.5">•</span>
                         <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ point }}</span>
                     </li>
                 </ul>
             </div>
 
             <!-- Topic Entity Tags -->
-            <div v-if="ep.topic_tags && ep.topic_tags.length" class="flex flex-wrap gap-1.5">
+            <div v-if="ep.topic_tags && ep.topic_tags.length" class="flex flex-wrap gap-2">
                 <span v-for="tag in ep.topic_tags" :key="tag"
                       @click="setPodcastTopic(tag)"
-                      class="px-2 py-0.5 rounded-md text-[11px] font-semibold border cursor-pointer transition-all"
+                      class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-semibold border cursor-pointer transition-all"
                       :class="podcastSelectedTopic === tag ? 'bg-amber-500 text-black border-amber-500 font-black' : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/50' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                     #{{ tag }}
                 </span>
             </div>
 
             <!-- KILLER FEATURE: LIVE TICKER BADGES (Click connects to Stock Drawer) -->
-            <div class="pt-3 border-t space-y-2" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                <div class="flex items-center justify-between text-xs">
-                    <span class="font-bold flex items-center space-x-1 text-amber-500">
+            <div class="pt-3 border-t space-y-2.5" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-xs sm:text-sm">
+                    <span class="font-bold flex items-center space-x-1.5 text-amber-500">
                         <span>📈</span>
                         <span>提及概念股與即時行情 (點擊展開抽屜):</span>
                     </span>
-                    <span class="text-[10px]" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">連動個股籌碼</span>
+                    <span class="text-xs font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">連動個股籌碼</span>
                 </div>
 
                 <!-- Ticker Badges Row -->
                 <div class="flex flex-wrap gap-2">
                     <button v-for="quote in (ep.ticker_prices || [])" :key="quote.ticker"
                             @click.stop="togglePodcastTicker(ep.id, quote.ticker)"
-                            class="px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1.5 group shadow-sm hover:scale-105"
+                            class="px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-2 group shadow-sm hover:scale-105"
                             :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md ring-2 ring-amber-400/50' : (isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500 text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400 text-slate-900')">
                         <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ quote.ticker }}</span>
-                        <span class="text-[11px]" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/80' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
-                        <span v-if="quote.price" class="num-font font-bold"
+                        <span class="text-xs sm:text-sm" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/90 font-bold' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
+                        <span v-if="quote.price" class="num-font font-bold text-xs sm:text-sm"
                               :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : (quote.direction === 'up' ? 'text-emerald-400' : (quote.direction === 'down' ? 'text-rose-500' : 'text-slate-400'))">
                             {{ quote.direction === 'up' ? '↑' : (quote.direction === 'down' ? '↓' : '—') }}
                             {{ quote.change_pct !== null ? Math.abs(quote.change_pct).toFixed(2) + '%' : '' }}
                         </span>
-                        <span class="text-[10px]" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-400/80'">▼</span>
+                        <span class="text-xs" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-400/80'">▼</span>
                     </button>
-                    <span v-if="!ep.ticker_prices || ep.ticker_prices.length === 0" class="text-xs text-slate-500">
+                    <span v-if="!ep.ticker_prices || ep.ticker_prices.length === 0" class="text-xs sm:text-sm text-slate-500 py-1">
                         此單集無直接映射之上市代號
                     </span>
                 </div>
 
                 <!-- Inline Company & Quant Intelligence Drawer (Zero-jump closed-loop) -->
                 <div v-if="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker"
-                     class="mt-3 p-3.5 rounded-xl border transition-all animate-fadeIn"
+                     class="mt-3 p-4 sm:p-5 rounded-2xl border transition-all animate-fadeIn"
                      :class="isDark ? 'bg-[#0D0E11] border-amber-500/40 text-slate-200 shadow-lg shadow-black/40' : 'bg-amber-50/70 border-amber-300 text-slate-800 shadow-sm'">
-                    <div class="flex items-center justify-between pb-2 border-b"
+                    <div class="flex items-center justify-between pb-3 border-b"
                          :class="isDark ? 'border-[#262626]' : 'border-amber-200'">
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2 py-0.5 rounded font-black num-font text-xs bg-amber-500 text-black">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="px-2.5 py-1 rounded-lg font-black num-font text-sm bg-amber-500 text-black">
                                 {{ podcastExpandedTicker }}
                             </span>
-                            <span class="font-bold text-xs">
+                            <span class="font-bold text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                 {{ podcastDrawerData ? (podcastDrawerData.name || podcastDrawerData.ticker) : podcastExpandedTicker }}
                             </span>
                             <span v-if="podcastDrawerData && podcastDrawerData.industry"
-                                  class="text-[11px] px-1.5 py-0.5 rounded"
-                                  :class="isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'">
+                                  class="text-xs sm:text-sm px-2 py-0.5 rounded-md font-medium"
+                                  :class="isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'">
                                 {{ podcastDrawerData.industry }}
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
                             <button @click="searchTickerHistory(podcastExpandedTicker)"
-                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-colors flex items-center space-x-1 shadow-sm">
+                                    class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-amber-500 hover:bg-amber-400 text-black transition-colors flex items-center space-x-1 shadow-sm">
                                 <span>🔍 查看量化籌碼與歷史</span>
                                 <span>→</span>
                             </button>
                             <button @click="closePodcastDrawer()"
-                                    class="text-xs p-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                                    class="text-sm p-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
                                     title="關閉預覽">
                                 ✕
                             </button>
@@ -287,21 +287,21 @@
                     </div>
 
                     <!-- Drawer Body -->
-                    <div v-if="podcastDrawerLoading" class="py-4 text-center text-xs text-amber-400 animate-pulse font-mono">
+                    <div v-if="podcastDrawerLoading" class="py-5 text-center text-sm text-amber-400 animate-pulse font-mono">
                         正在連線即時基本面與量化情報...
                     </div>
-                    <div v-else-if="podcastDrawerData" class="pt-2 text-xs space-y-2">
-                        <p class="leading-relaxed line-clamp-3 text-xs"
-                           :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                    <div v-else-if="podcastDrawerData" class="pt-3 space-y-3">
+                        <p class="leading-relaxed line-clamp-3 text-sm sm:text-base"
+                           :class="isDark ? 'text-slate-200' : 'text-slate-700'">
                             {{ podcastDrawerData.business_summary || '暫無該標的即時業務摘要' }}
                         </p>
-                        <div v-if="podcastDrawerData.recent_news && podcastDrawerData.recent_news.length" class="space-y-1">
-                            <div class="text-[11px] font-bold text-amber-500">近期新聞與重大催化劑：</div>
+                        <div v-if="podcastDrawerData.recent_news && podcastDrawerData.recent_news.length" class="space-y-1.5 pt-1">
+                            <div class="text-xs sm:text-sm font-bold text-amber-500">近期新聞與重大催化劑：</div>
                             <div v-for="(news, nIdx) in podcastDrawerData.recent_news.slice(0, 2)" :key="nIdx"
-                                 class="text-[11px] truncate flex items-center space-x-1.5"
-                                 :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                <span>•</span>
-                                <span>{{ news.title || news }}</span>
+                                 class="text-xs sm:text-sm truncate flex items-center space-x-2"
+                                 :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                <span class="text-amber-500">•</span>
+                                <span class="truncate">{{ news.title || news }}</span>
                             </div>
                         </div>
                     </div>
@@ -311,21 +311,21 @@
             <!-- Inline Video Player (YouTube Embed) -->
             <div v-if="podcastActiveVideoId === ep.id" class="pt-3 border-t animate-fadeIn"
                  :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                <div class="rounded-xl overflow-hidden border shadow-lg"
+                <div class="rounded-2xl overflow-hidden border shadow-lg"
                      :class="isDark ? 'bg-black border-amber-500/40' : 'bg-black border-amber-300'">
-                    <div class="px-3 py-1.5 flex items-center justify-between bg-zinc-900/90 text-xs font-bold text-rose-400 border-b border-zinc-800">
-                        <span class="flex items-center space-x-1.5">
+                    <div class="px-3.5 py-2 flex items-center justify-between bg-zinc-900/90 text-sm font-bold text-rose-400 border-b border-zinc-800">
+                        <span class="flex items-center space-x-2">
                             <span>📺</span>
                             <span>YouTube 播放中 (站內播放模式)</span>
                         </span>
                         <div class="flex items-center space-x-3">
                             <a :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
-                               class="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center space-x-0.5">
+                               class="text-xs sm:text-sm text-slate-400 hover:text-white transition-colors flex items-center space-x-1">
                                 <span>前往 YouTube</span>
                                 <span>↗</span>
                             </a>
                             <button @click="togglePodcastVideo(ep.id)"
-                                    class="text-slate-400 hover:text-white text-xs px-1 hover:bg-zinc-800 rounded transition-colors"
+                                    class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 hover:bg-zinc-800 rounded transition-colors"
                                     title="關閉播放器">
                                 ✕
                             </button>
@@ -343,73 +343,73 @@
             <!-- Inline Audio Player (HTML5 MP3 Stream) -->
             <div v-if="podcastActiveAudioId === ep.id" class="pt-3 border-t animate-fadeIn"
                  :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                <div class="p-3 rounded-xl border transition-all shadow-md"
+                <div class="p-4 rounded-2xl border transition-all shadow-md"
                      :class="isDark ? 'bg-[#0D0E11] border-amber-500/50 text-slate-200' : 'bg-amber-50/90 border-amber-300 text-slate-800'">
-                    <div class="flex items-center justify-between pb-2 text-xs font-bold text-amber-500">
-                        <span class="flex items-center space-x-1.5">
+                    <div class="flex items-center justify-between pb-2.5 text-sm font-bold text-amber-500">
+                        <span class="flex items-center space-x-2">
                             <span class="animate-pulse">📻</span>
                             <span>原聲音訊串流播放中</span>
                         </span>
                         <div class="flex items-center space-x-3">
                             <a :href="ep.audio_url" target="_blank" rel="noopener noreferrer"
-                               class="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center space-x-0.5">
+                               class="text-xs sm:text-sm text-slate-400 hover:text-white transition-colors flex items-center space-x-1">
                                 <span>在新分頁開啟</span>
                                 <span>↗</span>
                             </a>
                             <button @click="togglePodcastAudio(ep.id)"
-                                    class="text-slate-400 hover:text-white text-xs px-1 hover:bg-zinc-800/40 rounded transition-colors"
+                                    class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 hover:bg-zinc-800/40 rounded transition-colors"
                                     title="關閉播放器">
                                 ✕
                             </button>
                         </div>
                     </div>
-                    <audio controls class="w-full h-8 rounded" :src="ep.audio_url" autoplay preload="metadata">
+                    <audio controls class="w-full h-9 rounded" :src="ep.audio_url" autoplay preload="metadata">
                         您的瀏覽器不支援 HTML5 音訊播放，請點擊上方連結在新分頁開啟。
                     </audio>
                 </div>
             </div>
 
             <!-- Card Footer: Direct Links & Action Buttons -->
-            <div class="pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-xs"
+            <div class="pt-2.5 border-t flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
-                <span class="num-font">{{ ep.published_at ? ep.published_at.substring(0, 10) : '' }}</span>
+                <span class="num-font font-medium">{{ ep.published_at ? ep.published_at.substring(0, 10) : '' }}</span>
                 <div class="flex items-center space-x-2">
                     <!-- YouTube Action Buttons -->
-                    <div v-if="ep.youtube_url" class="inline-flex rounded-lg border overflow-hidden text-xs font-bold transition-all shadow-sm"
+                    <div v-if="ep.youtube_url" class="inline-flex rounded-xl border overflow-hidden text-xs sm:text-sm font-bold transition-all shadow-sm"
                          :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-rose-200 bg-rose-50'">
                         <button @click="togglePodcastVideo(ep.id)"
-                                class="px-2.5 py-1 transition-colors flex items-center space-x-1"
+                                class="px-3 py-1.5 transition-colors flex items-center space-x-1"
                                 :class="podcastActiveVideoId === ep.id ? 'bg-rose-600 text-white' : (isDark ? 'text-rose-400 hover:bg-rose-950/40' : 'text-rose-700 hover:bg-rose-100')"
                                 title="在看板內直接嵌入播放 YouTube 影片">
                             <span>{{ podcastActiveVideoId === ep.id ? '⏹️ 收起' : '📺 站內播放' }}</span>
                         </button>
                         <a :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
-                           class="px-2 py-1 border-l transition-colors flex items-center space-x-0.5"
+                           class="px-2.5 py-1.5 border-l transition-colors flex items-center space-x-1"
                            :class="isDark ? 'border-[#262626] text-rose-400 hover:bg-rose-950/40' : 'border-rose-200 text-rose-700 hover:bg-rose-100'"
                            title="在 YouTube 官方網站新分頁開啟">
-                            <span class="text-[10px]">YouTube ↗</span>
+                            <span class="text-xs font-bold">YouTube ↗</span>
                         </a>
                     </div>
 
                     <!-- Audio Action Buttons -->
-                    <div v-if="ep.audio_url" class="inline-flex rounded-lg border overflow-hidden text-xs font-bold transition-all shadow-sm"
+                    <div v-if="ep.audio_url" class="inline-flex rounded-xl border overflow-hidden text-xs sm:text-sm font-bold transition-all shadow-sm"
                          :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-amber-200 bg-amber-50'">
                         <button v-if="ep.audio_url.includes('.mp3')"
                                 @click="togglePodcastAudio(ep.id)"
-                                class="px-2.5 py-1 transition-colors flex items-center space-x-1"
+                                class="px-3 py-1.5 transition-colors flex items-center space-x-1"
                                 :class="podcastActiveAudioId === ep.id ? 'bg-amber-500 text-black font-black' : (isDark ? 'text-amber-400 hover:bg-amber-950/40' : 'text-amber-800 hover:bg-amber-100')"
                                 title="在看板內直接播放原聲音訊串流">
                             <span>{{ podcastActiveAudioId === ep.id ? '⏹️ 收起' : '🎧 播放音訊' }}</span>
                         </button>
                         <a :href="ep.audio_url" target="_blank" rel="noopener noreferrer"
-                           class="px-2 py-1 transition-colors flex items-center space-x-0.5"
+                           class="px-2.5 py-1.5 transition-colors flex items-center space-x-1"
                            :class="[
                                ep.audio_url.includes('.mp3') ? (isDark ? 'border-l border-[#262626]' : 'border-l border-amber-200') : '',
                                isDark ? 'text-amber-400 hover:bg-amber-950/40' : 'text-amber-800 hover:bg-amber-100'
                            ]"
                            :title="ep.audio_url.includes('.mp3') ? '在新分頁開啟原始 MP3 檔案' : '前往原聲節目頁面'">
                             <span v-if="!ep.audio_url.includes('.mp3')">🎧 原聲音訊</span>
-                            <span class="text-[10px]">↗</span>
+                            <span class="text-xs font-bold">↗</span>
                         </a>
                     </div>
                 </div>
@@ -421,9 +421,9 @@
     <!-- Empty State -->
     <div v-else class="py-20 text-center rounded-2xl border space-y-3"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-        <div class="text-3xl">🎙️</div>
-        <div class="font-bold text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">暫無符合篩選條件的 Podcast 單集</div>
-        <p class="text-xs text-slate-500">可嘗試切換話題標籤，或點擊上方「即時同步」從種子頻道獲取最新情報</p>
+        <div class="text-4xl">🎙️</div>
+        <div class="font-bold text-base sm:text-lg" :class="isDark ? 'text-white' : 'text-slate-900'">暫無符合篩選條件的 Podcast 單集</div>
+        <p class="text-sm font-medium text-slate-400">可嘗試切換話題標籤，或點擊上方「即時同步」從種子頻道獲取最新情報</p>
     </div>
 
 </div>
