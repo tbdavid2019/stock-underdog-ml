@@ -1007,9 +1007,9 @@
     </div>
 
     <!-- ================= 6. FULL EARNINGS CALL CALENDAR MODAL ================= -->
-    <div v-if="showEarningsModal"
-         class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm transition-opacity"
-         @keydown.esc="closeEarningsCalendar()" tabindex="-1">
+    <template v-if="showEarningsModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm transition-opacity"
+             @keydown.esc="closeEarningsCalendar()" tabindex="-1">
         <div class="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-900'">
 
@@ -1137,6 +1137,7 @@
                 </button>
             </div>
         </div>
-    </div>
+        </div>
+    </template>
 
 </div>

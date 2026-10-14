@@ -1165,6 +1165,16 @@ export const app = createApp({
         }
     },
     mounted() {
+        // Fade out and remove preloader once Vue has fully mounted and compiled
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            preloader.style.opacity = '0';
+            preloader.style.pointerEvents = 'none';
+            setTimeout(() => {
+                if (preloader.parentNode) preloader.parentNode.removeChild(preloader);
+            }, 300);
+        }
+
         this.applyTheme();
         this.parseUrlParams();
         this.loadMacro();

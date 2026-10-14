@@ -56,8 +56,8 @@
 </footer>
 
 <!-- ================= FLOATING COMPANY PROFILE HOVER CARD (2MD POWERED) ================= -->
-<div v-if="hoverVisible"
-     class="fixed z-50 pointer-events-auto transition-all duration-150 shadow-2xl rounded-2xl border p-4 max-w-sm w-96 backdrop-blur-xl"
+<template v-if="hoverVisible">
+<div class="fixed z-50 pointer-events-auto transition-all duration-150 shadow-2xl rounded-2xl border p-4 max-w-sm w-96 backdrop-blur-xl"
      :style="{ top: hoverPos.top + 'px', left: hoverPos.left + 'px' }"
      @mouseenter="clearHoverTimeout()"
      @mouseleave="hideCompanyHover(true)"
@@ -151,10 +151,12 @@
         </div>
     </div>
 </div>
+</template>
 
 <!-- Toast Notification Pop-up -->
-<div v-if="toastMessage"
-     class="fixed bottom-6 right-6 px-4 py-2.5 text-black font-bold text-xs rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter bg-amber-500 border border-amber-400">
-    <span class="material-symbols-outlined text-[16px] leading-none">check_circle</span>
-    <span>{{ toastMessage }}</span>
-</div>
+<template v-if="toastMessage">
+    <div class="fixed bottom-6 right-6 px-4 py-2.5 text-black font-bold text-xs rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter bg-amber-500 border border-amber-400">
+        <span class="material-symbols-outlined text-[16px] leading-none">check_circle</span>
+        <span>{{ toastMessage }}</span>
+    </div>
+</template>

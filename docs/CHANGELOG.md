@@ -4,6 +4,21 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.5)
+
+### Fixed (Eliminate Flash of Uncompiled Content / FOUC on Initial Page Entry)
+- **🚫 徹底終結初始進入頁面時的模板閃爍（FOUC）與彈窗重疊問題**：
+  - **診斷痛點**：首次進入頁面或網路載入時，瀏覽器會短暫跳出全黑背景的「台美股法人說明會暨財報行事曆」彈窗、左側浮動個股懸浮卡片及未解析的雙大括號標籤（如 `{{ hoverData.ticker }}`、`{{ calendarYear }}` 等），造成恐怖混亂的初次渲染體驗。
+  - **根本原因**：
+    1. Tailwind CDN 在執行期注入的 `.flex { display: flex; }` 樣式因權重與載入時序問題，覆蓋了原先弱規則的 `[v-cloak] { display: none; }`，導致 `#app` 在 Vue 3 完成掛載前未被隱藏。
+    2. 浮動彈窗與懸浮卡（`showEarningsModal`、`hoverVisible`、`toastMessage`）直接寫在一般 DOM 容器中，未掛載前被瀏覽器當成普通 `fixed` 元素直接繪製。
+  - **三重防護架構**：
+    1. **升級強規格 `[v-cloak]` 規則**：引入 `[v-cloak], [v-cloak] * { display: none !important; }`，杜絕任何 CSS 框架的特異性覆蓋。
+    2. **HTML5 原生 `<template v-if="...">` 隔離**：將「法人說明會日曆彈窗」、「個股懸浮速查卡」及「Toast 通知」全數包裹至 HTML5 原生 `<template>` 標籤中。依 HTML5 規範，未解析前 `<template>` 內容為惰性片段（Inert DocumentFragment），瀏覽器物理上絕不渲染，100% 杜絕彈窗先行爆出的問題。
+    3. **優雅初始掛載預載畫面（Initial Mount Preloader）**：於 `<body>` 注入輕量級品牌橘色徽章載入層（`#preloader`），在 Vue 完成編譯掛載（`mounted`）後平滑淡出並銷毀，保證使用者每次造訪皆流暢無感。
+
+---
+
 ## 2026-10-14 (v2.4.4)
 
 ### Fixed & Redesigned (Material Symbols Icon Facelift, Light Theme Default & Collapsed Macro Lines)
