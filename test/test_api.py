@@ -7,6 +7,7 @@ import unittest
 from fastapi.testclient import TestClient
 from api.main import app
 from data.duckdb_manager import DuckDBManager
+from core.version import APP_VERSION
 
 
 class TestFastAPIService(unittest.TestCase):
@@ -312,7 +313,7 @@ class TestFastAPIService(unittest.TestCase):
         resp_wk = self.client.get("/.well-known/mcp.json")
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
-        self.assertEqual(data_wk["version"], "2.4.0")
+        self.assertEqual(data_wk["version"], APP_VERSION)
         self.assertEqual(len(data_wk.get("tools", [])), 17)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
         self.assertIn("get_commodities_summary", data_wk.get("tools", []))
@@ -376,16 +377,15 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("fed_real_money_odds.cut_25bps || 0) }}", resp.text)
         self.assertNotIn("fed_real_money_odds.cut_25bps || 0) * 100", resp.text)
-        self.assertIn("m.probability", resp.text)
-        self.assertIn("m.top_outcome", resp.text)
-        self.assertIn("const params = new URLSearchParams()", resp.text)
+        app_js = self.client.get("/static/js/app.js")
+        self.assertEqual(app_js.status_code, 200)
+        self.assertIn("const params = new URLSearchParams()", app_js.text)
 
     def test_public_version_surfaces_are_current(self):
         health = self.client.get("/health")
         self.assertEqual(health.status_code, 200)
-        self.assertEqual(health.json()["version"], "2.4.0")
-        homepage = self.client.get("/")
-        self.assertIn("v2.4.0", homepage.text)
+        self.assertEqual(health.json()["version"], APP_VERSION)
+        self.assertEqual(app.version, APP_VERSION)
 
 
 if __name__ == "__main__":

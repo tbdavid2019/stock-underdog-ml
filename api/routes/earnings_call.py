@@ -104,36 +104,42 @@ def get_upcoming_calls(
     """
     查詢近期即將召開之法人說明會，自動換算雙時區與倒數剩餘天數。
     """
+    mkt = str(market) if isinstance(market, str) else "ALL"
+    s_date = str(start_date) if isinstance(start_date, str) and start_date else None
+    e_date = str(end_date) if isinstance(end_date, str) and end_date else None
+    w_stock = is_weight_stock if isinstance(is_weight_stock, bool) else None
+    day_cnt = int(days) if isinstance(days, int) else 14
+    lim = int(limit) if isinstance(limit, int) else 50
+
     today = datetime.date.today()
-    s_date = start_date or today.strftime("%Y-%m-%d")
-    e_date = end_date or (today + datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    s_date = s_date or today.strftime("%Y-%m-%d")
+    e_date = e_date or (today + datetime.timedelta(days=day_cnt)).strftime("%Y-%m-%d")
 
     records = duckdb_manager.get_earnings_calls(
-        market=market,
+        market=mkt,
         start_date=s_date,
         end_date=e_date,
-        is_weight_stock=is_weight_stock,
-        limit=limit
+        is_weight_stock=w_stock,
+        limit=lim
     )
 
-    # 僅在初次冷啟動且無特殊過濾時，主動觸發一次抓取以提供即時資料
-    if not records and start_date is None and end_date is None and is_weight_stock is None:
-        if duckdb_manager.get_earnings_calls_count() == 0:
-            fetcher = EarningsCallFetcher(duckdb_manager)
-            fetcher.fetch_all_and_sync()
-            records = duckdb_manager.get_earnings_calls(
-                market=market,
-                start_date=s_date,
-                end_date=e_date,
-                is_weight_stock=is_weight_stock,
-                limit=limit
-            )
+    # 若特定市場或冷啟動時查無紀錄，即時觸發一次同步以獲取最新法說會
+    if not records and (start_date is None or not isinstance(start_date, str)):
+        fetcher = EarningsCallFetcher(duckdb_manager)
+        fetcher.fetch_all_and_sync()
+        records = duckdb_manager.get_earnings_calls(
+            market=mkt,
+            start_date=s_date,
+            end_date=e_date,
+            is_weight_stock=w_stock,
+            limit=lim
+        )
 
     enriched = [_enrich_call_item(r, today) for r in records]
 
     return UpcomingCallsResponse(
         success=True,
-        market=market.upper(),
+        market=mkt.upper(),
         total_count=len(enriched),
         data=enriched
     )
@@ -149,15 +155,16 @@ def get_earnings_calendar(
     查詢指定月之每日法說會場次計數，供行事曆檢視視覺化。
     """
     today = datetime.date.today()
-    y = year or today.year
-    m = month or today.month
+    y = year if isinstance(year, int) else today.year
+    m = month if isinstance(month, int) else today.month
+    mkt = str(market) if isinstance(market, str) else "ALL"
 
-    data = duckdb_manager.get_earnings_calendar(year=y, month=m, market=market)
+    data = duckdb_manager.get_earnings_calendar(year=y, month=m, market=mkt)
     return EarningsCalendarResponse(
         success=True,
         year=y,
         month=m,
-        market=market.upper(),
+        market=mkt.upper(),
         data=data
     )
 
@@ -170,11 +177,18 @@ def get_ticker_calls(
     """
     查詢特定個股之歷史與預約法說會資訊，包含歷次官方簡報 PDF 下載入口與影音回放。
     """
+    lim = int(limit) if isinstance(limit, int) else 20
     today = datetime.date.today()
     records = duckdb_manager.get_earnings_calls(
         ticker=ticker,
-        limit=limit
+        limit=lim
     )
+    if not records:
+        fetcher = EarningsCallFetcher(duckdb_manager)
+        records = fetcher.fetch_ticker_calls(ticker)
+        if records:
+            records = records[:lim]
+
     enriched = [_enrich_call_item(r, today) for r in records]
     return UpcomingCallsResponse(
         success=True,

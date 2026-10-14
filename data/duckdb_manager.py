@@ -1525,26 +1525,27 @@ class DuckDBManager:
         try:
             query = "SELECT * FROM earnings_calls WHERE 1=1"
             params = []
-            if market and market.upper() != "ALL":
+            if isinstance(market, str) and market.strip() and market.upper() != "ALL":
                 query += " AND market = ?"
                 params.append(market.upper())
-            if start_date:
+            if isinstance(start_date, str) and start_date.strip():
                 query += " AND call_date >= ?"
-                params.append(start_date)
-            if end_date:
+                params.append(start_date.strip())
+            if isinstance(end_date, str) and end_date.strip():
                 query += " AND call_date <= ?"
-                params.append(end_date)
-            if ticker:
+                params.append(end_date.strip())
+            if isinstance(ticker, str) and ticker.strip():
                 clean_t = ticker.strip().upper()
                 query += " AND (ticker = ? OR ticker LIKE ?)"
                 params.append(clean_t)
                 params.append(f"{clean_t}.%")
-            if is_weight_stock is not None:
+            if isinstance(is_weight_stock, bool):
                 query += " AND is_weight_stock = ?"
                 params.append(is_weight_stock)
             
+            lim = int(limit) if isinstance(limit, (int, str)) and str(limit).isdigit() else 100
             query += " ORDER BY call_date ASC, call_time ASC LIMIT ?"
-            params.append(limit)
+            params.append(lim)
 
             with self._get_connection() as con:
                 df = con.execute(query, params).df()

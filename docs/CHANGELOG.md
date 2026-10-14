@@ -4,6 +4,25 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.12)
+
+### Fixed & Enhanced (Taiwan & US Earnings Call BigGo Aggregation & Clean UI Facelift)
+- **🏛️ 操盤看板「台美法說會」乾淨精簡標題與反模式修復（Clean Header & No Buzzwords）**：
+  - **診斷痛點**：原看板頂部催化劑卡片標題為「台美法說會預警雷達」，點綴詞「預警雷達」過於冗餘繁雜。且當點擊「台股」分頁時，因底層台股資料為空，前端竟錯誤降級渲染 Investing.com 美股財報行事曆（ASML、BAC、Morgan Stanley、BlackRock），導致台股分頁顯示美股的嚴重混淆。
+  - **頂級量化終端工藝修正**：
+    1. **去除繁雜綴詞，標題精煉**：將卡片標題由「台美法說會預警雷達」全面精簡為乾淨專業的「**台美法說會**」，維持頂級操盤終端之極簡風範。
+    2. **嚴格隔離跨市場降級渲染**：修復前端 fallback 邏輯，明確限制僅在市場為全部（`ALL`）或美股（`US`）時才允許降級至美股總經財報清單；當切換為「台股」時絕不滲漏美股，若無時程則乾淨呈現「近期暫無台股法說會時程」。
+
+- **🌐 台灣法說會資料全面抓取修復與 BigGo 財經 / MOPS 多視窗聚合（Taiwan Earnings Call Pipeline Overhaul）**：
+  - **根本原因**：原先使用的 TWSE OpenAPI (`openapi.twse.com.tw/v1/opendata/t100sb02_1`) 與 TPEx 端點因主管機關調整而回傳 HTTP 302 導向 404 頁面，導致台灣上市公司與上櫃公司法說會資料全數抓取失敗（0 筆）。
+  - **架構升級與高可用性實作**：
+    1. **BigGo 財經 / MOPS 多視窗滾動抓取管道 (`fetch_biggo_calls`)**：全面對接 BigGo 財經公開法說會 API，透過多視窗滾動分段（-12 天至 +24 天，每 6 天一滾動視窗，避開單次 7 天查詢限制），全量涵蓋台灣上市（TWSE）、上櫃（TPEx）與美股重大法說會與財報電話會議。
+    2. **官方簡報簽名 PDF 直連解析 (`fetch_biggo_slide_url`)**：針對當日（`today`）與近期即將召開之重磅法說會，透過 BigGo File API 直接解析出公開資訊觀測站 (MOPS) 之官方簡報 S3 簽名 PDF 下載入口，按鈕一鍵直達官方簡報。
+    3. **個股代碼智慧正規化與權值股識別**：精準正規化台股代碼（如 `1319.TW`、`2340.TW`、`2603.TW`、`6126.TWO`）與美股代號（`NVDA`、`AAPL`、`ASML`），精準標記台灣前 50 大與美股科技巨頭權值股徽章。
+    4. **DuckDB 參數型別防禦與即時隨選抓取**：修復 API 層與 DuckDB 查詢防禦層之型別轉換缺陷，並於個股法說會查詢（`GET /api/v1/earnings-call/{ticker}`）加入即時按需抓取入庫能力，查詢未在近期滾動視窗之個股亦能秒速回填歷次法說會與簡報連結。
+
+---
+
 ## 2026-10-14 (v2.4.11)
 
 ### Fixed & Enhanced (Eliminated Desktop Table Horizontal Scrollbar & Compact Density Optimization)
