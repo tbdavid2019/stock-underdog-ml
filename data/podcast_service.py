@@ -84,25 +84,25 @@ ENTITY_TICKER_MAP = {
 
 # 標的基準價格與名稱對照快照 (行情離線降級快照)
 FALLBACK_TICKER_QUOTES = {
-    "NVDA": {"name": "輝達", "price": 138.25, "change_pct": 1.45, "direction": "up"},
-    "MSFT": {"name": "微軟", "price": 422.80, "change_pct": 0.35, "direction": "up"},
-    "GOOGL": {"name": "Alphabet (Google)", "price": 166.40, "change_pct": 0.16, "direction": "up"},
-    "AMZN": {"name": "亞馬遜", "price": 188.50, "change_pct": -0.42, "direction": "down"},
-    "META": {"name": "Meta Platforms", "price": 595.60, "change_pct": 1.82, "direction": "up"},
-    "AAPL": {"name": "蘋果", "price": 231.30, "change_pct": -0.28, "direction": "down"},
-    "TSLA": {"name": "特斯拉", "price": 221.40, "change_pct": 3.12, "direction": "up"},
-    "2330.TW": {"name": "台積電", "price": 1050.0, "change_pct": 2.44, "direction": "up"},
-    "TSM": {"name": "台積電 ADR", "price": 192.50, "change_pct": 2.10, "direction": "up"},
-    "2454.TW": {"name": "聯發科", "price": 1305.0, "change_pct": 1.16, "direction": "up"},
-    "2317.TW": {"name": "鴻海", "price": 208.5, "change_pct": 0.72, "direction": "up"},
-    "2382.TW": {"name": "廣達", "price": 288.0, "change_pct": 1.58, "direction": "up"},
-    "ASML": {"name": "艾司摩爾", "price": 820.40, "change_pct": -1.15, "direction": "down"},
-    "AMD": {"name": "超微", "price": 158.60, "change_pct": 0.88, "direction": "up"},
-    "AVGO": {"name": "博通", "price": 178.90, "change_pct": 1.62, "direction": "up"},
-    "ORCL": {"name": "甲骨文", "price": 175.20, "change_pct": 0.65, "direction": "up"},
-    "3690.HK": {"name": "美團", "price": 192.4, "change_pct": 0.70, "direction": "up"},
-    "0700.HK": {"name": "騰訊控股", "price": 435.0, "change_pct": 1.12, "direction": "up"},
-    "BABA": {"name": "阿里巴巴", "price": 102.8, "change_pct": -0.55, "direction": "down"},
+    "NVDA": {"ticker": "NVDA", "name": "輝達", "price": 138.25, "change_pct": 1.45, "direction": "up"},
+    "MSFT": {"ticker": "MSFT", "name": "微軟", "price": 422.80, "change_pct": 0.35, "direction": "up"},
+    "GOOGL": {"ticker": "GOOGL", "name": "Alphabet (Google)", "price": 166.40, "change_pct": 0.16, "direction": "up"},
+    "AMZN": {"ticker": "AMZN", "name": "亞馬遜", "price": 188.50, "change_pct": -0.42, "direction": "down"},
+    "META": {"ticker": "META", "name": "Meta Platforms", "price": 595.60, "change_pct": 1.82, "direction": "up"},
+    "AAPL": {"ticker": "AAPL", "name": "蘋果", "price": 231.30, "change_pct": -0.28, "direction": "down"},
+    "TSLA": {"ticker": "TSLA", "name": "特斯拉", "price": 221.40, "change_pct": 3.12, "direction": "up"},
+    "2330.TW": {"ticker": "2330.TW", "name": "台積電", "price": 1050.0, "change_pct": 2.44, "direction": "up"},
+    "TSM": {"ticker": "TSM", "name": "台積電 ADR", "price": 192.50, "change_pct": 2.10, "direction": "up"},
+    "2454.TW": {"ticker": "2454.TW", "name": "聯發科", "price": 1305.0, "change_pct": 1.16, "direction": "up"},
+    "2317.TW": {"ticker": "2317.TW", "name": "鴻海", "price": 208.5, "change_pct": 0.72, "direction": "up"},
+    "2382.TW": {"ticker": "2382.TW", "name": "廣達", "price": 288.0, "change_pct": 1.58, "direction": "up"},
+    "ASML": {"ticker": "ASML", "name": "艾司摩爾", "price": 820.40, "change_pct": -1.15, "direction": "down"},
+    "AMD": {"ticker": "AMD", "name": "超微", "price": 158.60, "change_pct": 0.88, "direction": "up"},
+    "AVGO": {"ticker": "AVGO", "name": "博通", "price": 178.90, "change_pct": 1.62, "direction": "up"},
+    "ORCL": {"ticker": "ORCL", "name": "甲骨文", "price": 175.20, "change_pct": 0.65, "direction": "up"},
+    "3690.HK": {"ticker": "3690.HK", "name": "美團", "price": 192.4, "change_pct": 0.70, "direction": "up"},
+    "0700.HK": {"ticker": "0700.HK", "name": "騰訊控股", "price": 435.0, "change_pct": 1.12, "direction": "up"},
+    "BABA": {"ticker": "BABA", "name": "阿里巴巴", "price": 102.8, "change_pct": -0.55, "direction": "down"},
 }
 
 
@@ -187,7 +187,9 @@ class PodcastService:
 
         # 降級使用基準對照字典
         if ticker in FALLBACK_TICKER_QUOTES:
-            return FALLBACK_TICKER_QUOTES[ticker]
+            res = dict(FALLBACK_TICKER_QUOTES[ticker])
+            res["ticker"] = ticker
+            return res
 
         return {
             "ticker": ticker,
