@@ -6,13 +6,13 @@
         <button @click="instSubTab = 'three_inst'"
                 :class="instSubTab === 'three_inst' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
                 class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
-            <span>🏛️</span>
+            <span class="material-symbols-outlined text-[16px] leading-none">account_balance</span>
             <span>三大法人籌碼與持股</span>
         </button>
         <button @click="instSubTab = 'broker'; if(!brokerDates.length) loadBrokerTrend()"
                 :class="instSubTab === 'broker' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
                 class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
-            <span>🏦</span>
+            <span class="material-symbols-outlined text-[16px] leading-none">domain</span>
             <span>券商分點主力追蹤</span>
         </button>
     </div>
@@ -25,7 +25,8 @@
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-                        <span>🏛️ 台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
+                        <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">account_balance</span>
+                        <span>台股三大法人籌碼雷達 (外資 / 投信 / 自營商)</span>
                     </h2>
                     <p class="text-xs sm:text-sm mt-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
                         追蹤全市場 <strong class="num-font font-black text-amber-500">512,000+ 筆</strong> 上市櫃法人歷史進出與外資持股比率，每日收盤 15:30 官方 OpenAPI 自動更新。
@@ -34,13 +35,15 @@
 
                 <!-- Mini Stats Pills -->
                 <div class="flex flex-wrap items-center gap-2 text-xs num-font">
-                    <span class="px-3 py-1.5 rounded-xl border font-bold"
+                    <span class="px-3 py-1.5 rounded-xl border font-bold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'">
-                        📊 歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}
+                        <span class="material-symbols-outlined text-[14px] leading-none">bar_chart</span>
+                        <span>歷史籌碼: {{ marketStats.total_institutional_records ? marketStats.total_institutional_records.toLocaleString() + ' 筆' : '512,045 筆' }}</span>
                     </span>
-                    <span class="px-3 py-1.5 rounded-xl border font-bold"
+                    <span class="px-3 py-1.5 rounded-xl border font-bold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'">
-                        📅 最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}
+                        <span class="material-symbols-outlined text-[14px] leading-none">calendar_today</span>
+                        <span>最新出表: {{ marketStats.latest_institutional_date || '2026-08-31' }}</span>
                     </span>
                 </div>
             </div>
@@ -71,13 +74,15 @@
                          :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
                         <button @click="instSortDir = 'desc'; loadInstitutionalFlows()"
                                 :class="instSortDir === 'desc' ? (isDark ? 'bg-emerald-600 text-white font-black' : 'bg-emerald-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                                class="px-2.5 py-1 rounded-lg transition-all text-xs">
-                            🔥 買超榜
+                                class="px-2.5 py-1 rounded-lg transition-all text-xs flex items-center space-x-1">
+                            <span class="material-symbols-outlined text-[13px] leading-none">trending_up</span>
+                            <span>買超榜</span>
                         </button>
                         <button @click="instSortDir = 'asc'; loadInstitutionalFlows()"
                                 :class="instSortDir === 'asc' ? (isDark ? 'bg-rose-600 text-white font-black' : 'bg-rose-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                                class="px-2.5 py-1 rounded-lg transition-all text-xs">
-                            ❄️ 賣超榜
+                                class="px-2.5 py-1 rounded-lg transition-all text-xs flex items-center space-x-1">
+                            <span class="material-symbols-outlined text-[13px] leading-none">trending_down</span>
+                            <span>賣超榜</span>
                         </button>
                     </div>
                 </div>
@@ -110,7 +115,9 @@
 
         <!-- Institutional Table Results -->
         <div v-if="instLoading" class="text-center py-16 space-y-2">
-            <div class="inline-block animate-spin text-2xl">⏳</div>
+            <div class="flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px] animate-spin text-amber-500">progress_activity</span>
+            </div>
             <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在載入法人籌碼數據庫...</p>
         </div>
 
@@ -120,7 +127,8 @@
 
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <span>{{ instSortDir === 'desc' ? '🔥 三大法人淨買超排行榜' : '❄️ 三大法人淨賣超排行榜' }}</span>
+                    <span class="material-symbols-outlined text-[18px] leading-none" :class="instSortDir === 'desc' ? 'text-emerald-400' : 'text-rose-500'">{{ instSortDir === 'desc' ? 'trending_up' : 'trending_down' }}</span>
+                    <span>三大法人{{ instSortDir === 'desc' ? '淨買超' : '淨賣超' }}排行榜</span>
                     <span class="text-xs font-bold px-2.5 py-0.5 rounded-full border num-font"
                           :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'">
                         TOP {{ institutionalFlows.length }}
@@ -184,9 +192,10 @@
                         </td>
                         <td class="p-3 text-center">
                             <button @click="searchTickerHistory(item.ticker)"
-                                    class="text-xs font-bold px-2.5 py-1 rounded-lg border transition-all text-amber-500 hover:text-amber-400"
+                                    class="text-xs font-bold px-2.5 py-1 rounded-lg border transition-all text-amber-500 hover:text-amber-400 flex items-center justify-center space-x-0.5 mx-auto"
                                     :class="isDark ? 'bg-[#16181D] border-[#262626] hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] hover:bg-[#F4F4F6] shadow-sm'">
-                                分析 ↗
+                                <span>分析</span>
+                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
                             </button>
                         </td>
                     </tr>

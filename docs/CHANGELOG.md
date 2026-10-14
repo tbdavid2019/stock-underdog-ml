@@ -8,6 +8,14 @@
 
 ## 2026-10-14
 
+### Improved (Full Material Symbols Outlined Icon System & Minimalist Header Controls)
+- **✨ 全面導入 Google Material Symbols Outlined 圖示系統（徹底汰除 Emoji）**：
+  - 依據 Impeccable 工藝標準規範，杜絕以 Unicode Emoji 作為 UI 圖示的不一致混雜質感；全站引入 Google Material Symbols Outlined 向量字體圖示系統（`font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24`）。
+  - 將導覽列、操盤看板、策略篩選、巨集狀態卡、法說會行事曆、三大法人、券商分點、個股歷史時序、AI Podcast 雷達與頁尾全站所有 Emoji 完全替換為乾淨利落、筆畫一致的 Material Symbols Outlined 圖示（如 `bolt`, `monitoring`, `account_balance`, `history`, `podcasts`, `military_tech`, `timeline`, `auto_awesome`, `smart_toy`, `calendar_month`, `headphones`, `smart_display` 等）。
+- **🎯 頂部右側功能區極簡化（消除廢話文字）**：
+  - 徹底移除右上角「深色模式 / 淺色模式」冗長繁瑣的狀態文字說明，改採現代頂級 Web App 標準的 40x40 圓形純圖示按鈕（`w-10 h-10 rounded-full border`）。
+  - 整合「分享看板」（`share`）與「主題切換」（`light_mode` / `dark_mode`）為乾淨洗鍊的雙圖示按鈕組，並保留標準 `aria-label` 與 `title` 工具提示，視覺輕盈不雜亂。
+
 ### Fixed & Improved (Impeccable UI Layout Equilibrium, Chinese Typography Overhaul & Stock Recommendation Bug Fix)
 - **⚖️ 導覽列三欄平衡重構（消除偏右擠壓與不平衡問題）**：
   - 重構 `api/templates/partials/header.html` 為經典穩定的三欄對稱架構：

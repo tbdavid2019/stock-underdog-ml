@@ -7,7 +7,8 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <span>🏦 券商分點主力進出雷達</span>
+                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">domain</span>
+                    <span>券商分點主力進出雷達</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     穿透個別券商分點（外資高盛、摩根士丹利、瑞銀，本土元大台北、凱基台北）之多空建倉時間序列
@@ -41,7 +42,9 @@
 
     <!-- Broker Loading -->
     <div v-if="brokerLoading" class="text-center py-16 space-y-2">
-        <div class="inline-block animate-spin text-2xl">⏳</div>
+        <div class="flex items-center justify-center">
+            <span class="material-symbols-outlined text-[28px] animate-spin text-amber-500">progress_activity</span>
+        </div>
         <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在計算券商分點主力建倉時序...</p>
     </div>
 
@@ -53,7 +56,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <span>📈 <span class="num-font text-amber-500">{{ brokerSearchTicker.toUpperCase() }}</span> TOP 8 目標券商累計買賣超走勢</span>
+                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">timeline</span>
+                    <span><span class="num-font text-amber-500">{{ brokerSearchTicker.toUpperCase() }}</span> TOP 8 目標券商累計買賣超走勢</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     統計區間: {{ brokerSummary.start_date }} ~ {{ brokerSummary.end_date }} (共 {{ brokerSummary.days }} 個交易日)
@@ -75,7 +79,8 @@
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-5 rounded-2xl border space-y-3">
             <h4 class="text-sm font-black text-emerald-400 flex items-center space-x-2">
-                <span>🔥 主力買超券商分點 TOP 15</span>
+                <span class="material-symbols-outlined text-[16px] leading-none text-emerald-400">trending_up</span>
+                <span>主力買超券商分點 TOP 15</span>
             </h4>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs border-collapse">
@@ -104,7 +109,8 @@
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-5 rounded-2xl border space-y-3">
             <h4 class="text-sm font-black text-rose-500 flex items-center space-x-2">
-                <span>❄️ 主力賣超券商分點 TOP 15</span>
+                <span class="material-symbols-outlined text-[16px] leading-none text-rose-500">trending_down</span>
+                <span>主力賣超券商分點 TOP 15</span>
             </h4>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs border-collapse">
@@ -133,8 +139,11 @@
 
     <div v-else-if="!brokerLoading"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="text-center py-12 rounded-2xl border space-y-1">
-        <div class="text-3xl">🔎</div>
+         class="text-center py-12 rounded-2xl border space-y-2">
+        <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center border"
+             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
+            <span class="material-symbols-outlined text-[28px]">search</span>
+        </div>
         <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ brokerSearchTicker }}</strong> 的券商分點主力時序資料</div>
     </div>
 

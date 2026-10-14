@@ -9,8 +9,9 @@
             <a href="https://david888.com" target="_blank"
                class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-white hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-700 hover:bg-white shadow-sm'">
-                <span>⚡</span>
-                <span>技術提供 <strong class="underline decoration-dotted font-black num-font">david888.com</strong> ↗</span>
+                <span class="material-symbols-outlined text-[15px] leading-none">bolt</span>
+                <span>技術提供 <strong class="underline decoration-dotted font-black num-font">david888.com</strong></span>
+                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
             </a>
         </div>
 
@@ -21,7 +22,7 @@
                     class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
                     :class="activeTab === 'agent_hub' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-white border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-white hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700 hover:bg-white')"
                     title="切換至 AI Agent 與 MCP 工具中心">
-                <span>🤖</span>
+                <span class="material-symbols-outlined text-[16px] leading-none">smart_toy</span>
                 <span>Agent / MCP Hub</span>
             </button>
 
@@ -30,8 +31,9 @@
                class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-emerald-400 hover:text-emerald-300 hover:border-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'"
                title="LLM Context Standard (https://llmstxt.org)">
-                <span>📄</span>
-                <span>llms.txt ↗</span>
+                <span class="material-symbols-outlined text-[15px] leading-none">description</span>
+                <span>llms.txt</span>
+                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
             </a>
 
             <!-- API Docs / Endpoints -->
@@ -43,10 +45,10 @@
 
             <!-- Back to top -->
             <button @click="window.scrollTo({top: 0, behavior: 'smooth'})"
-                    class="p-1 rounded-lg border text-xs transition-all ml-1"
+                    class="p-1 rounded-lg border text-xs transition-all ml-1 flex items-center justify-center"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-500 hover:text-slate-900 shadow-sm'"
                     title="回到頂部" aria-label="回到頂部">
-                ▲
+                <span class="material-symbols-outlined text-[16px] leading-none">arrow_upward</span>
             </button>
         </div>
 
@@ -97,15 +99,17 @@
                     </span>
                 </div>
             </div>
-            <span class="text-xs px-2 py-0.5 rounded border text-emerald-400 border-emerald-500/30 bg-emerald-500/10 whitespace-nowrap shrink-0 font-mono">
-                ⚡ 2md
+            <span class="text-xs px-2 py-0.5 rounded border text-emerald-400 border-emerald-500/30 bg-emerald-500/10 whitespace-nowrap shrink-0 font-mono flex items-center">
+                <span class="material-symbols-outlined text-[13px] leading-none mr-0.5">bolt</span>
+                <span>2md</span>
             </span>
         </div>
 
         <!-- Business Overview -->
         <div>
             <div class="text-xs sm:text-sm font-bold mb-1 flex items-center space-x-1" :class="isDark ? 'text-slate-300' : 'text-slate-800'">
-                <span>🏢 主要業務與營運</span>
+                <span class="material-symbols-outlined text-[15px] leading-none text-amber-500">business</span>
+                <span>主要業務與營運</span>
             </div>
             <p class="text-xs sm:text-sm leading-relaxed line-clamp-3" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                 {{ hoverData.business_summary || '暫無詳細業務描述' }}
@@ -115,7 +119,8 @@
         <!-- Recent News (if any) -->
         <div v-if="hoverData.recent_news && hoverData.recent_news.length > 0" class="pt-2 border-t" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <div class="text-xs sm:text-sm font-bold mb-1 flex items-center space-x-1" :class="isDark ? 'text-slate-300' : 'text-slate-800'">
-                <span>📰 即時最新動態</span>
+                <span class="material-symbols-outlined text-[15px] leading-none text-amber-500">newspaper</span>
+                <span>即時最新動態</span>
             </div>
             <div class="space-y-1.5">
                 <a v-for="(news, nidx) in hoverData.recent_news.slice(0, 2)" :key="nidx"
@@ -129,16 +134,19 @@
 
         <!-- External Link Buttons -->
         <div class="pt-2 border-t flex items-center justify-between gap-1.5 text-xs font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-            <a v-if="hoverData.links?.yahoo" :href="hoverData.links.yahoo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1"
+            <a v-if="hoverData.links?.yahoo" :href="hoverData.links.yahoo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
-                Yahoo ↗
+                <span>Yahoo</span>
+                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
             </a>
-            <a v-if="hoverData.links?.goodinfo" :href="hoverData.links.goodinfo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1"
+            <a v-if="hoverData.links?.goodinfo" :href="hoverData.links.goodinfo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
-                Goodinfo ↗
+                <span>Goodinfo</span>
+                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
             </a>
-            <button @click="searchTickerHistory(hoverData.ticker); hideCompanyHover(true)" class="px-2 py-1 rounded-md border transition-all text-center flex-1 text-black bg-amber-500 hover:bg-amber-400 border-amber-500">
-                時序軌跡
+            <button @click="searchTickerHistory(hoverData.ticker); hideCompanyHover(true)" class="px-2 py-1 rounded-md border transition-all text-center flex-1 text-black bg-amber-500 hover:bg-amber-400 border-amber-500 flex items-center justify-center space-x-0.5">
+                <span>時序軌跡</span>
+                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
             </button>
         </div>
     </div>
@@ -147,6 +155,6 @@
 <!-- Toast Notification Pop-up -->
 <div v-if="toastMessage"
      class="fixed bottom-6 right-6 px-4 py-2.5 text-black font-bold text-xs rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter bg-amber-500 border border-amber-400">
-    <span>✓</span>
+    <span class="material-symbols-outlined text-[16px] leading-none">check_circle</span>
     <span>{{ toastMessage }}</span>
 </div>

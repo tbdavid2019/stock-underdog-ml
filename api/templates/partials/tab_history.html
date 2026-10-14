@@ -5,7 +5,8 @@
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-6 rounded-2xl border space-y-4">
         <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-            <span>🔍 個股時間序列量化預測查詢</span>
+            <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">search</span>
+            <span>個股時間序列量化預測查詢</span>
         </h2>
         <p class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
             輸入股票代號或公司名稱（例如 <code class="num-font font-bold text-amber-500">2330.TW</code>、<code class="font-bold text-amber-500">台積電</code>、<code class="font-bold text-amber-500">特斯拉</code>、<code class="font-bold text-amber-500">聯電</code>）檢索歷史量化預測軌跡、均線支撐與法人動向。
@@ -37,7 +38,9 @@
 
     <!-- History Table Results -->
     <div v-if="historyLoading" class="text-center py-16 space-y-2">
-        <div class="inline-block animate-spin text-2xl">⏳</div>
+        <div class="flex items-center justify-center">
+            <span class="material-symbols-outlined text-[28px] animate-spin text-amber-500">progress_activity</span>
+        </div>
         <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在檢索歷史時序軌跡...</p>
     </div>
 
@@ -98,7 +101,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <span>📈 <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 三大法人累計買賣超趨勢折線圖</span>
+                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">timeline</span>
+                    <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 三大法人累計買賣超趨勢折線圖</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     追蹤最近 {{ tickerInstHistory.length }} 個交易日法人主力波段建倉與出貨曲線
@@ -178,15 +182,21 @@
 
     <div v-else-if="hasSearched && historyError"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="text-center py-12 rounded-2xl border space-y-1">
-        <div class="text-3xl">⚠️</div>
+         class="text-center py-12 rounded-2xl border space-y-2">
+        <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center border"
+             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
+            <span class="material-symbols-outlined text-[28px]">warning</span>
+        </div>
         <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ historyError }}</div>
     </div>
 
     <div v-else-if="hasSearched && historyRecords.length === 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="text-center py-12 rounded-2xl border space-y-1">
-        <div class="text-3xl">🔎</div>
+         class="text-center py-12 rounded-2xl border space-y-2">
+        <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center border"
+             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
+            <span class="material-symbols-outlined text-[28px]">search</span>
+        </div>
         <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ searchTicker }}</strong> 的歷史時序資料</div>
     </div>
 

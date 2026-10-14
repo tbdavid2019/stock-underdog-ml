@@ -24,13 +24,13 @@ export const app = createApp({
             expandedDrawerLoading: false,
 
             strategyOptions: [
-                { id: 'resonance', label: '🏆 三重共振焦點', icon: '✨' },
-                { id: 'xuantie', label: '⚔️ 玄鐵均線波段', icon: '🗡️' },
-                { id: 'timesfm_bullish', label: '🔮 TimesFM 預測 TOP', icon: '💎' },
-                { id: 'bullish', label: '📈 LSTM 看漲 TOP', icon: '🚀' },
-                { id: 'bearish', label: '📉 LSTM 看跌避險', icon: '🐻' },
-                { id: 'timesfm_bearish', label: '🛡️ TimesFM 避險', icon: '📉' },
-                { id: 'latest', label: '📋 最新全量批次', icon: '📦' }
+                { id: 'resonance', label: '三重共振焦點', icon: 'military_tech' },
+                { id: 'xuantie', label: '玄鐵均線波段', icon: 'show_chart' },
+                { id: 'timesfm_bullish', label: 'TimesFM 預測 TOP', icon: 'auto_awesome' },
+                { id: 'bullish', label: 'LSTM 看漲 TOP', icon: 'trending_up' },
+                { id: 'bearish', label: 'LSTM 看跌避險', icon: 'trending_down' },
+                { id: 'timesfm_bearish', label: 'TimesFM 避險', icon: 'shield' },
+                { id: 'latest', label: '最新全量批次', icon: 'dataset' }
             ],
 
             macro: {},
@@ -131,7 +131,7 @@ export const app = createApp({
                 }
             }, null, 2),
 
-            pythonSnippet: `import requests\n\n# 取得 🏆 三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
+            pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
         };
     },
     methods: {
@@ -169,13 +169,13 @@ export const app = createApp({
                         catalyst_alerts: summary.catalyst_alerts,
                         polymarket: polymarket || this.macro.polymarket
                     };
-                    this.showToast('✅ 總經與行事曆已即時同步！');
+                    this.showToast('總經與行事曆已即時同步！');
                 } else {
-                    this.showToast('⚠️ 更新失敗，請稍後再試');
+                    this.showToast('更新失敗，請稍後再試');
                 }
             } catch (e) {
                 console.error("Failed to refresh macro", e);
-                this.showToast('❌ 更新發生錯誤');
+                this.showToast('更新發生錯誤');
             } finally {
                 this.macroRefreshing = false;
             }
@@ -1023,9 +1023,9 @@ export const app = createApp({
                     execute: async ({ ticker }) => JSON.stringify(await ApiClient.getCompanyProfile(ticker))
                 });
 
-                console.log('✅ [Chrome WebMCP] Registered native tools to document.modelContext');
+                console.log('[Chrome WebMCP] Registered native tools to document.modelContext');
             } catch (e) {
-                console.warn('⚠️ [Chrome WebMCP] Registration warning:', e);
+                console.warn('[Chrome WebMCP] Registration warning:', e);
             }
         }
     },

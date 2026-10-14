@@ -7,7 +7,7 @@
         <div class="flex items-center space-x-3 cursor-pointer select-none shrink-0" @click="setTab('dashboard')">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg font-black text-lg transition-transform hover:scale-105"
                  :class="isDark ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-black shadow-amber-500/20' : 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-amber-500/25'">
-                <span>⚡</span>
+                <span class="material-symbols-outlined text-[22px]">bolt</span>
             </div>
             <div class="flex flex-col">
                 <div class="flex items-center space-x-2">
@@ -27,39 +27,39 @@
             </div>
         </div>
 
-        <!-- 2. CENTER COLUMN: Core Navigation Tabs (Centered Balance, Eliminates Right-side Overcrowding) -->
+        <!-- 2. CENTER COLUMN: Core Navigation Tabs (Centered Balance with Material Icons) -->
         <div class="flex-1 hidden md:flex justify-center px-1">
             <nav class="flex items-center space-x-1 p-1 rounded-full border transition-colors shadow-sm"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
                 <button @click="setTab('dashboard')" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
                         :class="activeTab === 'dashboard' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
-                    <span>📊</span>
+                    <span class="material-symbols-outlined text-[18px]">monitoring</span>
                     <span>操盤看板</span>
                 </button>
                 <button @click="setTab('institutional')" :aria-current="activeTab === 'institutional' ? 'page' : undefined"
                         :class="activeTab === 'institutional' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
-                    <span>🏛️</span>
+                    <span class="material-symbols-outlined text-[18px]">account_balance</span>
                     <span>法人籌碼</span>
                 </button>
                 <button @click="setTab('history')" :aria-current="activeTab === 'history' ? 'page' : undefined"
                         :class="activeTab === 'history' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
-                    <span>🔍</span>
+                    <span class="material-symbols-outlined text-[18px]">history</span>
                     <span>個股歷史</span>
                 </button>
                 <button @click="setTab('podcast')" :aria-current="activeTab === 'podcast' ? 'page' : undefined"
                         :class="activeTab === 'podcast' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
-                    <span>🎙️</span>
+                    <span class="material-symbols-outlined text-[18px]">podcasts</span>
                     <span>Podcast 雷達</span>
                 </button>
             </nav>
         </div>
 
-        <!-- 3. RIGHT COLUMN: System Status & User Actions -->
-        <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+        <!-- 3. RIGHT COLUMN: System Status & User Actions (Sleek Icon Buttons, No Redundant Text) -->
+        <div class="flex items-center space-x-2 shrink-0">
             <!-- Global Macro Pill (Hidden on Laptops / Small Screens to Avoid Crowding) -->
             <div class="hidden 2xl:flex items-center space-x-2 px-3 py-1.5 rounded-full border text-sm font-medium whitespace-nowrap transition-colors"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700'">
@@ -74,23 +74,21 @@
                 </span>
             </div>
 
-            <!-- Share URL Button -->
+            <!-- Share URL Icon Button -->
             <button @click="copyShareLink()"
-                    class="px-3 py-1.5 rounded-full border text-sm font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap shadow-sm hover:scale-105"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626] hover:text-amber-300' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
+                    class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm hover:scale-105 active:scale-95"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626] hover:text-amber-300' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
                     title="複製目前頁面完整分享連結" aria-label="分享連結">
-                <span>🔗</span>
-                <span class="hidden sm:inline">分享</span>
+                <span class="material-symbols-outlined text-[20px]">share</span>
             </button>
 
-            <!-- Dark / Light Mode Switcher -->
+            <!-- Dark / Light Mode Switcher (Pure Icon Button, No Verbose Text) -->
             <button @click="toggleTheme()"
-                    class="px-3 py-1.5 rounded-full border transition-all text-sm font-bold flex items-center space-x-1.5 shadow-sm select-none hover:scale-105"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'"
+                    class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm select-none hover:scale-105 active:scale-95"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
                     :title="isDark ? '切換為淺色模式' : '切換為曜石黑深色模式'"
-                    :aria-label="isDark ? '深色模式' : '淺色模式'">
-                <span class="text-sm">{{ isDark ? '🌙' : '☀️' }}</span>
-                <span class="hidden md:inline">{{ isDark ? '深色模式' : '淺色模式' }}</span>
+                    :aria-label="isDark ? '切換為淺色模式' : '切換為深色模式'">
+                <span class="material-symbols-outlined text-[20px]">{{ isDark ? 'light_mode' : 'dark_mode' }}</span>
             </button>
         </div>
 
@@ -103,22 +101,26 @@
              :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
             <button @click="setTab('dashboard')"
                     :class="activeTab === 'dashboard' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap">
+                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[16px]">monitoring</span>
                 <span>操盤看板</span>
             </button>
             <button @click="setTab('institutional')"
                     :class="activeTab === 'institutional' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap">
+                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[16px]">account_balance</span>
                 <span>法人籌碼</span>
             </button>
             <button @click="setTab('history')"
                     :class="activeTab === 'history' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap">
+                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[16px]">history</span>
                 <span>個股歷史</span>
             </button>
             <button @click="setTab('podcast')"
                     :class="activeTab === 'podcast' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap">
+                    class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[16px]">podcasts</span>
                 <span>Podcast 雷達</span>
             </button>
         </nav>

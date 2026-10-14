@@ -27,7 +27,7 @@
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
             <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>美股宏觀環境</span>
-                <span class="text-base">🌍</span>
+                <span class="material-symbols-outlined text-[20px] text-amber-500">public</span>
             </div>
             <div class="text-xl sm:text-2xl font-black tracking-tight truncate my-1" :class="isDark ? 'text-white' : 'text-slate-900'">
                 {{ macro.regime_name || '評估中…' }}
@@ -46,7 +46,7 @@
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
             <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>VIX 恐慌指數</span>
-                <span class="text-base">⚡</span>
+                <span class="material-symbols-outlined text-[20px] text-amber-500">bolt</span>
             </div>
             <div class="text-2xl sm:text-3xl font-black num-font my-1"
                  :class="macro.vix === null || macro.vix === undefined ? (isDark ? 'text-slate-300' : 'text-slate-500') : (macro.vix > 20 ? 'text-amber-500' : 'text-emerald-500')">
@@ -64,20 +64,22 @@
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
             <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>標普 / 費半均線狀態</span>
-                <span class="text-base">📊</span>
+                <span class="material-symbols-outlined text-[20px] text-amber-500">monitoring</span>
             </div>
             <div class="space-y-1.5 text-xs font-semibold my-1">
                 <div class="flex items-center justify-between">
                     <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">SPY 標普:</span>
-                    <span v-if="macro.spy_above_ma60 !== null && macro.spy_above_ma60 !== undefined" :class="macro.spy_above_ma60 ? 'text-emerald-400' : 'text-rose-500'">
-                        {{ macro.spy_above_ma60 ? '站穩 MA60 ✓' : '跌破季線 ✗' }}
+                    <span v-if="macro.spy_above_ma60 !== null && macro.spy_above_ma60 !== undefined" :class="macro.spy_above_ma60 ? 'text-emerald-400' : 'text-rose-500'" class="flex items-center space-x-1 font-bold">
+                        <span>{{ macro.spy_above_ma60 ? '站穩 MA60' : '跌破季線' }}</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">{{ macro.spy_above_ma60 ? 'check' : 'close' }}</span>
                     </span>
                     <span v-else class="text-slate-400">讀取中…</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">SOX 費半:</span>
-                    <span v-if="macro.sox_above_ma60 !== null && macro.sox_above_ma60 !== undefined" :class="macro.sox_above_ma60 ? 'text-emerald-400' : 'text-amber-500'">
-                        {{ macro.sox_above_ma60 ? '站穩季線 ✓' : '破季線 (科技半倉)' }}
+                    <span v-if="macro.sox_above_ma60 !== null && macro.sox_above_ma60 !== undefined" :class="macro.sox_above_ma60 ? 'text-emerald-400' : 'text-amber-500'" class="flex items-center space-x-1 font-bold">
+                        <span>{{ macro.sox_above_ma60 ? '站穩季線' : '破季線 (科技半倉)' }}</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">{{ macro.sox_above_ma60 ? 'check' : 'warning' }}</span>
                     </span>
                     <span v-else class="text-slate-400">讀取中…</span>
                 </div>
@@ -96,7 +98,7 @@
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
             <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>歷史報告資料</span>
-                <span class="text-base">🦆</span>
+                <span class="material-symbols-outlined text-[20px] text-amber-500">database</span>
             </div>
             <div class="text-2xl sm:text-3xl font-black num-font my-1 flex items-baseline text-amber-500">
                 {{ stats.total_records !== null && stats.total_records !== undefined ? Number(stats.total_records).toLocaleString() : '—' }}
@@ -119,7 +121,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <div class="flex items-center space-x-2.5">
-                <span class="text-xl">🏛️</span>
+                <span class="material-symbols-outlined text-[24px] text-amber-500">account_balance</span>
                 <div>
                     <div class="flex items-center space-x-2">
                         <h2 class="text-base sm:text-lg font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
@@ -142,13 +144,14 @@
                         class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
                         title="強制刷新 Investing.com 宏觀數據">
-                    <span :class="{'animate-spin inline-block': macroRefreshing}">🔄</span>
+                    <span class="material-symbols-outlined text-[16px]" :class="{'animate-spin': macroRefreshing}">sync</span>
                     <span class="hidden sm:inline">{{ macroRefreshing ? '更新中...' : '即時更新' }}</span>
                 </button>
                 <button @click="showMacroDetails = !showMacroDetails"
                         class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
                         :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'">
-                    <span>{{ showMacroDetails ? '收合日曆 ▲' : '展開完整行事曆 ▼' }}</span>
+                    <span>{{ showMacroDetails ? '收合日曆' : '展開完整行事曆' }}</span>
+                    <span class="material-symbols-outlined text-[16px]">{{ showMacroDetails ? 'expand_less' : 'expand_more' }}</span>
                 </button>
             </div>
         </div>
@@ -158,6 +161,7 @@
             <div v-for="(alert, idx) in macro.catalyst_alerts" :key="idx"
                  class="text-xs px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900'">
+                <span class="material-symbols-outlined text-[14px] text-amber-400">campaign</span>
                 <span>{{ alert }}</span>
             </div>
         </div>
@@ -170,7 +174,7 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-base">🎯</span>
+                        <span class="material-symbols-outlined text-[20px] text-amber-500">crisis_alert</span>
                         <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">FedWatch 降息監控</span>
                     </div>
                     <span v-if="macro.fed_rate && macro.fed_rate.meeting_date" class="text-xs font-bold num-font text-amber-500">
@@ -216,21 +220,22 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-base">🏛️</span>
+                        <span class="material-symbols-outlined text-[20px] text-amber-500">calendar_month</span>
                         <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">台美法說會預警雷達</span>
                     </div>
                     <div class="flex items-center space-x-1.5">
                         <button @click="openEarningsCalendar()"
-                                class="px-2 py-0.5 rounded text-xs font-bold border transition-colors flex items-center space-x-1"
+                                class="px-2 py-1 rounded-lg text-xs font-bold border transition-colors flex items-center space-x-1"
                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-400 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-700 hover:bg-amber-50'"
                                 title="查看全月法說會日曆">
-                            <span>📅 日曆</span>
+                            <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                            <span>日曆</span>
                         </button>
                         <button @click="syncEarningsNow()"
-                                class="px-1.5 py-0.5 rounded text-xs border transition-colors"
+                                class="p-1 rounded-lg text-xs border transition-colors flex items-center justify-center"
                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]'"
                                 title="即時同步公開資訊觀測站與美股行事曆">
-                            🔄
+                            <span class="material-symbols-outlined text-[16px]">sync</span>
                         </button>
                     </div>
                 </div>
@@ -241,15 +246,16 @@
                     <div class="flex items-center space-x-1">
                         <button v-for="m in ['ALL', 'TW', 'US']" :key="m"
                                 @click="setEarningsMarket(m)"
-                                class="px-2 py-0.5 rounded text-xs font-bold transition-all"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
                                 :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                            {{ m === 'ALL' ? '全部' : (m === 'TW' ? '🇹🇼 台股' : '🇺🇸 美股') }}
+                            {{ m === 'ALL' ? '全部' : (m === 'TW' ? '台股' : '美股') }}
                         </button>
                     </div>
                     <button @click="toggleEarningsWeightOnly()"
-                            class="px-2 py-0.5 rounded text-xs font-bold border transition-all"
+                            class="px-2 py-1 rounded-lg text-xs font-bold border transition-all flex items-center space-x-1"
                             :class="earningsWeightOnly ? (isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-amber-100 text-amber-800 border-amber-300') : (isDark ? 'border-[#262626] text-slate-500 hover:text-slate-300' : 'border-[#E5E7EB] text-slate-400 hover:text-slate-600')">
-                        ⭐ 僅看權值股
+                        <span class="material-symbols-outlined text-[14px] text-amber-400">star</span>
+                        <span>僅看權值股</span>
                     </button>
                 </div>
 
@@ -275,27 +281,35 @@
                                 <span class="text-sm font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                     {{ call.name }}
                                 </span>
-                                <span v-if="call.is_weight_stock" class="text-amber-400 text-xs" title="權值股">⭐</span>
+                                <span v-if="call.is_weight_stock" class="material-symbols-outlined text-[14px] text-amber-400" title="權值股">star</span>
                             </div>
                             <div class="text-xs flex items-center space-x-2" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 <span>{{ call.datetime_cst || (call.call_date + ' ' + (call.call_time || '')) }}</span>
                                 <span v-if="call.presentation_url">
-                                    <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline font-semibold" title="下載官方法說會簡報">📑 簡報</a>
+                                    <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline font-semibold flex items-center space-x-0.5" title="下載官方法說會簡報">
+                                        <span class="material-symbols-outlined text-[14px]">description</span>
+                                        <span>簡報</span>
+                                    </a>
                                 </span>
                                 <span v-if="call.webcast_url">
-                                    <a :href="call.webcast_url" target="_blank" class="text-sky-400 hover:underline font-semibold" title="官方影音回放/直播">🎙️ 影音</a>
+                                    <a :href="call.webcast_url" target="_blank" class="text-sky-400 hover:underline font-semibold flex items-center space-x-0.5" title="官方影音回放/直播">
+                                        <span class="material-symbols-outlined text-[14px]">videocam</span>
+                                        <span>影音</span>
+                                    </a>
                                 </span>
                             </div>
                         </div>
                         <div class="text-right shrink-0 text-xs space-y-1">
                             <div>
-                                <span v-if="call.countdown_days === 0" class="px-2.5 py-1 rounded-md text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
-                                    今天 🔥
+                                <span v-if="call.countdown_days === 0" class="px-2.5 py-1 rounded-md text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse inline-flex items-center space-x-1">
+                                    <span class="material-symbols-outlined text-[14px]">local_fire_department</span>
+                                    <span>今天</span>
                                 </span>
-                                <span v-else-if="call.countdown_days === 1" class="px-2.5 py-1 rounded-md text-xs font-black bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                                    明天 ⚡
+                                <span v-else-if="call.countdown_days === 1" class="px-2.5 py-1 rounded-md text-xs font-black bg-amber-500/20 text-amber-400 border border-amber-500/40 inline-flex items-center space-x-1">
+                                    <span class="material-symbols-outlined text-[14px]">bolt</span>
+                                    <span>明天</span>
                                 </span>
-                                <span v-else-if="call.countdown_days > 1" class="px-2 py-0.5 rounded-md text-xs font-bold num-font"
+                                <span v-else-if="call.countdown_days > 1" class="px-2.5 py-1 rounded-md text-xs font-bold num-font"
                                       :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                                     T-{{ call.countdown_days }} 天
                                 </span>
@@ -342,7 +356,7 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-base">🛢️</span>
+                        <span class="material-symbols-outlined text-[20px] text-amber-500">oil_barrel</span>
                         <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">關鍵大宗商品 & 總經事件</span>
                     </div>
                     <span class="text-xs font-bold" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">通膨與流動性</span>
@@ -389,7 +403,7 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F9FAFB] border-[#E5E7EB]'">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-base">🎲</span>
+                        <span class="material-symbols-outlined text-[20px] text-amber-500">casino</span>
                         <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">Polymarket 預測市場</span>
                     </div>
                     <span v-if="macro.polymarket && macro.polymarket.source" class="text-xs font-medium num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
@@ -463,7 +477,7 @@
                     :aria-pressed="selectedStrategy === strat.id"
                     :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
                     class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 border">
-                <span>{{ strat.icon }}</span>
+                <span class="material-symbols-outlined text-[18px]">{{ strat.icon }}</span>
                 <span>{{ strat.label }}</span>
             </button>
         </div>
@@ -475,16 +489,16 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
                 <button @click="viewMode = 'table'"
                         :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
                         title="高密度表格檢視">
-                    <span>📋</span>
+                    <span class="material-symbols-outlined text-[18px]">table_rows</span>
                     <span class="hidden sm:inline">表格</span>
                 </button>
                 <button @click="viewMode = 'card'"
                         :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
                         title="卡片情報檢視">
-                    <span>🗂️</span>
+                    <span class="material-symbols-outlined text-[18px]">grid_view</span>
                     <span class="hidden sm:inline">卡片</span>
                 </button>
             </div>
@@ -493,18 +507,18 @@
             <select v-model="selectedIndex" @change="setIndex()"
                     class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
-                <option value="">🌐 全部市場 (All)</option>
-                <option value="台灣50">🇹🇼 台灣50 (TW0050)</option>
-                <option value="台灣中型100">🇹🇼 台灣中型100 (TW0051)</option>
-                <option value="SP500">🇺🇸 S&P 500 (美股標普)</option>
-                <option value="太空概念 (SpaceX)">🚀 太空概念 (SpaceX)</option>
+                <option value="">全部市場 (All)</option>
+                <option value="台灣50">台灣50 (TW0050)</option>
+                <option value="台灣中型100">台灣中型100 (TW0051)</option>
+                <option value="SP500">S&P 500 (美股標普)</option>
+                <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
             </select>
 
             <button @click="loadData()"
-                    class="p-2 sm:p-2.5 rounded-xl border transition-all text-xs font-bold flex items-center justify-center"
+                    class="w-9 h-9 rounded-xl border transition-all text-xs font-bold flex items-center justify-center hover:scale-105 active:scale-95"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
-                    title="重新整理" aria-label="重新整理日報">
-                🔄
+                    title="重新整理日報" aria-label="重新整理日報">
+                <span class="material-symbols-outlined text-[18px]">sync</span>
             </button>
         </div>
 
@@ -522,15 +536,15 @@
 
     <!-- 3. Loading & Error States -->
     <div v-if="loading" class="p-12 text-center space-y-3" aria-label="日報載入中" aria-busy="true">
-        <div class="inline-block animate-spin text-3xl">⏳</div>
-        <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在透過 DuckDB 引擎快速運算多維量化指標...</p>
+        <span class="material-symbols-outlined text-[36px] animate-spin text-amber-500">progress_activity</span>
+        <p class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在透過 DuckDB 引擎快速運算多維量化指標...</p>
     </div>
 
     <div v-else-if="loadError"
          class="text-center py-14 rounded-2xl border space-y-3"
          :class="isDark ? 'bg-[#0D0E11] border-rose-900/60' : 'bg-rose-50/60 border-rose-200'"
          role="alert">
-        <div class="text-3xl">⚠️</div>
+        <span class="material-symbols-outlined text-[40px] text-rose-500">error</span>
         <div class="text-base font-bold" :class="isDark ? 'text-rose-200' : 'text-rose-800'">{{ loadError }}</div>
         <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white transition-all bg-amber-500 hover:bg-amber-600">
             重新整理
@@ -540,7 +554,7 @@
     <div v-else-if="records.length === 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="text-center py-16 rounded-2xl border space-y-2">
-        <div class="text-4xl">🎯</div>
+        <span class="material-symbols-outlined text-[48px] text-amber-500/60">filter_alt_off</span>
         <div class="text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">當前篩選條件下無符合標的</div>
         <p class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">請嘗試切換其他策略或選擇全部市場</p>
     </div>
@@ -636,16 +650,17 @@
                             <td class="p-3 text-center" @click.stop>
                                 <div class="flex items-center justify-center space-x-1">
                                     <button @click="toggleRowDrawer(item.ticker)"
-                                            class="p-1 rounded-lg border text-xs font-bold transition-all"
+                                            class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
                                             :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
                                             :title="expandedDrawerTicker === item.ticker ? '收合簡介抽屜' : '展開公司簡介抽屜'">
-                                        {{ expandedDrawerTicker === item.ticker ? '收合 ▲' : '詳情 ▼' }}
+                                        <span>{{ expandedDrawerTicker === item.ticker ? '收合' : '詳情' }}</span>
+                                        <span class="material-symbols-outlined text-[14px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
                                     </button>
                                     <button @click="searchTickerHistory(item.ticker)"
-                                            class="p-1 rounded-lg border text-xs font-bold transition-all"
+                                            class="p-1 rounded-lg border text-xs font-bold transition-all flex items-center justify-center"
                                             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
                                             title="查詢時序歷史">
-                                        📈
+                                        <span class="material-symbols-outlined text-[16px] leading-none">timeline</span>
                                     </button>
                                 </div>
                             </td>
@@ -659,14 +674,16 @@
                                 <div class="flex items-center space-x-2 border-b pb-2"
                                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                                     <button @click="drawerActiveSubTab = 'profile'"
-                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
+                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        🏢 基本面與新聞
+                                        <span class="material-symbols-outlined text-[16px] leading-none">business</span>
+                                        <span>基本面與新聞</span>
                                     </button>
                                     <button @click="drawerActiveSubTab = 'earnings'"
                                             class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        <span>🏛️ 法說會與簡報</span>
+                                        <span class="material-symbols-outlined text-[16px] leading-none">event_note</span>
+                                        <span>法說會與簡報</span>
                                         <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                                               :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
                                             {{ drawerEarningsMap[item.ticker].length }}
@@ -701,7 +718,10 @@
 
                                         <!-- Recent News -->
                                         <div v-if="expandedDrawerData?.recent_news && expandedDrawerData.recent_news.length > 0" class="pt-2 space-y-1.5">
-                                            <div class="text-xs font-bold text-amber-500">📰 即時最新動態:</div>
+                                            <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
+                                                <span class="material-symbols-outlined text-[16px] leading-none">newspaper</span>
+                                                <span>即時最新動態:</span>
+                                            </div>
                                             <div class="flex flex-wrap gap-2">
                                                 <a v-for="(news, nidx) in expandedDrawerData.recent_news.slice(0, 3)" :key="nidx"
                                                    :href="news.url" target="_blank"
@@ -716,18 +736,21 @@
                                     <!-- Right: External Portals & Shortcuts -->
                                     <div class="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 self-start">
                                         <a v-if="expandedDrawerData?.links?.yahoo" :href="expandedDrawerData.links.yahoo" target="_blank"
-                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm"
+                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
-                                            Yahoo 奇摩股市 ↗
+                                            <span>Yahoo 奇摩股市</span>
+                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
                                         </a>
                                         <a v-if="expandedDrawerData?.links?.goodinfo" :href="expandedDrawerData.links.goodinfo" target="_blank"
-                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm"
+                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
-                                            Goodinfo 台灣股市 ↗
+                                            <span>Goodinfo 台灣股市</span>
+                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
                                         </a>
                                         <button @click="searchTickerHistory(item.ticker)"
-                                                class="px-3 py-1.5 rounded-xl text-xs font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20">
-                                            查看時序歷史軌跡 ↗
+                                                class="px-3 py-1.5 rounded-xl text-xs font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1">
+                                            <span>查看時序歷史軌跡</span>
+                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
                                         </button>
                                     </div>
                                 </div>
@@ -772,12 +795,14 @@
                                                 <a v-if="ec.presentation_url" :href="ec.presentation_url" target="_blank"
                                                    class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center space-x-1"
                                                    :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500' : 'bg-amber-50 border-amber-200 hover:bg-amber-100'">
-                                                    <span>📑 官方簡報</span>
+                                                    <span class="material-symbols-outlined text-[15px] leading-none">description</span>
+                                                    <span>官方簡報</span>
                                                 </a>
                                                 <a v-if="ec.webcast_url" :href="ec.webcast_url" target="_blank"
                                                    class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors flex items-center space-x-1"
                                                    :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-sky-500' : 'bg-sky-50 border-sky-200 hover:bg-sky-100'">
-                                                    <span>🎙️ 直播回放</span>
+                                                    <span class="material-symbols-outlined text-[15px] leading-none">play_circle</span>
+                                                    <span>直播回放</span>
                                                 </a>
                                             </div>
                                         </div>
@@ -826,7 +851,7 @@
                     <div v-if="item.potential !== null && item.potential !== undefined"
                          :class="item.potential >= 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-300') : (isDark ? 'bg-rose-950/80 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-300')"
                          class="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black num-font border flex items-center space-x-1.5 shadow-sm">
-                        <span>{{ item.potential >= 0 ? '▲' : '▼' }}</span>
+                        <span class="material-symbols-outlined text-[16px] leading-none">{{ item.potential >= 0 ? 'trending_up' : 'trending_down' }}</span>
                         <span>{{ item.potential > 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%</span>
                     </div>
                 </div>
@@ -902,14 +927,16 @@
                 <button @click.stop="toggleRowDrawer(item.ticker)"
                         class="font-bold flex items-center space-x-1 transition-all"
                         :class="expandedDrawerTicker === item.ticker ? 'text-amber-500 underline' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                    <span>{{ expandedDrawerTicker === item.ticker ? '收合資料 ▲' : '法說 / 簡報 ▼' }}</span>
+                    <span>{{ expandedDrawerTicker === item.ticker ? '收合資料' : '法說 / 簡報' }}</span>
+                    <span class="material-symbols-outlined text-[15px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
                 </button>
                 <div class="flex items-center space-x-3">
                     <span class="num-font font-medium">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
                     <button @click="searchTickerHistory(item.ticker)"
                             class="font-bold flex items-center space-x-1 transition-all text-amber-500 hover:text-amber-400"
                             :aria-label="'查看 ' + item.ticker + ' 歷史軌跡'">
-                        <span>歷史 ↗</span>
+                        <span>歷史</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                     </button>
                 </div>
             </div>
@@ -920,14 +947,16 @@
                 <!-- Drawer Sub-tabs -->
                 <div class="flex items-center space-x-2 pb-2">
                     <button @click.stop="drawerActiveSubTab = 'profile'"
-                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors"
+                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
                             :class="drawerActiveSubTab === 'profile' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                        🏢 基本面
+                        <span class="material-symbols-outlined text-[15px] leading-none">business</span>
+                        <span>基本面</span>
                     </button>
                     <button @click.stop="drawerActiveSubTab = 'earnings'"
-                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors"
+                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
                             :class="drawerActiveSubTab === 'earnings' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                        🏛️ 法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})
+                        <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
+                        <span>法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})</span>
                     </button>
                 </div>
 
@@ -952,9 +981,17 @@
                                 <span class="font-bold text-amber-500">{{ call.call_date }}</span>
                                 <span class="ml-2">{{ call.remarks || call.location || '法人說明會' }}</span>
                             </div>
-                            <div class="space-x-1.5">
-                                <a v-if="call.presentation_url" :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline">📑 簡報</a>
-                                <a v-if="call.webcast_url" :href="call.webcast_url" target="_blank" class="text-amber-400 hover:underline">🎙️ 影音</a>
+                            <div class="flex items-center space-x-2">
+                                <a v-if="call.presentation_url" :href="call.presentation_url" target="_blank"
+                                   class="text-amber-400 hover:underline flex items-center space-x-0.5">
+                                    <span class="material-symbols-outlined text-[14px] leading-none">description</span>
+                                    <span>簡報</span>
+                                </a>
+                                <a v-if="call.webcast_url" :href="call.webcast_url" target="_blank"
+                                   class="text-amber-400 hover:underline flex items-center space-x-0.5">
+                                    <span class="material-symbols-outlined text-[14px] leading-none">videocam</span>
+                                    <span>影音</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -976,7 +1013,7 @@
             <div class="p-4 sm:p-5 border-b flex items-center justify-between"
                  :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-[#E5E7EB] bg-[#F9FAFB]'">
                 <div class="flex items-center space-x-3">
-                    <span class="text-xl">📅</span>
+                    <span class="material-symbols-outlined text-[24px] text-amber-500 leading-none">calendar_month</span>
                     <div>
                         <h2 class="text-base sm:text-lg font-black tracking-tight">台美股法人說明會暨財報行事曆</h2>
                         <p class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
@@ -989,13 +1026,14 @@
                             class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
                             :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
                             title="立即重新抓取最新資料">
-                        <span>🔄 即時抓取</span>
+                        <span class="material-symbols-outlined text-[15px] leading-none">sync</span>
+                        <span>即時抓取</span>
                     </button>
                     <button @click="closeEarningsCalendar()"
-                            class="p-1.5 rounded-lg border transition-colors"
+                            class="p-1.5 rounded-lg border transition-colors flex items-center justify-center"
                             :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-500 hover:text-slate-900'"
                             title="關閉行事曆 (Esc)">
-                        ✕
+                        <span class="material-symbols-outlined text-[18px] leading-none">close</span>
                     </button>
                 </div>
             </div>
@@ -1006,17 +1044,19 @@
                 <!-- Month Navigator -->
                 <div class="flex items-center space-x-2">
                     <button @click="changeCalendarMonth(-1)"
-                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors"
+                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors flex items-center space-x-0.5"
                             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                        ◀ 上個月
+                        <span class="material-symbols-outlined text-[14px] leading-none">chevron_left</span>
+                        <span>上個月</span>
                     </button>
                     <span class="px-3 py-1 font-black text-sm num-font text-amber-500">
                         {{ calendarYear }} 年 {{ calendarMonth }} 月
                     </span>
                     <button @click="changeCalendarMonth(1)"
-                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors"
+                            class="px-2.5 py-1 rounded-lg border font-bold hover:border-amber-500 transition-colors flex items-center space-x-0.5"
                             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                        下個月 ▶
+                        <span>下個月</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">chevron_right</span>
                     </button>
                 </div>
 
@@ -1026,16 +1066,17 @@
                             @click="setEarningsMarket(m)"
                             class="px-3 py-1 rounded-lg text-xs font-bold transition-all"
                             :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
-                        {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '🇹🇼 台股' : '🇺🇸 美股') }}
+                        {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '台股' : '美股') }}
                     </button>
                 </div>
 
                 <!-- Timezone / Search -->
                 <div class="flex items-center space-x-2">
                     <button @click="calendarTimezone = calendarTimezone === 'CST' ? 'EST' : 'CST'"
-                            class="px-2.5 py-1 rounded-lg border font-bold transition-colors"
+                            class="px-2.5 py-1 rounded-lg border font-bold transition-colors flex items-center space-x-1"
                             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-700'">
-                        🌐 {{ calendarTimezone === 'CST' ? '時區: 台灣 CST' : '時區: 美東 EST' }}
+                        <span class="material-symbols-outlined text-[15px] leading-none">schedule</span>
+                        <span>{{ calendarTimezone === 'CST' ? '時區: 台灣 CST' : '時區: 美東 EST' }}</span>
                     </button>
                     <input v-model="calendarSearch" type="text" placeholder="搜尋代號或名稱..."
                            class="px-2.5 py-1 rounded-lg border text-xs outline-none focus:border-amber-500"
@@ -1055,16 +1096,18 @@
                          :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500/40' : 'bg-[#F9FAFB] border-[#E5E7EB] hover:border-amber-300'">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2.5">
-                                <span class="px-2.5 py-1 rounded-lg font-black text-xs num-font"
+                                <span class="px-2.5 py-1 rounded-lg font-black text-xs num-font flex items-center space-x-1"
                                       :class="isDark ? 'bg-[#0D0E11] text-amber-400 border border-[#262626]' : 'bg-white text-amber-700 border border-[#E5E7EB]'">
-                                    📅 {{ day.call_date }}
+                                    <span class="material-symbols-outlined text-[14px] leading-none">calendar_today</span>
+                                    <span>{{ day.call_date }}</span>
                                 </span>
                                 <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                     共 {{ day.total_calls }} 場法說會
                                     <span class="text-xs font-normal text-slate-400">({{ calendarTimezone === 'CST' ? '依當地/台灣工作日' : '依美東營業日' }})</span>
                                 </span>
-                                <span v-if="day.weight_stock_calls > 0" class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                                    ⭐ 權值股 {{ day.weight_stock_calls }} 場
+                                <span v-if="day.weight_stock_calls > 0" class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center space-x-0.5">
+                                    <span class="material-symbols-outlined text-[14px] leading-none text-amber-400">star</span>
+                                    <span>權值股 {{ day.weight_stock_calls }} 場</span>
                                 </span>
                             </div>
                         </div>
@@ -1077,7 +1120,7 @@
                     </div>
                 </div>
                 <div v-else class="py-16 text-center text-slate-400 text-xs">
-                    {{ calendarYear }} 年 {{ calendarMonth }} 月暫無法說會資料。可點擊上方「🔄 即時抓取」從證交所與美股更新。
+                    {{ calendarYear }} 年 {{ calendarMonth }} 月暫無法說會資料。可點擊上方「即時抓取」從證交所與美股更新。
                 </div>
             </div>
 
