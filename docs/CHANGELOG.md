@@ -4,6 +4,31 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.4)
+
+### Fixed & Redesigned (Material Symbols Icon Facelift, Light Theme Default & Collapsed Macro Lines)
+- **🎨 徹底移除 Raw Emoji 標籤圖示，全面升級為 Google Material Symbols Outlined 高質感圖標系統**：
+  - 診斷痛點：量化策略標籤與共振等級先前直接沿用後端字串之系統 Emoji（如 `🔮雙ML共振`、`⭐雙重共振`、`🏆三重共振`、`👑四重共振` 等），在不同瀏覽器與作業系統呈現出風格不一的卡通化色彩，破壞專業金融終端之嚴謹調性。
+  - 實作 `stripEmojis` 全局正則過濾（完整涵蓋 `\p{Extended_Pictographic}`、各區段 Emoji 與 Unicode 符號），並在前端 `parseTags` 中將共振標籤無縫轉化為乾淨文字搭配專屬 Google Material Symbols：
+    - 四重共振：`workspace_premium`
+    - 三重共振：`military_tech`
+    - 雙重共振 / 多維共振：`stars` / `hub`
+    - 雙ML共振：`psychology`
+    - 法人鎖碼 / 土洋合買 / 投信連買：`handshake`
+    - 玄鐵技術買點 / 均線波段：`show_chart`
+    - TimesFM 預測：`auto_awesome`
+    - LSTM 預測：`insights`
+    - 高盈虧比：`balance`
+    - 防守避險：`shield`
+  - 新增 `getTagClass` 主題適配樣式，在深色曜石黑與淺色溫潤模式下均具備清晰邊界與專屬層次色彩。
+- **☀️ 預設主題調整為淺色模式（Light Mode Default），杜絕突發性全黑畫面**：
+  - 移除 `<html class="dark">` 之硬性鎖定，修改防閃爍預載入腳本與 `app.js`，預設以清爽溫潤的淺色模式渲染（除非使用者先前已主動切換並保存深色偏好）。
+  - 標題列主題切換器維持純淨圖標按鈕（純 `dark_mode` / `light_mode`，無任何冗餘「淺色模式」文字標籤）。
+- **📊 總經流動性與重磅行事曆預設收合（Collapse Macro Progress Bars by Default）**：
+  - 將首頁大盤總經細節展開狀態調整為預設收合（`showMacroDetails: false`），使用者進入首頁時僅展示 4 張核心卡片與精簡摘要列，杜絕密集進度條與概率線條（FedWatch、Polymarket）突兀彈出所造成的視覺壓迫感，使用者可依需求點擊「展開完整行事曆」深入查閱。
+- **🔤 遵循 Impeccable 工藝標準：中文字體排版與表格易讀性升級**：
+  - 針對表格中股票名稱、策略模型、市場代號與共振標籤，將字體大小提升至 14px (`text-sm`) 與 16px (`text-base`)，全面符合中文字體易讀性門檻，搭配等寬數值字體 `JetBrains Mono`（`tabular-nums`），實現高工藝金融終端體驗。
+
 ---
 
 ## 2026-10-14 (v2.4.3)

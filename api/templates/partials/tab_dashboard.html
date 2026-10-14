@@ -29,8 +29,10 @@
                 <span>美股宏觀環境</span>
                 <span class="material-symbols-outlined text-[20px] text-amber-500">public</span>
             </div>
-            <div class="text-xl sm:text-2xl font-black tracking-tight truncate my-1" :class="isDark ? 'text-white' : 'text-slate-900'">
-                {{ macro.regime_name || '評估中…' }}
+            <div class="text-xl sm:text-2xl font-black tracking-tight truncate my-1 flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                <span v-if="macro.regime_name" class="w-2.5 h-2.5 rounded-full shrink-0"
+                      :class="macro.regime_name.includes('多頭') ? 'bg-emerald-500' : (macro.regime_name.includes('空頭') ? 'bg-rose-500' : 'bg-amber-500')"></span>
+                <span>{{ stripEmojis(macro.regime_name) || '評估中…' }}</span>
             </div>
             <div class="pt-2.5 border-t flex items-center justify-between text-xs"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
@@ -159,10 +161,10 @@
         <!-- Catalyst Alerts Pills -->
         <div v-if="macro.catalyst_alerts && macro.catalyst_alerts.length" class="flex flex-wrap gap-2 pt-1">
             <div v-for="(alert, idx) in macro.catalyst_alerts" :key="idx"
-                 class="text-xs px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
+                 class="text-xs sm:text-sm px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900'">
-                <span class="material-symbols-outlined text-[14px] text-amber-400">campaign</span>
-                <span>{{ alert }}</span>
+                <span class="material-symbols-outlined text-[15px] text-amber-400">campaign</span>
+                <span>{{ stripEmojis(alert) }}</span>
             </div>
         </div>
 
@@ -591,43 +593,43 @@
                             <td class="p-3">
                                 <div class="flex items-center space-x-2">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
-                                            class="font-black num-font hover:underline transition-colors text-amber-500"
+                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base"
                                             :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
                                         {{ item.ticker }}
                                     </button>
-                                    <span v-if="item.name" class="font-bold text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                    <span v-if="item.name" class="font-bold text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                         {{ item.name }}
                                     </span>
                                 </div>
                             </td>
                             <td class="p-3 text-center">
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans"
+                                <span class="px-2 py-0.5 text-xs sm:text-sm font-semibold rounded-md border font-sans"
                                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
                                     {{ item.index_name || '綜合' }}
                                 </span>
                             </td>
-                            <td class="p-3 font-bold text-xs">
-                                <span>{{ item.strategy_type || item.model_name }}</span>
+                            <td class="p-3 font-bold text-sm">
+                                <span>{{ stripEmojis(item.strategy_type || item.model_name) }}</span>
                             </td>
-                            <td class="p-3 text-right font-black num-font">
+                            <td class="p-3 text-right font-black num-font text-sm sm:text-base">
                                 ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
                             </td>
-                            <td class="p-3 text-right font-black num-font text-amber-500">
+                            <td class="p-3 text-right font-black num-font text-amber-500 text-sm sm:text-base">
                                 <span v-if="item.predicted_price">${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
-                                <span v-else-if="item.pullback_type" class="text-xs font-bold text-amber-500">{{ item.pullback_type }}</span>
+                                <span v-else-if="item.pullback_type" class="text-xs sm:text-sm font-bold text-amber-500">{{ item.pullback_type }}</span>
                                 <span v-else class="text-xs text-slate-400">-</span>
                             </td>
-                            <td class="p-3 text-right font-black num-font">
+                            <td class="p-3 text-right font-black num-font text-sm sm:text-base">
                                 <span v-if="item.potential !== null && item.potential !== undefined"
                                       :class="item.potential >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-600 font-bold') : 'text-rose-500 font-bold'">
                                     {{ item.potential >= 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%
                                 </span>
                                 <span v-else class="text-slate-400">-</span>
                             </td>
-                            <td class="p-3 text-center num-font text-xs">
+                            <td class="p-3 text-center num-font text-xs sm:text-sm">
                                 <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }} / {{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                             </td>
-                            <td class="p-3 text-right num-font text-xs">
+                            <td class="p-3 text-right num-font text-xs sm:text-sm">
                                 <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1.5 font-bold">
                                     <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
                                         投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
@@ -639,11 +641,12 @@
                                 <span v-else class="text-slate-400">-</span>
                             </td>
                             <td class="p-3">
-                                <div class="flex flex-wrap gap-1">
-                                    <span v-for="tag in parseTags(item.tags)" :key="tag"
-                                          :class="tag.includes('共振') ? (isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300 font-bold') : (tag.includes('合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]'))"
-                                          class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight">
-                                        {{ tag }}
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                                          :class="getTagClass(tag)"
+                                          class="px-2 py-0.5 text-xs sm:text-sm font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
+                                        <span v-if="tag.icon" class="material-symbols-outlined text-[14px] leading-none shrink-0">{{ tag.icon }}</span>
+                                        <span>{{ tag.label }}</span>
                                     </span>
                                 </div>
                             </td>
@@ -913,10 +916,11 @@
 
                 <!-- Tags Pills -->
                 <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
-                    <span v-for="tag in parseTags(item.tags)" :key="tag"
-                          :class="tag.includes('共振') ? (isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300 font-bold') : (tag.includes('合買') || tag.includes('連買') ? (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]'))"
-                          class="px-2.5 py-1 text-xs font-semibold rounded-lg border font-sans tracking-wide">
-                        {{ tag }}
+                    <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                          :class="getTagClass(tag)"
+                          class="px-2.5 py-1 text-xs sm:text-sm font-semibold rounded-lg border font-sans tracking-wide inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
+                        <span v-if="tag.icon" class="material-symbols-outlined text-[14px] leading-none shrink-0">{{ tag.icon }}</span>
+                        <span>{{ tag.label }}</span>
                     </span>
                 </div>
             </div>

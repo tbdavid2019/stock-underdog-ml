@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,13 +94,13 @@
         }
     </script>
     <script>
-        // Immediate Theme Pre-load (Anti-flash)
+        // Immediate Theme Pre-load (Anti-flash) - Default to Light Mode
         (function() {
-            const savedTheme = localStorage.getItem('theme_v20261013');
-            if (savedTheme === 'light') {
-                document.documentElement.classList.remove('dark');
-            } else {
+            const savedTheme = localStorage.getItem('theme_v20261013') || localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
                 document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
             }
         })();
     </script>

@@ -55,7 +55,7 @@
                 <span class="w-2 h-2 rounded-full animate-pulse"
                       :class="macro.exposure === null || macro.exposure === undefined ? 'bg-slate-400' : (macro.exposure >= 0.8 ? 'bg-emerald-500' : 'bg-amber-500')"></span>
                 <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">大盤風控:</span>
-                <span class="font-bold">{{ macro.regime_name || '評估中...' }}</span>
+                <span class="font-bold">{{ stripEmojis(macro.regime_name) || '評估中...' }}</span>
                 <span class="opacity-30">|</span>
                 <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">建議曝險:</span>
                 <span class="font-black num-font text-amber-500">

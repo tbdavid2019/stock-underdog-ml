@@ -12,9 +12,9 @@ const chartManager = new ChartManager();
 
 export const app = createApp({
     data() {
-        // Ensure default theme is Obsidian Dark Terminal per Figma 20261013
-        const savedTheme = localStorage.getItem('theme_v20261013');
-        const isDark = savedTheme ? savedTheme === 'dark' : true;
+        // Default theme is Light Mode unless explicitly set to 'dark' by user
+        const savedTheme = localStorage.getItem('theme_v20261013') || localStorage.getItem('theme');
+        const isDark = savedTheme === 'dark';
         return {
             isDark: isDark,
             activeTab: 'dashboard',
@@ -36,7 +36,7 @@ export const app = createApp({
             ],
 
             macro: {},
-            showMacroDetails: true,
+            showMacroDetails: false,
             macroRefreshing: false,
             stats: {},
             marketStats: {},
@@ -908,10 +908,120 @@ export const app = createApp({
                 }, (i / chunkSize) * 300);
             }
         },
+        stripEmojis(str) {
+            if (!str) return '';
+            return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();
+        },
         parseTags(tags) {
             if (!tags) return [];
-            if (Array.isArray(tags)) return tags;
-            return String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
+            const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
+            return list.map(rawTag => {
+                const cleanLabel = this.stripEmojis(rawTag);
+                let icon = null;
+                let badgeType = 'default';
+
+                if (cleanLabel.includes('四重共振')) {
+                    icon = 'workspace_premium';
+                    badgeType = 'resonance_quad';
+                } else if (cleanLabel.includes('三重共振')) {
+                    icon = 'military_tech';
+                    badgeType = 'resonance_triple';
+                } else if (cleanLabel.includes('雙重共振')) {
+                    icon = 'stars';
+                    badgeType = 'resonance_double';
+                } else if (cleanLabel.includes('雙ML共振')) {
+                    icon = 'psychology';
+                    badgeType = 'resonance_ml';
+                } else if (cleanLabel.includes('多維共振')) {
+                    icon = 'hub';
+                    badgeType = 'resonance_multi';
+                } else if (cleanLabel.includes('合買') || cleanLabel.includes('連買') || cleanLabel.includes('買超') || cleanLabel.includes('鎖碼')) {
+                    icon = 'handshake';
+                    badgeType = 'institutional';
+                } else if (cleanLabel.includes('玄鐵') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
+                    icon = 'show_chart';
+                    badgeType = 'technical';
+                } else if (cleanLabel.includes('TimesFM')) {
+                    icon = 'auto_awesome';
+                    badgeType = 'ai_timesfm';
+                } else if (cleanLabel.includes('LSTM')) {
+                    icon = 'insights';
+                    badgeType = 'ai_lstm';
+                } else if (cleanLabel.includes('高盈虧比')) {
+                    icon = 'balance';
+                    badgeType = 'risk_reward';
+                } else if (cleanLabel.includes('低PE') || cleanLabel.includes('低PB')) {
+                    icon = 'equalizer';
+                    badgeType = 'fundamental';
+                } else if (cleanLabel.includes('防守')) {
+                    icon = 'shield';
+                    badgeType = 'defense';
+                }
+
+                return {
+                    raw: rawTag,
+                    label: cleanLabel,
+                    icon: icon,
+                    type: badgeType
+                };
+            });
+        },
+        getTagClass(tag) {
+            if (!tag) return '';
+            const t = tag.type || 'default';
+            if (this.isDark) {
+                switch (t) {
+                    case 'resonance_quad':
+                        return 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold';
+                    case 'resonance_triple':
+                        return 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold';
+                    case 'resonance_double':
+                    case 'resonance_multi':
+                        return 'bg-amber-500/10 text-amber-400 border-amber-500/25 font-bold';
+                    case 'resonance_ml':
+                        return 'bg-purple-950/50 text-purple-300 border-purple-800/40 font-bold';
+                    case 'institutional':
+                        return 'bg-emerald-950/50 text-emerald-300 border-emerald-800/40 font-semibold';
+                    case 'technical':
+                        return 'bg-sky-950/40 text-sky-300 border-sky-800/40 font-medium';
+                    case 'ai_timesfm':
+                        return 'bg-amber-950/30 text-amber-300 border-amber-800/30 font-medium';
+                    case 'ai_lstm':
+                        return 'bg-blue-950/30 text-blue-300 border-blue-800/30 font-medium';
+                    case 'risk_reward':
+                        return 'bg-teal-950/40 text-teal-300 border-teal-800/40 font-semibold';
+                    case 'defense':
+                        return 'bg-rose-950/40 text-rose-300 border-rose-800/40 font-medium';
+                    default:
+                        return 'bg-[#16181D] text-slate-300 border-[#262626] font-medium';
+                }
+            } else {
+                switch (t) {
+                    case 'resonance_quad':
+                        return 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                    case 'resonance_triple':
+                        return 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
+                    case 'resonance_double':
+                    case 'resonance_multi':
+                        return 'bg-amber-50 text-amber-800 border-amber-200 font-bold';
+                    case 'resonance_ml':
+                        return 'bg-purple-50 text-purple-800 border-purple-200 font-bold';
+                    case 'institutional':
+                        return 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold';
+                    case 'technical':
+                        return 'bg-sky-50 text-sky-800 border-sky-200 font-medium';
+                    case 'ai_timesfm':
+                        return 'bg-amber-50 text-amber-800 border-amber-200 font-medium';
+                    case 'ai_lstm':
+                        return 'bg-blue-50 text-blue-800 border-blue-200 font-medium';
+                    case 'risk_reward':
+                        return 'bg-teal-50 text-teal-800 border-teal-200 font-semibold';
+                    case 'defense':
+                        return 'bg-rose-50 text-rose-800 border-rose-200 font-medium';
+                    default:
+                        return 'bg-slate-100 text-slate-700 border-slate-200 font-medium';
+                }
+            }
         },
         showToast(msg) {
             this.toastMessage = msg || '';
@@ -1090,6 +1200,13 @@ export const app = createApp({
 });
 
 // Global helper registration to prevent any template rendering exceptions
+const globalStripEmojis = (str) => {
+    if (!str) return '';
+    return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();
+};
+app.config.globalProperties.stripEmojis = globalStripEmojis;
+window.stripEmojis = globalStripEmojis;
+
 const globalFormatFollowers = (count) => {
     if (count === null || count === undefined) return '資料不足';
     if (!count) return '0';
