@@ -153,11 +153,44 @@ class PodcastService:
         return []
 
     def sync_seed_channels(self) -> int:
-        """同步種子頻道清單至 DuckDB"""
+        """同步種子頻道清單至 DuckDB，並清理過期或重複的舊頻道 ID"""
         channels = self.get_seed_channels()
         if not channels:
             return 0
         saved = self.db.save_podcast_channels_batch(channels)
+
+        # 清理不在種子清單中的過期/重複頻道 ID，並將關聯的舊 episode channel_id 遷移至標準 ID
+        legacy_remap = {
+            "all-in": "all-in-with-chamath-jason-sacks-friedberg",
+            "lex-fridman": "lex-fridman-podcast",
+            "dwarkesh": "dwarkesh-podcast",
+            "diary-of-a-ceo": "the-diary-of-a-ceo",
+            "y-combinator": "y-combinator-startup-podcast",
+            "lennys-podcast": "lenny-s-podcast",
+            "xiao-lin-shuo": "lin",
+            "sv101": "101",
+            "kurzgesagt": "in-a-nutshell",
+            "joe-rogan": "the-joe-rogan-experience",
+            "cls-tongxue": "cls",
+            "theo-t3gg": "theo-t3-gg",
+            "pragmatic-engineer": "the-pragmatic-engineer",
+            "knowledge-project": "the-knowledge-project",
+            "fengtouquan": "biggo-channel-0da8ef6bed3a",
+            "citeline": "citeline-podcasts",
+            "biocentury": "biocentury-this-week",
+            "42zhangjing": "42"
+        }
+        try:
+            with self.db._get_connection() as con:
+                for old_id, new_id in legacy_remap.items():
+                    con.execute("UPDATE podcast_episodes SET channel_id = ? WHERE channel_id = ?", [new_id, old_id])
+                
+                valid_ids = [c["channel_id"] for c in channels]
+                placeholders = ",".join(["?"] * len(valid_ids))
+                con.execute(f"DELETE FROM podcast_channels WHERE channel_id NOT IN ({placeholders})", valid_ids)
+        except Exception as e:
+            logger.warning(f"⚠️ 清理舊 Podcast 頻道失敗: {e}")
+
         logger.info(f"✅ 成功同步 {saved} 個 Podcast 種子頻道至資料庫")
         return saved
 

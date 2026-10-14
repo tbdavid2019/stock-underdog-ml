@@ -16,13 +16,14 @@ export const app = createApp({
         const savedTheme = localStorage.getItem('theme_v20261013') || localStorage.getItem('theme');
         const isDark = savedTheme === 'dark';
         const savedLocale = localStorage.getItem('stock_quant_locale') || 'zh';
+        const savedViewMode = localStorage.getItem('stock_quant_view_mode') || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table');
         return {
             isDark: isDark,
             currentLocale: savedLocale,
             activeTab: 'dashboard',
             selectedStrategy: 'resonance',
             selectedIndex: '',
-            viewMode: 'table', // 'table' | 'card'
+            viewMode: savedViewMode, // 'table' | 'card'
             expandedDrawerTicker: null,
             expandedDrawerData: null,
             expandedDrawerLoading: false,
@@ -527,7 +528,7 @@ export const app = createApp({
                     topic: this.podcastSelectedTopic || null,
                     channelId: this.podcastSelectedChannel,
                     lang: this.podcastSelectedLang,
-                    limit: 30
+                    limit: 100
                 });
                 if (res && res.data) {
                     this.podcastEpisodes = res.data;
@@ -540,7 +541,7 @@ export const app = createApp({
         },
         async loadPodcastChannels() {
             try {
-                const res = await ApiClient.getPodcastChannels();
+                const res = await ApiClient.getPodcastChannels(150);
                 if (res && res.data) {
                     this.podcastChannels = res.data;
                 }
@@ -685,6 +686,12 @@ export const app = createApp({
             this.selectedStrategy = stratId;
             this.updateUrl();
             this.loadData();
+        },
+        setViewMode(mode) {
+            this.viewMode = mode;
+            try {
+                localStorage.setItem('stock_quant_view_mode', mode);
+            } catch (e) {}
         },
         setIndex() {
             this.updateUrl();

@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.7)
+
+### Fixed & Enhanced (Responsive Table-to-Card RWD & Podcast 100-Channel/100-Episode Full Sync)
+- **📱 操盤看板表格 RWD 響應式優化（Mobile Hybrid Quant Cards & Desktop Fluid Table）**：
+  - **診斷痛點**：在行動裝置直向窄螢幕（~360px~414px）下，包含 11 欄量化與籌碼指標的 Bloomberg 寬表格因缺乏容器寬度保護與防折行設定，被瀏覽器硬性擠壓至極窄空間，導致「策略模型」中文字符垂直折成四行（「策\\n略\\n模\\n型」）、「玄鐵重劍」折成「玄\\n鐵\\n重\\n劍」，右側指標被截斷，嚴重破壞版面閱讀體驗。
+  - **雙層響應式架構革新**：
+    1. **智慧裝置偵測預設（Smart Device Adaptive Default）**：針對小於 768px 之行動裝置，進入首頁自動預設為專為手機設計的卡片檢視（`viewMode = 'card'`），並將使用者手動切換狀態持久化記錄於 `localStorage`。
+    2. **表格模式下 RWD 混合轉譯（Hybrid Table-to-Card Layout）**：當使用者在行動裝置上切換或維持表格模式（`viewMode = 'table'`）時，小螢幕（`< md`）自動無縫轉譯為「高密度行動量化卡片」，完整保留排名、代號、名稱、市場、策略、現價、目標價、PE/PB、籌碼、標籤與公司抽屜展開功能，杜絕任何文字垂直擠壓；而在平板與桌面端（`>= md`），則平滑呈現標準彭博寬表格，並全面賦予 `min-w-[980px]` 與 `whitespace-nowrap`，保障橫向滑動時排版絕不變形。
+- **🎙️ Podcast 財經雷達全量 100 頻道去重與 100 篇情報端到端同步**：
+  - **診斷痛點**：
+    1. 頻道下拉選單出現重複頻道名稱（如 In a Nutshell、The Joe Rogan Experience、Dwarkesh Podcast 等重複出現兩次）。
+    2. 頂部狀態列顯示「收錄 50 頻道 · 30 篇情報」，未完整展現 BigGo Finance 上游最新收錄的完整 100 篇情報。
+  - **根本原因與架構修復**：
+    1. **資料庫去重與舊頻道淘汰 (`data/podcast_service.py`)**：早期 Mock 測試資料保留了舊頻道 ID（如 `kurzgesagt`, `joe-rogan`, `dwarkesh` 等），與後續 BigGo 爬蟲標準 Slug ID 共存於 DuckDB 中。本次加入自動清理遷移機制，將舊 episode 自動映射至標準 ID，並以 `DELETE FROM podcast_channels WHERE channel_id NOT IN (...)` 徹底清除不在 100 種子清單中的 19 個舊頻道；API 路由層面進一步加入不分大小寫的標題嚴格去重，確保下拉選單 100% 乾淨無重複。
+    2. **端到端放寬情報容量上限（20/30 -> 100 篇）**：將 `api/routes/podcast.py` 預設 limit 由 20 提升至 100，`api-client.js` 由 20 提升至 100，`app.js` 由 30 提升至 100，使前端首頁直接呈現「收錄 100 頻道 · 100 篇情報」，完整對齊 BigGo Finance 即時情報庫。
+
+---
+
 ## 2026-10-14 (v2.4.6)
 
 ### Fixed & Enhanced (Pure Chinese Macro Labels & Header Language Switcher)

@@ -31,7 +31,7 @@ def get_episodes(
     ticker: Optional[str] = Query(None, description="依股票代號篩選 (例如 NVDA, 2330.TW)"),
     channel_id: Optional[str] = Query(None, description="依特定頻道 ID 篩選 (例如 all-in, odd-lots)"),
     lang: Optional[str] = Query("ALL", description="語言篩選: ALL / EN / ZH"),
-    limit: int = Query(20, ge=1, le=100, description="每頁筆數"),
+    limit: int = Query(100, ge=1, le=200, description="每頁筆數"),
     offset: int = Query(0, ge=0, description="分頁偏移量")
 ):
     """
@@ -79,18 +79,25 @@ def get_channels(
     """
     channels = duckdb_manager.get_podcast_channels(limit=limit)
     seed_channels = podcast_service.get_seed_channels()
-    if refresh or len(channels) < len(seed_channels):
+    if refresh or len(channels) != len(seed_channels):
         podcast_service.sync_seed_channels()
         channels = duckdb_manager.get_podcast_channels(limit=limit)
 
-    # Channel counts and follower counts come from the checked-in BigGo seed snapshot.
-    for channel in channels:
-        channel["source"] = "seed_snapshot"
+    # 嚴格去重頻道標題，確保 UI 下拉選單絕無重複項 (Deduplicate by Title)
+    seen_titles = set()
+    unique_channels = []
+    for ch in channels:
+        t_key = ch.get("title", "").strip().lower()
+        if t_key and t_key in seen_titles:
+            continue
+        seen_titles.add(t_key)
+        ch["source"] = "seed_snapshot"
+        unique_channels.append(ch)
 
     return PodcastChannelsResponse(
         success=True,
-        total_count=duckdb_manager.get_podcast_channels_count() or len(channels),
-        data=channels
+        total_count=len(unique_channels),
+        data=unique_channels
     )
 
 

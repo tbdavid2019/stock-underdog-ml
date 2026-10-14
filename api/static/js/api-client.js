@@ -246,7 +246,7 @@ export const ApiClient = {
     /**
      * Podcast Radar episodes with stock quote enrichment
      */
-    async getPodcastEpisodes({ topic = null, ticker = null, channelId = null, lang = 'ALL', limit = 20, offset = 0 } = {}) {
+    async getPodcastEpisodes({ topic = null, ticker = null, channelId = null, lang = 'ALL', limit = 100, offset = 0 } = {}) {
         const params = new URLSearchParams();
         if (topic) params.set('topic', topic);
         if (ticker) params.set('ticker', ticker);
