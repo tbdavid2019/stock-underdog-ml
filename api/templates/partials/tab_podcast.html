@@ -58,7 +58,7 @@
                     class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
                     :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                 <span>✨ 全部話題</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full"
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full"
                       :class="!podcastSelectedTopic ? 'bg-black/20 text-white' : (isDark ? 'bg-[#262626] text-slate-400' : 'bg-slate-200 text-slate-600')">
                     {{ podcastEpisodes.length }}
                 </span>
@@ -70,7 +70,7 @@
                     class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
                     :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                 <span>{{ t.topic }}</span>
-                <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono"
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-mono"
                       :class="podcastSelectedTopic === t.topic ? 'bg-black/25 text-white' : (isDark ? 'bg-[#262626] text-amber-400' : 'bg-amber-100 text-amber-800')">
                     {{ t.count }}
                 </span>
@@ -85,7 +85,7 @@
         <!-- Channel Filter Selector -->
         <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
             <span class="font-bold shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">頻道篩選:</span>
-            <select v-model="podcastSelectedChannel" @change="loadPodcastEpisodes()"
+            <select v-model="podcastSelectedChannel" @change="setPodcastChannel(podcastSelectedChannel)"
                     class="px-2.5 py-1.5 rounded-xl border font-medium outline-none transition-colors"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-900'">
                 <option value="ALL">全部收錄頻道 ({{ podcastChannels.length }})</option>
@@ -155,7 +155,7 @@
                         ⏱️ {{ ep.duration_formatted || '1h+' }}
                     </span>
                     <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
-                          :class="ep.language === 'zh' ? 'bg-rose-950/60 text-rose-400 border border-rose-800/60' : 'bg-sky-950/60 text-sky-400 border border-sky-800/60'">
+                          :class="ep.language === 'zh' ? (isDark ? 'bg-rose-950/60 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-200') : (isDark ? 'bg-sky-950/60 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-200')">
                         {{ ep.language }}
                     </span>
                 </div>
@@ -231,21 +231,75 @@
                 <!-- Ticker Badges Row -->
                 <div class="flex flex-wrap gap-2">
                     <button v-for="quote in (ep.ticker_prices || [])" :key="quote.ticker"
-                            @click="searchTickerHistory(quote.ticker)"
+                            @click.stop="togglePodcastTicker(ep.id, quote.ticker)"
                             class="px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1.5 group shadow-sm hover:scale-105"
-                            :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400'">
-                        <span class="font-black num-font text-amber-500">{{ quote.ticker }}</span>
-                        <span class="text-[11px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ quote.name || '' }}</span>
+                            :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md ring-2 ring-amber-400/50' : (isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500 text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400 text-slate-900')">
+                        <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ quote.ticker }}</span>
+                        <span class="text-[11px]" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/80' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
                         <span v-if="quote.price" class="num-font font-bold"
-                              :class="quote.direction === 'up' ? 'text-emerald-400' : (quote.direction === 'down' ? 'text-rose-500' : 'text-slate-400')">
+                              :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : (quote.direction === 'up' ? 'text-emerald-400' : (quote.direction === 'down' ? 'text-rose-500' : 'text-slate-400'))">
                             {{ quote.direction === 'up' ? '↑' : (quote.direction === 'down' ? '↓' : '—') }}
                             {{ quote.change_pct !== null ? Math.abs(quote.change_pct).toFixed(2) + '%' : '' }}
                         </span>
-                        <span class="text-[10px] text-amber-400/80 group-hover:translate-x-0.5 transition-transform">↗</span>
+                        <span class="text-[10px]" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-400/80'">▼</span>
                     </button>
                     <span v-if="!ep.ticker_prices || ep.ticker_prices.length === 0" class="text-xs text-slate-500">
                         此單集無直接映射之上市代號
                     </span>
+                </div>
+
+                <!-- Inline Company & Quant Intelligence Drawer (Zero-jump closed-loop) -->
+                <div v-if="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker"
+                     class="mt-3 p-3.5 rounded-xl border transition-all animate-fadeIn"
+                     :class="isDark ? 'bg-[#0D0E11] border-amber-500/40 text-slate-200 shadow-lg shadow-black/40' : 'bg-amber-50/70 border-amber-300 text-slate-800 shadow-sm'">
+                    <div class="flex items-center justify-between pb-2 border-b"
+                         :class="isDark ? 'border-[#262626]' : 'border-amber-200'">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 rounded font-black num-font text-xs bg-amber-500 text-black">
+                                {{ podcastExpandedTicker }}
+                            </span>
+                            <span class="font-bold text-xs">
+                                {{ podcastDrawerData ? (podcastDrawerData.name || podcastDrawerData.ticker) : podcastExpandedTicker }}
+                            </span>
+                            <span v-if="podcastDrawerData && podcastDrawerData.industry"
+                                  class="text-[11px] px-1.5 py-0.5 rounded"
+                                  :class="isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'">
+                                {{ podcastDrawerData.industry }}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button @click="searchTickerHistory(podcastExpandedTicker)"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition-colors flex items-center space-x-1 shadow-sm">
+                                <span>🔍 查看量化籌碼與歷史</span>
+                                <span>→</span>
+                            </button>
+                            <button @click="closePodcastDrawer()"
+                                    class="text-xs p-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                                    title="關閉預覽">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Drawer Body -->
+                    <div v-if="podcastDrawerLoading" class="py-4 text-center text-xs text-amber-400 animate-pulse font-mono">
+                        正在連線即時基本面與量化情報...
+                    </div>
+                    <div v-else-if="podcastDrawerData" class="pt-2 text-xs space-y-2">
+                        <p class="leading-relaxed line-clamp-3 text-xs"
+                           :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            {{ podcastDrawerData.business_summary || '暫無該標的即時業務摘要' }}
+                        </p>
+                        <div v-if="podcastDrawerData.recent_news && podcastDrawerData.recent_news.length" class="space-y-1">
+                            <div class="text-[11px] font-bold text-amber-500">近期新聞與重大催化劑：</div>
+                            <div v-for="(news, nIdx) in podcastDrawerData.recent_news.slice(0, 2)" :key="nIdx"
+                                 class="text-[11px] truncate flex items-center space-x-1.5"
+                                 :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                <span>•</span>
+                                <span>{{ news.title || news }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

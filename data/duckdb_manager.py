@@ -1545,6 +1545,17 @@ class DuckDBManager:
             logger.error(f"❌ 查詢法說會資料失敗: {e}")
             return []
 
+    def get_earnings_calls_count(self) -> int:
+        """取得法說會總記錄數 (用於冷啟動判定)"""
+        if not self.enabled:
+            return 0
+        try:
+            with self._get_connection() as con:
+                val = con.execute("SELECT COUNT(*) FROM earnings_calls;").fetchone()
+                return int(val[0]) if val else 0
+        except Exception:
+            return 0
+
     def get_earnings_calendar(
         self,
         year: int,
@@ -1638,8 +1649,10 @@ class DuckDBManager:
         try:
             with self._get_connection() as con:
                 df = con.execute("""
-                    SELECT c.*, 
-                           COALESCE((SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id), 0) as real_episode_count
+                    SELECT c.channel_id, c.title, c.author, c.description, c.image_url,
+                           c.rss_url, c.youtube_channel_url, c.follower_count,
+                           COALESCE((SELECT COUNT(*) FROM podcast_episodes e WHERE e.channel_id = c.channel_id), c.episode_count) as episode_count,
+                           c.category, c.language, c.is_subscribed, c.created_at, c.updated_at
                     FROM podcast_channels c 
                     ORDER BY c.follower_count DESC 
                     LIMIT ?;
@@ -1650,6 +1663,17 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 查詢 Podcast 頻道失敗: {e}")
             return []
+
+    def get_podcast_channels_count(self) -> int:
+        """取得收錄的 Podcast 頻道總數"""
+        if not self.enabled:
+            return 0
+        try:
+            with self._get_connection() as con:
+                val = con.execute("SELECT COUNT(*) FROM podcast_channels;").fetchone()
+                return int(val[0]) if val else 0
+        except Exception:
+            return 0
 
     def save_podcast_episodes_batch(self, records: List[Dict[str, Any]]) -> int:
         """批次寫入或更新單集 AI 萃取情報"""
@@ -1805,4 +1829,69 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 聚合熱門 Podcast 主題失敗: {e}")
             return []
+
+    def get_total_episodes_count(self) -> int:
+        """取得收錄的 Podcast 單集總數 (用於冷啟動判定)"""
+        if not self.enabled:
+            return 0
+        try:
+            with self._get_connection() as con:
+                val = con.execute("SELECT COUNT(*) FROM podcast_episodes;").fetchone()
+                return int(val[0]) if val else 0
+        except Exception:
+            return 0
+
+    def get_latest_quotes_batch(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
+        """批次查詢多個 Ticker 的最新價格與潛力評估，避免 N+1 查詢與全表掃描"""
+        if not self.enabled or not tickers:
+            return {}
+        try:
+            clean_tickers = list({str(t).strip().upper() for t in tickers if t})
+            if not clean_tickers:
+                return {}
+            with self._get_connection() as con:
+                placeholders = ",".join(["?"] * len(clean_tickers))
+                query = f"""
+                    WITH target_tickers AS (
+                        SELECT UNNEST([{placeholders}]) as t_raw
+                    ),
+                    ranked AS (
+                        SELECT 
+                            p.ticker,
+                            p.current_price,
+                            p.potential,
+                            p.timestamp,
+                            ROW_NUMBER() OVER (PARTITION BY p.ticker ORDER BY p.timestamp DESC) as rn
+                        FROM predictions p
+                        WHERE p.ticker IN (SELECT t_raw FROM target_tickers)
+                           OR p.ticker IN (SELECT t_raw || '.TW' FROM target_tickers)
+                           OR p.ticker IN (SELECT t_raw || '.TWO' FROM target_tickers)
+                    )
+                    SELECT ticker, current_price, potential
+                    FROM ranked
+                    WHERE rn = 1;
+                """
+                df = con.execute(query, clean_tickers).df()
+                res = {}
+                if not df.empty:
+                    for _, row in df.iterrows():
+                        t = str(row["ticker"])
+                        c_price = float(row["current_price"]) if row["current_price"] is not None and not pd.isna(row["current_price"]) else None
+                        pot = float(row["potential"]) if row["potential"] is not None and not pd.isna(row["potential"]) else 0.0
+                        direction = "up" if pot >= 0 else "down"
+                        quote_obj = {
+                            "ticker": t,
+                            "name": t,
+                            "price": c_price,
+                            "change_pct": round(pot, 2),
+                            "direction": direction
+                        }
+                        res[t] = quote_obj
+                        if "." in t:
+                            res[t.split(".")[0]] = quote_obj
+                return res
+        except Exception as e:
+            logger.debug(f"批次查詢最新行情失敗: {e}")
+            return {}
+
 

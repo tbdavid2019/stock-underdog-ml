@@ -100,6 +100,10 @@ export const app = createApp({
             podcastSelectedChannel: 'ALL',
             podcastSelectedLang: 'ALL',
             podcastSearchQuery: '',
+            podcastExpandedEpisodeId: null,
+            podcastExpandedTicker: null,
+            podcastDrawerData: null,
+            podcastDrawerLoading: false,
 
             // Toast
             toastMessage: '',
@@ -414,10 +418,15 @@ export const app = createApp({
         },
         async openEarningsCalendar() {
             this.showEarningsModal = true;
+            document.body.classList.add('overflow-hidden');
             await this.loadCalendarData();
         },
         closeEarningsCalendar() {
             this.showEarningsModal = false;
+            document.body.classList.remove('overflow-hidden');
+        },
+        toggleCalendarTimezone() {
+            this.calendarTimezone = this.calendarTimezone === 'CST' ? 'EST' : 'CST';
         },
         async changeCalendarMonth(delta) {
             let m = this.calendarMonth + delta;
@@ -570,6 +579,53 @@ export const app = createApp({
                 this.showToast("同步失敗：" + e.message);
             }
         },
+        togglePodcastTicker(episodeId, ticker) {
+            if (this.podcastExpandedEpisodeId === episodeId && this.podcastExpandedTicker === ticker) {
+                this.podcastExpandedEpisodeId = null;
+                this.podcastExpandedTicker = null;
+                this.podcastDrawerData = null;
+                return;
+            }
+
+            this.podcastExpandedEpisodeId = episodeId;
+            this.podcastExpandedTicker = ticker;
+
+            if (this.companyProfileCache[ticker]) {
+                this.podcastDrawerData = this.companyProfileCache[ticker];
+                this.podcastDrawerLoading = false;
+                return;
+            }
+
+            this.podcastDrawerLoading = true;
+            this.podcastDrawerData = {
+                ticker: ticker,
+                name: ticker,
+                industry: '查詢中...',
+                business_summary: '正在查詢公司基本面資料與最新產業資訊...',
+                recent_news: []
+            };
+
+            ApiClient.getCompanyProfile(ticker)
+                .then(data => {
+                    if (data && data.ticker) {
+                        this.companyProfileCache[ticker] = data;
+                        if (this.podcastExpandedTicker === ticker && this.podcastExpandedEpisodeId === episodeId) {
+                            this.podcastDrawerData = data;
+                        }
+                    }
+                })
+                .catch(e => console.debug("Podcast drawer profile fetch failed:", e))
+                .finally(() => {
+                    if (this.podcastExpandedTicker === ticker && this.podcastExpandedEpisodeId === episodeId) {
+                        this.podcastDrawerLoading = false;
+                    }
+                });
+        },
+        closePodcastDrawer() {
+            this.podcastExpandedEpisodeId = null;
+            this.podcastExpandedTicker = null;
+            this.podcastDrawerData = null;
+        },
         setStrategy(stratId) {
             this.selectedStrategy = stratId;
             this.updateUrl();
@@ -640,53 +696,26 @@ export const app = createApp({
             try {
                 const params = new URLSearchParams(window.location.search);
                 const tab = params.get('tab');
-                if (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) {
-                    this.activeTab = tab;
-                }
+                this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) ? tab : 'dashboard';
+
                 const strat = params.get('strategy');
-                if (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) {
-                    this.selectedStrategy = strat;
-                }
+                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
+
                 const idx = params.get('index');
-                if (idx !== null) {
-                    this.selectedIndex = idx;
-                }
+                this.selectedIndex = (idx !== null && idx !== '') ? idx : 'ALL';
+
                 const sub = params.get('sub');
-                if (sub && ['three_inst', 'broker'].includes(sub)) {
-                    this.instSubTab = sub;
-                }
-                const mkt = params.get('market');
-                if (mkt) {
-                    this.instMarket = mkt;
-                }
-                const order = params.get('order');
-                if (order) {
-                    this.instOrderBy = order;
-                }
-                const dt = params.get('date');
-                if (dt) {
-                    this.instSelectedDate = dt;
-                }
-                const brokerTicker = params.get('broker_ticker');
-                if (brokerTicker) {
-                    this.brokerSearchTicker = brokerTicker;
-                }
-                const ticker = params.get('ticker');
-                if (ticker) {
-                    this.searchTicker = ticker;
-                }
-                const topic = params.get('topic');
-                if (topic) {
-                    this.podcastSelectedTopic = topic;
-                }
-                const channel = params.get('channel');
-                if (channel) {
-                    this.podcastSelectedChannel = channel;
-                }
-                const lang = params.get('lang');
-                if (lang) {
-                    this.podcastSelectedLang = lang;
-                }
+                this.instSubTab = (sub && ['three_inst', 'broker'].includes(sub)) ? sub : 'three_inst';
+
+                this.instMarket = params.get('market') || 'ALL';
+                this.instOrderBy = params.get('order') || 'total_net';
+                this.instSelectedDate = params.get('date') || '';
+                this.brokerSearchTicker = params.get('broker_ticker') || '';
+                this.searchTicker = params.get('ticker') || '';
+
+                this.podcastSelectedTopic = params.get('topic') || '';
+                this.podcastSelectedChannel = params.get('channel') || 'ALL';
+                this.podcastSelectedLang = params.get('lang') || 'ALL';
             } catch (e) {
                 console.debug("Parse URL params error:", e);
             }

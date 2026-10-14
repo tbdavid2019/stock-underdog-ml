@@ -263,8 +263,8 @@
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
                         <div class="space-y-0.5 truncate mr-2">
                             <div class="flex items-center space-x-1.5">
-                                <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase"
-                                      :class="call.market === 'TW' ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-sky-950/70 text-sky-400 border border-sky-800/60'">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
+                                      :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300')">
                                     {{ call.market }}
                                 </span>
                                 <button @click.stop="searchTickerHistory(call.ticker)"
@@ -899,12 +899,67 @@
             <!-- Card Footer -->
             <div class="pt-3 border-t flex items-center justify-between text-xs"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
-                <span class="num-font font-medium">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
-                <button @click="searchTickerHistory(item.ticker)"
-                        class="font-bold flex items-center space-x-1 transition-all text-amber-500 hover:text-amber-400"
-                        :aria-label="'查看 ' + item.ticker + ' 歷史軌跡'">
-                    <span>歷史軌跡 ↗</span>
+                <button @click.stop="toggleRowDrawer(item.ticker)"
+                        class="font-bold flex items-center space-x-1 transition-all"
+                        :class="expandedDrawerTicker === item.ticker ? 'text-amber-500 underline' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                    <span>{{ expandedDrawerTicker === item.ticker ? '收合資料 ▲' : '法說 / 簡報 ▼' }}</span>
                 </button>
+                <div class="flex items-center space-x-3">
+                    <span class="num-font font-medium">時效: {{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
+                    <button @click="searchTickerHistory(item.ticker)"
+                            class="font-bold flex items-center space-x-1 transition-all text-amber-500 hover:text-amber-400"
+                            :aria-label="'查看 ' + item.ticker + ' 歷史軌跡'">
+                        <span>歷史 ↗</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card View Expandable Drawer -->
+            <div v-if="expandedDrawerTicker === item.ticker" class="mt-3 pt-3 border-t text-xs"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <!-- Drawer Sub-tabs -->
+                <div class="flex items-center space-x-2 pb-2">
+                    <button @click.stop="drawerActiveSubTab = 'profile'"
+                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors"
+                            :class="drawerActiveSubTab === 'profile' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
+                        🏢 基本面
+                    </button>
+                    <button @click.stop="drawerActiveSubTab = 'earnings'"
+                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors"
+                            :class="drawerActiveSubTab === 'earnings' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
+                        🏛️ 法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})
+                    </button>
+                </div>
+
+                <!-- Sub-tab 1: Profile -->
+                <div v-if="drawerActiveSubTab === 'profile'">
+                    <div v-if="expandedDrawerLoading" class="py-3 text-center text-amber-400 animate-pulse">載入中...</div>
+                    <div v-else-if="expandedDrawerData" class="space-y-1.5">
+                        <p class="leading-relaxed line-clamp-2" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            {{ expandedDrawerData.business_summary || '無資料' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Sub-tab 2: Earnings -->
+                <div v-if="drawerActiveSubTab === 'earnings'">
+                    <div v-if="drawerEarningsLoading" class="py-3 text-center text-amber-400 animate-pulse">查詢法說會資料中...</div>
+                    <div v-else-if="drawerEarningsMap[item.ticker] && drawerEarningsMap[item.ticker].length" class="space-y-1.5">
+                        <div v-for="call in drawerEarningsMap[item.ticker]" :key="call.id"
+                             class="p-2 rounded border flex items-center justify-between"
+                             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div>
+                                <span class="font-bold text-amber-500">{{ call.call_date }}</span>
+                                <span class="ml-2">{{ call.remarks || call.location || '法人說明會' }}</span>
+                            </div>
+                            <div class="space-x-1.5">
+                                <a v-if="call.presentation_url" :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline">📑 簡報</a>
+                                <a v-if="call.webcast_url" :href="call.webcast_url" target="_blank" class="text-amber-400 hover:underline">🎙️ 影音</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="py-2 text-center text-slate-400">近期查無法說會排程</div>
+                </div>
             </div>
 
         </div>
@@ -937,8 +992,8 @@
                         <span>🔄 即時抓取</span>
                     </button>
                     <button @click="closeEarningsCalendar()"
-                            class="p-1.5 rounded-lg border text-slate-400 hover:text-white transition-colors"
-                            :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'"
+                            class="p-1.5 rounded-lg border transition-colors"
+                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-500 hover:text-slate-900'"
                             title="關閉行事曆 (Esc)">
                         ✕
                     </button>
@@ -1006,6 +1061,7 @@
                                 </span>
                                 <span class="text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                     共 {{ day.total_calls }} 場法說會
+                                    <span class="text-[10px] font-normal text-slate-500">({{ calendarTimezone === 'CST' ? '依當地/台灣工作日' : '依美東營業日' }})</span>
                                 </span>
                                 <span v-if="day.weight_stock_calls > 0" class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                                     ⭐ 權值股 {{ day.weight_stock_calls }} 場

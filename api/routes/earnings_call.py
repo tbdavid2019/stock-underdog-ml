@@ -38,19 +38,31 @@ def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCall
     except Exception:
         pass
 
-    # 產生雙時區表示
+    # 產生雙時區表示 (精確利用 zoneinfo 處理夏令/冬令時差)
     datetime_cst = None
     datetime_est = None
     try:
+        from zoneinfo import ZoneInfo
+        time_part = call_time_str.strip() if call_time_str else "14:00"
+        if len(time_part) == 5:
+            time_part += ":00"
+        elif len(time_part) == 4 and ":" not in time_part:
+            time_part = f"{time_part[:2]}:{time_part[2:]}:00"
+
+        dt_naive = datetime.datetime.strptime(f"{call_date_str} {time_part[:8]}", "%Y-%m-%d %H:%M:%S")
         if timezone_str == "America/New_York":
-            datetime_est = f"{call_date_str} {call_time_str} EDT"
-            # 粗估美東下午盤後為台灣次日清晨 (時差 +12/+13 小時)
-            datetime_cst = f"{call_date_str} {call_time_str} (美東時間，次日清晨)"
+            dt_ny = dt_naive.replace(tzinfo=ZoneInfo("America/New_York"))
+            dt_cst_obj = dt_ny.astimezone(ZoneInfo("Asia/Taipei"))
+            datetime_est = dt_ny.strftime("%Y-%m-%d %H:%M %Z")
+            datetime_cst = dt_cst_obj.strftime("%Y-%m-%d %H:%M CST")
         else:
-            datetime_cst = f"{call_date_str} {call_time_str} CST"
-            datetime_est = f"{call_date_str} (台灣時間下午)"
+            dt_tw = dt_naive.replace(tzinfo=ZoneInfo("Asia/Taipei"))
+            dt_ny_obj = dt_tw.astimezone(ZoneInfo("America/New_York"))
+            datetime_cst = dt_tw.strftime("%Y-%m-%d %H:%M CST")
+            datetime_est = dt_ny_obj.strftime("%Y-%m-%d %H:%M %Z")
     except Exception:
-        datetime_cst = f"{call_date_str} {call_time_str}"
+        datetime_cst = f"{call_date_str} {call_time_str} CST"
+        datetime_est = f"{call_date_str} {call_time_str} EST"
 
     return EarningsCallItem(
         id=str(row.get("id", "")),
@@ -104,17 +116,18 @@ def get_upcoming_calls(
         limit=limit
     )
 
-    # 若資料庫目前無記錄，主動觸發一次抓取以提供即時資料
-    if not records:
-        fetcher = EarningsCallFetcher(duckdb_manager)
-        fetcher.fetch_all_and_sync()
-        records = duckdb_manager.get_earnings_calls(
-            market=market,
-            start_date=s_date,
-            end_date=e_date,
-            is_weight_stock=is_weight_stock,
-            limit=limit
-        )
+    # 僅在初次冷啟動且無特殊過濾時，主動觸發一次抓取以提供即時資料
+    if not records and start_date is None and end_date is None and is_weight_stock is None:
+        if duckdb_manager.get_earnings_calls_count() == 0:
+            fetcher = EarningsCallFetcher(duckdb_manager)
+            fetcher.fetch_all_and_sync()
+            records = duckdb_manager.get_earnings_calls(
+                market=market,
+                start_date=s_date,
+                end_date=e_date,
+                is_weight_stock=is_weight_stock,
+                limit=limit
+            )
 
     enriched = [_enrich_call_item(r, today) for r in records]
 
@@ -129,7 +142,7 @@ def get_upcoming_calls(
 @router.get("/calendar", response_model=EarningsCalendarResponse, summary="取得月度法說會日曆聚合場次")
 def get_earnings_calendar(
     year: Optional[int] = Query(None, description="年份 (預設當前年)"),
-    month: Optional[int] = Query(None, description="月份 (預設當前月)"),
+    month: Optional[int] = Query(None, ge=1, le=12, description="月份 (1-12，預設當前月)"),
     market: str = Query("ALL", description="市場: ALL / TW / US")
 ):
     """

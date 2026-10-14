@@ -46,20 +46,21 @@ def get_episodes(
         offset=offset
     )
 
-    # 若資料庫初次為空，自動載入種子頻道與高價值單集
-    if not episodes:
-        podcast_service.sync_all()
-        episodes = duckdb_manager.get_podcast_episodes(
-            topic=topic,
-            ticker=ticker,
-            channel_id=channel_id,
-            lang=lang,
-            limit=limit,
-            offset=offset
-        )
+    # 僅在資料庫完全為空且無任何篩選條件時，進行初次冷啟動同步
+    if not episodes and not any([topic, ticker, channel_id]) and (not lang or lang.upper() == "ALL") and offset == 0:
+        if duckdb_manager.get_total_episodes_count() == 0:
+            podcast_service.sync_all()
+            episodes = duckdb_manager.get_podcast_episodes(
+                topic=topic,
+                ticker=ticker,
+                channel_id=channel_id,
+                lang=lang,
+                limit=limit,
+                offset=offset
+            )
 
-    # 進行即時行情與時長格式化增強
-    enriched = [podcast_service.enrich_episode_quotes(ep) for ep in episodes]
+    # 批次進行即時行情與時長格式化增強 (一次性 SQL 查詢消除 N+1)
+    enriched = podcast_service.enrich_episodes_batch(episodes)
 
     return PodcastEpisodesResponse(
         success=True,
@@ -76,7 +77,7 @@ def get_channels(
     取得已收錄的國際頂級科技、宏觀金融與商業頻道庫元數據。
     """
     channels = duckdb_manager.get_podcast_channels(limit=limit)
-    if not channels:
+    if not channels and duckdb_manager.get_podcast_channels_count() == 0:
         podcast_service.sync_seed_channels()
         channels = duckdb_manager.get_podcast_channels(limit=limit)
 
@@ -95,7 +96,7 @@ def get_topics(
     取得近期各 Podcast 單集最頻繁討論的核心科技實體（如 Claude, OpenAI, NVIDIA 等）。
     """
     topics = duckdb_manager.get_podcast_topics_aggregation(limit=limit)
-    if not topics:
+    if not topics and duckdb_manager.get_total_episodes_count() == 0:
         podcast_service.sync_all()
         topics = duckdb_manager.get_podcast_topics_aggregation(limit=limit)
 

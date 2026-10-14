@@ -180,34 +180,12 @@ class PodcastService:
 
         return sorted(list(found_entities)), sorted(list(found_tickers))
 
-    def get_ticker_quote_badge(self, ticker: str) -> Dict[str, Any]:
-        """組裝即時行情與漲跌幅 Badge 結構"""
-        # 1. 優先從 DuckDB 最新量化預測與歷史池中讀取現價與評估
-        try:
-            with self.db._get_connection() as con:
-                df = con.execute("""
-                    SELECT ticker, current_price, potential, timestamp 
-                    FROM predictions 
-                    WHERE ticker = ? OR ticker LIKE ?
-                    ORDER BY timestamp DESC 
-                    LIMIT 1;
-                """, [ticker, f"{ticker}.%"]).df()
-                if not df.empty:
-                    row = df.iloc[0]
-                    c_price = float(row["current_price"]) if row["current_price"] is not None else None
-                    pot = float(row["potential"]) if row["potential"] is not None else 0.0
-                    direction = "up" if pot >= 0 else "down"
-                    return {
-                        "ticker": ticker,
-                        "name": ticker,
-                        "price": c_price,
-                        "change_pct": round(pot, 2),
-                        "direction": direction
-                    }
-        except Exception:
-            pass
+    def get_ticker_quote_badge(self, ticker: str, cached_quotes: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """組裝即時行情與漲跌幅 Badge 結構，優先從批次快取讀取"""
+        if cached_quotes and ticker in cached_quotes:
+            return cached_quotes[ticker]
 
-        # 2. 降級使用基準對照字典
+        # 降級使用基準對照字典
         if ticker in FALLBACK_TICKER_QUOTES:
             return FALLBACK_TICKER_QUOTES[ticker]
 
@@ -219,35 +197,52 @@ class PodcastService:
             "direction": "up"
         }
 
-    def enrich_episode_quotes(self, episode: Dict[str, Any]) -> Dict[str, Any]:
-        """為單集情報附加即時股票行情 Badge 陣列"""
-        tickers_val = episode.get("tickers")
-        tickers_list = []
-        if isinstance(tickers_val, list):
-            tickers_list = tickers_val
-        elif isinstance(tickers_val, str):
-            try:
-                tickers_list = json.loads(tickers_val)
-            except Exception:
-                tickers_list = [t.strip() for t in tickers_val.split(",") if t.strip()]
+    def enrich_episodes_batch(self, episodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """批次為多個單集情報附加即時股票行情 Badge，一次性查詢 DuckDB 消除 N+1 連線開銷"""
+        if not episodes:
+            return []
 
-        badges = [self.get_ticker_quote_badge(t) for t in tickers_list if t]
-        episode["ticker_prices"] = badges
-
-        # 格式化時長
-        dur_sec = episode.get("duration_seconds")
-        episode["duration_formatted"] = format_duration(dur_sec)
-
-        # 展開 JSON 欄位
-        for fld in ("key_takeaways", "topic_tags", "tickers"):
-            val = episode.get(fld)
-            if isinstance(val, str):
+        # 1. 收集整頁所有單集的 distinct tickers
+        all_tickers = set()
+        for ep in episodes:
+            tickers_val = ep.get("tickers")
+            if isinstance(tickers_val, list):
+                all_tickers.update(tickers_val)
+            elif isinstance(tickers_val, str):
                 try:
-                    episode[fld] = json.loads(val)
+                    loaded = json.loads(tickers_val)
+                    if isinstance(loaded, list):
+                        all_tickers.update(loaded)
                 except Exception:
-                    episode[fld] = []
+                    all_tickers.update([t.strip() for t in tickers_val.split(",") if t.strip()])
 
-        return episode
+        # 2. 一次性批量查詢 DuckDB 最新預測行情
+        cached_quotes = self.db.get_latest_quotes_batch(list(all_tickers)) if hasattr(self.db, "get_latest_quotes_batch") else {}
+
+        # 3. 在記憶體中進行組裝與時長格式化
+        for ep in episodes:
+            # 展開 JSON 欄位
+            for fld in ("key_takeaways", "topic_tags", "tickers"):
+                val = ep.get(fld)
+                if isinstance(val, str):
+                    try:
+                        ep[fld] = json.loads(val)
+                    except Exception:
+                        ep[fld] = []
+
+            tickers_list = ep.get("tickers") or []
+            badges = [self.get_ticker_quote_badge(t, cached_quotes) for t in tickers_list if t]
+            ep["ticker_prices"] = badges
+
+            # 格式化時長
+            dur_sec = ep.get("duration_seconds")
+            ep["duration_formatted"] = format_duration(dur_sec)
+
+        return episodes
+
+    def enrich_episode_quotes(self, episode: Dict[str, Any]) -> Dict[str, Any]:
+        """單集行情增強（相容舊介面）"""
+        return self.enrich_episodes_batch([episode])[0]
 
     def seed_initial_curated_episodes(self) -> int:
         """
@@ -388,11 +383,104 @@ class PodcastService:
         logger.info(f"🎉 成功寫入 {saved} 筆種子 Podcast 情報單集")
         return saved
 
-    def sync_all(self) -> int:
+    def fetch_rss_episodes(self, rss_url: str, channel_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        從真實 Podcast RSS XML 串流解析最新單集並萃取實體與股票標籤
+        """
+        if not rss_url:
+            return []
+
+        episodes = []
+        try:
+            req = urllib.request.Request(
+                rss_url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; StockUnderdogRadar/1.0; +https://stock.example.com)"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                xml_data = response.read()
+
+            root = ET.fromstring(xml_data)
+            channel = root.find("channel")
+            if channel is None:
+                return []
+
+            items = channel.findall("item")[:limit]
+            for item in items:
+                title_elem = item.find("title")
+                title = title_elem.text.strip() if title_elem is not None and title_elem.text else "未命名單集"
+
+                link_elem = item.find("link")
+                link = link_elem.text.strip() if link_elem is not None and link_elem.text else ""
+
+                desc_elem = item.find("description")
+                desc = desc_elem.text.strip() if desc_elem is not None and desc_elem.text else ""
+                clean_desc = re.sub(r'<[^>]+>', ' ', desc).strip()
+
+                pub_elem = item.find("pubDate")
+                pub_date_str = ""
+                if pub_elem is not None and pub_elem.text:
+                    try:
+                        import email.utils
+                        parsed_tuple = email.utils.parsedate_to_datetime(pub_elem.text)
+                        pub_date_str = parsed_tuple.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    except Exception:
+                        pub_date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                else:
+                    pub_date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+                audio_url = ""
+                enclosure = item.find("enclosure")
+                if enclosure is not None:
+                    audio_url = enclosure.attrib.get("url", "")
+
+                combined_text = f"{title} {clean_desc}"
+                entities, tickers = self.extract_entities_and_tickers(combined_text)
+
+                import hashlib
+                ep_hash = hashlib.md5(f"{channel_id}_{title}_{pub_date_str}".encode()).hexdigest()[:12]
+                ep_id = f"{channel_id}_{ep_hash}"
+
+                episodes.append({
+                    "id": ep_id,
+                    "channel_id": channel_id,
+                    "title": title,
+                    "published_at": pub_date_str,
+                    "audio_url": audio_url or link,
+                    "youtube_url": link if ("youtube.com" in link or "youtu.be" in link) else None,
+                    "duration_seconds": 3600,
+                    "language": "en",
+                    "host": None,
+                    "guest": None,
+                    "tldr_zh_tw": clean_desc[:250] + ("..." if len(clean_desc) > 250 else "") if clean_desc else "本集內容涵蓋前沿科技與金融宏觀趨勢討論。",
+                    "key_takeaways": [
+                        f"探討重點核心包含：{', '.join(entities[:3]) if entities else '產業脈動'}",
+                        "關聯標的即時估值與技術指標持續連動。",
+                        "詳細觀點可點擊收聽完整音訊或原創節目連結。"
+                    ],
+                    "topic_tags": entities if entities else ["科技", "財經"],
+                    "tickers": tickers,
+                    "status": "extracted"
+                })
+        except Exception as e:
+            logger.debug(f"RSS 解析失敗 ({rss_url}): {e}")
+            return []
+
+        return episodes
+
+    def sync_all(self, fetch_live_rss: bool = False) -> int:
         """執行全量頻道與情報單集同步"""
         ch_count = self.sync_seed_channels()
         ep_count = self.seed_initial_curated_episodes()
-        return ch_count + ep_count
+        rss_ep_count = 0
+        if fetch_live_rss:
+            channels = self.db.get_podcast_channels(limit=5)
+            for ch in channels:
+                rss_url = ch.get("rss_url")
+                if rss_url:
+                    fetched = self.fetch_rss_episodes(rss_url, ch.get("channel_id"), limit=3)
+                    if fetched:
+                        rss_ep_count += self.db.save_podcast_episodes_batch(fetched)
+        return ch_count + ep_count + rss_ep_count
 
 
 if __name__ == "__main__":

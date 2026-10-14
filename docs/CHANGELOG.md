@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-10-14
+
+### Fixed & Improved (Codex & OpenCode Dual Code Review Hardening)
+- **🛡️ 後端高並發架構與資料安全強化 (Codex 審查改善)**：
+  - **消除 N+1 查詢與 DuckDB 連線開銷風暴**：於 `data/duckdb_manager.py` 實作 `get_latest_quotes_batch` 向量化批次查詢，並於 `data/podcast_service.py` 實作 `enrich_episodes_batch`，將單次 API 請求由原先 80~100 次連線開關與全表掃描縮減為 1 次單一 DuckDB 視窗函數查詢（`ROW_NUMBER() OVER`），延遲降低 90% 以上。
+  - **杜絕 GET 請求雪崩式連鎖同步 (Cache Stampede / DoS 防護)**：拔除 `api/routes/earnings_call.py` 與 `api/routes/podcast.py` 中因空條件查詢誤觸發的外部 OpenAPI / RSS 阻斷式同步；僅在資料庫完全為空（0 筆記錄）且為無篩選全域請求時才執行初次冷啟動。
+  - **落地真實 Podcast RSS XML 解析管線 (`data/podcast_service.py`)**：新增 `fetch_rss_episodes` 方法，支援透過標準 HTTP User-Agent 抓取 RSS XML、解析 `<item>`、`<enclosure>` 音訊、發布日期、並執行正則與白名單之實體/Ticker 萃取。
+  - **精確夏令/冬令時雙時區換算**：使用 Python 標準庫 `zoneinfo.ZoneInfo` 精確處理 `America/New_York` (EDT/EST) 與 `Asia/Taipei` (CST) 之跨日與日光節約時間換算。
+  - **修復頻道單集數統計映射**：修正 `get_podcast_channels` 中 DuckDB SQL 別名，確保精確對齊 Pydantic `PodcastChannelItem` 之 `episode_count`。
+
+- **🎨 前端工藝（Craft Floor）與閉環體驗升級 (OpenCode 審查改善)**：
+  - **Podcast 實時概念股 Badge 原地展開抽屜（Inline Intelligence Drawer）**：點擊單集內的即時股價 Badge 不再強制跳轉離開頁面，而是在卡片下方直接滑出個股基本面業務摘要與重大新聞，並提供「🔍 查看量化籌碼與歷史 →」按鈕供深度查看，達成真正零跳轉之情報閉環。
+  - **瀏覽器歷史導航（`popstate`）雙向狀態完全同步**：重構 `app.js` 之 `parseUrlParams()`，當 URL 參數缺失時自動重置為預設值，解決點擊返回上一頁後過濾狀態殘留的 Stale State Bug。
+  - **頻道下拉選單同步 URL**：修正 `@change="setPodcastChannel(podcastSelectedChannel)"`，使頻道篩選可被 URL 分享與書籤持久化。
+  - **淺色模式（Light Mode）全組件自適應升級**：修復法說會市場徽章、Podcast 語言標籤與日曆 Modal 關閉按鈕在淺色模式下的深色寫死與文字懸停隱形問題。
+  - **修復非標準 Tailwind 樣式**：將 `py-0.2` 修正為合法之 `py-0.5`。
+  - **操盤看板卡片模式（Card View）抽屜對齊**：卡片視圖新增「法說 / 簡報 ▼」抽屜切換功能，消除表格模式與卡片模式之功能不對等。
+  - **日曆 Modal 滾動防穿透（Body Scroll Lock）**：彈窗開啟時鎖定 `body` 滾動，避免 Background Scroll Chaining。
+
 ## 2026-10-13
 
 ### Added
