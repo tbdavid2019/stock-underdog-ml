@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 
 from core.config import config
 from data.duckdb_manager import DuckDBManager
+from data.decision_service import DecisionService
 
 logger = logging.getLogger("stock_app.podcast")
 
@@ -140,6 +141,7 @@ class PodcastService:
 
     def __init__(self, db_manager: Optional[DuckDBManager] = None):
         self.db = db_manager or DuckDBManager()
+        self.decision_service = DecisionService()
         _ensure_cache_dir()
 
     def get_seed_channels(self) -> List[Dict[str, Any]]:
@@ -263,7 +265,7 @@ class PodcastService:
         # 2. 一次性批量查詢 DuckDB 最新預測行情
         cached_quotes = self.db.get_latest_quotes_batch(list(all_tickers)) if hasattr(self.db, "get_latest_quotes_batch") else {}
 
-        # 3. 在記憶體中進行組裝與時長格式化
+        # 3. 在記憶體中進行組裝、時長格式化與 AI 決策重要性附加
         for ep in episodes:
             # 展開 JSON 欄位
             for fld in ("key_takeaways", "topic_tags", "tickers"):
@@ -274,8 +276,57 @@ class PodcastService:
                     except Exception:
                         ep[fld] = []
 
+            # 4. 決策模型重要性與標的多空推論
+            imp_score = ep.get("importance_score")
+            ts_val = ep.get("ticker_sentiments")
+            if isinstance(ts_val, str):
+                try:
+                    ticker_sentiments = json.loads(ts_val)
+                except Exception:
+                    ticker_sentiments = {}
+            elif isinstance(ts_val, dict):
+                ticker_sentiments = ts_val
+            else:
+                ticker_sentiments = {}
+
+            if imp_score is None:
+                # 尚未評估過：調用 5-Tier 決策鏈（若遠端全掛，自動於 2ms 內執行本地確定性規則）
+                verdict = self.decision_service.evaluate_podcast_episode(ep)
+                ep["importance_score"] = verdict.importance_score
+                ep["importance_level"] = verdict.importance_level
+                ep["importance_badge"] = verdict.importance_badge
+                ep["market_catalyst"] = verdict.market_catalyst
+                ep["decision_slot"] = verdict.source_slot
+                ticker_sentiments = verdict.ticker_sentiments
+                ep["ticker_sentiments"] = ticker_sentiments
+            else:
+                score_num = float(imp_score)
+                ep["importance_score"] = score_num
+                dec_slot = ep.get("decision_slot") or "clef_primary"
+                slot_suffix = "(本地規則)" if dec_slot == "local_rules" else ""
+                if score_num >= 4.2:
+                    ep["importance_level"] = "heavyweight"
+                    ep["importance_badge"] = f"⭐ 5星重磅{slot_suffix}"
+                elif score_num >= 3.4:
+                    ep["importance_level"] = "important"
+                    ep["importance_badge"] = f"⚡ 4星重要{slot_suffix}"
+                else:
+                    ep["importance_level"] = "watch"
+                    ep["importance_badge"] = f"📰 3星關注{slot_suffix}"
+                ep["ticker_sentiments"] = ticker_sentiments
+
+            # 5. 股票行情 Badge 結合決策多空立場
             tickers_list = ep.get("tickers") or []
-            badges = [self.get_ticker_quote_badge(t, cached_quotes) for t in tickers_list if t]
+            badges = []
+            for t in tickers_list:
+                if not t:
+                    continue
+                b = self.get_ticker_quote_badge(t, cached_quotes)
+                sent = ticker_sentiments.get(str(t).upper(), {}) or ticker_sentiments.get(str(t), {})
+                b["stance"] = sent.get("stance", "neutral")
+                b["stance_label"] = sent.get("label", "↔ 中立")
+                b["stance_confidence"] = sent.get("confidence", 0.5)
+                badges.append(b)
             ep["ticker_prices"] = badges
 
             # 格式化時長
@@ -283,6 +334,76 @@ class PodcastService:
             ep["duration_formatted"] = format_duration(dur_sec)
 
         return episodes
+
+    def evaluate_episode_intelligence(self, episode_id: str, force: bool = False) -> Dict[str, Any]:
+        """
+        針對特定單集強制或即時執行 5-Tier 決策評估（Clef/JEV/OpenAI/LocalRules），
+        並將結果持久化至 DuckDB。
+        """
+        target = None
+        try:
+            with self.db._get_connection() as con:
+                df = con.execute("SELECT * FROM podcast_episodes WHERE id = ?", [str(episode_id)]).df()
+                if not df.empty:
+                    target = df.iloc[0].to_dict()
+        except Exception as e:
+            logger.error(f"❌ 查詢單集失敗 ({episode_id}): {e}")
+            return {"success": False, "error": str(e)}
+
+        if not target:
+            return {"success": False, "error": f"Episode {episode_id} not found"}
+
+        # 展開欄位
+        for fld in ("key_takeaways", "topic_tags", "tickers"):
+            val = target.get(fld)
+            if isinstance(val, str):
+                try:
+                    target[fld] = json.loads(val)
+                except Exception:
+                    target[fld] = []
+
+        verdict = self.decision_service.evaluate_podcast_episode(target)
+        self.db.update_podcast_episode_decision(
+            episode_id=episode_id,
+            importance_score=verdict.importance_score,
+            importance_level=verdict.importance_level,
+            ticker_sentiments=verdict.ticker_sentiments,
+            decision_slot=verdict.source_slot
+        )
+
+        return {
+            "success": True,
+            "episode_id": episode_id,
+            "verdict": verdict.to_dict()
+        }
+
+    def evaluate_episodes_batch(self, limit: int = 20) -> Dict[str, Any]:
+        """批量評估尚未進行決策分析的單集"""
+        evaluated_count = 0
+        try:
+            with self.db._get_connection() as con:
+                df = con.execute("""
+                    SELECT * FROM podcast_episodes
+                    WHERE importance_score IS NULL
+                    ORDER BY published_at DESC
+                    LIMIT ?;
+                """, [limit]).df()
+                records = df.to_dict(orient="records") if not df.empty else []
+        except Exception as e:
+            logger.error(f"❌ 查詢未評估單集失敗: {e}")
+            return {"success": False, "error": str(e)}
+
+        for r in records:
+            ep_id = str(r["id"])
+            res = self.evaluate_episode_intelligence(ep_id, force=True)
+            if res.get("success"):
+                evaluated_count += 1
+
+        return {
+            "success": True,
+            "evaluated_count": evaluated_count,
+            "total_requested": len(records)
+        }
 
     def enrich_episode_quotes(self, episode: Dict[str, Any]) -> Dict[str, Any]:
         """單集行情增強（相容舊介面）"""

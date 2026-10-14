@@ -97,9 +97,9 @@ class LLMConfig:
 
 
 class ClefConfig:
-    """3-Tier Fallback Clef-Flash System One Typed Decision API settings"""
+    """5-Tier Resilient Clef/JEV/OpenAI/LocalRules System One Decision API settings"""
     ENABLE_CLEF_DECISION: bool = os.getenv("ENABLE_CLEF_DECISION", "true").lower() in ("true", "1", "yes")
-    TIMEOUT: int = int(os.getenv("CLEF_TIMEOUT_SECONDS", "6"))
+    TIMEOUT: int = int(os.getenv("CLEF_TIMEOUT_SECONDS", "4"))
     MAX_CANDIDATES: int = int(os.getenv("CLEF_MAX_CANDIDATES", "15"))
 
     PRIMARY_NAME: str = os.getenv("CLEF_PRIMARY_NAME", "Clef-Create360")
@@ -108,8 +108,15 @@ class ClefConfig:
     FALLBACK1_NAME: str = os.getenv("CLEF_FALLBACK1_NAME", "Clef-Aiurl")
     FALLBACK1_URL: str = os.getenv("CLEF_FALLBACK1_URL", "https://clef.aiurl.tw/v1/systemone")
 
-    FALLBACK2_NAME: str = os.getenv("CLEF_FALLBACK2_NAME", "Clef-Jev")
-    FALLBACK2_URL: str = os.getenv("CLEF_FALLBACK2_URL", os.getenv("JEV_SYSTEMONE_URL", "https://jev.create360.ai/v1/systemone"))
+    FALLBACK2_NAME: str = os.getenv("CLEF_FALLBACK2_NAME", "Jev-SystemOne")
+    FALLBACK2_URL: str = os.getenv("CLEF_FALLBACK2_URL", os.getenv("JEV_SYSTEMONE_URL", "https://api.typesafe.ai/v1/systemone"))
+
+    FALLBACK3_NAME: str = os.getenv("CLEF_FALLBACK3_NAME", "OpenAI-Decision")
+    FALLBACK3_URL: str = os.getenv("CLEF_FALLBACK3_URL", "https://api.openai.com/v1/chat/completions")
+    FALLBACK3_MODEL: str = os.getenv("CLEF_FALLBACK3_MODEL", "gpt-4o-mini")
+    FALLBACK3_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+
+    FALLBACK4_NAME: str = os.getenv("CLEF_FALLBACK4_NAME", "Local-Rules")
 
 
 class SectorConfig:

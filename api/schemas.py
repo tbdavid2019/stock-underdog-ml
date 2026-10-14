@@ -148,6 +148,9 @@ class PodcastTickerPrice(BaseModel):
     price: Optional[float] = None
     change_pct: Optional[float] = None
     direction: str = "flat"  # up / down / flat
+    stance: Optional[str] = "neutral"
+    stance_label: Optional[str] = "↔ 中立"
+    stance_confidence: Optional[float] = 0.5
     source: Optional[str] = None
     as_of: Optional[str] = None
 
@@ -187,6 +190,12 @@ class PodcastEpisodeItem(BaseModel):
     topic_tags: List[str] = Field(default_factory=list)
     tickers: List[str] = Field(default_factory=list)
     ticker_prices: List[PodcastTickerPrice] = Field(default_factory=list)
+    importance_score: Optional[float] = None
+    importance_level: Optional[str] = None
+    importance_badge: Optional[str] = None
+    market_catalyst: Optional[str] = None
+    decision_slot: Optional[str] = None
+    ticker_sentiments: Optional[Dict[str, Any]] = None
     status: str = "extracted"
 
 

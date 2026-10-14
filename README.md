@@ -117,15 +117,21 @@ graph TD
   python scripts/export_supabase_to_duckdb.py
   ```
 
-### 10. ⚡ Clef-Flash System One 決策大模型 (Typed Probabilistic Decision Engine)
-* 整合 Cloudflare Clef-Flash 決策模型，實施 **3 級高可用 Fallback 架構**（主力 `clef.create360.ai` ➔ 備援 `clef.aiurl.tw` ➔ 備援 `jev` ➔ 本地規則降級）。
-* 採用 **System 1 直覺式快思考架構**，針對 Stage 3 通過初篩的 10~20 檔焦點候選標的進行強類型推論，輸出直覺交易動作機率分佈（`strong_buy`, `buy`, `hold_watch`, `avoid`）、確信度評分（1~5 分）與勝率預期。
-* 與生成式 `AINarrativeEngine`（System 2 慢思考文字研報）互補，形成「Clef 算機率決策 ➔ LLM 解讀研報」的雙 AI 體系。
+### 10. ⚡ 5 級階梯式韌性決策大模型 (5-Tier Resilient Decision Engine)
+* 整合 Cloudflare Clef-Flash、JEV 與 OpenAI 決策模型，實施 **5 級高可用 Fallback 架構**：
+  - **Tier 1 (主力)**: `https://clef.create360.ai/v1/systemone` (Clef-Flash System One 快思考推理)
+  - **Tier 2 (備援 1)**: `https://clef.aiurl.tw/v1/systemone` (llama.cpp GGUF 節點)
+  - **Tier 3 (備援 2)**: `https://api.typesafe.ai/v1/systemone` (JEV 原生端點)
+  - **Tier 4 (備援 3)**: OpenAI 結構化決策模型 (JSON Schema 降級)
+  - **Tier 5 (兜底保障)**: **100% 確定性本地啟發式規則引擎 (Local Rule Heuristics Fallback)**。
+* **🚨 永不崩潰鐵律保證**：若所有遠端決策模型（Tier 1~4）全數遭遇斷線、503 服務不可用或逾時，系統自動於 2ms 內無縫降級至本地確定性啟發式規則，確保決策推論 100% 正常可用，API 恆常返回 HTTP 200。
+* 採用 **System 1 直覺式快思考架構**，針對焦點候選標的輸出直覺交易動作機率分佈（`strong_buy`, `buy`, `hold_watch`, `avoid`）、確信度評分（1~5 分）與勝率預期。
 * 提供 REST 端點 `POST /api/v1/decision/evaluate`、`GET /api/v1/decision/health` 與原生 FastMCP / WebMCP 工具 `get_clef_stock_verdict`。
 
 ### 11. 🎙️ Podcast 財經與科技情報雷達 (AI Financial & Tech Podcast Radar)
 * 匯聚國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**），即時收錄全球深度對話。
 * **AI 結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
+* **⚡ AI 催化重要性評級與標的多空推論**：透過 5 級決策鏈推論市場催化強度（⭐ 重磅 / ⚡ 重要 / 📰 關注）以及上市公司股票的多空姿態（`↑ 看多`、`↓ 看空`、`↔ 持平`），並提供專屬快篩開關。
 * **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
 * **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。
 

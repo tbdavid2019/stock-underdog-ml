@@ -131,3 +131,30 @@ def trigger_podcast_sync(background_tasks: BackgroundTasks):
         message="Podcast 頻道與單集同步任務已於背景排隊執行",
         timestamp=datetime.datetime.now().isoformat()
     )
+
+
+@router.post("/episodes/{episode_id}/evaluate", summary="對特定 Podcast 單集執行 5-Tier 決策推論評估")
+def evaluate_episode(
+    episode_id: str = Path(..., description="單集 ID"),
+    force: bool = Query(False, description="是否強制重新推論")
+):
+    """
+    針對單集調用 5 級決策鏈（Clef/JEV/OpenAI/LocalRules），
+    計算市場重要性評級與提及標的多空立場。即使所有遠端模型故障，
+    也能於 2ms 內無縫降級至本地規則返回結果。
+    """
+    res = podcast_service.evaluate_episode_intelligence(episode_id, force=force)
+    if not res.get("success"):
+        raise HTTPException(status_code=404, detail=res.get("error", "單集評估失敗"))
+    return res
+
+
+@router.post("/batch-evaluate", summary="批量執行尚未評估之單集決策推論")
+def batch_evaluate_episodes(
+    limit: int = Query(20, ge=1, le=100, description="批次處理上限")
+):
+    """
+    批次掃描尚未擁有重要性評級的單集，執行 5-Tier 決策評估並寫入快取。
+    """
+    return podcast_service.evaluate_episodes_batch(limit=limit)
+

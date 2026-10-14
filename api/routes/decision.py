@@ -13,10 +13,12 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from pydantic import BaseModel, Field
 
 from data.clef_client import ClefDecisionClient
+from data.decision_service import DecisionService
 from data.duckdb_manager import DuckDBManager
 
 router = APIRouter(prefix="/decision", tags=["Decision Model (Clef System One)"])
 clef_client = ClefDecisionClient()
+decision_service = DecisionService(clef_client)
 db = DuckDBManager()
 
 # In-memory sliding window rate limiter per client IP
@@ -85,18 +87,13 @@ class EvaluateDecisionRequest(BaseModel):
     macro_regime: Optional[str] = Field("bull", description="Current market macro regime ('bull', 'pullback', 'defense', 'panic')")
 
 
-@router.get("/health", summary="Check Clef Decision Model endpoints health")
+@router.get("/health", summary="Check 5-Tier Decision Model endpoints health")
 def get_decision_health() -> Dict[str, Any]:
     """
-    Check availability of Clef-Flash primary (create360), fallback 1 (aiurl.tw), and fallback 2 (jev).
+    Check availability across all 5 tiers:
+    Clef Primary, Clef Aiurl, JEV, OpenAI, and Local-Rules.
     """
-    health_status = clef_client.check_health()
-    all_healthy = any(s.get("status") == "healthy" for s in health_status.values())
-    return {
-        "success": True,
-        "any_available": all_healthy,
-        "endpoints": health_status
-    }
+    return decision_service.check_health()
 
 
 @router.post("/evaluate", summary="Evaluate stock or custom state using Clef System One", dependencies=[Depends(verify_decision_access)])
@@ -131,7 +128,7 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
         candidate_data["ticker"] = ticker
 
     if req.state is not None:
-        verdict = clef_client.evaluate_stock(
+        verdict = decision_service.evaluate_stock(
             raw_state=req.state,
             macro_regime=req.macro_regime
         )
@@ -141,7 +138,7 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
             "verdict": verdict.to_dict()
         }
 
-    verdict = clef_client.evaluate_stock(
+    verdict = decision_service.evaluate_stock(
         candidate=candidate_data,
         macro_regime=req.macro_regime
     )

@@ -4,6 +4,28 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.8)
+
+### Added & Enhanced (5-Tier Resilient Decision Engine & Podcast AI Importance/Sentiment Integration)
+- **⚡ 5 級階梯式高可用決策鏈 (5-Tier Resilient Decision Engine)**：
+  - **核心架構**：整合 Clef-Flash System One、JEV 與 OpenAI 決策模型，實作 5 級高可用降級鏈路：
+    - **Tier 1 (主力)**: `https://clef.create360.ai/v1/systemone` (Clef-Flash System One 快思考推理)
+    - **Tier 2 (備援 1)**: `https://clef.aiurl.tw/v1/systemone` (llama.cpp GGUF 節點)
+    - **Tier 3 (備援 2)**: `https://api.typesafe.ai/v1/systemone` (JEV 原生端點)
+    - **Tier 4 (備援 3)**: OpenAI 結構化決策模型 (JSON Schema 降級)
+    - **Tier 5 (兜底保障)**: **100% 確定性本地啟發式規則引擎 (Local Rule Heuristics Fallback)**。
+  - **🚨 永不崩潰鐵律保證**：若所有遠端決策模型（Tier 1~4）全數遭遇斷線、503 服務不可用或逾時，系統自動於 2ms 內無縫降級至本地確定性啟發式規則，確保決策推論 100% 正常可用，API 恆常返回 HTTP 200。
+- **🎙️ Podcast 單集深度智慧決策增強 (AI Importance & Ticker Sentiments)**：
+  - **市場催化重要性評級 (`importance_score`)**：依據訪談深度、頻道權威、來賓知名度與關鍵催化劑，評估 1.0~5.0 分，並於單集情報卡右上角生成高質感膠囊徽章（`⭐ 5星重磅`、`⚡ 4星重要`、`📰 3星關注`）。
+  - **實體標的多空姿態動態指示 (`ticker_sentiments`)**：針對單集提及之上市公司代號，由決策模型推論其看多（`↑ 看多`）、看空（`↓ 看空`）或持平（`↔ 中立`）之立場與確信度，並在代號 Badge 上直觀呈現。
+  - **頂部工具列新增重要性快篩開關**：支援一鍵過濾出「⭐ 重磅」或「⚡ 重要」單集，大幅提升高信噪比資訊提煉效率。
+- **💾 DuckDB 單集表無損遷移與 API 端點擴充**：
+  - `podcast_episodes` 表結構自動遷移新增 `importance_score`、`importance_level`、`ticker_sentiments` 與 `decision_slot` 欄位。
+  - 新增 `POST /api/v1/podcast/episodes/{episode_id}/evaluate`（單集重新推論）與 `POST /api/v1/podcast/batch-evaluate`（批量推論）。
+  - 升級 `GET /api/v1/decision/health`，即時反饋全部 5 個 Tier 的存活與備援狀態。
+
+---
+
 ## 2026-10-14 (v2.4.7)
 
 ### Fixed & Enhanced (Responsive Table-to-Card RWD & Podcast 100-Channel/100-Episode Full Sync)

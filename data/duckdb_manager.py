@@ -235,13 +235,26 @@ class DuckDBManager:
                     topic_tags VARCHAR,
                     tickers VARCHAR,
                     ticker_prices_json VARCHAR,
+                    importance_score DOUBLE,
+                    importance_level VARCHAR,
+                    ticker_sentiments VARCHAR,
+                    decision_slot VARCHAR,
                     status VARCHAR DEFAULT 'extracted',
                     created_at VARCHAR,
                     updated_at VARCHAR
                 );
                 CREATE INDEX IF NOT EXISTS idx_podcast_episodes_pub ON podcast_episodes (published_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_podcast_episodes_channel ON podcast_episodes (channel_id);
-                """)
+                """);
+
+                # Schema migration for existing installations
+                try:
+                    con.execute("ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS importance_score DOUBLE;")
+                    con.execute("ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS importance_level VARCHAR;")
+                    con.execute("ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS ticker_sentiments VARCHAR;")
+                    con.execute("ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS decision_slot VARCHAR;")
+                except Exception as alter_e:
+                    logger.debug(f"DuckDB schema migration note: {alter_e}")
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
@@ -1702,13 +1715,23 @@ class DuckDBManager:
                     else:
                         tk_str = str(tk) if tk else "[]"
 
+                    imp_score = float(r["importance_score"]) if r.get("importance_score") is not None else None
+                    imp_level = r.get("importance_level")
+                    ts = r.get("ticker_sentiments")
+                    if isinstance(ts, dict):
+                        ts_str = json.dumps(ts, ensure_ascii=False)
+                    else:
+                        ts_str = str(ts) if ts else None
+                    dec_slot = r.get("decision_slot")
+
                     con.execute("""
                         INSERT INTO podcast_episodes (
                             id, channel_id, title, published_at, audio_url,
                             youtube_url, duration_seconds, language, host, guest,
                             tldr_zh_tw, key_takeaways, topic_tags, tickers,
-                            ticker_prices_json, status, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ticker_prices_json, importance_score, importance_level,
+                            ticker_sentiments, decision_slot, status, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT (id) DO UPDATE SET
                             title = EXCLUDED.title,
                             published_at = EXCLUDED.published_at,
@@ -1723,6 +1746,10 @@ class DuckDBManager:
                             topic_tags = EXCLUDED.topic_tags,
                             tickers = EXCLUDED.tickers,
                             ticker_prices_json = EXCLUDED.ticker_prices_json,
+                            importance_score = COALESCE(EXCLUDED.importance_score, podcast_episodes.importance_score),
+                            importance_level = COALESCE(EXCLUDED.importance_level, podcast_episodes.importance_level),
+                            ticker_sentiments = COALESCE(EXCLUDED.ticker_sentiments, podcast_episodes.ticker_sentiments),
+                            decision_slot = COALESCE(EXCLUDED.decision_slot, podcast_episodes.decision_slot),
                             status = EXCLUDED.status,
                             updated_at = EXCLUDED.updated_at;
                     """, [
@@ -1741,6 +1768,10 @@ class DuckDBManager:
                         tt_str,
                         tk_str,
                         r.get("ticker_prices_json") or "{}",
+                        imp_score,
+                        imp_level,
+                        ts_str,
+                        dec_slot,
                         r.get("status") or "extracted",
                         r.get("created_at") or now_str,
                         now_str
@@ -1750,6 +1781,35 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 批次寫入 Podcast 單集失敗: {e}")
             return 0
+
+    def update_podcast_episode_decision(
+        self,
+        episode_id: str,
+        importance_score: float,
+        importance_level: str,
+        ticker_sentiments: Dict[str, Any],
+        decision_slot: str
+    ) -> bool:
+        """更新單集之 AI 決策與多空評估結果"""
+        if not self.enabled:
+            return False
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        ts_str = json.dumps(ticker_sentiments, ensure_ascii=False) if isinstance(ticker_sentiments, dict) else str(ticker_sentiments or "{}")
+        try:
+            with self._get_connection() as con:
+                con.execute("""
+                    UPDATE podcast_episodes
+                    SET importance_score = ?,
+                        importance_level = ?,
+                        ticker_sentiments = ?,
+                        decision_slot = ?,
+                        updated_at = ?
+                    WHERE id = ?;
+                """, [float(importance_score), str(importance_level), ts_str, str(decision_slot), now_str, str(episode_id)])
+            return True
+        except Exception as e:
+            logger.error(f"❌ 更新 Podcast 單集決策失敗 ({episode_id}): {e}")
+            return False
 
     def get_podcast_episodes(
         self,

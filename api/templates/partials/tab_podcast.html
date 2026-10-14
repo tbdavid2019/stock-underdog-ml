@@ -193,8 +193,19 @@
                 </button>
             </div>
 
-            <!-- Language Switcher & Live Keyword Search -->
-            <div class="flex items-center space-x-2.5 shrink-0">
+            <!-- Importance Pills, Language Switcher & Live Keyword Search -->
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <!-- AI Importance Filter Pills -->
+                <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
+                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                    <button v-for="imp in [{ id: 'ALL', label: '全部' }, { id: 'heavyweight', label: '⭐ 重磅' }, { id: 'important', label: '⚡ 重要' }]" :key="imp.id"
+                            @click="setPodcastImportance(imp.id)"
+                            class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
+                            :class="podcastSelectedImportance === imp.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                        {{ imp.label }}
+                    </button>
+                </div>
+
                 <!-- Language Pills -->
                 <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
@@ -226,7 +237,7 @@
     <div v-else-if="podcastEpisodes && podcastEpisodes.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
 
         <article v-for="ep in podcastEpisodes" :key="ep.id"
-                 v-show="!podcastSearchQuery || (ep.title + (ep.guest || '') + (ep.tldr_zh_tw || '')).toLowerCase().includes(podcastSearchQuery.toLowerCase())"
+                 v-show="(!podcastSearchQuery || (ep.title + (ep.guest || '') + (ep.tldr_zh_tw || '')).toLowerCase().includes(podcastSearchQuery.toLowerCase())) && (podcastSelectedImportance === 'ALL' || (podcastSelectedImportance === 'heavyweight' && ep.importance_level === 'heavyweight') || (podcastSelectedImportance === 'important' && (ep.importance_level === 'heavyweight' || ep.importance_level === 'important')))"
                  class="p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 hover:border-amber-500/50 shadow-sm"
                  :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
 
@@ -248,8 +259,23 @@
                     </div>
                 </div>
 
-                <!-- Right Badges: Duration & Language -->
-                <div class="flex items-center space-x-2 shrink-0">
+                <!-- Right Badges: AI Importance, Duration & Language -->
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0 justify-end">
+                    <!-- AI Importance Badge (Clef / JEV System One / Local Rules) -->
+                    <span v-if="ep.importance_score"
+                          :title="'AI 市場催化重要性評級: ' + ep.importance_score + ' 分 (來源: ' + (ep.decision_slot || 'local_rules') + ')'"
+                          class="px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 border"
+                          :class="ep.importance_level === 'heavyweight' 
+                              ? (isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20' : 'bg-amber-100 text-amber-900 border-amber-300 font-black') 
+                              : (ep.importance_level === 'important' 
+                                  ? (isDark ? 'bg-indigo-950/60 text-indigo-300 border-indigo-700/60' : 'bg-indigo-50 text-indigo-800 border-indigo-200') 
+                                  : (isDark ? 'bg-[#16181D] text-slate-400 border-[#262626]' : 'bg-[#F4F4F6] text-slate-600 border-[#E5E7EB]'))">
+                        <span class="material-symbols-outlined text-[13px] leading-none">
+                            {{ ep.importance_level === 'heavyweight' ? 'workspace_premium' : (ep.importance_level === 'important' ? 'bolt' : 'article') }}
+                        </span>
+                        <span>{{ ep.importance_badge || (ep.importance_score + ' 分') }}</span>
+                    </span>
+
                     <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                         <span class="material-symbols-outlined text-[13px] leading-none align-text-bottom">schedule</span>
@@ -345,6 +371,18 @@
                             :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md ring-2 ring-amber-400/50' : (isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500 text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400 text-slate-900')">
                         <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ quote.ticker }}</span>
                         <span class="text-xs sm:text-sm" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/90 font-bold' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
+                        
+                        <!-- AI Sentiment Stance Badge -->
+                        <span v-if="quote.stance" 
+                              class="px-1.5 py-0.5 rounded text-[11px] font-bold"
+                              :class="quote.stance === 'bullish' 
+                                  ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800 border border-emerald-200') 
+                                  : (quote.stance === 'bearish' 
+                                      ? (isDark ? 'bg-rose-950/70 text-rose-400 border border-rose-800/50' : 'bg-rose-100 text-rose-800 border border-rose-200') 
+                                      : (isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'))">
+                            {{ quote.stance_label || '↔ 中立' }}
+                        </span>
+
                         <span v-if="quote.price" class="num-font font-bold text-xs sm:text-sm"
                               :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : (quote.direction === 'up' ? 'text-emerald-400' : (quote.direction === 'down' ? 'text-rose-500' : 'text-slate-400'))">
                             <template v-if="quote.change_pct !== null && quote.change_pct !== undefined">

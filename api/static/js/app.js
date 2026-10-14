@@ -104,6 +104,7 @@ export const app = createApp({
             podcastSelectedTopic: '',
             podcastSelectedChannel: 'ALL',
             podcastSelectedLang: 'ALL',
+            podcastSelectedImportance: 'ALL', // 'ALL' | 'heavyweight' | 'important'
             podcastSearchQuery: '',
             podcastExpandedEpisodeId: null,
             podcastExpandedTicker: null,
@@ -561,6 +562,9 @@ export const app = createApp({
         },
         togglePodcastSubView(view) {
             this.podcastSubView = view;
+        },
+        setPodcastImportance(level) {
+            this.podcastSelectedImportance = level;
         },
         formatFollowers(count) {
             if (count === null || count === undefined) return '資料不足';
