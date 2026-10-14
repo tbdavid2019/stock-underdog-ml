@@ -7,8 +7,9 @@ export const ApiClient = {
     /**
      * Fetch latest market macro risk regime & exposure cap
      */
-    async getMacroLatest() {
-        const res = await fetch('/api/v1/macro/latest');
+    async getMacroLatest(forceRefresh = false) {
+        const url = forceRefresh ? '/api/v1/macro/latest?force_refresh=true' : '/api/v1/macro/latest';
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return data.success ? (data.data || data) : data;

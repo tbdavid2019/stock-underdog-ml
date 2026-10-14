@@ -5,8 +5,9 @@ data/macro.py - 美股宏觀環境與風控分析器 (Macro Regime Analyzer)
 """
 
 import logging
+import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import pandas as pd
 import yfinance as yf
 
@@ -93,13 +94,29 @@ class MacroRegimeAnalyzer:
     US_MACRO_TICKERS = ["SPY", "^VIX", "^SOX"]
     TW_MACRO_TICKERS = ["^TWII", "^SOX", "^VIX"]
 
+    _cache: Dict[str, Tuple[float, Any]] = {}
+    CACHE_TTL_SECONDS: float = 300.0
+
     @classmethod
-    def evaluate_market(cls, index_name: str, period: str = "6mo") -> MacroState:
-        """根據目標指數名稱自動路由台股或美股大盤風控評估"""
+    def evaluate_market(cls, index_name: str, period: str = "6mo", force_refresh: bool = False) -> MacroState:
+        """根據目標指數名稱自動路由台股或美股大盤風控評估，支援 5 分鐘記憶體快取加速"""
         norm_name = index_name.strip()
-        if norm_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or norm_name.startswith("TW") or norm_name.endswith(".TW"):
-            return cls.evaluate_tw_market(period=period)
-        return cls.evaluate_us_market(period=period)
+        is_tw = norm_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or norm_name.startswith("TW") or norm_name.endswith(".TW")
+        cache_key = f"{'TW' if is_tw else 'US'}_{period}"
+        now = time.time()
+
+        if not force_refresh and cache_key in cls._cache:
+            ts, cached_state = cls._cache[cache_key]
+            if now - ts < cls.CACHE_TTL_SECONDS and cached_state.data_available:
+                return cached_state
+
+        state = cls.evaluate_tw_market(period=period) if is_tw else cls.evaluate_us_market(period=period)
+        if state.data_available:
+            cls._cache[cache_key] = (now, state)
+        elif cache_key in cls._cache:
+            # 若上游抓取失敗但過去有快取，優雅降級使用舊快取
+            return cls._cache[cache_key][1]
+        return state
 
     @classmethod
     def evaluate_tw_market(cls, period: str = "6mo") -> MacroState:

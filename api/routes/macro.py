@@ -13,14 +13,14 @@ router = APIRouter(prefix="/macro", tags=["Macro Regime & Risk Gate"])
 
 
 @router.get("/latest", response_model=MacroRegimeResponse, summary="取得當前大盤/宏觀風控狀態與建議曝險")
-def get_latest_macro(market: str = "us", index_name: Optional[str] = None):
+def get_latest_macro(market: str = "us", index_name: Optional[str] = None, force_refresh: bool = False):
     """
     即時評估台股或美股大盤核心指標，回傳當前市場情境與建議倉位比例。
     支援 market=tw (加權指數/費半連動) 或 market=us (S&P500/VIX/費半)。
     同時整合 Investing.com 之聯準會降息機率與重磅催化劑事件。
     """
     target = index_name or market
-    state = MacroRegimeAnalyzer.evaluate_market(target)
+    state = MacroRegimeAnalyzer.evaluate_market(target, force_refresh=force_refresh)
     
     return MacroRegimeResponse(
         market=state.market,
