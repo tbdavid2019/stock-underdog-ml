@@ -46,7 +46,7 @@
 
     <div v-else-if="historyRecords.length > 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-5 rounded-2xl border overflow-x-auto space-y-3">
+         class="p-5 rounded-2xl border space-y-3">
 
         <div class="flex items-center justify-between">
             <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
@@ -54,6 +54,7 @@
             </h3>
         </div>
 
+        <div class="overflow-x-auto">
         <table class="w-full text-left text-xs sm:text-sm border-collapse">
             <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                 <tr>
@@ -90,6 +91,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
 
     </div>
 

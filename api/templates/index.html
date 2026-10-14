@@ -187,11 +187,17 @@
             font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        /* Refined Scrollbars: Slim vertical thumb, hidden horizontal bar on interactive controls */
+        ::-webkit-scrollbar { width: 6px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.4); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
+        .dark ::-webkit-scrollbar-thumb { background: #262626; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+        /* No-Scrollbar utility: completely hides scrollbar while keeping touch/scroll functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
 
         :focus-visible {
             outline: 2px solid #F59E0B;

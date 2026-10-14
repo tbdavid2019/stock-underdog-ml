@@ -468,22 +468,22 @@
 
     <!-- 2. Strategy Filter Bar & View Mode Selector -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
 
-        <!-- Strategy Buttons -->
-        <div class="flex items-center space-x-2 overflow-x-auto pb-1.5 lg:pb-0">
+        <!-- Strategy Buttons: Responsive Flex-Wrap (Zero Horizontal Scrollbar) -->
+        <div class="flex flex-wrap items-center gap-2">
             <button v-for="strat in strategyOptions" :key="strat.id"
                     @click="setStrategy(strat.id)"
                     :aria-pressed="selectedStrategy === strat.id"
                     :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
-                    class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 border">
-                <span class="material-symbols-outlined text-[18px]">{{ strat.icon }}</span>
+                    class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 border">
+                <span class="material-symbols-outlined text-[17px] sm:text-[18px]">{{ strat.icon }}</span>
                 <span>{{ strat.label }}</span>
             </button>
         </div>
 
         <!-- Right: View Mode, Market Selector & Refresh -->
-        <div class="flex items-center space-x-2.5 self-end lg:self-auto shrink-0">
+        <div class="flex items-center space-x-2.5 self-end xl:self-auto shrink-0 pt-1 xl:pt-0">
             <!-- View Mode Switcher -->
             <div class="inline-flex rounded-xl border p-0.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">

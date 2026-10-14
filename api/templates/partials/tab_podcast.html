@@ -140,11 +140,11 @@
                 </span>
             </div>
 
-            <!-- Entity Pill Rail with Smooth Horizontal Scroll -->
-            <div class="flex items-center space-x-2.5 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
+            <!-- Entity Topic Tag Cloud (Responsive Flex-Wrap, Zero Scrollbars) -->
+            <div class="flex flex-wrap items-center gap-2 pt-0.5">
                 <!-- "All" Pill -->
                 <button @click="setPodcastTopic('')"
-                        class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
+                        class="px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
                         :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                     <span class="material-symbols-outlined text-[16px] leading-none">auto_awesome</span>
                     <span>全部話題</span>
@@ -157,7 +157,7 @@
                 <!-- Dynamic Aggregated Topic Pills -->
                 <button v-for="t in podcastTopics" :key="t.topic"
                         @click="setPodcastTopic(t.topic)"
-                        class="px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
+                        class="px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
                         :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                     <span>{{ t.topic }}</span>
                     <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
@@ -172,8 +172,8 @@
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
 
-            <!-- Channel Filter Selector -->
-            <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+            <!-- Channel Filter Selector (Flex-Wrap, No Overflow) -->
+            <div class="flex flex-wrap items-center gap-2">
                 <span class="font-bold shrink-0 text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">頻道篩選:</span>
                 <select v-model="podcastSelectedChannel" @change="setPodcastChannel(podcastSelectedChannel)"
                         class="px-3 py-2 rounded-xl border font-medium text-sm outline-none transition-colors max-w-[280px] sm:max-w-xs"

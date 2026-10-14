@@ -23,7 +23,18 @@
 - **⚡ 後端自動同步與查詢上限擴展**：
   - `api/routes/podcast.py` `/channels` 上限由 100 擴大至預設 200，並新增 `refresh=True` 支援。
   - `api/static/js/api-client.js` `getPodcastChannels` 預設查詢上限調整為 200，保證全量 100 頻道一次性完整渲染。
-  - 自動冷啟動同步機制：當單集數少於 50 筆或頻道數少於種子清單時，自動於背景執行無縫增量同步。
+### Fixed & Redesigned (Zero Horizontal Scrollbars & Responsive Flow across Desktop and Mobile)
+- **🚫 徹底終結桌面與手機端橫向捲軸（Scrollbar 橫軸）視覺噪音與裁切問題**：
+  - **診斷痛點**：舊版在策略篩選列、頂部手機導覽列及 Podcast 話題標籤處使用 `overflow-x: auto`，搭配全局 `::-webkit-scrollbar` 設定，在桌機螢幕窄化或手機直向瀏覽時，強行浮現一條 6px 粗厚的黑灰色捲軸軌道，且多數選項被推出可視畫面之外，嚴重破壞彭博終端之工藝質感。
+  - **操盤看板策略篩選升級為「自適應換行排版（Responsive Flex-Wrap）」**：
+    - 移除 `overflow-x-auto`，全面改採 `flex flex-wrap items-center gap-2`。
+    - 在寬螢幕上維持單列俐落排版；在筆電或小螢幕上自然換行排列，全部 7 大策略（三重共振、玄鐵均線、TimesFM、LSTM 看漲/看跌、全量批次）100% 完整可見，零橫向捲軸，無須笨拙側滑。
+  - **手機版導覽列重構為「全寬等分四宮格（Full-Width Grid Segmented Control）」**：
+    - 將 `header.html` 溢出的藥丸橫軸改為 `grid grid-cols-4 gap-1 w-full`，完美適配 375px~414px 任何手機螢幕寬度，零溢出、零滾動、無捲軸。
+  - **Podcast 熱門話題升級為「AI 實體標籤雲（Entity Tag Cloud）」**：
+    - 移除 `custom-scrollbar`，改以響應式標籤雲（Tag Cloud）呈現，所有前沿實體（OpenAI, NVIDIA, Claude, TSMC, Google...）一眼盡覽。
+  - **全局捲軸純淨化與 `.no-scrollbar` 工具類**：
+    - 優化 `index.html` 捲軸樣式，水平方向預設隱藏捲軸，垂直方向改為低干擾細緻軌道，杜絕任何控件邊緣黑線。
 
 ---
 
