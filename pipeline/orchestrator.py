@@ -269,12 +269,16 @@ class PipelineOrchestrator:
         if tw_indices_present:
             logger.info("🇹🇼 [Pre-flight] 評估台股大盤環境與籌碼/國際風控門檻...")
             macro_states_map["TW"] = MacroRegimeAnalyzer.evaluate_tw_market(period=period)
-            logger.info(f"   • 台股大盤狀態: {macro_states_map['TW'].regime_name} (建議曝險: {int(macro_states_map['TW'].exposure*100)}%)\n")
+            tw_exposure = macro_states_map["TW"].exposure
+            tw_exposure_text = f"{int(tw_exposure * 100)}%" if tw_exposure is not None else "資料不足"
+            logger.info(f"   • 台股大盤狀態: {macro_states_map['TW'].regime_name} (建議曝險: {tw_exposure_text})\n")
 
         if us_indices_present:
             logger.info("🇺🇸 [Pre-flight] 評估美股宏觀環境與全球風控門檻...")
             macro_states_map["US"] = MacroRegimeAnalyzer.evaluate_us_market(period=period)
-            logger.info(f"   • 美股市場狀態: {macro_states_map['US'].regime_name} (建議曝險: {int(macro_states_map['US'].exposure*100)}%)\n")
+            us_exposure = macro_states_map["US"].exposure
+            us_exposure_text = f"{int(us_exposure * 100)}%" if us_exposure is not None else "資料不足"
+            logger.info(f"   • 美股市場狀態: {macro_states_map['US'].regime_name} (建議曝險: {us_exposure_text})\n")
 
         all_reports = {}
         for index_name, stock_list in indices.items():

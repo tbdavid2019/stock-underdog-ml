@@ -3,18 +3,35 @@ test/test_macro.py - 測試美股宏觀風控分析模組
 """
 
 import unittest
+from unittest.mock import patch
+
+import pandas as pd
 from data.macro import MacroRegimeAnalyzer, MacroState
 
 
 class TestMacroRegimeAnalyzer(unittest.TestCase):
     def test_macro_state_defaults(self):
         state = MacroState()
-        self.assertEqual(state.exposure, 1.0)
-        self.assertTrue(state.spy_above_ma60)
+        self.assertFalse(state.data_available)
+        self.assertIsNone(state.exposure)
+        self.assertIsNone(state.spy_above_ma60)
         d = state.to_dict()
         self.assertIn("regime_name", d)
         self.assertIn("exposure", d)
         self.assertIn("vix", d)
+
+    @patch("data.macro.yf.download")
+    def test_us_market_data_failure_does_not_emit_fabricated_risk_state(self, mock_download):
+        mock_download.return_value = pd.DataFrame()
+
+        state = MacroRegimeAnalyzer.evaluate_us_market(period="3mo")
+
+        self.assertFalse(state.data_available)
+        self.assertIsNone(state.exposure)
+        self.assertIsNone(state.vix)
+        self.assertIsNone(state.spy_above_ma60)
+        self.assertIsNone(state.sox_above_ma60)
+        self.assertIn("資料缺失", state.summary)
 
     def test_evaluate_us_market(self):
         state = MacroRegimeAnalyzer.evaluate_us_market(period="3mo")

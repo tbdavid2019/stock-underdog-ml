@@ -302,7 +302,7 @@ class CompositeEvaluator:
             composite_score = round(score_total / weight_total, 2) if weight_total > 0 else 0.0
 
             # Macro Exposure Multiplier Discount
-            if macro_state and macro_state.exposure < 1.0:
+            if macro_state and macro_state.exposure is not None and macro_state.exposure < 1.0:
                 composite_score = round(composite_score * macro_state.exposure, 2)
 
             # Bearish ML Penalty on composite score: prevent high ranking for negative stocks

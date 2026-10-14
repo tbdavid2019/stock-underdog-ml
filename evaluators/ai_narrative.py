@@ -139,25 +139,31 @@ class AINarrativeEngine:
         if is_tw:
             market_type = "🇹🇼 台灣股市 (TWSE/TPEX)"
             if macro_state:
-                twii_status = "站穩MA60季線" if getattr(macro_state, "twii_above_ma60", True) else "跌破MA60季線"
-                sox_status = "站穩季線" if macro_state.sox_above_ma60 else "破季線"
+                twii_flag = getattr(macro_state, "twii_above_ma60", None)
+                sox_flag = getattr(macro_state, "sox_above_ma60", None)
+                twii_status = "站穩MA60季線" if twii_flag is True else "跌破MA60季線" if twii_flag is False else "資料不足"
+                sox_status = "站穩季線" if sox_flag is True else "破季線" if sox_flag is False else "資料不足"
+                vix_text = f"{macro_state.vix:.1f}" if macro_state.vix is not None else "資料不足"
                 macro_info = (
                     f"台股大盤狀態: {macro_state.regime_name}\n"
-                    f"建議曝險比例: {int(macro_state.exposure*100)}%\n"
+                    f"建議曝險比例: {int(macro_state.exposure*100) if macro_state.exposure is not None else '資料不足'}\n"
                     f"加權指數 (^TWII): {twii_status}\n"
-                    f"國際美股連動: 費城半導體{sox_status}, 國際VIX恐慌指數 {macro_state.vix:.1f}"
+                    f"國際美股連動: 費城半導體{sox_status}, 國際VIX恐慌指數 {vix_text}"
                 )
             else:
                 macro_info = "台股大盤數據缺失"
         else:
             market_type = "🇺🇸 美國股市 (US Markets)"
             if macro_state:
-                spy_status = "站穩MA60" if macro_state.spy_above_ma60 else "跌破MA60"
-                sox_status = "站穩MA60" if macro_state.sox_above_ma60 else "破季線"
+                spy_flag = getattr(macro_state, "spy_above_ma60", None)
+                sox_flag = getattr(macro_state, "sox_above_ma60", None)
+                spy_status = "站穩MA60" if spy_flag is True else "跌破MA60" if spy_flag is False else "資料不足"
+                sox_status = "站穩MA60" if sox_flag is True else "破季線" if sox_flag is False else "資料不足"
+                vix_text = f"{macro_state.vix:.1f}" if macro_state.vix is not None else "資料不足"
                 macro_info = (
                     f"美股宏觀狀態: {macro_state.regime_name}\n"
-                    f"建議曝險比例: {int(macro_state.exposure*100)}%\n"
-                    f"VIX 恐慌指數: {macro_state.vix:.1f}\n"
+                    f"建議曝險比例: {int(macro_state.exposure*100) if macro_state.exposure is not None else '資料不足'}\n"
+                    f"VIX 恐慌指數: {vix_text}\n"
                     f"S&P 500 (SPY): {spy_status}\n"
                     f"費城半導體 (SOX): {sox_status}"
                 )
@@ -242,7 +248,11 @@ class AINarrativeEngine:
         else:
             overlap_list = []
 
-        exposure_str = f"{int(macro_state.exposure * 100)}%" if macro_state else "100%"
+        exposure_str = (
+            f"{int(macro_state.exposure * 100)}%"
+            if macro_state and macro_state.exposure is not None
+            else "資料不足"
+        )
         regime_str = macro_state.regime_name if macro_state else "正常"
 
         if overlap_list:

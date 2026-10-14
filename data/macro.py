@@ -17,22 +17,23 @@ logger = logging.getLogger("stock_app.macro")
 class MacroState:
     """宏觀市場狀態數據結構"""
     market: str = "US"  # "TW" or "US"
-    regime_name: str = "中性 (Neutral)"
-    exposure: float = 1.0  # 0.0 ~ 1.0
-    vix: float = 20.0
-    spy_price: float = 0.0
-    spy_ma60: float = 0.0
-    spy_above_ma60: bool = True
-    spy_above_ma20: bool = True
-    sox_price: float = 0.0
-    sox_ma60: float = 0.0
-    sox_above_ma60: bool = True
-    sox_mom_20d: float = 0.0
-    twii_price: float = 0.0
-    twii_ma60: float = 0.0
-    twii_above_ma60: bool = True
-    twii_above_ma20: bool = True
-    tech_exposure_cap: float = 1.0  # 科技股曝險上限
+    regime_name: str = "資料不足 (Unavailable)"
+    exposure: Optional[float] = None  # 0.0 ~ 1.0; None means unavailable
+    vix: Optional[float] = None
+    spy_price: Optional[float] = None
+    spy_ma60: Optional[float] = None
+    spy_above_ma60: Optional[bool] = None
+    spy_above_ma20: Optional[bool] = None
+    sox_price: Optional[float] = None
+    sox_ma60: Optional[float] = None
+    sox_above_ma60: Optional[bool] = None
+    sox_mom_20d: Optional[float] = None
+    twii_price: Optional[float] = None
+    twii_ma60: Optional[float] = None
+    twii_above_ma60: Optional[bool] = None
+    twii_above_ma20: Optional[bool] = None
+    tech_exposure_cap: Optional[float] = None  # None means unavailable
+    data_available: bool = False
     warnings: List[str] = field(default_factory=list)
     summary: str = ""
     fed_rate: Optional[Dict[str, Any]] = None
@@ -42,16 +43,39 @@ class MacroState:
     catalyst_alerts: List[str] = field(default_factory=list)
     polymarket: Optional[Dict[str, Any]] = None
 
+    def mark_unavailable(self, reason: str) -> None:
+        """清除推導值，避免上游缺資料看起來像正常市場狀態。"""
+        self.regime_name = "資料不足 (Unavailable)"
+        self.exposure = None
+        self.vix = None
+        self.spy_price = None
+        self.spy_ma60 = None
+        self.spy_above_ma60 = None
+        self.spy_above_ma20 = None
+        self.sox_price = None
+        self.sox_ma60 = None
+        self.sox_above_ma60 = None
+        self.sox_mom_20d = None
+        self.twii_price = None
+        self.twii_ma60 = None
+        self.twii_above_ma60 = None
+        self.twii_above_ma20 = None
+        self.tech_exposure_cap = None
+        self.data_available = False
+        self.warnings = [reason]
+        self.summary = f"{reason}，暫停產生建議曝險"
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "market": self.market,
             "regime_name": self.regime_name,
-            "exposure": round(self.exposure, 2),
-            "vix": round(self.vix, 2),
+            "exposure": round(self.exposure, 2) if self.exposure is not None else None,
+            "vix": round(self.vix, 2) if self.vix is not None else None,
             "spy_above_ma60": self.spy_above_ma60,
             "sox_above_ma60": self.sox_above_ma60,
             "twii_above_ma60": self.twii_above_ma60,
-            "tech_exposure_cap": round(self.tech_exposure_cap, 2),
+            "tech_exposure_cap": round(self.tech_exposure_cap, 2) if self.tech_exposure_cap is not None else None,
+            "data_available": self.data_available,
             "warnings": self.warnings,
             "summary": self.summary,
             "fed_rate": self.fed_rate,
@@ -89,8 +113,8 @@ class MacroRegimeAnalyzer:
             data = yf.download(cls.TW_MACRO_TICKERS, period=period, progress=False, group_by="ticker")
             
             if data is None or data.empty:
-                logger.warning("⚠️ 未能下載台股大盤數據，採用預設中性配置 (曝險 100%)")
-                state.summary = "大盤數據缺失，預設全額曝險 (100%)"
+                logger.warning("⚠️ 未能下載台股大盤數據，暫停產生曝險建議")
+                state.mark_unavailable("台股大盤資料缺失")
                 return state
 
             # 1. 解析 VIX 恐慌指數
@@ -110,6 +134,18 @@ class MacroRegimeAnalyzer:
 
             # 3. 解析 ^TWII (台灣加權指數)
             twii_series = cls._extract_close_series(data, "^TWII")
+            if (
+                vix_val is None
+                or sox_series is None
+                or len(sox_series) < 60
+                or twii_series is None
+                or len(twii_series) < 60
+            ):
+                logger.warning("⚠️ 台股宏觀資料不完整，暫停產生曝險建議")
+                state.mark_unavailable("台股宏觀資料不完整")
+                return state
+
+            state.data_available = True
             if twii_series is not None and len(twii_series) >= 60:
                 state.twii_price = float(twii_series.iloc[-1])
                 state.twii_ma60 = float(twii_series.rolling(60).mean().iloc[-1])
@@ -174,7 +210,7 @@ class MacroRegimeAnalyzer:
 
         except Exception as e:
             logger.error(f"❌ 計算台股大盤狀態失敗: {e}", exc_info=True)
-            state.summary = f"台股大盤計算異常 ({e})，採用中性 100% 曝險"
+            state.mark_unavailable(f"台股大盤計算異常 ({e})")
 
         return state
 
@@ -189,8 +225,8 @@ class MacroRegimeAnalyzer:
             data = yf.download(cls.US_MACRO_TICKERS, period=period, progress=False, group_by="ticker")
             
             if data is None or data.empty:
-                logger.warning("⚠️ 未能下載宏觀數據，採用預設中性配置 (曝險 100%)")
-                state.summary = "宏觀數據缺失，預設全額曝險 (100%)"
+                logger.warning("⚠️ 未能下載宏觀數據，暫停產生曝險建議")
+                state.mark_unavailable("美股宏觀資料缺失")
                 return state
 
             # 1. 解析 VIX
@@ -202,6 +238,20 @@ class MacroRegimeAnalyzer:
 
             # 2. 解析 SPY (S&P 500)
             spy_series = cls._extract_close_series(data, "SPY")
+            # 3. 解析 SOX (費城半導體)
+            sox_series = cls._extract_close_series(data, "^SOX")
+            if (
+                vix_val is None
+                or spy_series is None
+                or len(spy_series) < 60
+                or sox_series is None
+                or len(sox_series) < 60
+            ):
+                logger.warning("⚠️ 美股宏觀資料不完整，暫停產生曝險建議")
+                state.mark_unavailable("美股宏觀資料不完整")
+                return state
+
+            state.data_available = True
             if spy_series is not None and len(spy_series) >= 60:
                 state.spy_price = float(spy_series.iloc[-1])
                 state.spy_ma60 = float(spy_series.rolling(60).mean().iloc[-1])
@@ -212,8 +262,6 @@ class MacroRegimeAnalyzer:
                 state.spy_above_ma60 = True
                 state.spy_above_ma20 = True
 
-            # 3. 解析 SOX (費城半導體)
-            sox_series = cls._extract_close_series(data, "^SOX")
             if sox_series is not None and len(sox_series) >= 60:
                 state.sox_price = float(sox_series.iloc[-1])
                 state.sox_ma60 = float(sox_series.rolling(60).mean().iloc[-1])
@@ -294,7 +342,7 @@ class MacroRegimeAnalyzer:
 
         except Exception as e:
             logger.error(f"❌ 計算宏觀風控狀態失敗: {e}", exc_info=True)
-            state.summary = f"宏觀計算異常 ({e})，採用中性 100% 曝險"
+            state.mark_unavailable(f"宏觀計算異常 ({e})")
 
         return state
 

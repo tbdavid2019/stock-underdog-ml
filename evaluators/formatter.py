@@ -36,6 +36,20 @@ def format_ticker_label(ticker: str, name_map: Optional[Dict[str, str]] = None) 
     return f"{ticker} {name}" if name else ticker
 
 
+def _format_exposure(macro: Any) -> str:
+    exposure = getattr(macro, "exposure", None)
+    return f"{int(exposure * 100)}%" if exposure is not None else "資料不足"
+
+
+def _format_vix(macro: Any) -> str:
+    vix = getattr(macro, "vix", None)
+    return f"{vix:.1f}" if vix is not None else "資料不足"
+
+
+def _format_trend(flag: Optional[bool], positive: str, negative: str) -> str:
+    return positive if flag is True else negative if flag is False else "資料不足"
+
+
 def _extract_candidates(results: dict, overlap_df: pd.DataFrame) -> List[dict]:
     """Extract list of candidate dictionaries from results or overlap_df."""
     candidates = results.get("overlap_candidates")
@@ -159,19 +173,17 @@ def format_telegram_message(
     # 宏觀風控卡片
     if macro:
         if is_tw:
-            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
-            sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
-            vix_val = getattr(macro, 'vix', 0.0)
+            twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
             msg += "<b>【台股大盤與風控】</b>\n"
-            msg += f"• 大盤狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
-            msg += f"• 加權指數: {twii_str} | 國際連動: {sox_str} (VIX {vix_val:.1f})\n\n"
+            msg += f"• 大盤狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {_format_exposure(macro)})\n"
+            msg += f"• 加權指數: {twii_str} | 國際連動: {sox_str} (VIX {_format_vix(macro)})\n\n"
         else:
-            spy_str = '站穩MA60' if getattr(macro, 'spy_above_ma60', True) else '破季線'
-            sox_str = '站穩MA60' if getattr(macro, 'sox_above_ma60', True) else '破季線'
-            vix_val = getattr(macro, 'vix', 0.0)
+            spy_str = _format_trend(getattr(macro, 'spy_above_ma60', None), '站穩MA60', '破季線')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '站穩MA60', '破季線')
             msg += "<b>【美股宏觀風控】</b>\n"
-            msg += f"• 狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {int(macro.exposure*100)}%)\n"
-            msg += f"• VIX: {vix_val:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
+            msg += f"• 狀態: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {_format_exposure(macro)})\n"
+            msg += f"• VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     # AI 操盤總評 (採用 Telegram Blockquote 美化引言，嚴格跳脫 HTML 避免訊息解析失敗)
     if summary_text:
@@ -489,13 +501,13 @@ def format_discord_message(
 
     if macro:
         if is_tw:
-            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
-            sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
-            msg += f"**【台股大盤與風控】**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
+            twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
+            msg += f"**【台股大盤與風控】**: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {_format_vix(macro)})\n\n"
         else:
-            spy_str = '站穩MA60' if getattr(macro, 'spy_above_ma60', True) else '破季線'
-            sox_str = '站穩MA60' if getattr(macro, 'sox_above_ma60', True) else '破季線'
-            msg += f"**【美股宏觀風控】**: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
+            spy_str = _format_trend(getattr(macro, 'spy_above_ma60', None), '站穩MA60', '破季線')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '站穩MA60', '破季線')
+            msg += f"**【美股宏觀風控】**: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     if summary_text:
         quoted = summary_text.replace("\n", "\n> ")
@@ -617,13 +629,13 @@ def format_email_message(
 
     if macro:
         if is_tw:
-            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
-            sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
-            msg += f"🇹🇼 台股大盤與風控: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {macro.vix:.1f})\n\n"
+            twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
+            msg += f"🇹🇼 台股大盤與風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {_format_vix(macro)})\n\n"
         else:
-            spy_str = '站穩MA60' if getattr(macro, 'spy_above_ma60', True) else '破季線'
-            sox_str = '站穩MA60' if getattr(macro, 'sox_above_ma60', True) else '破季線'
-            msg += f"🇺🇸 美股宏觀風控: {macro.regime_name} (建議曝險 {int(macro.exposure*100)}%) | VIX: {macro.vix:.1f} | SPY: {spy_str} | SOX: {sox_str}\n\n"
+            spy_str = _format_trend(getattr(macro, 'spy_above_ma60', None), '站穩MA60', '破季線')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '站穩MA60', '破季線')
+            msg += f"🇺🇸 美股宏觀風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     if summary_text:
         msg += f"AI 操盤解讀:\n{summary_text}\n\n"
@@ -747,14 +759,14 @@ def print_evaluation_report(report: EvaluationReport, log=None):
         is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
         if is_tw:
             logger.info("🇹🇼 【台股大盤與籌碼風向】")
-            logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
-            twii_str = '站穩MA60' if getattr(macro, 'twii_above_ma60', True) else '跌破MA60'
-            sox_str = '費半站穩季線' if getattr(macro, 'sox_above_ma60', True) else '費半破季線'
-            logger.info(f"   • 關鍵指標: 加權指數={twii_str} | 國際連動={sox_str} (VIX={macro.vix:.1f})")
+            logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
+            twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
+            logger.info(f"   • 關鍵指標: 加權指數={twii_str} | 國際連動={sox_str} (VIX={_format_vix(macro)})")
         else:
             logger.info("🇺🇸 【美股宏觀環境與風控門檻】")
-            logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {int(macro.exposure*100)}%)")
-            logger.info(f"   • 關鍵指標: VIX={macro.vix:.1f} | SPY={'站穩MA60' if macro.spy_above_ma60 else '破季線'} | SOX={'站穩MA60' if macro.sox_above_ma60 else '破季線'}")
+            logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
+            logger.info(f"   • 關鍵指標: VIX={_format_vix(macro)} | SPY={_format_trend(macro.spy_above_ma60, '站穩MA60', '破季線')} | SOX={_format_trend(macro.sox_above_ma60, '站穩MA60', '破季線')}")
         if macro.warnings:
             for w in macro.warnings:
                 logger.info(f"   • ⚠️  {w}")

@@ -59,7 +59,7 @@ class MacroRegimeResponse(BaseModel):
     success: bool = True
     market: Optional[str] = Field("US", description="所屬市場 (TW 或 US)")
     regime_name: str = Field(..., description="大盤/宏觀環境 (全面多頭, 多頭回調, 避險防禦, 極度恐慌)")
-    exposure: float = Field(..., description="建議投資曝險比例 (0.0 ~ 1.0)")
+    exposure: Optional[float] = Field(None, description="建議投資曝險比例 (0.0 ~ 1.0；資料不足時為 null)")
     vix: Optional[float] = Field(None, description="VIX 恐慌指數")
     spy_above_ma60: Optional[bool] = Field(None, description="S&P500 是否站穩季線")
     sox_above_ma60: Optional[bool] = Field(None, description="費城半導體是否站穩季線")
