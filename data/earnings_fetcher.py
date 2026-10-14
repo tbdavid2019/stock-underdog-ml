@@ -243,50 +243,9 @@ class EarningsCallFetcher:
             except Exception as e:
                 logger.warning(f"讀取美股法說會快取失敗: {e}")
 
-        # 若無快取或需初始化，預置美股科技七巨頭標準法說會時序範本
+        # 無可驗證的快取時保持空集合，避免把推測日期與 EPS 當成正式法說會資料。
         if not records:
-            today = datetime.date.today()
-            sample_dates = [
-                ("TSM", "台積電 ADR", today + datetime.timedelta(days=2), "14:00", 1.85, "Q3 2026 營收與先進製程展望"),
-                ("NVDA", "NVIDIA Corporation", today + datetime.timedelta(days=5), "17:00", 0.78, "Blackwell 伺服器出貨量與毛利率指引"),
-                ("AAPL", "Apple Inc.", today + datetime.timedelta(days=7), "17:00", 1.55, "Apple Intelligence 設備換機潮與服務營收"),
-                ("MSFT", "Microsoft Corp.", today + datetime.timedelta(days=9), "17:30", 3.12, "Azure 雲端 AI 增長與 CapEx 投資展望"),
-                ("GOOGL", "Alphabet Inc.", today + datetime.timedelta(days=11), "16:30", 1.95, "Gemini 模型商業化與搜尋廣告強勁表現"),
-                ("AMZN", "Amazon.com Inc.", today + datetime.timedelta(days=12), "17:30", 1.25, "AWS 加速成長與零售營運利潤率"),
-                ("META", "Meta Platforms", today + datetime.timedelta(days=14), "17:00", 5.20, "Llama 4 運算集群與 AI 廣告轉換提升")
-            ]
-
-            for ticker, name, d, t, eps_est, rem in sample_dates:
-                call_date_str = d.strftime("%Y-%m-%d")
-                call_id = f"US_{ticker}_{d.strftime('%Y%m%d')}"
-                records.append({
-                    "id": call_id,
-                    "market": "US",
-                    "ticker": ticker,
-                    "name": name,
-                    "call_date": call_date_str,
-                    "call_time": t,
-                    "timezone": "America/New_York",
-                    "meeting_type": "online",
-                    "location": "Live Audio Webcast",
-                    "webcast_url": US_IR_WEBCAST_MAP.get(ticker, f"https://finance.yahoo.com/quote/{ticker}"),
-                    "presentation_url": f"https://finance.yahoo.com/quote/{ticker}/financials",
-                    "transcript_url": "",
-                    "language": "en-US",
-                    "eps_estimate": eps_est,
-                    "eps_actual": None,
-                    "revenue_estimate": None,
-                    "revenue_actual": None,
-                    "is_weight_stock": True,
-                    "remarks": rem,
-                    "source": "YAHOO/IR"
-                })
-
-            try:
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    json.dump(records, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
+            logger.warning("⚠️ 無美股法說會快取，略過未驗證的預置排程")
 
         return records
 
