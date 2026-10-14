@@ -104,6 +104,8 @@ export const app = createApp({
             podcastExpandedTicker: null,
             podcastDrawerData: null,
             podcastDrawerLoading: false,
+            podcastActiveAudioId: null,
+            podcastActiveVideoId: null,
 
             // Toast
             toastMessage: '',
@@ -625,6 +627,27 @@ export const app = createApp({
             this.podcastExpandedEpisodeId = null;
             this.podcastExpandedTicker = null;
             this.podcastDrawerData = null;
+        },
+        togglePodcastAudio(episodeId) {
+            if (this.podcastActiveAudioId === episodeId) {
+                this.podcastActiveAudioId = null;
+            } else {
+                this.podcastActiveAudioId = episodeId;
+                this.podcastActiveVideoId = null; // 關閉影片避免雙重音訊衝突
+            }
+        },
+        togglePodcastVideo(episodeId) {
+            if (this.podcastActiveVideoId === episodeId) {
+                this.podcastActiveVideoId = null;
+            } else {
+                this.podcastActiveVideoId = episodeId;
+                this.podcastActiveAudioId = null; // 關閉音訊避免雙重音訊衝突
+            }
+        },
+        getYouTubeEmbedUrl(url) {
+            if (!url) return '';
+            const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+            return match ? `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=1` : '';
         },
         setStrategy(stratId) {
             this.selectedStrategy = stratId;

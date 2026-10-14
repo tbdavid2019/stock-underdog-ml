@@ -8,6 +8,22 @@
 
 ## 2026-10-14
 
+### Fixed & Improved (Podcast Live Playback & Media Player Integration)
+- **🎙️ 修復 Podcast 情報單集連結無效問題並全面升級為站內雙模態播放器**：
+  - **全面替換假資料連結為 100% 驗證之真實有效媒體**：
+    - 將 `data/podcast_service.py` 中的 6 大精選單集假 URL（如 `watch?v=allin_e204`、`allin_e204.mp3` 等無效佔位符）全面換成經過即時連線驗證（HTTP 200 / 206）之官方真實節目：
+      1. All-In Podcast: Sam Altman 深度訪談（YouTube: `nSM0xd8xHUM`，Libsyn 官方原聲 MP3 串流）。
+      2. Lex Fridman Podcast: Mark Zuckerberg #383（YouTube: `Ff4fRgnuFgQ`，Blubrry 官方原聲 MP3 串流）。
+      3. Odd Lots: 台灣地緣戰略與台積電護城河（YouTube: `lxmt7rz4DLQ`，Omny Studio 官方原聲 MP3 串流）。
+      4. Dwarkesh Patel: Dario Amodei 訪談（YouTube: `n1E9IZfvGMA`，Substack 官方原聲頁面）。
+      5. 小Lin說: 光刻機與晶片商戰史（YouTube: `Tzp0EF-sysI`）。
+      6. 硅谷101: AI Agent 新範式與 Cursor/Claude 實戰（YouTube: `JEXUta6_oaQ`，Fireside 官方原聲 MP3 串流）。
+    - 修正 `config/podcast_seed_channels.json` 中已失效或佔位之 RSS Feed（Libsyn、Omny Studio、Fireside、Substack），確保上游即時同步連線無阻。
+  - **新增站內無摩擦雙模態播放器（Inline Media Player）**：
+    - **站內 YouTube 嵌入播放器**：在單集卡片點擊「📺 站內播放」可直接於看板內展開 YouTube `<iframe>` 影片流暢播放，無需跳轉離開看盤視窗；並保留「YouTube ↗」獨立按鈕供另開分頁。
+    - **站內 HTML5 原聲音訊播放器**：在單集卡片點擊「🎧 播放音訊」可原地展開 HTML5 原生 `<audio>` 播放器，支援背景聽播、倍速與進度拉桿；同時附帶外開 MP3 串流連結。
+    - **標題超連結指示優化**：單集標題提供醒目的外部跳轉圖示（`↗`）與 `rel="noopener noreferrer"` 安全屬性，點擊直接前往驗證後的官方 YouTube 單集頁面。
+
 ### Fixed & Improved (Codex & OpenCode Dual Code Review Hardening)
 - **🛡️ 後端高並發架構與資料安全強化 (Codex 審查改善)**：
   - **消除 N+1 查詢與 DuckDB 連線開銷風暴**：於 `data/duckdb_manager.py` 實作 `get_latest_quotes_batch` 向量化批次查詢，並於 `data/podcast_service.py` 實作 `enrich_episodes_batch`，將單次 API 請求由原先 80~100 次連線開關與全表掃描縮減為 1 次單一 DuckDB 視窗函數查詢（`ROW_NUMBER() OVER`），延遲降低 90% 以上。

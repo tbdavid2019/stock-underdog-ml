@@ -165,7 +165,12 @@
             <div class="space-y-1.5">
                 <h3 class="text-base sm:text-lg font-black leading-snug tracking-tight transition-colors hover:text-amber-500"
                     :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <a v-if="ep.youtube_url" :href="ep.youtube_url" target="_blank">{{ ep.title }}</a>
+                    <a v-if="ep.youtube_url" :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-baseline gap-1 group/title"
+                       title="在 YouTube 開啟此單集完整影片">
+                        <span class="group-hover/title:underline">{{ ep.title }}</span>
+                        <span class="text-xs text-amber-500 shrink-0 opacity-80 group-hover/title:opacity-100">↗</span>
+                    </a>
                     <span v-else>{{ ep.title }}</span>
                 </h3>
 
@@ -303,21 +308,110 @@
                 </div>
             </div>
 
-            <!-- Card Footer: Direct Links -->
-            <div class="pt-2 border-t flex items-center justify-between text-xs"
+            <!-- Inline Video Player (YouTube Embed) -->
+            <div v-if="podcastActiveVideoId === ep.id" class="pt-3 border-t animate-fadeIn"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <div class="rounded-xl overflow-hidden border shadow-lg"
+                     :class="isDark ? 'bg-black border-amber-500/40' : 'bg-black border-amber-300'">
+                    <div class="px-3 py-1.5 flex items-center justify-between bg-zinc-900/90 text-xs font-bold text-rose-400 border-b border-zinc-800">
+                        <span class="flex items-center space-x-1.5">
+                            <span>📺</span>
+                            <span>YouTube 播放中 (站內播放模式)</span>
+                        </span>
+                        <div class="flex items-center space-x-3">
+                            <a :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
+                               class="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center space-x-0.5">
+                                <span>前往 YouTube</span>
+                                <span>↗</span>
+                            </a>
+                            <button @click="togglePodcastVideo(ep.id)"
+                                    class="text-slate-400 hover:text-white text-xs px-1 hover:bg-zinc-800 rounded transition-colors"
+                                    title="關閉播放器">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="aspect-video w-full">
+                        <iframe :src="getYouTubeEmbedUrl(ep.youtube_url)"
+                                class="w-full h-full border-0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inline Audio Player (HTML5 MP3 Stream) -->
+            <div v-if="podcastActiveAudioId === ep.id" class="pt-3 border-t animate-fadeIn"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <div class="p-3 rounded-xl border transition-all shadow-md"
+                     :class="isDark ? 'bg-[#0D0E11] border-amber-500/50 text-slate-200' : 'bg-amber-50/90 border-amber-300 text-slate-800'">
+                    <div class="flex items-center justify-between pb-2 text-xs font-bold text-amber-500">
+                        <span class="flex items-center space-x-1.5">
+                            <span class="animate-pulse">📻</span>
+                            <span>原聲音訊串流播放中</span>
+                        </span>
+                        <div class="flex items-center space-x-3">
+                            <a :href="ep.audio_url" target="_blank" rel="noopener noreferrer"
+                               class="text-[11px] text-slate-400 hover:text-white transition-colors flex items-center space-x-0.5">
+                                <span>在新分頁開啟</span>
+                                <span>↗</span>
+                            </a>
+                            <button @click="togglePodcastAudio(ep.id)"
+                                    class="text-slate-400 hover:text-white text-xs px-1 hover:bg-zinc-800/40 rounded transition-colors"
+                                    title="關閉播放器">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <audio controls class="w-full h-8 rounded" :src="ep.audio_url" autoplay preload="metadata">
+                        您的瀏覽器不支援 HTML5 音訊播放，請點擊上方連結在新分頁開啟。
+                    </audio>
+                </div>
+            </div>
+
+            <!-- Card Footer: Direct Links & Action Buttons -->
+            <div class="pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-xs"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                 <span class="num-font">{{ ep.published_at ? ep.published_at.substring(0, 10) : '' }}</span>
                 <div class="flex items-center space-x-2">
-                    <a v-if="ep.youtube_url" :href="ep.youtube_url" target="_blank"
-                       class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1"
-                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-rose-400 hover:border-rose-500' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">
-                        <span>📺 YouTube</span>
-                    </a>
-                    <a v-if="ep.audio_url" :href="ep.audio_url" target="_blank"
-                       class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1"
-                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:border-amber-500' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'">
-                        <span>🎧 原聲音訊</span>
-                    </a>
+                    <!-- YouTube Action Buttons -->
+                    <div v-if="ep.youtube_url" class="inline-flex rounded-lg border overflow-hidden text-xs font-bold transition-all shadow-sm"
+                         :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-rose-200 bg-rose-50'">
+                        <button @click="togglePodcastVideo(ep.id)"
+                                class="px-2.5 py-1 transition-colors flex items-center space-x-1"
+                                :class="podcastActiveVideoId === ep.id ? 'bg-rose-600 text-white' : (isDark ? 'text-rose-400 hover:bg-rose-950/40' : 'text-rose-700 hover:bg-rose-100')"
+                                title="在看板內直接嵌入播放 YouTube 影片">
+                            <span>{{ podcastActiveVideoId === ep.id ? '⏹️ 收起' : '📺 站內播放' }}</span>
+                        </button>
+                        <a :href="ep.youtube_url" target="_blank" rel="noopener noreferrer"
+                           class="px-2 py-1 border-l transition-colors flex items-center space-x-0.5"
+                           :class="isDark ? 'border-[#262626] text-rose-400 hover:bg-rose-950/40' : 'border-rose-200 text-rose-700 hover:bg-rose-100'"
+                           title="在 YouTube 官方網站新分頁開啟">
+                            <span class="text-[10px]">YouTube ↗</span>
+                        </a>
+                    </div>
+
+                    <!-- Audio Action Buttons -->
+                    <div v-if="ep.audio_url" class="inline-flex rounded-lg border overflow-hidden text-xs font-bold transition-all shadow-sm"
+                         :class="isDark ? 'border-[#262626] bg-[#16181D]' : 'border-amber-200 bg-amber-50'">
+                        <button v-if="ep.audio_url.includes('.mp3')"
+                                @click="togglePodcastAudio(ep.id)"
+                                class="px-2.5 py-1 transition-colors flex items-center space-x-1"
+                                :class="podcastActiveAudioId === ep.id ? 'bg-amber-500 text-black font-black' : (isDark ? 'text-amber-400 hover:bg-amber-950/40' : 'text-amber-800 hover:bg-amber-100')"
+                                title="在看板內直接播放原聲音訊串流">
+                            <span>{{ podcastActiveAudioId === ep.id ? '⏹️ 收起' : '🎧 播放音訊' }}</span>
+                        </button>
+                        <a :href="ep.audio_url" target="_blank" rel="noopener noreferrer"
+                           class="px-2 py-1 transition-colors flex items-center space-x-0.5"
+                           :class="[
+                               ep.audio_url.includes('.mp3') ? (isDark ? 'border-l border-[#262626]' : 'border-l border-amber-200') : '',
+                               isDark ? 'text-amber-400 hover:bg-amber-950/40' : 'text-amber-800 hover:bg-amber-100'
+                           ]"
+                           :title="ep.audio_url.includes('.mp3') ? '在新分頁開啟原始 MP3 檔案' : '前往原聲節目頁面'">
+                            <span v-if="!ep.audio_url.includes('.mp3')">🎧 原聲音訊</span>
+                            <span class="text-[10px]">↗</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 
