@@ -72,6 +72,18 @@ Future Price:_96.313_
         self.assertEqual(comms["copper"]["weekly_change"], "+0.11%")
         self.assertEqual(comms["crude_oil"]["daily_change"], "-0.17%")
 
+    @patch("data.investing_service.InvestingService._fetch_url_markdown", return_value="")
+    def test_missing_commodities_are_not_reported_as_flat_market(self, _mock_fetch):
+        comms = InvestingService.get_commodities_summary(force_refresh=True)
+
+        self.assertIsNone(comms)
+
+    @patch("data.investing_service.InvestingService._fetch_url_markdown", return_value="")
+    def test_missing_fed_rate_is_not_reported_as_stable_expectation(self, _mock_fetch):
+        result = InvestingService.get_fed_rate_monitor(force_refresh=True)
+
+        self.assertIsNone(result)
+
     @patch("data.investing_service.InvestingService._fetch_url_markdown")
     def test_get_economic_calendar(self, mock_fetch):
         mock_fetch.return_value = """

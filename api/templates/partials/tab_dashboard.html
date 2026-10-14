@@ -406,14 +406,14 @@
                         <span class="material-symbols-outlined text-[20px] text-amber-500">casino</span>
                         <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">Polymarket 預測市場</span>
                     </div>
-                    <span v-if="macro.polymarket && macro.polymarket.source" class="text-xs font-medium num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    <span v-if="macro.polymarket && macro.polymarket.success && macro.polymarket.source" class="text-xs font-medium num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                         {{ macro.polymarket.source === 'doh_direct' ? 'DoH 直連' : (macro.polymarket.source === '2md_reader' ? '2MD 快線' : '真金白銀') }}
                     </span>
                 </div>
 
-                <div v-if="macro.polymarket" class="space-y-2">
+                <div v-if="macro.polymarket && macro.polymarket.success" class="space-y-2">
                     <!-- Fed Odds Highlights from Polymarket -->
-                    <div v-if="macro.polymarket.fed_real_money_odds" class="p-2.5 rounded-lg border text-xs"
+                    <div v-if="macro.polymarket.fed_real_money_odds && Object.keys(macro.polymarket.fed_real_money_odds).length" class="p-2.5 rounded-lg border text-xs"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700'">
                         <div class="font-bold mb-1 flex items-center justify-between text-amber-500">
                             <span class="text-xs">真金白銀降息定價</span>
@@ -460,7 +460,7 @@
                         </div>
                     </div>
                 </div>
-                <div v-else class="text-xs text-slate-400 py-6 text-center">暫無 Polymarket 預測數據</div>
+                <div v-else class="text-xs text-slate-400 py-6 text-center">暫無可驗證的 Polymarket 預測數據</div>
             </div>
 
         </div>

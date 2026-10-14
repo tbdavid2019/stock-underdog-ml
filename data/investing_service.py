@@ -133,7 +133,7 @@ class InvestingService:
     # =========================================================================
 
     @classmethod
-    def get_fed_rate_monitor(cls, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_fed_rate_monitor(cls, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
         """
         取得 CME 聯準會下次 FOMC 利率決策機率
         來源: https://www.investing.com/central-banks/fed-rate-monitor
@@ -209,9 +209,8 @@ class InvestingService:
                 cls._write_cache(cache_key, result)
                 return result
 
-        # 降級備用預設（若爬蟲被擋）
-        result["summary"] = "聯準會利率預期穩定，維持密切監控中"
-        return result
+        logger.warning("⚠️ FedWatch 上游沒有可驗證資料，略過利率預期顯示")
+        return None
 
     # =========================================================================
     # 2. 美股重量級財報行事曆 (US Earnings Calendar)
@@ -277,7 +276,7 @@ class InvestingService:
     # =========================================================================
 
     @classmethod
-    def get_commodities_summary(cls, force_refresh: bool = False) -> Dict[str, Any]:
+    def get_commodities_summary(cls, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
         """
         取得黃金、銅博士、WTI 原油即時行情與漲跌
         來源: https://www.investing.com/commodities/
@@ -313,12 +312,8 @@ class InvestingService:
                 cls._write_cache(cache_key, commodities)
                 return commodities
 
-        # 預設回傳基礎結構
-        return {
-            "gold": {"name": "黃金 (Gold)", "daily_change": "+0.0%", "weekly_change": "+0.0%", "indicator": "避險與流動性"},
-            "copper": {"name": "銅博士 (Copper)", "daily_change": "+0.0%", "weekly_change": "+0.0%", "indicator": "製造業與AI硬體景氣"},
-            "crude_oil": {"name": "WTI 原油 (Crude Oil)", "daily_change": "+0.0%", "weekly_change": "+0.0%", "indicator": "通膨預期與能源成本"}
-        }
+        logger.warning("⚠️ 商品行情上游沒有可驗證資料，略過商品行情顯示")
+        return None
 
     # =========================================================================
     # 4. 重磅總體經濟行事曆 (Economic Calendar)
