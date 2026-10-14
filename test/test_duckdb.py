@@ -225,6 +225,26 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertIsNotNone(snap)
         self.assertEqual(snap["composite_score"], 0.0)
 
+    def test_get_latest_candidate_snapshot_does_not_invent_missing_score(self):
+        """驗證缺少正式綜合評分時保持缺失，不產生 50 分基準合成分數"""
+        ts = "2026-10-08T10:00:00"
+        self.mgr.save_predictions_batch([{
+            "index_name": "台灣50",
+            "model_name": "LSTM",
+            "strategy_type": "LSTM預測",
+            "ticker": "2330.TW",
+            "current_price": 1000.0,
+            "potential": 5.0,
+            "timestamp": ts,
+            "tags": "LSTM看漲"
+        }])
+
+        snap = self.mgr.get_latest_candidate_snapshot("2330.TW")
+
+        self.assertIsNotNone(snap)
+        self.assertIsNone(snap["composite_score"])
+        self.assertIsNone(snap["score"])
+
     def test_get_resonance_candidates_excludes_defense_and_stale_history(self):
         """驗證 get_resonance_candidates 以最新快照為準，排除轉為防守的標的，且絕不回溯選取舊的看漲記錄"""
         records = [

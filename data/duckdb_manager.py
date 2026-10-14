@@ -1004,27 +1004,6 @@ class DuckDBManager:
         if cand["potential"] is None:
             cand["potential"] = cand["lstm_potential"] if cand["lstm_potential"] is not None else cand["timesfm_potential"]
 
-        # Synthetic composite score fallback ONLY if not explicitly stored in any record of this batch
-        if cand["composite_score"] is None:
-            calc_score = 50.0
-            l_pot = cand["lstm_potential"] or 0.0
-            t_pot = cand["timesfm_potential"] or 0.0
-            if l_pot > 0:
-                calc_score += min(20.0, l_pot * 1.5)
-            elif l_pot < 0:
-                calc_score -= min(30.0, abs(l_pot) * 2.0)
-            if t_pot > 0:
-                calc_score += min(15.0, t_pot * 1.5)
-            elif t_pot < 0:
-                calc_score -= min(20.0, abs(t_pot) * 1.5)
-            if cand.get("pullback_type"):
-                calc_score += 10.0
-            if (cand.get("trust_net_5d") or 0) > 0:
-                calc_score += 5.0
-            if (cand.get("foreign_net_5d") or 0) > 0:
-                calc_score += 5.0
-            cand["composite_score"] = round(max(0.0, min(100.0, calc_score)), 2)
-
         cand["score"] = cand["composite_score"]
         cand["tags"] = list(merged_tags)
         return cand
