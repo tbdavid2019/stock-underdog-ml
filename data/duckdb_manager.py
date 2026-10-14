@@ -8,6 +8,7 @@ import os
 import re
 import logging
 import datetime
+import json
 from typing import Dict, List, Optional, Any
 import pandas as pd
 import duckdb
