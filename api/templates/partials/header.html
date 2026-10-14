@@ -55,13 +55,22 @@
                 <span class="w-2 h-2 rounded-full animate-pulse"
                       :class="macro.exposure === null || macro.exposure === undefined ? 'bg-slate-400' : (macro.exposure >= 0.8 ? 'bg-emerald-500' : 'bg-amber-500')"></span>
                 <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">大盤風控:</span>
-                <span class="font-bold">{{ stripEmojis(macro.regime_name) || '評估中...' }}</span>
+                <span class="font-bold">{{ cleanRegimeName(macro.regime_name) }}</span>
                 <span class="opacity-30">|</span>
                 <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">建議曝險:</span>
                 <span class="font-black num-font text-amber-500">
                     {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
                 </span>
             </div>
+
+            <!-- Language Switcher Button (🌐 繁中 / EN) -->
+            <button @click="toggleLocale()"
+                    class="h-10 px-2.5 sm:px-3 rounded-full border transition-all flex items-center space-x-1 shadow-sm hover:scale-105 active:scale-95 text-xs font-bold select-none"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
+                    :title="currentLocale === 'zh' ? '切換為 English' : '切換為繁體中文'" aria-label="切換語言">
+                <span class="material-symbols-outlined text-[18px]">language</span>
+                <span class="tracking-tight">{{ currentLocale === 'zh' ? '繁中' : 'EN' }}</span>
+            </button>
 
             <!-- Share URL Icon Button -->
             <button @click="copyShareLink()"

@@ -15,8 +15,10 @@ export const app = createApp({
         // Default theme is Light Mode unless explicitly set to 'dark' by user
         const savedTheme = localStorage.getItem('theme_v20261013') || localStorage.getItem('theme');
         const isDark = savedTheme === 'dark';
+        const savedLocale = localStorage.getItem('stock_quant_locale') || 'zh';
         return {
             isDark: isDark,
+            currentLocale: savedLocale,
             activeTab: 'dashboard',
             selectedStrategy: 'resonance',
             selectedIndex: '',
@@ -152,6 +154,11 @@ export const app = createApp({
             } else {
                 document.documentElement.classList.remove('dark');
             }
+        },
+        toggleLocale() {
+            this.currentLocale = this.currentLocale === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('stock_quant_locale', this.currentLocale);
+            this.showToast(this.currentLocale === 'zh' ? '已切換為繁體中文' : 'Language switched to English');
         },
         async loadMacro() {
             try {
@@ -912,6 +919,26 @@ export const app = createApp({
             if (!str) return '';
             return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();
         },
+        cleanRegimeName(str) {
+            if (!str) return this.currentLocale === 'en' ? 'Evaluating…' : '評估中…';
+            let s = this.stripEmojis(str);
+            if (this.currentLocale === 'en') {
+                const match = s.match(/\(([A-Za-z\s_-]+)\)/);
+                if (match) return match[1].trim();
+                if (s.includes('全面多頭') || s.includes('台股全面多頭')) return 'Strong Bull';
+                if (s.includes('多頭回調') || s.includes('台股多頭回調')) return 'Bull Pullback';
+                if (s.includes('弱勢整理') || s.includes('加權弱勢整理')) return 'Weak Consolidation';
+                if (s.includes('溫和空頭')) return 'Mild Bear';
+                if (s.includes('輕微震盪')) return 'Mild Volatility';
+                if (s.includes('極度恐慌') || s.includes('全球恐慌避險')) return 'Extreme Panic';
+                if (s.includes('劇烈震盪')) return 'High Volatility';
+                if (s.includes('空頭恐慌') || s.includes('台美雙破季線')) return 'Bearish Defense';
+                if (s.includes('資料不足')) return 'Unavailable';
+                return s.replace(/\s*\([A-Za-z\s_-]+\)/g, '').trim();
+            }
+            // Traditional Chinese: strip all redundant English in parentheses
+            return s.replace(/\s*\([A-Za-z\s_-]+\)/g, '').trim();
+        },
         parseTags(tags) {
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
@@ -1216,6 +1243,29 @@ const globalStripEmojis = (str) => {
 };
 app.config.globalProperties.stripEmojis = globalStripEmojis;
 window.stripEmojis = globalStripEmojis;
+
+const globalCleanRegimeName = (str) => {
+    const locale = localStorage.getItem('stock_quant_locale') || 'zh';
+    if (!str) return locale === 'en' ? 'Evaluating…' : '評估中…';
+    let s = globalStripEmojis(str);
+    if (locale === 'en') {
+        const match = s.match(/\(([A-Za-z\s_-]+)\)/);
+        if (match) return match[1].trim();
+        if (s.includes('全面多頭') || s.includes('台股全面多頭')) return 'Strong Bull';
+        if (s.includes('多頭回調') || s.includes('台股多頭回調')) return 'Bull Pullback';
+        if (s.includes('弱勢整理') || s.includes('加權弱勢整理')) return 'Weak Consolidation';
+        if (s.includes('溫和空頭')) return 'Mild Bear';
+        if (s.includes('輕微震盪')) return 'Mild Volatility';
+        if (s.includes('極度恐慌') || s.includes('全球恐慌避險')) return 'Extreme Panic';
+        if (s.includes('劇烈震盪')) return 'High Volatility';
+        if (s.includes('空頭恐慌') || s.includes('台美雙破季線')) return 'Bearish Defense';
+        if (s.includes('資料不足')) return 'Unavailable';
+        return s.replace(/\s*\([A-Za-z\s_-]+\)/g, '').trim();
+    }
+    return s.replace(/\s*\([A-Za-z\s_-]+\)/g, '').trim();
+};
+app.config.globalProperties.cleanRegimeName = globalCleanRegimeName;
+window.cleanRegimeName = globalCleanRegimeName;
 
 const globalFormatFollowers = (count) => {
     if (count === null || count === undefined) return '資料不足';

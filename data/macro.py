@@ -17,7 +17,7 @@ logger = logging.getLogger("stock_app.macro")
 class MacroState:
     """宏觀市場狀態數據結構"""
     market: str = "US"  # "TW" or "US"
-    regime_name: str = "資料不足 (Unavailable)"
+    regime_name: str = "資料不足"
     exposure: Optional[float] = None  # 0.0 ~ 1.0; None means unavailable
     vix: Optional[float] = None
     spy_price: Optional[float] = None
@@ -45,7 +45,7 @@ class MacroState:
 
     def mark_unavailable(self, reason: str) -> None:
         """清除推導值，避免上游缺資料看起來像正常市場狀態。"""
-        self.regime_name = "資料不足 (Unavailable)"
+        self.regime_name = "資料不足"
         self.exposure = None
         self.vix = None
         self.spy_price = None
@@ -160,31 +160,31 @@ class MacroRegimeAnalyzer:
 
             # (A) 國際恐慌熔斷機制
             if state.vix >= 28.0:
-                state.regime_name = "🚨 全球恐慌避險 (Global Panic)"
+                state.regime_name = "全球恐慌避險"
                 state.exposure = 0.0
                 warnings.append(f"國際 VIX 恐慌指數過高 ({state.vix:.1f} > 28)，全球避險熔斷，建議台股多單暫停進場")
             # (B) 加權指數跌破季線 MA60
             elif not state.twii_above_ma60:
                 if not state.sox_above_ma60:
-                    state.regime_name = "🛡️ 台美雙破季線 (Bearish Defense)"
+                    state.regime_name = "台美雙破季線"
                     state.exposure = 0.3
                     warnings.append("加權指數與費城半導體同步跌破季線 MA60，建議降至 30% 輕倉防禦")
                 else:
-                    state.regime_name = "📉 加權弱勢整理 (Weak Consolidation)"
+                    state.regime_name = "加權弱勢整理"
                     state.exposure = 0.5
                     warnings.append("加權指數處於季線 (MA60) 之下，防範假突破，嚴格控制部位")
             # (C) 加權指數站穩季線 MA60
             else:
                 if state.twii_above_ma20:
                     if state.sox_above_ma60:
-                        state.regime_name = "🟢 台股全面多頭 (Strong Bull)"
+                        state.regime_name = "台股全面多頭"
                         state.exposure = 1.0
                     else:
-                        state.regime_name = "🌱 多頭回調 (費半整理)"
+                        state.regime_name = "多頭回調"
                         state.exposure = 0.85
                         warnings.append("加權指數多頭排列，但費半處於季線之下，半導體與科技股留意回測震盪")
                 else:
-                    state.regime_name = "🌱 台股多頭回調 (Bull Pullback)"
+                    state.regime_name = "台股多頭回調"
                     state.exposure = 0.85
                     warnings.append("加權指數回測月線支撐，順應季線多頭趨勢分批佈局")
 
@@ -276,36 +276,36 @@ class MacroRegimeAnalyzer:
             
             # (A) VIX 恐慌斷路器 (最高優先級)
             if state.vix >= 28.0:
-                state.regime_name = "🚨 極度恐慌 (Extreme Panic)"
+                state.regime_name = "極度恐慌"
                 state.exposure = 0.0
                 warnings.append(f"VIX 恐慌指數過高 ({state.vix:.1f} > 28)，觸發避險熔斷，建議完全空倉停止買進")
             elif state.vix >= 25.0:
                 if state.spy_above_ma60:
-                    state.regime_name = "⚠️ 劇烈震盪 (High Volatility)"
+                    state.regime_name = "劇烈震盪"
                     state.exposure = 0.5
                     warnings.append(f"VIX 偏高 ({state.vix:.1f})，降至半倉 50%")
                 else:
-                    state.regime_name = "🛡️ 空頭恐慌 (Bearish Panic)"
+                    state.regime_name = "空頭恐慌"
                     state.exposure = 0.2
                     warnings.append(f"SPY 破季線且 VIX 偏高 ({state.vix:.1f})，降至 20% 輕倉防禦")
             elif state.vix >= 22.0:
                 if state.spy_above_ma60:
-                    state.regime_name = "🌤️ 輕微震盪 (Mild Volatility)"
+                    state.regime_name = "輕微震盪"
                     state.exposure = 0.7
                 else:
-                    state.regime_name = "📉 溫和空頭 (Mild Bear)"
+                    state.regime_name = "溫和空頭"
                     state.exposure = 0.4
                     warnings.append("SPY 跌破季線 MA60，建議降至 40% 倉位")
             else:
                 # VIX < 22.0
                 if state.spy_above_ma60 and state.spy_above_ma20:
-                    state.regime_name = "🟢 全面多頭 (Strong Bull)"
+                    state.regime_name = "全面多頭"
                     state.exposure = 1.0
                 elif state.spy_above_ma60:
-                    state.regime_name = "🌱 多頭回調 (Bull Pullback)"
+                    state.regime_name = "多頭回調"
                     state.exposure = 0.85
                 else:
-                    state.regime_name = "📉 弱勢整理 (Weak Consolidation)"
+                    state.regime_name = "弱勢整理"
                     state.exposure = 0.5
                     warnings.append("SPY 處於 MA60 之下，防範假突破")
 

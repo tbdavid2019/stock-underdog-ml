@@ -4,6 +4,20 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-14 (v2.4.6)
+
+### Fixed & Enhanced (Pure Chinese Macro Labels & Header Language Switcher)
+- **🏷️ 全面清除大盤風控多餘英文括號註記，回歸純粹凝練之專業中文語境**：
+  - **診斷痛點**：大盤風控與宏觀狀態先前帶有冗餘的英文括號翻譯（如「全面多頭 (Strong Bull)」、「多頭回調 (Bull Pullback)」、「加權弱勢整理 (Weak Consolidation)」等），在繁體中文介面下顯得拖沓廢話且破壞視覺平衡。
+  - **雙層徹底淨化架構**：
+    1. **後端淨化 (`data/macro.py`)**：清理台股加權指數與美股宏觀分析引擎之全部 `state.regime_name` 定義，全數改為純中文標準狀態（如「全面多頭」、「多頭回調」、「加權弱勢整理」、「溫和空頭」、「輕微震盪」、「極度恐慌」），徹底移除所有後綴英文與舊版 Emoji。
+    2. **前端智能清洗 (`cleanRegimeName`)**：無論後端即時推導或 DuckDB 快取舊資料，前端全局透過 `cleanRegimeName` 進行正則清除，在繁體中文模式下自動濾除任何 `(English Words)` 括號後綴，確保看板頂部風控藥丸與儀表板卡片呈現純粹凝練之標題。
+- **🌐 頂部導覽列導入精煉語言切換按鈕（Language Switcher）**：
+  - 於右上角功能群組（Header Actions）新增精巧藥丸型語言切換鈕（`🌐 繁中 / EN`），具備狀態記憶（`localStorage`）與流暢切換微互動。
+  - 當切換為英文語系時，宏觀風控狀態將對應呈現標準國際金融術語（如「Strong Bull」、「Bull Pullback」、「Weak Consolidation」等），實現雙語切換自由且不混雜冗贅括號。
+
+---
+
 ## 2026-10-14 (v2.4.5)
 
 ### Fixed (Eliminate Flash of Uncompiled Content / FOUC on Initial Page Entry)

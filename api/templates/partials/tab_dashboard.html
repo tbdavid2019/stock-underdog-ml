@@ -32,7 +32,7 @@
             <div class="text-xl sm:text-2xl font-black tracking-tight truncate my-1 flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                 <span v-if="macro.regime_name" class="w-2.5 h-2.5 rounded-full shrink-0"
                       :class="macro.regime_name.includes('多頭') ? 'bg-emerald-500' : (macro.regime_name.includes('空頭') ? 'bg-rose-500' : 'bg-amber-500')"></span>
-                <span>{{ stripEmojis(macro.regime_name) || '評估中…' }}</span>
+                <span>{{ cleanRegimeName(macro.regime_name) }}</span>
             </div>
             <div class="pt-2.5 border-t flex items-center justify-between text-xs"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
