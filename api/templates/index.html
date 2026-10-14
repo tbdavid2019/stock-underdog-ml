@@ -93,6 +93,17 @@
             }
         }
     </script>
+    <script>
+        // Immediate Theme Pre-load (Anti-flash)
+        (function() {
+            const savedTheme = localStorage.getItem('theme_v20261013');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
 
     <!-- Vue 3 & Chart.js CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

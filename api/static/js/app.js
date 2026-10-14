@@ -12,9 +12,11 @@ const chartManager = new ChartManager();
 
 export const app = createApp({
     data() {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
+        // Ensure default theme is Obsidian Dark Terminal per Figma 20261013
+        const savedTheme = localStorage.getItem('theme_v20261013');
+        const isDark = savedTheme ? savedTheme === 'dark' : true;
         return {
-            isDark: savedTheme === 'dark',
+            isDark: isDark,
             activeTab: 'dashboard',
             selectedStrategy: 'resonance',
             selectedIndex: '',
@@ -138,7 +140,9 @@ export const app = createApp({
     methods: {
         toggleTheme() {
             this.isDark = !this.isDark;
-            localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
+            const themeStr = this.isDark ? 'dark' : 'light';
+            localStorage.setItem('theme_v20261013', themeStr);
+            localStorage.setItem('theme', themeStr);
             this.applyTheme();
             chartManager.updateTheme(this.isDark);
         },

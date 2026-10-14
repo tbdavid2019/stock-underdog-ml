@@ -8,6 +8,14 @@
 
 ## 2026-10-14
 
+### Redesigned & Fixed (Figma 5:36 Compact Orange Badge Logo & Obsidian Dark Terminal Default)
+- **🎨 依據 Figma 5:36 重構左上角品牌 Logo（亮橘底色純標誌徽章，消除冗長版號與副標）**：
+  - 依據 Figma 設計節點 `5:36`（`node-id=5-36`）與設計規範，徹底移除左側臃腫的文字區塊、版本號（`v2.4.0`）與「多維量化交易決策平台」副標題，釋放超過 200px 寶貴的水平空間。
+  - 全新打造 48x48 高質感亮橘漸層品牌徽章（`888 \n Stock \n Quant` 三層垂直排列），黑字粗體對比強烈，支援點擊一鍵返回操盤看板，視覺乾淨簡練且具備高辨識度。
+- **🌑 預設主題切換至 Figma 20261013 曜石黑彭博終端（消除首次造訪為淺色模式之誤解）**：
+  - 診斷出使用者因本地瀏覽器歷史快取或舊版預設而造訪淺色模式（`#EEEEEE` 灰底白卡片），導致誤認整體風格未依據 Figma 20261013 進行深邃金融終端重塑。
+  - 導入新版獨立主題狀態鍵 `theme_v20261013`，預設全面啟用深色曜石黑終端（Obsidian Black Terminal，`#030302` 深邃底色、`#0D0E11` 卡片與 `#F59E0B` 琥珀金點綴），並在 `<head>` 注入防白閃預載入腳本，確保首次開啟或重新整理均能完美呈現 Figma 20261013 彭博終端風貌。
+
 ### Added & Expanded (Full BigGo Finance Podcast Recommendation Directory & 36 Top Channels)
 - **🎙️ 全面擴充收錄 BigGo 財經推薦頻道庫（由 12 個大幅擴增至 36 個全球頂級頻道）**：
   - 完整收錄 `https://finance.biggo.com.tw/podcast/recommend` 與使用者提供之推薦頻道目錄：
