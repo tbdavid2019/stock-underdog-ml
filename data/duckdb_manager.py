@@ -216,6 +216,14 @@ class DuckDBManager:
                     except Exception:
                         pass
 
+                # 若舊版資料庫因 ALTER TABLE 欄位順序錯位，自動清除重抓以確保資料品質
+                try:
+                    bad_rows = con.execute("SELECT count(*) FROM earnings_calls WHERE source LIKE '%Q%' OR guidance_margin LIKE '%BigGo%'").fetchone()[0]
+                    if bad_rows > 0:
+                        con.execute("DELETE FROM earnings_calls;")
+                except Exception:
+                    pass
+
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS podcast_channels (
                     channel_id VARCHAR PRIMARY KEY,
@@ -1520,7 +1528,7 @@ class DuckDBManager:
             with self._get_connection() as con:
                 con.register("df_earnings_batch", df)
                 con.execute("""
-                INSERT OR REPLACE INTO earnings_calls
+                INSERT OR REPLACE INTO earnings_calls BY NAME
                 SELECT * FROM df_earnings_batch;
                 """)
             logger.info(f"✅ 成功批次寫入/更新 {len(df)} 筆法說會資料")
