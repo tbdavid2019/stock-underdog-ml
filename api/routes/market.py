@@ -1,14 +1,17 @@
-"""
-api/routes/market.py - 台股全市場行情與三大法人籌碼 Endpoints
-"""
-
 from datetime import date
-from typing import Optional, List, Dict, Any
+import time
+from typing import Optional, List, Dict, Any, Tuple
 from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
 from data.duckdb_manager import DuckDBManager
 
 router = APIRouter(prefix="/market", tags=["Market Data & Institutional Flows"])
+
+_STATS_CACHE: Dict[str, Tuple[float, Any]] = {}
+_STATS_CACHE_TTL = 60.0  # 60 seconds
+
+_BROKER_CACHE: Dict[str, Tuple[float, Any]] = {}
+_BROKER_CACHE_TTL = 180.0  # 3 minutes
 
 
 def get_duckdb():
@@ -53,6 +56,12 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
     """
     查詢 DuckDB 中台股全市場日 K 棒、三大法人歷史進出表、券商分點主力與預測記錄之數據量。
     """
+    now = time.time()
+    if "stats" in _STATS_CACHE:
+        ts, cached_obj = _STATS_CACHE["stats"]
+        if now - ts < _STATS_CACHE_TTL:
+            return cached_obj
+
     try:
         with db._get_connection() as con:
             bars_cnt = con.execute("SELECT COUNT(*) FROM tw_daily_bars").fetchone()[0]
@@ -69,7 +78,7 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             latest_bar_date = con.execute("SELECT MAX(date) FROM tw_daily_bars").fetchone()[0]
             latest_inst_date = con.execute("SELECT MAX(date) FROM tw_institutional_daily").fetchone()[0]
 
-            return MarketStatsResponse(
+            res = MarketStatsResponse(
                 total_bars=bars_cnt,
                 total_institutional_records=inst_cnt,
                 total_broker_records=broker_cnt,
@@ -77,6 +86,8 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
                 latest_market_date=str(latest_bar_date) if latest_bar_date else None,
                 latest_institutional_date=str(latest_inst_date) if latest_inst_date else None
             )
+            _STATS_CACHE["stats"] = (now, res)
+            return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查詢市場統計失敗: {e}")
 
@@ -216,7 +227,16 @@ def get_ticker_broker_summary(
     """
     查詢特定標的在過去 N 個交易日內，買超前 15 名與賣超前 15 名之券商分點合計統計。
     """
-    return db.get_broker_top_summary(ticker=ticker, limit_days=days)
+    now = time.time()
+    cache_key = f"summary_{ticker}_{days}"
+    if cache_key in _BROKER_CACHE:
+        ts, cached_obj = _BROKER_CACHE[cache_key]
+        if now - ts < _BROKER_CACHE_TTL:
+            return cached_obj
+
+    res = db.get_broker_top_summary(ticker=ticker, limit_days=days)
+    _BROKER_CACHE[cache_key] = (now, res)
+    return res
 
 
 @router.get("/broker/trades/{ticker}", summary="取得個股近期券商分點明細")
@@ -245,6 +265,13 @@ def get_ticker_broker_trend(
     計算特定標的各關鍵券商分點在歷史區間內的每日「累計買賣超 (張)」時間序列，用於繪製分點走勢圖。
     """
     clean_code = ticker.split(".")[0]
+    now = time.time()
+    cache_key = f"trend_{ticker}_{days}_{top_n}"
+    if cache_key in _BROKER_CACHE:
+        ts, cached_obj = _BROKER_CACHE[cache_key]
+        if now - ts < _BROKER_CACHE_TTL:
+            return cached_obj
+
     try:
         with db._get_connection() as con:
             # 1. 取得最近 N 天日期
@@ -257,7 +284,9 @@ def get_ticker_broker_trend(
             """, [ticker, clean_code, f"{clean_code}.%", days]).df()
             
             if dates_df.empty:
-                return {"ticker": ticker, "dates": [], "series": []}
+                empty_res = {"ticker": ticker, "dates": [], "series": []}
+                _BROKER_CACHE[cache_key] = (now, empty_res)
+                return empty_res
 
             dates = sorted(dates_df["date"].tolist())
             min_date = dates[0]
@@ -273,7 +302,9 @@ def get_ticker_broker_trend(
             """, [ticker, clean_code, f"{clean_code}.%", min_date, top_n]).df()
 
             if top_brokers_df.empty:
-                return {"ticker": ticker, "dates": dates, "series": []}
+                empty_res = {"ticker": ticker, "dates": dates, "series": []}
+                _BROKER_CACHE[cache_key] = (now, empty_res)
+                return empty_res
 
             top_broker_names = top_brokers_df["broker_name"].tolist()
 
@@ -312,11 +343,13 @@ def get_ticker_broker_trend(
             # 依最終累計淨量降冪排序
             series_result.sort(key=lambda x: abs(x["final_net"]), reverse=True)
 
-            return {
+            res = {
                 "ticker": ticker,
                 "dates": dates,
                 "series": series_result
             }
+            _BROKER_CACHE[cache_key] = (now, res)
+            return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"計算券商趨勢失敗: {e}")
 

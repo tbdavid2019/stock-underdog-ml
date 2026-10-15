@@ -9,6 +9,8 @@ Integrates Cloudflare Clef-Flash model endpoints:
 """
 
 import re
+import time
+import json
 import math
 import logging
 import requests
@@ -103,16 +105,24 @@ def _safe_float(val: Any, default: float = 0.0) -> float:
 
 
 class ClefDecisionClient:
-    """3-Tier Fallback Client for Clef-Flash System One Decision API"""
+    """3-Tier Fallback Client for Clef-Flash System One Decision API with DuckDB L2 Caching"""
+
+    _MEM_CACHE: Dict[str, Tuple[float, ClefDecisionVerdict]] = {}
+    CACHE_TTL_SECONDS: float = 86400.0  # 24 hours
 
     def __init__(
         self,
         slots: Optional[List[ClefSlot]] = None,
         enabled: Optional[bool] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
+        db: Optional[Any] = None,
+        enable_cache: Optional[bool] = None
     ):
         self.enabled = config.clef.ENABLE_CLEF_DECISION if enabled is None else enabled
         default_timeout = config.clef.TIMEOUT if timeout is None else timeout
+        self.db = db
+        self.enable_cache = enable_cache
+        self._mem_cache: Dict[str, Tuple[float, ClefDecisionVerdict]] = {}
 
         raw_slots = slots if slots is not None else [
             ClefSlot(
@@ -436,7 +446,8 @@ class ClefDecisionClient:
         candidate: Optional[Dict[str, Any]] = None,
         macro_regime: Optional[str] = None,
         custom_questions: Optional[Dict[str, Any]] = None,
-        raw_state: Optional[Dict[str, Any]] = None
+        raw_state: Optional[Dict[str, Any]] = None,
+        force_refresh: bool = False
     ) -> ClefDecisionVerdict:
         """Evaluate a single stock candidate state or arbitrary custom raw_state against Clef decision questions"""
         if raw_state is not None:
@@ -449,14 +460,57 @@ class ClefDecisionClient:
             ticker = candidate.get("ticker", "UNKNOWN")
             state = self.format_stock_state(candidate, macro_regime=macro_regime)
 
+        # Caching logic: check L1 and L2 for standard ticker evaluation
+        cache_active = self.enable_cache if self.enable_cache is not None else (self.db is not None)
+        is_cacheable = bool(
+            cache_active and ticker and ticker not in ("UNKNOWN", "CUSTOM_STATE") and custom_questions is None
+        )
+        cache_key = f"{ticker}_{macro_regime or 'default'}"
+        now = time.time()
+
+        if is_cacheable and not force_refresh:
+            # 1. Check L1 Memory Cache (instance, then class)
+            cached_item = self._mem_cache.get(cache_key) or self._MEM_CACHE.get(cache_key)
+            if cached_item:
+                cached_ts, cached_verdict = cached_item
+                if now - cached_ts < self.CACHE_TTL_SECONDS:
+                    return cached_verdict
+
+            # 2. Check L2 DuckDB Cache (only when self.db is configured)
+            if self.db and hasattr(self.db, "get_decision_verdict"):
+                db_cached = self.db.get_decision_verdict(ticker)
+                if db_cached:
+                    verdict = ClefDecisionVerdict(
+                        ticker=db_cached["ticker"],
+                        action_decision=db_cached["action_decision"],
+                        action_confidence=db_cached["action_confidence"],
+                        action_probabilities=db_cached.get("action_probabilities", {}),
+                        conviction_score=db_cached["conviction_score"],
+                        is_favorable_entry=db_cached["is_favorable_entry"],
+                        tag=db_cached["tag"],
+                        source_slot=f"{db_cached.get('source_slot', 'clef')}_cache",
+                        success=True
+                    )
+                    self._mem_cache[cache_key] = (now, verdict)
+                    self._MEM_CACHE[cache_key] = (now, verdict)
+                    return verdict
+
+        def _persist_and_return(verdict_obj: ClefDecisionVerdict) -> ClefDecisionVerdict:
+            if is_cacheable:
+                self._mem_cache[cache_key] = (now, verdict_obj)
+                self._MEM_CACHE[cache_key] = (now, verdict_obj)
+                if self.db and hasattr(self.db, "save_decision_verdict"):
+                    self.db.save_decision_verdict(ticker, verdict_obj.to_dict())
+            return verdict_obj
+
         if not self.enabled:
-            return self._evaluate_local_rules(state, error_msg="Clef decision disabled")
+            return _persist_and_return(self._evaluate_local_rules(state, error_msg="Clef decision disabled"))
 
         questions = custom_questions or DEFAULT_STOCK_QUESTIONS
 
         success, answers, slot_name, error_msg = self._call_systemone(state, questions)
         if not success or not answers:
-            return self._evaluate_local_rules(state, error_msg=error_msg or "All Clef endpoints failed")
+            return _persist_and_return(self._evaluate_local_rules(state, error_msg=error_msg or "All Clef endpoints failed"))
 
         try:
             # Parse action_decision safely
@@ -487,7 +541,7 @@ class ClefDecisionClient:
             else:
                 tag = "🤖AI中立"
 
-            return ClefDecisionVerdict(
+            verdict = ClefDecisionVerdict(
                 ticker=ticker,
                 action_decision=action_choice,
                 action_confidence=action_conf,
@@ -498,15 +552,17 @@ class ClefDecisionClient:
                 source_slot=slot_name,
                 success=True
             )
+            return _persist_and_return(verdict)
         except Exception as parse_err:
             logger.warning(f"Error parsing answers from {slot_name}: {parse_err}, degrading to local rules...")
-            return self._evaluate_local_rules(state, error_msg=f"Answer parsing error: {parse_err}")
+            return _persist_and_return(self._evaluate_local_rules(state, error_msg=f"Answer parsing error: {parse_err}"))
 
     def evaluate_candidates_batch(
         self,
         candidates: List[Dict[str, Any]],
         macro_regime: Optional[str] = None,
-        max_workers: int = 5
+        max_workers: int = 5,
+        force_refresh: bool = False
     ) -> Dict[str, ClefDecisionVerdict]:
         """
         Evaluate multiple candidates in parallel.

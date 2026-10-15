@@ -147,6 +147,13 @@ class CacheManager:
         except Exception as e:
             logger.warning(f"儲存基本面快取失敗 {ticker}: {e}")
 
+        # Sync to DuckDB if available
+        try:
+            from data.duckdb_manager import DuckDBManager
+            DuckDBManager().save_company_fundamentals(ticker, data)
+        except Exception:
+            pass
+
     # ========== 4. Cache Purging ==========
 
     @classmethod

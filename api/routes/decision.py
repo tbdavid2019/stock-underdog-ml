@@ -17,9 +17,9 @@ from data.decision_service import DecisionService
 from data.duckdb_manager import DuckDBManager
 
 router = APIRouter(prefix="/decision", tags=["Decision Model (Clef System One)"])
-clef_client = ClefDecisionClient()
-decision_service = DecisionService(clef_client)
 db = DuckDBManager()
+clef_client = ClefDecisionClient(db=db)
+decision_service = DecisionService(clef_client=clef_client, db=db)
 
 # In-memory sliding window rate limiter per client IP
 _RATE_LIMIT_STORE: Dict[str, list] = defaultdict(list)
@@ -85,6 +85,7 @@ class EvaluateDecisionRequest(BaseModel):
     candidate: Optional[Dict[str, Any]] = Field(None, description="Full candidate dictionary with metrics")
     state: Optional[Dict[str, Any]] = Field(None, description="Custom structured state dictionary")
     macro_regime: Optional[str] = Field("bull", description="Current market macro regime ('bull', 'pullback', 'defense', 'panic')")
+    force_refresh: bool = Field(False, description="Whether to bypass DuckDB & memory cache and force remote LLM inference")
 
 
 @router.get("/health", summary="Check 5-Tier Decision Model endpoints health")
@@ -130,7 +131,8 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
     if req.state is not None:
         verdict = decision_service.evaluate_stock(
             raw_state=req.state,
-            macro_regime=req.macro_regime
+            macro_regime=req.macro_regime,
+            force_refresh=req.force_refresh
         )
         return {
             "success": verdict.success,
@@ -140,7 +142,8 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
 
     verdict = decision_service.evaluate_stock(
         candidate=candidate_data,
-        macro_regime=req.macro_regime
+        macro_regime=req.macro_regime,
+        force_refresh=req.force_refresh
     )
 
     return {

@@ -168,8 +168,10 @@ class TestDecisionAPI(unittest.TestCase):
 
     def test_mcp_tool_decision_auth_and_lookup(self):
         """驗證 MCP 工具 get_clef_stock_verdict 具備相同授權與依 ticker 查詢之安全機制"""
-        import os
-        from mcp_server import get_clef_stock_verdict
+        try:
+            from mcp_server import get_clef_stock_verdict
+        except ImportError:
+            self.skipTest("mcp module not installed in current environment")
 
         # 1. 測試當設定 API Key 時，未授權 MCP 呼叫會被阻擋
         with patch.dict(os.environ, {"DECISION_API_KEY": "mcp_secret_key"}):
@@ -187,6 +189,16 @@ class TestDecisionAPI(unittest.TestCase):
             res_not_found = get_clef_stock_verdict(ticker="UNKNOWN_TICKER.TW")
             self.assertFalse(res_not_found["success"])
             self.assertIn("未在量化資料庫中找到標的", res_not_found["error"])
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            with db._get_connection() as con:
+                con.execute("DELETE FROM decision_verdicts WHERE ticker = '2330.TW'")
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

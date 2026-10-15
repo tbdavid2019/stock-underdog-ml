@@ -1,13 +1,13 @@
-"""
-api/routes/predictions.py - Stock Predictions & Multi-Strategy Quantitative Endpoints
-"""
-
-from typing import Optional, List
+import time
+from typing import Optional, List, Dict, Tuple, Any
 from fastapi import APIRouter, Query, HTTPException, Depends
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
 from data.duckdb_manager import DuckDBManager
 
 router = APIRouter(prefix="/predictions", tags=["Predictions & Quant Signals"])
+
+_PRED_CACHE: Dict[str, Tuple[float, PredictionResponse]] = {}
+_PRED_CACHE_TTL = 30.0  # 30 seconds
 
 
 def get_duckdb():
@@ -26,6 +26,13 @@ def get_latest_predictions(
     """
     查詢最新量化批次運算結果。預設 (batch_only=True) 僅回傳最新成功執行批次之標的，並附帶 batch_date, data_as_of, age_hours 與 is_stale 狀態。
     """
+    now = time.time()
+    cache_key = f"latest_{index_name}_{model_name}_{batch_only}_{limit}_{offset}"
+    if cache_key in _PRED_CACHE:
+        ts, cached_obj = _PRED_CACHE[cache_key]
+        if now - ts < _PRED_CACHE_TTL:
+            return cached_obj
+
     res = db.get_latest_predictions(
         index_name=index_name, 
         model_name=model_name, 
@@ -34,13 +41,15 @@ def get_latest_predictions(
         batch_only=batch_only
     )
     records = res.get("records", [])
-    return PredictionResponse(
+    response_obj = PredictionResponse(
         count=len(records),
         batch_date=res.get("batch_date"),
         latest_batch_timestamp=res.get("latest_batch_timestamp"),
         is_stale=res.get("is_stale", False),
         data=records
     )
+    _PRED_CACHE[cache_key] = (now, response_obj)
+    return response_obj
 
 
 @router.get("/resonance", response_model=PredictionResponse, summary="查詢多策略交集與 🏆 三重共振焦點股")
@@ -52,8 +61,17 @@ def get_resonance_candidates(
     """
     篩選同時符合「技術面均線買點 ∩ LSTM 看漲 ∩ 投信/法人鎖碼」的多策略共振股票。
     """
+    now = time.time()
+    cache_key = f"resonance_{index_name}_{limit}"
+    if cache_key in _PRED_CACHE:
+        ts, cached_obj = _PRED_CACHE[cache_key]
+        if now - ts < _PRED_CACHE_TTL:
+            return cached_obj
+
     records = db.get_resonance_candidates(index_name=index_name, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    response_obj = PredictionResponse(count=len(records), data=records)
+    _PRED_CACHE[cache_key] = (now, response_obj)
+    return response_obj
 
 
 @router.get("/xuantie", response_model=PredictionResponse, summary="查詢玄鐵重劍技術面均線回調買點")
@@ -66,8 +84,17 @@ def get_xuantie_candidates(
     """
     篩選處於中長期多頭趨勢且當前股價剛好回踩 MA60 季線或 MA120 半年線之支撐買點標的。
     """
+    now = time.time()
+    cache_key = f"xuantie_{index_name}_{pullback_type}_{limit}"
+    if cache_key in _PRED_CACHE:
+        ts, cached_obj = _PRED_CACHE[cache_key]
+        if now - ts < _PRED_CACHE_TTL:
+            return cached_obj
+
     records = db.get_xuantie_candidates(index_name=index_name, pullback_type=pullback_type, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    response_obj = PredictionResponse(count=len(records), data=records)
+    _PRED_CACHE[cache_key] = (now, response_obj)
+    return response_obj
 
 
 @router.get("/lstm/top-bullish", response_model=PredictionResponse, summary="查詢 LSTM 預測漲幅 TOP N 潛力股")

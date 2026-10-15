@@ -774,13 +774,24 @@ class EarningsCallFetcher:
         """獲取南韓 (KRX) 主要公司法說會日程"""
         return self.fetch_biggo_calls(market="KR")
 
-    def fetch_ticker_calls(self, ticker: str, enrich_top: int = 3) -> List[Dict[str, Any]]:
+    def fetch_ticker_calls(self, ticker: str, enrich_top: int = 3, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
-        依單一股票代碼 (如 2330.TW, NVDA, 7203.T) 線上查詢該標的之歷史與預約法說會
-        並自動富化 top 場次之高管指引、簡報 PDF 與影音回放，最後寫入 DuckDB 快取。
+        依單一股票代碼 (如 2330.TW, NVDA, 7203.T) 查詢該標的之歷史與預約法說會。
+        優先從 DuckDB 讀取已富化之法說會記錄；若無記錄或 force_refresh=True 則線上查詢 BigGo 並富化寫入 DuckDB。
         """
         clean = ticker.strip().upper()
         clean_query = clean.split(".")[0]
+
+        # 1. 優先檢查本地 DuckDB 快取 (避免重複打 BigGo API)
+        if not force_refresh and self.db and hasattr(self.db, "get_earnings_calls"):
+            try:
+                cached = self.db.get_earnings_calls(ticker=clean, limit=50)
+                if isinstance(cached, list) and len(cached) > 0:
+                    logger.debug(f"📦 命中 DuckDB 法說會快取: {clean} ({len(cached)} 筆)")
+                    return cached
+            except Exception as dbe:
+                logger.debug(f"DuckDB 讀取個股法說會快取略過: {dbe}")
+
         results_map: Dict[str, Dict[str, Any]] = {}
 
         tasks = [

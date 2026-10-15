@@ -6,6 +6,8 @@ data/duckdb_manager.py - 本地 DuckDB 量化時序資料庫管理器 (Local Duc
 
 import os
 import re
+import time
+import math
 import logging
 import datetime
 import json
@@ -346,6 +348,35 @@ class DuckDBManager:
                 );
                 CREATE INDEX IF NOT EXISTS idx_podcast_episodes_pub ON podcast_episodes (published_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_podcast_episodes_channel ON podcast_episodes (channel_id);
+
+                CREATE TABLE IF NOT EXISTS decision_verdicts (
+                    ticker VARCHAR NOT NULL,
+                    as_of_date VARCHAR NOT NULL,
+                    action_decision VARCHAR NOT NULL,
+                    action_confidence DOUBLE,
+                    action_probabilities VARCHAR,
+                    conviction_score DOUBLE,
+                    is_favorable_entry DOUBLE,
+                    tag VARCHAR,
+                    source_slot VARCHAR,
+                    raw_verdict VARCHAR,
+                    created_at VARCHAR NOT NULL,
+                    expires_at VARCHAR NOT NULL,
+                    PRIMARY KEY (ticker, as_of_date)
+                );
+                CREATE INDEX IF NOT EXISTS idx_decision_verdicts_ticker ON decision_verdicts (ticker);
+                CREATE INDEX IF NOT EXISTS idx_decision_verdicts_expires ON decision_verdicts (expires_at);
+
+                CREATE TABLE IF NOT EXISTS company_fundamentals (
+                    ticker VARCHAR PRIMARY KEY,
+                    pe DOUBLE,
+                    forward_pe DOUBLE,
+                    pb DOUBLE,
+                    ev_ebitda DOUBLE,
+                    data_json VARCHAR,
+                    updated_at VARCHAR NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_company_fundamentals_ticker ON company_fundamentals (ticker);
                 """);
 
                 # Schema migration for existing installations
@@ -1122,11 +1153,29 @@ class DuckDBManager:
         cand["tags"] = list(merged_tags)
         return cand
 
+    _RESOLVER_CACHE: Dict[str, Tuple[float, Optional[Dict[str, Any]]]] = {}
+    _RESOLVER_CACHE_TTL: float = 86400.0
+    _RESOLVER_CACHE_MAX_SIZE: int = 2000
+
     def resolve_ticker(self, value: str) -> Optional[Dict[str, Any]]:
-        """Resolve a ticker or company name using explicit aliases and local metadata."""
+        """Resolve a ticker or company name using explicit aliases, memory cache, and local metadata."""
         query = clean_query(value)
         if not query:
             return None
+
+        cache_key = query.casefold()
+        now = time.time()
+        if cache_key in self._RESOLVER_CACHE:
+            cached_time, cached_result = self._RESOLVER_CACHE[cache_key]
+            if now - cached_time < self._RESOLVER_CACHE_TTL:
+                return cached_result
+
+        def _cache_and_return(result: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+            if len(self._RESOLVER_CACHE) >= self._RESOLVER_CACHE_MAX_SIZE:
+                for k in list(self._RESOLVER_CACHE.keys())[:400]:
+                    self._RESOLVER_CACHE.pop(k, None)
+            self._RESOLVER_CACHE[cache_key] = (now, result)
+            return result
 
         alias_ticker = resolve_alias(query)
         normalized = alias_ticker or normalize_ticker(query)
@@ -1153,18 +1202,18 @@ class DuckDBManager:
                         [query, query, normalized, query],
                     ).fetchone()
                 if row and row[0]:
-                    return {"query": query, "ticker": str(row[0]).upper(), "name": row[1], "matched_by": "database"}
+                    return _cache_and_return({"query": query, "ticker": str(row[0]).upper(), "name": row[1], "matched_by": "database"})
             except Exception as exc:
                 logger.warning("股票名稱解析略過本機 metadata 查詢: %s", exc)
 
         if alias_ticker:
-            return {"query": query, "ticker": alias_ticker, "name": None, "matched_by": "alias"}
+            return _cache_and_return({"query": query, "ticker": alias_ticker, "name": None, "matched_by": "alias"})
 
         # Ticker-shaped input is accepted, but its history endpoint still
         # requires actual records before returning any quantitative data.
         if re.fullmatch(r"[A-Z][A-Z0-9.-]{0,9}", normalized) or re.fullmatch(r"\d{4,6}\.(TW|TWO)", normalized):
-            return {"query": query, "ticker": normalized, "name": None, "matched_by": "ticker"}
-        return None
+            return _cache_and_return({"query": query, "ticker": normalized, "name": None, "matched_by": "ticker"})
+        return _cache_and_return(None)
 
     def get_db_stats(self) -> Dict[str, Any]:
         """取得 DuckDB 全局時序庫統計資訊 (已排除內部路徑與測試資料)"""
@@ -2514,5 +2563,193 @@ class DuckDBManager:
         except Exception as e:
             logger.debug(f"批次查詢最新行情失敗: {e}")
             return {}
+
+    # ==================== Decision Verdicts Methods (Clef System One) ====================
+
+    def save_decision_verdict(
+        self,
+        ticker: str,
+        verdict: Dict[str, Any],
+        as_of_date: Optional[str] = None,
+        ttl_seconds: int = 86400
+    ) -> bool:
+        """寫入 Clef System One AI 機率化決策推論至 DuckDB，支援多代碼自動正規化與過期時間設置"""
+        if not self.enabled or not ticker or not verdict:
+            return False
+        try:
+            t_clean = str(ticker).strip().upper()
+            date_str = as_of_date or datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d")
+            now_dt = datetime.datetime.now(TZ_TAIPEI)
+            created_at = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+            expires_at = (now_dt + datetime.timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
+
+            action = str(verdict.get("action_decision") or "neutral")
+            confidence = float(verdict.get("action_confidence") or 0.0)
+            probs = verdict.get("action_probabilities") or {}
+            probs_str = json.dumps(probs, ensure_ascii=False) if isinstance(probs, dict) else str(probs)
+            conviction = float(verdict.get("conviction_score") or 2.5)
+            favorable = float(verdict.get("is_favorable_entry") or 0.5)
+            tag = str(verdict.get("tag") or "")
+            source_slot = str(verdict.get("source_slot") or "clef")
+            raw_verdict_str = json.dumps(verdict, ensure_ascii=False)
+
+            with self._get_connection() as con:
+                con.execute("""
+                INSERT OR REPLACE INTO decision_verdicts
+                (ticker, as_of_date, action_decision, action_confidence, action_probabilities,
+                 conviction_score, is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, [
+                    t_clean, date_str, action, confidence, probs_str,
+                    conviction, favorable, tag, source_slot, raw_verdict_str, created_at, expires_at
+                ])
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ 寫入 AI 決策推論至 DuckDB 失敗 ({ticker}): {e}")
+            return False
+
+    def get_decision_verdict(
+        self,
+        ticker: str,
+        as_of_date: Optional[str] = None,
+        check_expiry: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """從 DuckDB 讀取特定標的與交易日之 AI 決策推論快取，支援過期時間檢查"""
+        if not self.enabled or not ticker:
+            return None
+        try:
+            t_clean = str(ticker).strip().upper()
+            date_str = as_of_date or datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d")
+
+            with self._get_connection() as con:
+                row = con.execute("""
+                SELECT action_decision, action_confidence, action_probabilities, conviction_score,
+                       is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at
+                FROM decision_verdicts
+                WHERE (ticker = ? OR ticker LIKE ?) AND as_of_date = ?
+                ORDER BY created_at DESC LIMIT 1;
+                """, [t_clean, f"{t_clean}.%", date_str]).fetchone()
+
+                if not row:
+                    return None
+
+                (action, conf, probs_s, conv, fav, tag, slot, raw_v, c_at, exp_at) = row
+
+                if check_expiry and exp_at:
+                    now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+                    if now_str > exp_at:
+                        return None
+
+                try:
+                    probs_dict = json.loads(probs_s) if probs_s else {}
+                except Exception:
+                    probs_dict = {}
+
+                return {
+                    "ticker": t_clean,
+                    "as_of_date": date_str,
+                    "action_decision": action,
+                    "action_confidence": conf,
+                    "action_probabilities": probs_dict,
+                    "conviction_score": conv,
+                    "is_favorable_entry": fav,
+                    "tag": tag,
+                    "source_slot": slot,
+                    "created_at": c_at,
+                    "expires_at": exp_at,
+                    "success": True
+                }
+        except Exception as e:
+            logger.debug(f"DuckDB 讀取 AI 決策快取失敗 ({ticker}): {e}")
+            return None
+
+    # ==================== Company Fundamentals Methods ====================
+
+    def save_company_fundamentals(self, ticker: str, data: Dict[str, Any]) -> bool:
+        """寫入個股基本面估值指標 (PE, Forward PE, PB, EV/EBITDA) 至 DuckDB"""
+        if not self.enabled or not ticker or not data:
+            return False
+        try:
+            t_clean = str(ticker).strip().upper()
+            now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+
+            def _s_float(v):
+                if v is None:
+                    return None
+                try:
+                    fv = float(v)
+                    return fv if math.isfinite(fv) else None
+                except (ValueError, TypeError):
+                    return None
+
+            pe = _s_float(data.get("pe"))
+            forward_pe = _s_float(data.get("forward_pe"))
+            pb = _s_float(data.get("pb"))
+            ev_ebitda = _s_float(data.get("ev_ebitda"))
+            data_json = json.dumps(data, ensure_ascii=False)
+
+            with self._get_connection() as con:
+                con.execute("""
+                INSERT OR REPLACE INTO company_fundamentals
+                (ticker, pe, forward_pe, pb, ev_ebitda, data_json, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?);
+                """, [t_clean, pe, forward_pe, pb, ev_ebitda, data_json, now_str])
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ 寫入個股基本面至 DuckDB 失敗 ({ticker}): {e}")
+            return False
+
+    def get_company_fundamentals(
+        self,
+        ticker: str,
+        max_age_hours: int = 24
+    ) -> Optional[Dict[str, Optional[float]]]:
+        """從 DuckDB 讀取個股基本面估值指標，支援 TTL 效期檢查"""
+        if not self.enabled or not ticker:
+            return None
+        try:
+            t_clean = str(ticker).strip().upper()
+            with self._get_connection() as con:
+                row = con.execute("""
+                SELECT pe, forward_pe, pb, ev_ebitda, updated_at
+                FROM company_fundamentals
+                WHERE ticker = ? OR ticker LIKE ?
+                ORDER BY updated_at DESC LIMIT 1;
+                """, [t_clean, f"{t_clean}.%"]).fetchone()
+
+                if not row:
+                    return None
+
+                pe, forward_pe, pb, ev_ebitda, updated_at = row
+                if max_age_hours is not None and updated_at:
+                    try:
+                        up_time = datetime.datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_TAIPEI)
+                        now_time = datetime.datetime.now(TZ_TAIPEI)
+                        if (now_time - up_time).total_seconds() > max_age_hours * 3600:
+                            return None
+                    except Exception:
+                        pass
+
+                return {
+                    "pe": pe,
+                    "forward_pe": forward_pe,
+                    "pb": pb,
+                    "ev_ebitda": ev_ebitda,
+                    "updated_at": updated_at
+                }
+        except Exception as e:
+            logger.debug(f"DuckDB 讀取個股基本面快取失敗 ({ticker}): {e}")
+            return None
+
+    def save_company_fundamentals_batch(self, records: Dict[str, Dict[str, Any]]) -> int:
+        """批次儲存多個股票之基本面指標"""
+        if not self.enabled or not records:
+            return 0
+        saved = 0
+        for t, d in records.items():
+            if self.save_company_fundamentals(t, d):
+                saved += 1
+        return saved
+
 
 

@@ -43,6 +43,16 @@ class TestFundamentals(unittest.TestCase):
                 self.assertIsNone(res["pe"])
                 self.assertIsNone(res["pb"])
 
+    def tearDown(self):
+        FundamentalProvider._MEM_CACHE.clear()
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            with db._get_connection() as con:
+                con.execute("DELETE FROM company_fundamentals WHERE ticker = '2330.TW'")
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

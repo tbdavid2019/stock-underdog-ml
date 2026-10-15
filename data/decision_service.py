@@ -93,8 +93,20 @@ class DecisionService:
     Ensures 100% operational reliability through deterministic local rule degradation.
     """
 
-    def __init__(self, clef_client: Optional[ClefDecisionClient] = None):
-        self.clef_client = clef_client or ClefDecisionClient()
+    def __init__(
+        self,
+        clef_client: Optional[ClefDecisionClient] = None,
+        db: Optional[Any] = None
+    ):
+        if db is not None:
+            self.db = db
+        else:
+            try:
+                from data.duckdb_manager import DuckDBManager
+                self.db = DuckDBManager()
+            except Exception:
+                self.db = None
+        self.clef_client = clef_client or ClefDecisionClient(db=self.db)
         self.timeout = config.clef.TIMEOUT
 
     def check_health(self) -> Dict[str, Any]:
@@ -154,9 +166,17 @@ class DecisionService:
         self,
         candidate: Optional[Dict[str, Any]] = None,
         macro_regime: Optional[str] = None,
-        raw_state: Optional[Dict[str, Any]] = None
+        raw_state: Optional[Dict[str, Any]] = None,
+        force_refresh: bool = False
     ) -> ClefDecisionVerdict:
-        """Evaluate stock candidate with 5-tier fallback to deterministic local rules"""
+        """Evaluate stock candidate with 5-tier fallback to deterministic local rules and DuckDB caching"""
+        if force_refresh:
+            return self.clef_client.evaluate_stock(
+                candidate=candidate,
+                macro_regime=macro_regime,
+                raw_state=raw_state,
+                force_refresh=True
+            )
         return self.clef_client.evaluate_stock(
             candidate=candidate,
             macro_regime=macro_regime,

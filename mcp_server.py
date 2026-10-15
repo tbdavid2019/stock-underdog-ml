@@ -427,7 +427,8 @@ def get_polymarket_macro_sentiment(
 def get_clef_stock_verdict(
     ticker: str,
     macro_regime: Optional[str] = "bull",
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
     Get Clef-Flash System One probabilistic decision verdict for a stock.
@@ -436,6 +437,7 @@ def get_clef_stock_verdict(
         ticker: 股票代號 (如 '2330.TW', 'NVDA')
         macro_regime: 當前宏觀市場情境 ('bull', 'pullback', 'defense', 'panic')
         api_key: 選擇性 API 密鑰 (若伺服器設定 DECISION_API_KEY / CLEF_API_KEY 則必填)
+        force_refresh: 是否繞過快取強制重新推論 (預設 False)
     """
     # 1. Enforce access control if configured
     required_key = os.getenv("DECISION_API_KEY") or os.getenv("CLEF_API_KEY")
@@ -473,8 +475,8 @@ def get_clef_stock_verdict(
         }
 
     from data.clef_client import ClefDecisionClient
-    client = ClefDecisionClient()
-    verdict = client.evaluate_stock(cand, macro_regime=macro_regime)
+    client = ClefDecisionClient(db=db)
+    verdict = client.evaluate_stock(cand, macro_regime=macro_regime, force_refresh=force_refresh)
     return {
         "success": verdict.success,
         "ticker": ticker,
