@@ -225,6 +225,13 @@ class DuckDBManager:
                     pass
 
                 con.execute("""
+                CREATE TABLE IF NOT EXISTS macro_snapshots (
+                    category VARCHAR PRIMARY KEY,
+                    data_json VARCHAR NOT NULL,
+                    source VARCHAR,
+                    updated_at VARCHAR NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS podcast_channels (
                     channel_id VARCHAR PRIMARY KEY,
                     title VARCHAR NOT NULL,
@@ -1630,6 +1637,50 @@ class DuckDBManager:
         except Exception as e:
             logger.error(f"❌ 取得法說會日曆彙總失敗: {e}")
             return []
+
+    # ==================== Macro Snapshots Methods ====================
+
+    def save_macro_snapshot(self, category: str, data: Any, source: str = "Investing.com") -> bool:
+        """持久化宏觀數據與行事曆快照至 DuckDB (以 category 為主鍵 Upsert)"""
+        if not self.enabled or not category or data is None:
+            return False
+        try:
+            now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+            data_json = json.dumps(data, ensure_ascii=False)
+            with self._get_connection() as con:
+                con.execute("""
+                INSERT OR REPLACE INTO macro_snapshots (category, data_json, source, updated_at)
+                VALUES (?, ?, ?, ?);
+                """, [category, data_json, source, now_str])
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ 寫入宏觀快照至 DuckDB 失敗 ({category}): {e}")
+            return False
+
+    def get_macro_snapshot(self, category: str, max_age_seconds: Optional[int] = None) -> Optional[Any]:
+        """從 DuckDB 讀取宏觀數據或行事曆快照，支援效期檢查"""
+        if not self.enabled or not category:
+            return None
+        try:
+            with self._get_connection() as con:
+                row = con.execute("""
+                SELECT data_json, updated_at FROM macro_snapshots WHERE category = ?;
+                """, [category]).fetchone()
+                if not row:
+                    return None
+                data_json, updated_at = row
+                if max_age_seconds is not None:
+                    try:
+                        up_time = datetime.datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_TAIPEI)
+                        now_time = datetime.datetime.now(TZ_TAIPEI)
+                        if (now_time - up_time).total_seconds() > max_age_seconds:
+                            return None
+                    except Exception:
+                        pass
+                return json.loads(data_json)
+        except Exception as e:
+            logger.debug(f"讀取 DuckDB 宏觀快照失敗 ({category}): {e}")
+            return None
 
     # ==================== Podcast Radar Methods ====================
 

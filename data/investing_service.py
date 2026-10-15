@@ -17,6 +17,7 @@ import time
 import datetime
 import logging
 import threading
+import concurrent.futures
 from typing import Dict, List, Optional, Any
 import requests
 
@@ -27,14 +28,14 @@ class InvestingService:
     """Investing.com 宏觀與行事曆資訊服務"""
 
     FALLBACK_2MD_HOSTS = [
-        "https://2md.aiurl.tw",
         "https://2md.glsoft.ai",
-        "https://create360.ai"
+        "https://create360.ai",
+        "https://2md.aiurl.tw"
     ]
 
-    # 全域節流信號量 (與 company_profile 共享保守並發)
-    _CRAWLER_SEMAPHORE = threading.Semaphore(2)
-    TIMEOUT = 18.0
+    # 全域節流信號量 (擴展至 4 並發)
+    _CRAWLER_SEMAPHORE = threading.Semaphore(4)
+    TIMEOUT = 7.0
 
     # 磁碟快取目錄
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +46,7 @@ class InvestingService:
     TTL_ECONOMIC_CALENDAR = 3600 * 6  # 總經行事曆 (6 小時)
     TTL_EARNINGS_CALENDAR = 3600 * 12 # 財報行事曆 (12 小時)
     TTL_COMMODITIES = 3600 * 6        # 大宗商品行情 (6 小時)
+    TTL_SUMMARY = 3600 * 6            # 綜合總經前瞻 (6 小時)
 
     # 記憶體快取 L1
     _MEM_CACHE: Dict[str, tuple] = {}
@@ -55,15 +57,28 @@ class InvestingService:
         return os.path.join(cls.CACHE_DIR, f"{key}.json")
 
     @classmethod
-    def _read_cache(cls, key: str, ttl: int) -> Optional[Any]:
+    def _read_cache(cls, key: str, ttl: int, allow_stale: bool = False) -> Optional[Any]:
         now = time.time()
         # 1. 檢查 L1 記憶體
         if key in cls._MEM_CACHE:
             ts, data = cls._MEM_CACHE[key]
-            if now - ts < ttl:
+            if (now - ts < ttl) or allow_stale:
                 return data
 
-        # 2. 檢查 L2 磁碟
+        # 2. 檢查 L2 DuckDB
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            max_age = None if allow_stale else ttl
+            db_data = db.get_macro_snapshot(key, max_age_seconds=max_age)
+            if db_data is not None:
+                cls._MEM_CACHE[key] = (now, db_data)
+                logger.debug(f"📦 Investing DuckDB 快取命中: {key}")
+                return db_data
+        except Exception as e:
+            logger.debug(f"讀取 DuckDB 宏觀快照失敗 {key}: {e}")
+
+        # 3. 檢查 L3 磁碟
         filepath = cls._get_cache_filepath(key)
         if os.path.exists(filepath):
             try:
@@ -71,12 +86,18 @@ class InvestingService:
                     payload = json.load(f)
                 cached_at = payload.get("cached_at", 0)
                 data = payload.get("data")
-                if data is not None and (now - cached_at < ttl):
+                if data is not None and ((now - cached_at < ttl) or allow_stale):
                     cls._MEM_CACHE[key] = (cached_at, data)
+                    # 同步回寫 DuckDB 保持一致性
+                    try:
+                        from data.duckdb_manager import DuckDBManager
+                        DuckDBManager().save_macro_snapshot(key, data, source="DiskCache")
+                    except Exception:
+                        pass
                     logger.debug(f"📦 Investing 磁碟快取命中: {key}")
                     return data
             except Exception as e:
-                logger.debug(f"讀取 Investing 快取失敗 {key}: {e}")
+                logger.debug(f"讀取 Investing 磁碟快取失敗 {key}: {e}")
 
         return None
 
@@ -84,6 +105,15 @@ class InvestingService:
     def _write_cache(cls, key: str, data: Any):
         now = time.time()
         cls._MEM_CACHE[key] = (now, data)
+
+        # 1. 寫入 L2 DuckDB
+        try:
+            from data.duckdb_manager import DuckDBManager
+            DuckDBManager().save_macro_snapshot(key, data, source="Investing.com")
+        except Exception as e:
+            logger.debug(f"寫入 DuckDB 宏觀快照失敗 {key}: {e}")
+
+        # 2. 寫入 L3 磁碟
         try:
             filepath = cls._get_cache_filepath(key)
             tmp_path = f"{filepath}.tmp.{threading.get_ident()}"
@@ -96,7 +126,7 @@ class InvestingService:
             with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
             os.replace(tmp_path, filepath)
-            logger.debug(f"💾 Investing 快取已持久化至磁碟: {key}")
+            logger.debug(f"💾 Investing 快取已持久化至磁碟與 DuckDB: {key}")
         except Exception as e:
             logger.warning(f"寫入 Investing 磁碟快取失敗 {key}: {e}")
 
@@ -209,6 +239,11 @@ class InvestingService:
                 cls._write_cache(cache_key, result)
                 return result
 
+        if not force_refresh:
+            stale = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True)
+            if stale:
+                return stale
+
         logger.warning("⚠️ FedWatch 上游沒有可驗證資料，略過利率預期顯示")
         return None
 
@@ -269,6 +304,11 @@ class InvestingService:
                 cls._write_cache(cache_key, items[:30])
                 return items[:30]
 
+        if not force_refresh:
+            stale = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True)
+            if stale:
+                return stale
+
         return []
 
     # =========================================================================
@@ -311,6 +351,11 @@ class InvestingService:
             if commodities:
                 cls._write_cache(cache_key, commodities)
                 return commodities
+
+        if not force_refresh:
+            stale = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True)
+            if stale:
+                return stale
 
         logger.warning("⚠️ 商品行情上游沒有可驗證資料，略過商品行情顯示")
         return None
@@ -377,31 +422,61 @@ class InvestingService:
                 cls._write_cache(cache_key, events[:25])
                 return events[:25]
 
+        if not force_refresh:
+            stale = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True)
+            if stale:
+                return stale
+
         return []
 
     # =========================================================================
-    # 5. 綜合宏觀前瞻摘要 (Full Macro & Calendar Summary)
+    # 5. 綜合宏觀前瞻摘要 (Full Macro & Calendar Summary - DuckDB Fast Parallel)
     # =========================================================================
 
     @classmethod
     def get_investing_macro_summary(cls, force_refresh: bool = False) -> Dict[str, Any]:
-        """彙整聯準會利率預期、重要財報與大宗原物料之一站式宏觀數據"""
-        fed_rate = cls.get_fed_rate_monitor(force_refresh=force_refresh)
-        earnings = cls.get_earnings_calendar(force_refresh=force_refresh)
-        commodities = cls.get_commodities_summary(force_refresh=force_refresh)
-        economic_calendar = cls.get_economic_calendar(force_refresh=force_refresh)
+        """彙整聯準會利率預期、重要財報與大宗原物料之一站式宏觀數據 (DuckDB 優先並行加速)"""
+        cache_key = "investing_summary"
+
+        if not force_refresh:
+            cached = cls._read_cache(cache_key, cls.TTL_SUMMARY)
+            if cached:
+                return cached
+
+        # 並行抓取 4 大宏觀數據，大幅降低延遲至秒級
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            fut_fed = executor.submit(cls.get_fed_rate_monitor, force_refresh)
+            fut_earn = executor.submit(cls.get_earnings_calendar, force_refresh)
+            fut_comm = executor.submit(cls.get_commodities_summary, force_refresh)
+            fut_econ = executor.submit(cls.get_economic_calendar, None, force_refresh)
+
+            fed_rate = fut_fed.result()
+            earnings = fut_earn.result()
+            commodities = fut_comm.result()
+            economic_calendar = fut_econ.result()
 
         # 提煉今日與明日重點警示
-        high_impact_events = [e for e in economic_calendar if e.get("is_high_impact")][:3]
+        high_impact_events = [e for e in (economic_calendar or []) if e.get("is_high_impact")][:3]
         catalyst_alerts = []
         for e in high_impact_events:
             catalyst_alerts.append(f"⚠️ {e.get('date', '')} {e.get('time', '')} [{e.get('country', '')}] {e.get('event')}")
 
-        return {
+        result = {
             "fed_rate": fed_rate,
-            "earnings_calendar": earnings[:15],
+            "earnings_calendar": (earnings or [])[:15],
             "commodities": commodities,
-            "economic_calendar": economic_calendar[:10],
+            "economic_calendar": (economic_calendar or [])[:10],
             "catalyst_alerts": catalyst_alerts,
             "timestamp": datetime.datetime.now().isoformat()
         }
+
+        # 只要有抓到任一有效區塊即快取寫入 DuckDB 與磁碟
+        if fed_rate or commodities or earnings or economic_calendar:
+            cls._write_cache(cache_key, result)
+        elif not force_refresh:
+            # 若全部抓取失敗，優先使用 DuckDB 中的歷史快照容災，杜絕前端空窗
+            stale = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True)
+            if stale:
+                return stale
+
+        return result

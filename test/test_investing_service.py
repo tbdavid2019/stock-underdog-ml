@@ -14,11 +14,27 @@ class TestInvestingService(unittest.TestCase):
         InvestingService._MEM_CACHE.clear()
         if os.path.exists(InvestingService.CACHE_DIR):
             shutil.rmtree(InvestingService.CACHE_DIR, ignore_errors=True)
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            if db.enabled:
+                with db._get_connection() as con:
+                    con.execute("DELETE FROM macro_snapshots;")
+        except Exception:
+            pass
 
     def tearDown(self):
         InvestingService._MEM_CACHE.clear()
         if os.path.exists(InvestingService.CACHE_DIR):
             shutil.rmtree(InvestingService.CACHE_DIR, ignore_errors=True)
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            if db.enabled:
+                with db._get_connection() as con:
+                    con.execute("DELETE FROM macro_snapshots;")
+        except Exception:
+            pass
 
     @patch("data.investing_service.InvestingService._fetch_url_markdown")
     def test_get_fed_rate_monitor(self, mock_fetch):

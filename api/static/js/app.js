@@ -39,7 +39,7 @@ export const app = createApp({
             ],
 
             macro: {},
-            showMacroDetails: false,
+            showMacroDetails: localStorage.getItem('stock_show_macro_details') !== 'false',
             macroRefreshing: false,
             stats: {},
             marketStats: {},
@@ -214,6 +214,10 @@ export const app = createApp({
             } finally {
                 this.macroRefreshing = false;
             }
+        },
+        toggleMacroDetails() {
+            this.showMacroDetails = !this.showMacroDetails;
+            localStorage.setItem('stock_show_macro_details', this.showMacroDetails);
         },
         async loadStats() {
             try {

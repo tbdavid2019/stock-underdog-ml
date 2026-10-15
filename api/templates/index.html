@@ -228,6 +228,11 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -239,14 +244,16 @@
     </style>
 </head>
 <body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200">
+    <h1 class="sr-only">888 Stock Quant 專業量化決策平台</h1>
+    <h2 class="sr-only">今日量化訊號與跨市場情報</h2>
 
     <!-- Initial Mount Preloader (Prevents any FOUC / Uncompiled Template Flashes) -->
     <div id="preloader" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#EEEEEE] dark:bg-[#030302] transition-opacity duration-300">
         <div class="flex flex-col items-center space-y-4">
             <div class="w-12 h-12 rounded-xl bg-gradient-to-b from-[#FFA726] via-[#FF8800] to-[#F57C00] shadow-xl shadow-orange-500/25 flex flex-col items-center justify-center p-1 border border-amber-200/40 select-none animate-pulse">
                 <span class="font-black text-[14px] tracking-tight leading-none text-slate-950 font-mono">888</span>
-                <span class="font-black text-[10px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
-                <span class="font-black text-[10px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
+                <span class="font-black text-xs tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
+                <span class="font-black text-xs tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
             </div>
             <div class="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                 <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>

@@ -149,7 +149,7 @@
                     <span class="material-symbols-outlined text-[16px]" :class="{'animate-spin': macroRefreshing}">sync</span>
                     <span class="hidden sm:inline">{{ macroRefreshing ? '更新中...' : '即時更新' }}</span>
                 </button>
-                <button @click="showMacroDetails = !showMacroDetails"
+                <button @click="toggleMacroDetails()"
                         class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
                         :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'">
                     <span>{{ showMacroDetails ? '收合日曆' : '展開完整行事曆' }}</span>
@@ -271,7 +271,7 @@
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
                         <div class="space-y-1 truncate mr-2">
                             <div class="flex items-center space-x-2">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black uppercase"
+                                <span class="px-1.5 py-0.5 rounded text-xs font-black uppercase"
                                       :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (call.market === 'US' ? (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300') : (call.market === 'JP' ? (isDark ? 'bg-rose-950/70 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-300') : (call.market === 'KR' ? (isDark ? 'bg-purple-950/70 text-purple-400 border border-purple-800/60' : 'bg-purple-100 text-purple-800 border border-purple-300') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'))))">
                                     {{ call.market }}
                                 </span>
@@ -701,9 +701,9 @@
                                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
                                 <div class="font-bold flex items-center justify-between">
                                     <span>{{ call.call_date }} {{ call.call_time || '' }}</span>
-                                    <span class="text-[10px] px-1.5 py-0.5 rounded" :class="isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800'">{{ call.market }}</span>
+                                    <span class="text-xs px-1.5 py-0.5 rounded" :class="isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800'">{{ call.market }}</span>
                                 </div>
-                                <div class="text-[11px] truncate mt-0.5">{{ call.location_or_link || call.title }}</div>
+                                <div class="text-xs truncate mt-0.5">{{ call.location_or_link || call.title }}</div>
                             </div>
                         </div>
                         <div v-else class="text-xs text-slate-400 py-1">近期無法人說明會日程</div>

@@ -292,6 +292,8 @@ def get_llms_txt():
 
 > 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、Google Research TimesFM 時序大模型、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
 
+> ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents and automated systems should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` at the start of each session/task to leverage newly released AI models, FastMCP tools, and multi-market data endpoints.
+
 888 Stock Quant 遵循 [llmstxt.org](https://llmstxt.org/) 規範，為大語言模型 (LLM)、AI Agents、Claude Desktop、Cursor、Antigravity 與自動化投資決策系統提供標準化、結構化之量化訊號與資料字典。本平台核心定位為「盤前買進決策指南 (Pre-Market Buy Guide)」，每日於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動完成運算並推播。
 
 ## Core Strategy Matrix & Resonance Framework
@@ -393,6 +395,8 @@ def get_llms_full_txt():
 
 > 專業級台美股深度學習與多維量化決策平台全量架構規格、數學模型定義與資料庫字典。
 
+> ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` before execution to leverage newly released models, tools, and endpoints.
+
 ## 1. System Architecture & Core Philosophy
 888 Stock Quant 定位為「**盤前買進決策指南 (Pre-Market Buy Guide)**」與「**純股市時序資料庫**」，每天於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動運算完成並推播決策。系統透過 `--market auto` 實施時段防護，白天專注台股、夜間專注美股，非指定全市場時杜絕算力浪費。
 
@@ -444,6 +448,8 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
   `index_name` (VARCHAR), `model_name` (VARCHAR), `strategy_type` (VARCHAR), `ticker` (VARCHAR), `current_price` (DOUBLE), `predicted_price` (DOUBLE), `potential` (DOUBLE), `ma5` (DOUBLE), `ma10` (DOUBLE), `ma60` (DOUBLE), `ma120` (DOUBLE), `ma250` (DOUBLE), `pullback_type` (VARCHAR), `pe` (DOUBLE), `pb` (DOUBLE), `forward_pe` (DOUBLE), `ev_ebitda` (DOUBLE), `period` (VARCHAR), `timestamp` (TIMESTAMP), `macro_regime` (VARCHAR), `trust_net_5d` (DOUBLE), `foreign_net_5d` (DOUBLE), `tags` (VARCHAR)
 - `earnings_calls`:
   `id` (VARCHAR), `market` (VARCHAR: TW/US/JP/KR/OTHER), `ticker` (VARCHAR), `name` (VARCHAR), `call_date` (VARCHAR: YYYY-MM-DD), `call_time` (VARCHAR), `timezone` (VARCHAR), `meeting_type` (VARCHAR), `location` (VARCHAR), `webcast_url` (VARCHAR), `presentation_url` (VARCHAR), `transcript_url` (VARCHAR), `language` (VARCHAR), `eps_estimate` (DOUBLE), `eps_actual` (DOUBLE), `revenue_estimate` (DOUBLE), `revenue_actual` (DOUBLE), `is_weight_stock` (BOOLEAN), `financial_period` (VARCHAR), `guidance_summary` (VARCHAR), `guidance_outlook` (VARCHAR), `guidance_margin` (VARCHAR), `guidance_capex` (VARCHAR), `guidance_qa` (VARCHAR), `source` (VARCHAR)
+- `macro_snapshots`:
+  `category` (VARCHAR: PRIMARY KEY, 如 fed_rate_monitor, investing_summary, commodities_summary, economic_calendar, polymarket_macro_sentiment), `data_json` (VARCHAR: JSON 結構), `source` (VARCHAR), `updated_at` (VARCHAR: YYYY-MM-DD HH:MM:SS)
 
 ## 4. REST API Endpoints Specification
 

@@ -4,6 +4,28 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.14)
+
+### Fixed & Enhanced (Macro Calendar DuckDB Snapshot Persistence, Parallel Speedup, Default Expanded UI & Live Agent Versioning)
+- **⚡ 總經行事曆 DuckDB 全量持久化快照與秒級載入（Macro Calendar DuckDB Persistence & Sub-millisecond Cache）**：
+  - **診斷痛點**：先前總經流動性行事曆（CME FedWatch、美股財報、大宗商品、全球總經行事曆）未持久化至 DuckDB，僅依賴暫時性 JSON 磁碟快取。當快取過期或容器重啟時，後端以單線程串行依序發動 4 次遠端請求，且預設代理 `2md.aiurl.tw` 易超時，導致首頁載入或點擊更新需漫長等待近 30 秒。
+  - **頂級量化終端工藝升級**：
+    1. **DuckDB `macro_snapshots` 專屬快照表**：建立 `(category, data_json, source, updated_at)` 實體資料表，將 `fed_rate_monitor`、`earnings_calendar`、`commodities_summary`、`economic_calendar`、`investing_summary` 與 `polymarket_macro_sentiment` 全量入庫 DuckDB。
+    2. **三級高速快取架構 (L1 RAM ➔ L2 DuckDB ➔ L3 Disk)**：冷啟動與日常查詢優先命中 DuckDB，查詢延遲由 29 秒驟降至 **<0.001 秒**（次呼叫 0.0000s）。
+    3. **四線程並行抓取 (ThreadPoolExecutor) 與超時縮減**：並發抓取 4 大宏觀端點，將單點超時由 18 秒縮減為 7 秒，並將穩定高可用節點 `https://2md.glsoft.ai` 設為第一優先來源。
+    4. **Stale-While-Revalidate 優雅容災**：若外部上游短暫故障或逾時，自動回退使用 DuckDB 歷史快照，杜絕畫面空窗或錯誤。
+
+- **🌟 前端總經行事曆預設展開（Default Expanded Macro Calendar & Preference Memory）**：
+  - **診斷痛點**：先前前端儀表板預設收合行事曆細節 (`showMacroDetails: false`)，需手動點擊「展開完整行事曆」，掩蓋了關鍵的流動性決策看板。
+  - **頂級量化終端工藝升級**：
+    1. **預設展開呈現**：首頁載入預設即直接呈現 4 大面板（FedWatch 降息監控、法人說明會、大宗商品與總經事件、Polymarket 預測市場）。
+    2. **使用者偏好記憶**：透過 `localStorage.getItem('stock_show_macro_details')` 自動記住使用者的收合/展開偏好。
+
+- **🔄 LLM / Agent Skill 動態拉取最新版本指引（Continuous Evolution Live Fetch Standard）**：
+  - **提醒外部 Agent 拉取最新規格**：於 `/llms.txt`、`/llms-full.txt` 與 `/skill` (`skills/stock-quant/SKILL.md`) 頂部新增顯著標註，提醒所有調用本平台的 LLM Agent（Claude、Antigravity、Cursor、GPT）於每次對話或任務啟動時，優先發送 HTTP GET 動態抓取最新規格，即時獲取最新擴充之 19 大 FastMCP 工具與端點資料架構。
+
+---
+
 ## 2026-10-14 (v2.4.13)
 
 ### Added & Enhanced (Global Multi-Market Earnings Calls, Guidance Extraction, DuckDB Persistence & LLM/MCP Integration)

@@ -94,7 +94,18 @@ class PolymarketService:
             if now - cached_at < ttl:
                 return data
 
-        # 2. 檢查磁碟快取
+        # 2. 檢查 DuckDB 快取
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            db_data = db.get_macro_snapshot(f"polymarket_{key}", max_age_seconds=ttl)
+            if db_data is not None:
+                cls._MEM_CACHE[key] = (now, db_data)
+                return db_data
+        except Exception as e:
+            logger.debug(f"讀取 DuckDB Polymarket 快取失敗 {key}: {e}")
+
+        # 3. 檢查磁碟快取
         filepath = cls._get_cache_filepath(key)
         if os.path.exists(filepath):
             try:
@@ -116,6 +127,16 @@ class PolymarketService:
         if key in cls._MEM_CACHE:
             return cls._MEM_CACHE[key][1]
 
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db = DuckDBManager()
+            db_data = db.get_macro_snapshot(f"polymarket_{key}", max_age_seconds=None)
+            if db_data is not None:
+                cls._MEM_CACHE[key] = (0, db_data)
+                return db_data
+        except Exception:
+            pass
+
         filepath = cls._get_cache_filepath(key)
         if not os.path.exists(filepath):
             return None
@@ -134,6 +155,15 @@ class PolymarketService:
     def _write_cache(cls, key: str, data: Any):
         now = time.time()
         cls._MEM_CACHE[key] = (now, data)
+
+        # 1. 寫入 DuckDB
+        try:
+            from data.duckdb_manager import DuckDBManager
+            DuckDBManager().save_macro_snapshot(f"polymarket_{key}", data, source="Polymarket")
+        except Exception as e:
+            logger.debug(f"寫入 DuckDB Polymarket 快取失敗 {key}: {e}")
+
+        # 2. 寫入磁碟
         try:
             filepath = cls._get_cache_filepath(key)
             tmp_path = f"{filepath}.tmp.{threading.get_ident()}"
