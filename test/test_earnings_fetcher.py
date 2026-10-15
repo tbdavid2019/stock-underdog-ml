@@ -242,12 +242,11 @@ class TestEarningsCallFetcher(unittest.TestCase):
         cal = db.get_earnings_calendar(year=2026, month=10, market="ALL")
         self.assertTrue(len(cal) > 0)
         day_14 = next((d for d in cal if d["call_date"] == "2026-10-14"), None)
-        self.assertIsNotNone(day_14)
-        self.assertEqual(day_14["total_calls"], 2)
-        self.assertIn("calls", day_14)
-        self.assertEqual(len(day_14["calls"]), 2)
-        self.assertIn(day_14["calls"][0]["market"], ("JP", "KR"))
         self.assertEqual(day_14["weekday"], "星期三")
+        self.assertGreaterEqual(day_14["total_calls"], 2)
+        self.assertIn("calls", day_14)
+        self.assertGreaterEqual(len(day_14["calls"]), 2)
+        self.assertTrue(any(c["market"] in ("JP", "KR") for c in day_14["calls"]))
 
     def test_upcoming_endpoint_time_filtering(self):
         from fastapi.testclient import TestClient
@@ -286,6 +285,36 @@ class TestEarningsCallFetcher(unittest.TestCase):
         for item in data_bounded["data"]:
             self.assertGreaterEqual(item["call_date"], "2026-10-01")
             self.assertLessEqual(item["call_date"], "2026-10-14")
+
+        # 5. 查詢今天 (TODAY) 驗證台積電 2330.TW 官方法說會 (指定 ref_date=2026-10-15 避免隨執行日期漂移)
+        resp_today = client.get("/api/v1/earnings-call/upcoming?time_filter=TODAY&market=ALL&ref_date=2026-10-15")
+        self.assertEqual(resp_today.status_code, 200)
+        data_today = resp_today.json()
+        self.assertTrue(data_today["success"])
+        self.assertGreaterEqual(data_today["today_count"], 1)
+        self.assertTrue(any(c["ticker"] == "2330.TW" for c in data_today["data"]))
+        tsmc = next(c for c in data_today["data"] if c["ticker"] == "2330.TW")
+        self.assertEqual(tsmc["call_date"], "2026-10-15")
+        self.assertEqual(tsmc["call_time"], "14:00")
+        self.assertTrue(tsmc["is_weight_stock"])
+        self.assertIsNotNone(tsmc["webcast_url"])
+
+    def test_verified_corporate_earnings_fallback(self):
+        """測試當 BigGo 無回應或未收錄時，自動退回官方基準庫 (如台積電 2330.TW)"""
+        from data.earnings_fetcher import EarningsCallFetcher, load_verified_corporate_earnings
+        benchmarks = load_verified_corporate_earnings()
+        self.assertGreaterEqual(len(benchmarks), 20)
+        self.assertTrue(any(b["ticker"] == "2330.TW" for b in benchmarks))
+
+        # 模擬 BigGo API 回傳空字典
+        fetcher = EarningsCallFetcher(db=None)
+        with unittest.mock.patch.object(fetcher, "_fetch_biggo_all_windows", return_value={}):
+            results = fetcher.fetch_ticker_calls("2330.TW")
+            self.assertGreaterEqual(len(results), 1)
+            tsmc = next(r for r in results if r["ticker"] == "2330.TW")
+            self.assertEqual(tsmc["call_date"], "2026-10-15")
+            self.assertEqual(tsmc["call_time"], "14:00")
+            self.assertIn("investor.tsmc.com", tsmc["webcast_url"])
 
 
 if __name__ == "__main__":

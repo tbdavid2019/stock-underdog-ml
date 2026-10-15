@@ -4,6 +4,21 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.17)
+
+### Added & Enhanced (TSMC & Global Corporate Benchmark Earnings Integration, Fallback Defense & Deterministic Testing)
+- **🎯 官方指標企業法說會基準庫（Verified Corporate Benchmark Directory）深度整合**：
+  - **診斷痛點**：台積電（2330.TW）於 2026-10-15 14:00 召開之 2026 Q3 法人說明會，因採用官方專屬 Global Audio Webcast 系統而非 TWSE WebPro，導致外部爬蟲若因時效、分頁或上游未及時建檔時易產生遺漏；且 `fetch_ticker_calls` 先前在 BigGo 回傳空結果時會提前返回，導致查詢台積電或重量級標的時無法退回基準庫。
+  - **核心升級**：
+    1. **官方指標企業基準目錄（`data/verified_earnings.json`）**：收錄包含台積電（2330.TW）、聯發科（2454.TW）、鴻海（2317.TW）、廣達（2382.TW）及美股科技巨頭（NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA 等）共 22 場已確認之全球指標企業法說會，包含官方 IR Webcast、簡報下載與 Q&A 重點指引。
+    2. **DuckDB 獨立種子植入機制**：資料庫初始化時採用 `INSERT OR IGNORE` 批次寫入基準庫，不依賴單一股票判斷，確保現有資料庫平滑升級，所有基準資料皆完整保留。
+    3. **雙向安全融合與富化（Bidirectional Merge & Enrichment）**：
+       - `fetch_all_and_sync`：抓取 BigGo 與交易所資料後，與基準庫進行比對融合，既有紀錄自動補齊官方 Webcast 與指引。
+       - `fetch_ticker_calls`：BigGo 上游無資料或連線異常時，自動退回基準庫，確保台積電等關鍵標的永不回傳空值。
+    4. **API 與測試確定性增強（Deterministic API & Tests）**：
+       - API `/api/v1/earnings-call/upcoming` 新增 `ref_date` 查詢參數（YYYY-MM-DD），支援依指定基準日計算「今天」、「即將召開」與「近期回放」，防範時區與日期漂移。
+       - 單元測試補齊 `test_verified_corporate_earnings_fallback`，確保測試在任何日期執行皆具 100% 確定性。
+
 ## 2026-10-15 (v2.4.16)
 
 ### Added & Enhanced (BigGo-Style Earnings Call UI Overhaul, Today-First Smart Grouping, 2-Column Calendar Grid & Multidimensional Filtering)

@@ -134,6 +134,7 @@ def get_upcoming_calls(
     end_date: Optional[str] = Query(None, description="截止日期 (YYYY-MM-DD)"),
     is_weight_stock: Optional[bool] = Query(None, description="是否僅顯示重量級權值股"),
     time_filter: str = Query("ALL", description="時間區間: ALL (全部) / TODAY (今天) / UPCOMING (即將召開) / PAST (近期回放)"),
+    ref_date: Optional[str] = Query(None, description="基準日期 (YYYY-MM-DD，預設今天，用於回測或指定基準日)"),
     limit: int = Query(50, ge=1, le=200, description="返回筆數上限")
 ):
     """
@@ -150,6 +151,12 @@ def get_upcoming_calls(
     tf = str(time_filter).strip().upper() if time_filter else "ALL"
 
     today = datetime.date.today()
+    if ref_date:
+        try:
+            parts = [int(p) for p in str(ref_date).strip().split("-")]
+            today = datetime.date(parts[0], parts[1], parts[2])
+        except Exception:
+            pass
     today_str = today.strftime("%Y-%m-%d")
     tomorrow_str = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     yesterday_str = (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")

@@ -21,6 +21,19 @@ import urllib.parse
 logger = logging.getLogger("stock_app.earnings")
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache", "earnings")
+VERIFIED_EARNINGS_FILE = os.path.join(os.path.dirname(__file__), "verified_earnings.json")
+
+
+def load_verified_corporate_earnings() -> List[Dict[str, Any]]:
+    """載入官方已確認之全球指標企業 (如台積電 2330.TW、聯發科 2454.TW、鴻海 2317.TW、美股巨頭等) 法說會基準庫"""
+    if os.path.exists(VERIFIED_EARNINGS_FILE):
+        try:
+            with open(VERIFIED_EARNINGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"讀取官方基準法說會檔案失敗: {e}")
+    return []
+
 
 # 台股前 50 大與美股科技巨頭權值股清單
 TW_WEIGHT_STOCKS = {
@@ -788,10 +801,7 @@ class EarningsCallFetcher:
             except Exception as e:
                 logger.debug(f"查詢標的法說會失敗 ({u}): {e}")
 
-        if not results_map:
-            return []
-
-        raw_items = list(results_map.values())
+        raw_items = list(results_map.values()) if results_map else []
         parsed_records: List[Dict[str, Any]] = []
 
         # 富化前 N 場次
@@ -848,6 +858,25 @@ class EarningsCallFetcher:
                 "source": f"BigGo / {mkt} IR"
             })
 
+        # 融合官方基準庫 (如台積電 2330.TW 等)，即使上游 BigGo 無資料亦能精準回傳
+        verified_items = load_verified_corporate_earnings()
+        verified_map = {f"{r.get('ticker')}_{r.get('call_date')}": r for r in parsed_records}
+        for v in verified_items:
+            v_t = (v.get("ticker") or "").upper()
+            if v_t == clean or v_t.startswith(clean_query) or (v.get("name") and clean_query in v["name"].upper()):
+                k = f"{v.get('ticker')}_{v.get('call_date')}"
+                if k not in verified_map:
+                    parsed_records.append(v)
+                    verified_map[k] = v
+                else:
+                    existing = verified_map[k]
+                    for fld in ("webcast_url", "presentation_url", "transcript_url", "guidance_summary", "guidance_outlook", "guidance_margin", "guidance_capex", "guidance_qa"):
+                        if not existing.get(fld) and v.get(fld):
+                            existing[fld] = v[fld]
+
+        if not parsed_records:
+            return []
+
         parsed_records.sort(key=lambda x: (x["call_date"], x["call_time"]))
 
         if parsed_records and self.db and hasattr(self.db, "save_earnings_calls_batch"):
@@ -871,6 +900,28 @@ class EarningsCallFetcher:
             logger.info("⚠️ BigGo 未包含台股資料，啟動 TWSE/TPEx 次級備援...")
             tw_backup = self.fetch_twse_calls() + self.fetch_tpex_calls()
             all_records.extend(tw_backup)
+
+        # 融合官方指標企業基準庫 (如台積電 2330.TW、聯發科、鴻海等)，確保重大法說會永不遺漏
+        verified_items = load_verified_corporate_earnings()
+        merged_map: Dict[str, Dict[str, Any]] = {}
+        for r in all_records:
+            t = (r.get("ticker") or "").strip().upper()
+            d = (r.get("call_date") or "").strip()
+            merged_map[f"{t}_{d}"] = r
+
+        for v in verified_items:
+            t = (v.get("ticker") or "").strip().upper()
+            d = (v.get("call_date") or "").strip()
+            key = f"{t}_{d}"
+            if key not in merged_map:
+                merged_map[key] = v
+            else:
+                existing = merged_map[key]
+                for fld in ("webcast_url", "presentation_url", "transcript_url", "guidance_summary", "guidance_outlook", "guidance_margin", "guidance_capex", "guidance_qa"):
+                    if not existing.get(fld) and v.get(fld):
+                        existing[fld] = v[fld]
+
+        all_records = list(merged_map.values())
 
         if not all_records:
             logger.warning("⚠️ 未抓取到任何跨市場法說會紀錄")

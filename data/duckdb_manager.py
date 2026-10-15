@@ -224,6 +224,28 @@ class DuckDBManager:
                 except Exception:
                     pass
 
+                # 自動植入官方指標企業基準庫種子 (確保台積電 2330.TW 等關鍵法說會永不缺席)
+                try:
+                    v_path = os.path.join(os.path.dirname(__file__), "verified_earnings.json")
+                    if os.path.exists(v_path):
+                        with open(v_path, "r", encoding="utf-8") as vf:
+                            v_items = json.load(vf)
+                        if v_items:
+                            v_df = pd.DataFrame(v_items)
+                            v_df = v_df.where(pd.notna(v_df), None)
+                            if "timestamp_utc" not in v_df.columns:
+                                v_df["timestamp_utc"] = None
+                            now_str = datetime.datetime.now().isoformat()
+                            if "created_at" not in v_df.columns:
+                                v_df["created_at"] = now_str
+                            if "updated_at" not in v_df.columns:
+                                v_df["updated_at"] = now_str
+                            con.register("v_seed_batch", v_df)
+                            con.execute("INSERT OR IGNORE INTO earnings_calls BY NAME SELECT * FROM v_seed_batch;")
+                            logger.info(f"✅ 自動植入官方基準法說會資料 (共 {len(v_items)} 筆)")
+                except Exception as seed_err:
+                    logger.debug(f"自動植入基準法說會資料略過: {seed_err}")
+
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS macro_snapshots (
                     category VARCHAR PRIMARY KEY,
