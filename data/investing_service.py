@@ -370,11 +370,17 @@ class InvestingService:
         if not raw_events:
             return []
 
+        def _is_nsa(text: str) -> bool:
+            return bool(re.search(r'(?i)(?<![a-z])n\.?s\.?a\.?(?![a-z])', text))
+
+        def _is_sa(text: str) -> bool:
+            return not _is_nsa(text) and bool(re.search(r'(?i)(?<![a-z])s\.?a\.?(?![a-z])', text))
+
         groups: Dict[str, List[Dict[str, Any]]] = {}
         for ev in raw_events:
             t = ev.get("event", "")
             # 去除 s.a. / n.s.a. 等縮寫標記，提取基準指標名
-            base_name = re.sub(r'[\(\[\{]?(?:n\.s\.a\.|s\.a\.|nsa|sa)[\)\]\}]?', '', t, flags=re.I)
+            base_name = re.sub(r'(?i)[\(\[\{]?(?:n\.?s\.?a\.|s\.?a\.|nsa|sa)[\)\]\}]?', '', t)
             base_name = re.sub(r'\s+', ' ', base_name).strip()
             group_key = f"{ev.get('date')}_{ev.get('time')}_{ev.get('country')}_{base_name.lower()}"
             groups.setdefault(group_key, []).append(ev)
@@ -385,15 +391,17 @@ class InvestingService:
                 chosen = ev_list[0]
             else:
                 # 若同時包含 s.a. (季調後) 與 n.s.a. (未季調)，市場標準優先採用 s.a.
-                sa_ev = next((e for e in ev_list if re.search(r'\bs\.a\.?\b', e.get("event", ""), re.I)), None)
+                sa_ev = next((e for e in ev_list if _is_sa(e.get("event", ""))), None)
                 chosen = sa_ev if sa_ev else ev_list[0]
 
             # 增強標題中文可讀性
             ev_title = chosen.get("event", "")
-            if re.search(r'\bn\.s\.a\.?\b', ev_title, re.I):
-                ev_title = re.sub(r'\bn\.s\.a\.?\b', '未季調 (n.s.a.)', ev_title, flags=re.I)
-            elif re.search(r'\bs\.a\.?\b', ev_title, re.I):
-                ev_title = re.sub(r'\bs\.a\.?\b', '季調後 (s.a.)', ev_title, flags=re.I)
+            if _is_nsa(ev_title):
+                ev_title = re.sub(r'(?i)[\(\[\{]?(?:n\.?s\.?a\.|nsa)[\)\]\}]?', '未季調 (n.s.a.)', ev_title).strip()
+                ev_title = re.sub(r'\s+', ' ', ev_title)
+            elif _is_sa(ev_title):
+                ev_title = re.sub(r'(?i)[\(\[\{]?(?:s\.?a\.|sa)[\)\]\}]?', '季調後 (s.a.)', ev_title).strip()
+                ev_title = re.sub(r'\s+', ' ', ev_title)
 
             chosen_copy = dict(chosen)
             chosen_copy["event"] = ev_title
