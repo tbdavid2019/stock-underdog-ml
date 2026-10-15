@@ -88,8 +88,8 @@ class CompanyProfileService:
         return None
 
     @classmethod
-    def _write_cache(cls, ticker: str, profile_data: Dict[str, Any]):
-        """寫入兩層快取 (L1 記憶體 + L2 磁碟持久化)，效期 20 天"""
+    def _write_cache(cls, ticker: str, profile_data: Dict[str, Any], db: Optional[Any] = None):
+        """寫入三層快取 (L1 記憶體 + L2 DuckDB + L3 磁碟持久化)，效期 20 天"""
         now = time.time()
 
         # 1. 寫入 L1 記憶體快取
@@ -105,7 +105,15 @@ class CompanyProfileService:
         if not has_content:
             return
 
-        # 3. 寫入 L2 磁碟持久化快取 (原子寫入避免並發衝突)
+        # 3. 寫入 L2 DuckDB 時序資料庫 (跨使用者持久化共享)
+        if db is not None and hasattr(db, "save_company_profile"):
+            try:
+                db.save_company_profile(ticker, profile_data)
+                logger.debug(f"🦆 公司資料已持久化至 DuckDB: {ticker}")
+            except Exception as e:
+                logger.debug(f"DuckDB 寫入公司快取失敗 {ticker}: {e}")
+
+        # 4. 寫入 L3 磁碟持久化快取 (原子寫入避免並發衝突)
         try:
             os.makedirs(cls.CACHE_DIR, exist_ok=True)
             filepath = cls._get_cache_filepath(ticker)
@@ -117,49 +125,50 @@ class CompanyProfileService:
                 "profile": profile_data
             }
             with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
+                json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
             os.replace(tmp_path, filepath)
             logger.debug(f"💾 公司資料已持久化至磁碟 (20天): {ticker}")
         except Exception as e:
             logger.warning(f"寫入公司磁碟快取失敗 {ticker}: {e}")
 
     @classmethod
-    def get_company_profile(cls, ticker_raw: str, db: Optional[Any] = None) -> Dict[str, Any]:
+    def get_company_profile(cls, ticker_raw: str, db: Optional[Any] = None, force_refresh: bool = False) -> Dict[str, Any]:
         """
-        取得公司名稱、簡介、主要業務與最新新聞 (單一標的，優先命中 20 天持久化快取)
+        取得公司名稱、簡介、主要業務與最新新聞 (單一標的，支援 L1 記憶體 -> L2 DuckDB -> L3 磁碟)
         """
         ticker = normalize_ticker(ticker_raw).upper()
+        now = time.time()
 
-        # 1. 檢查快取 (L1 記憶體 -> L2 磁碟 20天)
-        cached = cls._read_cache(ticker)
-        if cached:
-            is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
-            if is_tw and not cached.get("company_network"):
-                try:
-                    from data.company_network import CompanyNetworkService
-                    network = CompanyNetworkService.get_company_network(ticker, db)
-                    if network:
-                        cached["company_network"] = network
-                        if network.get("unified_id") and not cached.get("unified_id"):
-                            cached["unified_id"] = network["unified_id"]
-                        if network.get("capital_formatted") and not cached.get("capital"):
-                            cached["capital"] = network["capital_formatted"]
-                        if network.get("representative") and not cached.get("chairman"):
-                            cached["chairman"] = network["representative"]
-                        if network.get("name") and not cached.get("registered_name"):
-                            cached["registered_name"] = network["name"]
-                        if network.get("web_url"):
-                            if "links" not in cached:
-                                cached["links"] = {}
-                            cached["links"]["network_graph"] = network["web_url"]
-                        if network.get("image_url"):
-                            if "links" not in cached:
-                                cached["links"] = {}
-                            cached["links"]["network_image"] = network["image_url"]
-                        cls._write_cache(ticker, cached)
-                except Exception as e:
-                    logger.debug(f"Backfill company network failed: {e}")
-            return cached
+        # 1. 檢查 L1 記憶體快取
+        if not force_refresh and ticker in cls._CACHE:
+            cached_at, mem_profile = cls._CACHE[ticker]
+            if now - cached_at < cls.CACHE_TTL:
+                cls._enrich_network_if_needed(ticker, mem_profile, db=db)
+                return mem_profile
+
+        # 2. 檢查 L2 DuckDB 快取 (跨使用者共享)
+        if not force_refresh and db is not None and hasattr(db, "get_company_profile"):
+            try:
+                db_profile = db.get_company_profile(ticker, max_age_seconds=cls.CACHE_TTL)
+                if db_profile and db_profile.get("business_summary"):
+                    cls._CACHE[ticker] = (now, db_profile)
+                    cls._enrich_network_if_needed(ticker, db_profile, db=db)
+                    return db_profile
+            except Exception as e:
+                logger.debug(f"DuckDB 讀取公司快取失敗 ({ticker}): {e}")
+
+        # 3. 檢查 L3 磁碟快取 (20天)
+        if not force_refresh:
+            cached = cls._read_cache(ticker)
+            if cached:
+                # 自動回填至 L2 DuckDB
+                if db is not None and hasattr(db, "save_company_profile"):
+                    try:
+                        db.save_company_profile(ticker, cached)
+                    except Exception:
+                        pass
+                cls._enrich_network_if_needed(ticker, cached, db=db)
+                return cached
 
         # 2. 解析公司基本名稱
         stock_name = cls._resolve_stock_name(ticker, db)
@@ -233,9 +242,39 @@ class CompanyProfileService:
         if not profile_data.get("business_summary"):
             cls._fallback_yfinance(profile_data, ticker)
 
-        # 5. 寫入兩層快取 (L1 記憶體 + L2 磁碟持久化 20 天)
-        cls._write_cache(ticker, profile_data)
+        # 5. 寫入三層快取 (L1 記憶體 + L2 DuckDB + L3 磁碟持久化 20 天)
+        cls._write_cache(ticker, profile_data, db=db)
         return profile_data
+
+    @classmethod
+    def _enrich_network_if_needed(cls, ticker: str, cached: Dict[str, Any], db: Optional[Any] = None):
+        """若快取中尚未包含企業網絡且為台股標的，自動並行或延遲補齊"""
+        is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
+        if is_tw and not cached.get("company_network"):
+            try:
+                from data.company_network import CompanyNetworkService
+                network = CompanyNetworkService.get_company_network(ticker, db)
+                if network:
+                    cached["company_network"] = network
+                    if network.get("unified_id") and not cached.get("unified_id"):
+                        cached["unified_id"] = network["unified_id"]
+                    if network.get("capital_formatted") and not cached.get("capital"):
+                        cached["capital"] = network["capital_formatted"]
+                    if network.get("representative") and not cached.get("chairman"):
+                        cached["chairman"] = network["representative"]
+                    if network.get("name") and not cached.get("registered_name"):
+                        cached["registered_name"] = network["name"]
+                    if network.get("web_url"):
+                        if "links" not in cached:
+                            cached["links"] = {}
+                        cached["links"]["network_graph"] = network["web_url"]
+                    if network.get("image_url"):
+                        if "links" not in cached:
+                            cached["links"] = {}
+                        cached["links"]["network_image"] = network["image_url"]
+                    cls._write_cache(ticker, cached, db=db)
+            except Exception as e:
+                logger.debug(f"Backfill company network failed: {e}")
 
     @classmethod
     def _resolve_stock_name(cls, ticker: str, db: Optional[Any] = None) -> Optional[str]:
@@ -252,13 +291,17 @@ class CompanyProfileService:
         if not manager:
             return None
         try:
-            with manager._get_connection() as con:
-                row = con.execute("SELECT name FROM tw_daily_bars WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
-                if row and row[0]:
-                    return str(row[0]).strip()
-                row_inst = con.execute("SELECT name FROM tw_institutional_daily WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
-                if row_inst and row_inst[0]:
-                    return str(row_inst[0]).strip()
+            if hasattr(manager, "_get_connection"):
+                with manager._get_connection() as con:
+                    row = con.execute("SELECT name FROM tw_daily_bars WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
+                    if row and row[0] and isinstance(row[0], str):
+                        return str(row[0]).strip()
+                    row_inst = con.execute("SELECT name FROM tw_institutional_daily WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
+                    if row_inst and row_inst[0] and isinstance(row_inst[0], str):
+                        return str(row_inst[0]).strip()
+                    row_p = con.execute("SELECT name FROM company_profiles WHERE ticker = ? OR raw_code = ? LIMIT 1", [ticker, ticker.split(".")[0]]).fetchone()
+                    if row_p and row_p[0] and isinstance(row_p[0], str):
+                        return str(row_p[0]).strip()
         except Exception as e:
             logger.debug(f"DuckDB stock name lookup failed: {e}")
 
@@ -505,13 +548,38 @@ class CompanyProfileService:
         if not unique_tickers:
             return results
 
-        # 1. 優先回傳已在快取者 (L1 記憶體 -> L2 磁碟持久化，20天)
+        # 1. 優先回傳已在快取者 (L1 記憶體 -> L2 DuckDB -> L3 磁碟持久化，20天)
         missing = []
+        now = time.time()
         for t in unique_tickers:
             norm = normalize_ticker(t).upper()
+            # 檢查 L1 記憶體快取
+            if norm in cls._CACHE:
+                cached_at, mem_prof = cls._CACHE[norm]
+                if now - cached_at < cls.CACHE_TTL:
+                    results[norm] = mem_prof
+                    continue
+
+            # 檢查 L2 DuckDB
+            if db is not None and hasattr(db, "get_company_profile"):
+                try:
+                    db_prof = db.get_company_profile(norm, max_age_seconds=cls.CACHE_TTL)
+                    if db_prof and db_prof.get("business_summary"):
+                        cls._CACHE[norm] = (now, db_prof)
+                        results[norm] = db_prof
+                        continue
+                except Exception:
+                    pass
+
+            # 檢查 L3 磁碟
             cached = cls._read_cache(norm)
             if cached:
                 results[norm] = cached
+                if db is not None and hasattr(db, "save_company_profile"):
+                    try:
+                        db.save_company_profile(norm, cached)
+                    except Exception:
+                        pass
             else:
                 missing.append(norm)
 
@@ -567,8 +635,8 @@ class CompanyProfileService:
             prof = profiles_to_fetch[norm]
             if not prof.get("business_summary"):
                 cls._fallback_yfinance(prof, norm)
-            # 寫入兩層快取 (L1 記憶體 + L2 磁碟持久化 20 天) 與回傳結果
-            cls._write_cache(norm, prof)
+            # 寫入三層快取 (L1 記憶體 + L2 DuckDB + L3 磁碟持久化 20 天) 與回傳結果
+            cls._write_cache(norm, prof, db=db)
             results[norm] = prof
 
         return results

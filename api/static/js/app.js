@@ -494,9 +494,8 @@ export const app = createApp({
             // Also load earnings call history for this ticker
             this.loadTickerEarnings(ticker);
 
-            if (targetTab === 'network') {
+            if (this.isTwStock(ticker)) {
                 this.ensureCompanyNetworkLoaded(ticker);
-            } else if (targetTab === 'tender') {
                 this.ensureCompanyTenderLoaded(ticker);
             }
 

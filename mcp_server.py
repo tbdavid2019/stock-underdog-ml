@@ -568,6 +568,26 @@ def open_company_network(
     }
 
 
+@mcp.tool(
+    name="get_company_tenders",
+    description="查詢台股上市櫃企業之政府電子採購網得標案件統計、累計金額、主要採購機關金主、主要競標對手情報與政府採購法第101條停權風控狀態 (ToBid)。優先命中 DuckDB 本機快取。"
+)
+def get_company_tenders(
+    ticker: str,
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    """
+    Query government procurement tender history, wins, sole-bid rate, top agency clients, rivals, and Article 101 compliance from ToBid MCP and DuckDB cache.
+    """
+    from data.tender_fetcher import TenderService
+    from data.duckdb_manager import DuckDBManager
+    db_inst = DuckDBManager() if DuckDBManager else None
+    res = TenderService.get_company_tender(ticker, db=db_inst, force_refresh=force_refresh)
+    if not res:
+        return {"success": False, "ticker": ticker, "data": None, "message": "無法取得該標的之政府標案情報"}
+    return {"success": True, "ticker": ticker, "data": res}
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

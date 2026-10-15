@@ -265,6 +265,41 @@ URL Source: https://tw.stock.yahoo.com/quote/9945.TW/profile
         self.assertIn("晶圓製造代工", results["2303.TW"]["business_summary"])
         self.assertEqual(mock_batch.call_count, 1)
 
+    @patch("data.company_profile.CompanyProfileService._fetch_profile_from_2md")
+    @patch("data.company_profile.CompanyProfileService._fetch_news_from_2md")
+    def test_get_company_profile_persists_and_reads_from_duckdb(self, mock_news, mock_profile):
+        """驗證當使用者點擊查到公司資料後，自動存入 DuckDB，再次查詢直接命中 DuckDB 無需重抓"""
+        def _fake_fetch_profile(prof, is_tw):
+            prof["name"] = "大同"
+            prof["industry"] = "綜合產業"
+            prof["business_summary"] = "家電與重電設備"
+            prof["chairman"] = "張_華"
+            prof["market_cap"] = "1000億"
+        mock_profile.side_effect = _fake_fetch_profile
+        mock_news.return_value = []
+
+        mock_db = MagicMock()
+        mock_db.get_company_profile.return_value = None  # 初次查無快取
+
+        # 1. 第一次呼叫：查無快取，觸發抓取並寫入 DuckDB
+        res1 = CompanyProfileService.get_company_profile("2371.TW", db=mock_db)
+        self.assertEqual(res1["name"], "大同")
+        self.assertEqual(mock_profile.call_count, 1)
+        mock_db.save_company_profile.assert_called_once()
+
+        # 2. 第二次呼叫：DuckDB 命中，清除記憶體與磁碟快取，驗證直接回傳 DuckDB 快取且不重複抓取
+        CompanyProfileService._CACHE.clear()
+        mock_db.get_company_profile.return_value = {
+            "ticker": "2371.TW",
+            "raw_code": "2371",
+            "name": "大同",
+            "business_summary": "家電與重電設備 (來自 DuckDB)",
+            "chairman": "張_華"
+        }
+        res2 = CompanyProfileService.get_company_profile("2371.TW", db=mock_db)
+        self.assertEqual(res2["business_summary"], "家電與重電設備 (來自 DuckDB)")
+        self.assertEqual(mock_profile.call_count, 1)  # 抓取次數依然為 1，未重抓！
+
 
 if __name__ == "__main__":
     unittest.main()

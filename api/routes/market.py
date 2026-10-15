@@ -345,6 +345,7 @@ class CompanyProfileResponse(BaseModel):
 def get_company_profile_endpoint(
     ticker: Optional[str] = None,
     query: Optional[str] = Query(None, description="股票代號或名稱，如 9945.TW, 2330, 台積電, AAPL"),
+    force_refresh: bool = Query(False, description="是否強制重新抓取最新資料"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
@@ -357,7 +358,7 @@ def get_company_profile_endpoint(
         raise HTTPException(status_code=400, detail="請提供股票代號或名稱")
 
     try:
-        profile = CompanyProfileService.get_company_profile(target, db=db)
+        profile = CompanyProfileService.get_company_profile(target, db=db, force_refresh=force_refresh)
         return CompanyProfileResponse(
             success=True,
             ticker=profile["ticker"],

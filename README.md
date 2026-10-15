@@ -278,9 +278,9 @@ graph TD
 | `/api/v1/macro/investing/economic-calendar` | `GET` | 全球重大總經行事曆（CPI、非農 NFP 等） |
 | `/api/v1/market/institutional/top` | `GET` | 三大法人買賣超焦點排行 |
 | `/api/v1/market/universe` | `GET` | 全球證券清冊、來源 snapshot 與 stale/cache freshness 狀態 |
-| `/api/v1/market/company-profile/{ticker}` | `GET` | 查詢公司中文營運簡介、董監事持股、即時新聞與集團網絡連結 |
-| `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡 |
-| `/api/v1/market/company-tender/{ticker}` | `GET` | 查詢台股標的之政府採購得標金額、勝率、獨標率、採購機關與對手標案情資 (ToBid) |
+| `/api/v1/market/company-profile/{ticker}` | `GET` | 查詢公司中文營運簡介、董監事持股、即時新聞與集團網絡連結（支援 DuckDB 20天快取與跨使用者共享） |
+| `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡（支援 DuckDB 30天快取） |
+| `/api/v1/market/company-tender/{ticker}` | `GET` | 查詢台股標的之政府採購得標金額、勝率、獨標率、採購機關與對手標案情資（串接 ToBid MCP，支援 DuckDB 7天快取） |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 | `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美日韓跨市場法人說明會、雙時區（CST/EST）、時間維度篩選（ALL/TODAY/UPCOMING/PAST）與天數倒數 |

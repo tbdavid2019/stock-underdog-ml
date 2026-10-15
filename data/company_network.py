@@ -257,27 +257,41 @@ class CompanyNetworkService:
             return None
 
         ticker_upper = str(ticker_raw).strip().upper()
+        raw_code = re.sub(r"\.(TW|TWO)$", "", ticker_upper)
+
+        # 0. 解析公司正式全名與代碼標準化 (Entity Resolution)
+        company_info = cls.resolve_company_info(ticker_raw)
+        canonical_ticker = ticker_upper
+        if company_info:
+            code = company_info.get("code")
+            if code:
+                raw_code = code
+                market = company_info.get("market", "TWSE")
+                suffix = ".TWO" if market == "TPEx" else ".TW"
+                canonical_ticker = f"{raw_code}{suffix}"
 
         # 快速過濾外盤標的（如 AAPL, NVDA, TSLA, SPY, QQQ 等非台股格式）
         is_tw_explicit = ticker_upper.endswith(".TW") or ticker_upper.endswith(".TWO")
-        raw_code = re.sub(r"\.(TW|TWO)$", "", ticker_upper)
-        if not is_tw_explicit and not raw_code.isdigit() and ticker_upper not in cls._NAME_TO_INFO:
-            # 嘗試檢查是否為中文別名 (如 '台積電')
-            info = cls.resolve_company_info(ticker_raw)
-            if not info:
-                return None
+        if not is_tw_explicit and not raw_code.isdigit() and ticker_upper not in cls._NAME_TO_INFO and not company_info:
+            return None
 
         # 1. 檢查 L1 記憶體快取
         now = time.time()
-        if raw_code in cls._MEM_NETWORKS:
-            ts, cached_net = cls._MEM_NETWORKS[raw_code]
-            if now - ts < cls.NETWORK_TTL:
-                return cached_net
+        if raw_code in cls._MEM_NETWORKS or canonical_ticker in cls._MEM_NETWORKS:
+            cached_tuple = cls._MEM_NETWORKS.get(raw_code) or cls._MEM_NETWORKS.get(canonical_ticker)
+            if cached_tuple:
+                ts, cached_net = cached_tuple
+                if now - ts < cls.NETWORK_TTL:
+                    return cached_net
 
-        # 2. 檢查 DuckDB 快取
+        # 2. 檢查 DuckDB 快取 (跨使用者共享)
         if db is not None and hasattr(db, "get_company_network"):
             try:
                 db_data = db.get_company_network(raw_code, max_age_seconds=cls.NETWORK_TTL)
+                if not db_data and canonical_ticker:
+                    db_data = db.get_company_network(canonical_ticker, max_age_seconds=cls.NETWORK_TTL)
+                if not db_data and company_info and company_info.get("name"):
+                    db_data = db.get_company_network(company_info["name"], max_age_seconds=cls.NETWORK_TTL)
                 if db_data:
                     cls._MEM_NETWORKS[raw_code] = (now, db_data)
                     return db_data
@@ -294,12 +308,18 @@ class CompanyNetworkService:
                     with open(net_file, "r", encoding="utf-8") as f:
                         data = json.load(f)
                         cls._MEM_NETWORKS[raw_code] = (mtime, data)
+                        if db is not None and hasattr(db, "save_company_network"):
+                            try:
+                                db.save_company_network(raw_code, data)
+                            except Exception:
+                                pass
                         return data
             except Exception as e:
                 logger.debug(f"讀取磁碟網絡快取失敗 {raw_code}: {e}")
 
-        # 4. 解析公司正式全名
-        company_info = cls.resolve_company_info(ticker_raw)
+        # 4. 若前面尚未解析成功，嘗試再次解析
+        if not company_info:
+            company_info = cls.resolve_company_info(ticker_raw)
         if not company_info:
             return None
 

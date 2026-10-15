@@ -150,16 +150,45 @@ class TenderService:
 
         now = time.time()
 
-        # 1. 檢查 L1 記憶體快取
-        if not force_refresh and raw_code in cls._MEM_CACHE:
-            ts, cached_data = cls._MEM_CACHE[raw_code]
-            if now - ts < cls.CACHE_TTL:
-                return cached_data
+        # 0. 解析公司正式全名與代碼 (Entity Resolution)
+        company_name = None
+        canonical_ticker = ticker_upper
+        try:
+            from data.company_network import CompanyNetworkService
+            comp_info = CompanyNetworkService.resolve_company_info(ticker_clean)
+            if comp_info and comp_info.get("name"):
+                company_name = comp_info.get("name")
+                code = comp_info.get("code")
+                if code:
+                    raw_code = code
+                market = comp_info.get("market", "TWSE")
+                suffix = ".TWO" if market == "TPEx" else ".TW"
+                canonical_ticker = f"{raw_code}{suffix}" if raw_code.isdigit() else ticker_upper
+        except Exception as e:
+            logger.debug(f"解析公司正式名稱失敗: {e}")
 
-        # 2. 檢查 DuckDB 快取
+        if not company_name:
+            if any(ord(c) > 127 for c in ticker_clean):
+                company_name = ticker_clean
+            else:
+                company_name = ticker_clean
+
+        # 1. 檢查 L1 記憶體快取
+        if not force_refresh and (raw_code in cls._MEM_CACHE or canonical_ticker in cls._MEM_CACHE):
+            cached_data = cls._MEM_CACHE.get(raw_code) or cls._MEM_CACHE.get(canonical_ticker)
+            if cached_data:
+                ts, data = cached_data
+                if now - ts < cls.CACHE_TTL:
+                    return data
+
+        # 2. 檢查 DuckDB 快取 (跨使用者共享)
         if not force_refresh and db is not None and hasattr(db, "get_company_tender"):
             try:
                 db_data = db.get_company_tender(raw_code, max_age_seconds=cls.CACHE_TTL)
+                if not db_data and canonical_ticker:
+                    db_data = db.get_company_tender(canonical_ticker, max_age_seconds=cls.CACHE_TTL)
+                if not db_data and company_name:
+                    db_data = db.get_company_tender(company_name, max_age_seconds=cls.CACHE_TTL)
                 if db_data:
                     cls._MEM_CACHE[raw_code] = (now, db_data)
                     return db_data
@@ -176,31 +205,14 @@ class TenderService:
                     with open(cache_file, "r", encoding="utf-8") as f:
                         disk_data = json.load(f)
                         cls._MEM_CACHE[raw_code] = (mtime, disk_data)
+                        if db is not None and hasattr(db, "save_company_tender"):
+                            try:
+                                db.save_company_tender(raw_code, disk_data)
+                            except Exception:
+                                pass
                         return disk_data
             except Exception as e:
                 logger.debug(f"讀取磁碟標案快取失敗 ({raw_code}): {e}")
-
-        # 4. 解析公司正式全名 (Entity Resolution)
-        company_name = None
-        canonical_ticker = ticker_upper
-        try:
-            from data.company_network import CompanyNetworkService
-            comp_info = CompanyNetworkService.resolve_company_info(ticker_clean)
-            if comp_info and comp_info.get("name"):
-                company_name = comp_info.get("name")
-                code = comp_info.get("code") or raw_code
-                market = comp_info.get("market", "TWSE")
-                suffix = ".TWO" if market == "TPEx" else ".TW"
-                canonical_ticker = f"{code}{suffix}" if code.isdigit() else ticker_upper
-        except Exception as e:
-            logger.debug(f"解析公司正式名稱失敗: {e}")
-
-        if not company_name:
-            # 若為中文名稱輸入，直接使用
-            if any(ord(c) > 127 for c in ticker_clean):
-                company_name = ticker_clean
-            else:
-                company_name = ticker_clean
 
         # 5. 並行呼叫 ToBid MCP: vendor_report, vendor_awards, vendor_compliance
         report_data = None
@@ -410,6 +422,12 @@ class TenderService:
         now = time.time()
         # L1
         cls._MEM_CACHE[code] = (now, data)
+        canon = data.get("ticker")
+        if canon and canon != code:
+            cls._MEM_CACHE[canon] = (now, data)
+        c_name = data.get("name")
+        if c_name:
+            cls._MEM_CACHE[c_name] = (now, data)
 
         # L2 DuckDB
         if db is not None and hasattr(db, "save_company_tender"):

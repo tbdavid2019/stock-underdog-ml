@@ -421,6 +421,94 @@ class TestDuckDBManager(unittest.TestCase):
         tickers = [c["ticker"] for c in cands]
         self.assertIn("2330.TW", tickers)
 
+    def test_company_profile_duckdb_caching(self):
+        """驗證 DuckDB 支援公司基本面與即時新聞持久化快取，且支援代碼/別名雙向匹配"""
+        profile_data = {
+            "ticker": "2371.TW",
+            "raw_code": "2371",
+            "name": "大同",
+            "registered_name": "大同股份有限公司",
+            "unified_id": "11026506",
+            "capital": "1000.00 億元",
+            "industry": "綜合產業",
+            "chairman": "張_華",
+            "business_summary": "重電設備、家電及系統整合",
+            "recent_news": [{"title": "大同得標新案", "date": "2026-10-15"}],
+            "source": "2md"
+        }
+        # 1. 寫入 DuckDB
+        saved = self.mgr.save_company_profile("2371.TW", profile_data)
+        self.assertTrue(saved)
+
+        # 2. 透過完整代號 (2371.TW) 命中
+        res1 = self.mgr.get_company_profile("2371.TW")
+        self.assertIsNotNone(res1)
+        self.assertEqual(res1["name"], "大同")
+        self.assertEqual(res1["unified_id"], "11026506")
+
+        # 3. 透過純代號 (2371) 命中
+        res2 = self.mgr.get_company_profile("2371")
+        self.assertIsNotNone(res2)
+        self.assertEqual(res2["chairman"], "張_華")
+
+        # 4. 透過公司俗稱 (大同) 命中
+        res3 = self.mgr.get_company_profile("大同")
+        self.assertIsNotNone(res3)
+        self.assertEqual(res3["ticker"], "2371.TW")
+
+    def test_company_tender_duckdb_alias_resolution(self):
+        """驗證 DuckDB 標案情報支援 2371.TW、2371 與名稱大同交叉命中快取"""
+        tender_data = {
+            "ticker": "2371.TW",
+            "raw_code": "2371",
+            "name": "大同股份有限公司",
+            "tax_id": "11026506",
+            "wins": 3350,
+            "participations": 5657,
+            "win_rate_pct": 59.2,
+            "known_award_total": 111200000000,
+            "web_url": "https://tobid.tw/?vendor=11026506"
+        }
+        saved = self.mgr.save_company_tender("2371.TW", tender_data)
+        self.assertTrue(saved)
+
+        # 透過 2371.TW 命中
+        t1 = self.mgr.get_company_tender("2371.TW")
+        self.assertIsNotNone(t1)
+        self.assertEqual(t1["wins"], 3350)
+
+        # 透過 2371 命中
+        t2 = self.mgr.get_company_tender("2371")
+        self.assertIsNotNone(t2)
+        self.assertEqual(t2["wins"], 3350)
+
+        # 透過統編命中
+        t3 = self.mgr.get_company_tender("11026506")
+        self.assertIsNotNone(t3)
+        self.assertEqual(t3["wins"], 3350)
+
+    def test_company_network_duckdb_alias_resolution(self):
+        """驗證 DuckDB 企業網絡支援代碼與統編跨維度檢索"""
+        net_data = {
+            "ticker": "2371.TW",
+            "raw_code": "2371",
+            "name": "大同股份有限公司",
+            "unified_id": "11026506",
+            "capital": 100000000000.0,
+            "representative": "張_華",
+            "relationships": {"downstream": [{"name": "福華電子", "code": "8085"}]}
+        }
+        saved = self.mgr.save_company_network("2371.TW", net_data)
+        self.assertTrue(saved)
+
+        n1 = self.mgr.get_company_network("2371.TW")
+        self.assertIsNotNone(n1)
+        self.assertEqual(n1["unified_id"], "11026506")
+
+        n2 = self.mgr.get_company_network("2371")
+        self.assertIsNotNone(n2)
+        self.assertEqual(n2["representative"], "張_華")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -254,6 +254,26 @@ class DuckDBManager:
                     updated_at VARCHAR NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS company_profiles (
+                    ticker VARCHAR PRIMARY KEY,
+                    raw_code VARCHAR,
+                    name VARCHAR NOT NULL,
+                    registered_name VARCHAR,
+                    unified_id VARCHAR,
+                    capital VARCHAR,
+                    industry VARCHAR,
+                    chairman VARCHAR,
+                    market_cap VARCHAR,
+                    established VARCHAR,
+                    business_summary VARCHAR,
+                    recent_news_json VARCHAR,
+                    data_json VARCHAR NOT NULL,
+                    source VARCHAR,
+                    updated_at VARCHAR NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_company_profiles_raw_code ON company_profiles (raw_code);
+                CREATE INDEX IF NOT EXISTS idx_company_profiles_name ON company_profiles (name);
+
                 CREATE TABLE IF NOT EXISTS company_networks (
                     ticker VARCHAR PRIMARY KEY,
                     name VARCHAR NOT NULL,
@@ -265,6 +285,8 @@ class DuckDBManager:
                     web_url VARCHAR,
                     updated_at VARCHAR NOT NULL
                 );
+                CREATE INDEX IF NOT EXISTS idx_company_networks_name ON company_networks (name);
+                CREATE INDEX IF NOT EXISTS idx_company_networks_unified ON company_networks (unified_id);
 
                 CREATE TABLE IF NOT EXISTS company_tenders (
                     ticker VARCHAR PRIMARY KEY,
@@ -278,6 +300,8 @@ class DuckDBManager:
                     web_url VARCHAR,
                     updated_at VARCHAR NOT NULL
                 );
+                CREATE INDEX IF NOT EXISTS idx_company_tenders_name ON company_tenders (name);
+                CREATE INDEX IF NOT EXISTS idx_company_tenders_tax_id ON company_tenders (tax_id);
 
                 CREATE TABLE IF NOT EXISTS podcast_channels (
                     channel_id VARCHAR PRIMARY KEY,
@@ -1871,6 +1895,84 @@ class DuckDBManager:
             logger.debug(f"讀取 DuckDB 宏觀快照失敗 ({category}): {e}")
             return None
 
+    # ==================== Company Profile Methods ====================
+
+    def save_company_profile(self, ticker: str, data: Dict[str, Any]) -> bool:
+        """寫入公司基本資料與新聞快取至 DuckDB (支援使用者點擊後跨使用者持久化共享)"""
+        if not self.enabled or not ticker or not data:
+            return False
+        try:
+            now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+            data_json = json.dumps(data, ensure_ascii=False)
+            t_upper = str(ticker).strip().upper()
+            raw_code = str(data.get("raw_code") or re.sub(r"\.(TW|TWO)$", "", t_upper))
+            name = str(data.get("name") or ticker)
+            registered_name = str(data.get("registered_name") or "")
+            unified_id = str(data.get("unified_id") or "")
+            capital = str(data.get("capital") or "")
+            industry = str(data.get("industry") or "綜合產業")
+            chairman = str(data.get("chairman") or "")
+            market_cap = str(data.get("market_cap") or "")
+            established = str(data.get("established") or "")
+            business_summary = str(data.get("business_summary") or "")
+            recent_news_json = json.dumps(data.get("recent_news") or [], ensure_ascii=False)
+            source = str(data.get("source") or "2md")
+
+            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
+
+            with self._get_connection() as con:
+                # 寫入主代碼
+                con.execute("""
+                INSERT OR REPLACE INTO company_profiles 
+                (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, [ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
+
+                # 若傳入為 2371.TW，亦同步寫入 2371 供純代碼快速檢索；反之亦然
+                if raw_code and raw_code != ticker:
+                    con.execute("""
+                    INSERT OR REPLACE INTO company_profiles 
+                    (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, [raw_code, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ 寫入公司基本資料至 DuckDB 失敗 ({ticker}): {e}")
+            return False
+
+    def get_company_profile(self, ticker: str, max_age_seconds: Optional[int] = 86400 * 20) -> Optional[Dict[str, Any]]:
+        """從 DuckDB 讀取公司基本資料，支援效期檢查（預設 20 天）與多代碼/名稱/統編多維命中"""
+        if not self.enabled or not ticker:
+            return None
+        try:
+            t_clean = str(ticker).strip()
+            t_upper = t_clean.upper()
+            raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
+            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
+            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
+
+            with self._get_connection() as con:
+                row = con.execute("""
+                SELECT data_json, updated_at FROM company_profiles 
+                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR raw_code = ? OR name = ? OR registered_name = ? OR unified_id = ?
+                ORDER BY updated_at DESC LIMIT 1;
+                """, [t_clean, t_upper, raw_code, canon_tw, raw_code, t_clean, t_clean, t_clean]).fetchone()
+                if not row:
+                    return None
+                data_json, updated_at = row
+                if max_age_seconds is not None:
+                    try:
+                        up_time = datetime.datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_TAIPEI)
+                        now_time = datetime.datetime.now(TZ_TAIPEI)
+                        if (now_time - up_time).total_seconds() > max_age_seconds:
+                            return None
+                    except Exception:
+                        pass
+                return json.loads(data_json)
+        except Exception as e:
+            logger.debug(f"DuckDB 讀取公司基本資料快取失敗 ({ticker}): {e}")
+            return None
+
     # ==================== Company Network Methods ====================
 
     def save_company_network(self, ticker: str, data: Dict[str, Any]) -> bool:
@@ -1888,26 +1990,43 @@ class DuckDBManager:
             address = str(data.get("address") or "")
             web_url = str(data.get("web_url") or "")
 
+            clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
+            canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
+
             with self._get_connection() as con:
                 con.execute("""
                 INSERT OR REPLACE INTO company_networks 
                 (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [ticker, name, unified_id, capital, representative, address, data_json, web_url, now_str])
+                """, [clean_code, name, unified_id, capital, representative, address, data_json, web_url, now_str])
+                if canonical_ticker and canonical_ticker != clean_code:
+                    con.execute("""
+                    INSERT OR REPLACE INTO company_networks 
+                    (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, [canonical_ticker, name, unified_id, capital, representative, address, data_json, web_url, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入企業網絡至 DuckDB 失敗 ({ticker}): {e}")
             return False
 
     def get_company_network(self, ticker: str, max_age_seconds: Optional[int] = 86400 * 30) -> Optional[Dict[str, Any]]:
-        """從 DuckDB 讀取企業架構與網絡資料，支援效期檢查"""
+        """從 DuckDB 讀取企業架構與網絡資料，支援效期檢查與多代碼/名稱/統編多維命中"""
         if not self.enabled or not ticker:
             return None
         try:
+            t_clean = str(ticker).strip()
+            t_upper = t_clean.upper()
+            raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
+            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
+            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
+
             with self._get_connection() as con:
                 row = con.execute("""
-                SELECT data_json, updated_at FROM company_networks WHERE ticker = ?;
-                """, [ticker]).fetchone()
+                SELECT data_json, updated_at FROM company_networks 
+                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR name = ? OR unified_id = ?
+                ORDER BY updated_at DESC LIMIT 1;
+                """, [t_clean, t_upper, raw_code, canon_tw, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row
@@ -1941,26 +2060,43 @@ class DuckDBManager:
             award_total = float(data.get("known_award_total", 0.0))
             web_url = str(data.get("web_url") or "")
 
+            clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
+            canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
+
             with self._get_connection() as con:
                 con.execute("""
                 INSERT OR REPLACE INTO company_tenders 
                 (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
+                """, [clean_code, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
+                if canonical_ticker and canonical_ticker != clean_code:
+                    con.execute("""
+                    INSERT OR REPLACE INTO company_tenders 
+                    (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, [canonical_ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入企業標案情報至 DuckDB 失敗 ({ticker}): {e}")
             return False
 
     def get_company_tender(self, ticker: str, max_age_seconds: Optional[int] = 86400 * 7) -> Optional[Dict[str, Any]]:
-        """從 DuckDB 讀取企業標案資料，支援效期檢查（預設 7 天）"""
+        """從 DuckDB 讀取企業標案資料，支援效期檢查（預設 7 天）與多代碼/名稱/統編多維命中"""
         if not self.enabled or not ticker:
             return None
         try:
+            t_clean = str(ticker).strip()
+            t_upper = t_clean.upper()
+            raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
+            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
+            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
+
             with self._get_connection() as con:
                 row = con.execute("""
-                SELECT data_json, updated_at FROM company_tenders WHERE ticker = ?;
-                """, [ticker]).fetchone()
+                SELECT data_json, updated_at FROM company_tenders 
+                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR name = ? OR tax_id = ?
+                ORDER BY updated_at DESC LIMIT 1;
+                """, [t_clean, t_upper, raw_code, canon_tw, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row
