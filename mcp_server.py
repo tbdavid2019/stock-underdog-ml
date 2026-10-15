@@ -380,7 +380,7 @@ def get_economic_calendar(force_refresh: bool = False, limit: int = 15) -> Dict[
 
 @mcp.tool(
     name="get_commodities_summary",
-    description="透過 2MD 查詢 Investing.com 關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油 Crude Oil）實時行情、即時報價與週期漲跌幅。"
+    description="透過 2MD 查詢 Investing.com 關鍵大宗商品（黃金 Gold、銅 Copper、WTI 原油 Crude Oil）實時行情、即時報價與週期漲跌幅。"
 )
 def get_commodities_summary(force_refresh: bool = False) -> Dict[str, Any]:
     """

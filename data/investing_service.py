@@ -5,7 +5,7 @@ data/investing_service.py - Investing.com 宏觀數據與美股行事曆整合�
 1. 聯準會利率決策監控 (Fed Rate Monitor Tool - CME FedWatch)
 2. 重磅總體經濟行事曆 (Economic Calendar - CPI, PCE, 非農, FOMC)
 3. 美股重量級財報行事曆 (US Earnings Calendar)
-4. 關鍵大宗商品與原物料 (Commodities - 銅博士, WTI 原油, 黃金)
+4. 關鍵大宗商品與原物料 (Commodities - 銅 Copper, WTI 原油, 黃金)
 
 支援 3 級容災 Fallback、信號量節流、以及 6~12 小時原子磁碟持久化快取。
 """
@@ -344,7 +344,7 @@ class InvestingService:
                     if "Gold" in raw_name:
                         commodities["gold"] = {"name": "黃金 (Gold)", "daily_change": chg_d, "weekly_change": chg_w, "indicator": "避險與流動性"}
                     elif "Copper" in raw_name:
-                        commodities["copper"] = {"name": "銅博士 (Copper)", "daily_change": chg_d, "weekly_change": chg_w, "indicator": "製造業與AI硬體景氣"}
+                        commodities["copper"] = {"name": "銅 (Copper)", "daily_change": chg_d, "weekly_change": chg_w, "indicator": "製造業與AI硬體景氣"}
                     elif "Crude Oil" in raw_name:
                         commodities["crude_oil"] = {"name": "WTI 原油 (Crude Oil)", "daily_change": chg_d, "weekly_change": chg_w, "indicator": "通膨預期與能源成本"}
 
@@ -359,6 +359,47 @@ class InvestingService:
 
         logger.warning("⚠️ 商品行情上游沒有可驗證資料，略過商品行情顯示")
         return None
+
+    @staticmethod
+    def _clean_and_dedup_economic_events(raw_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        清洗並去重總體經濟數據行事曆：
+        1. 解決同一機構同時間發布 s.a. (季調後) 與 n.s.a. (未季調) 之重複顯示問題，優先保留最具市場參考性之 s.a. 季調數據。
+        2. 自動為 s.a. 與 n.s.a. 標註中文解說，如「季調後 (s.a.)」、「未季調 (n.s.a.)」，消除語意混淆。
+        """
+        if not raw_events:
+            return []
+
+        groups: Dict[str, List[Dict[str, Any]]] = {}
+        for ev in raw_events:
+            t = ev.get("event", "")
+            # 去除 s.a. / n.s.a. 等縮寫標記，提取基準指標名
+            base_name = re.sub(r'[\(\[\{]?(?:n\.s\.a\.|s\.a\.|nsa|sa)[\)\]\}]?', '', t, flags=re.I)
+            base_name = re.sub(r'\s+', ' ', base_name).strip()
+            group_key = f"{ev.get('date')}_{ev.get('time')}_{ev.get('country')}_{base_name.lower()}"
+            groups.setdefault(group_key, []).append(ev)
+
+        deduped: List[Dict[str, Any]] = []
+        for g_key, ev_list in groups.items():
+            if len(ev_list) == 1:
+                chosen = ev_list[0]
+            else:
+                # 若同時包含 s.a. (季調後) 與 n.s.a. (未季調)，市場標準優先採用 s.a.
+                sa_ev = next((e for e in ev_list if re.search(r'\bs\.a\.?\b', e.get("event", ""), re.I)), None)
+                chosen = sa_ev if sa_ev else ev_list[0]
+
+            # 增強標題中文可讀性
+            ev_title = chosen.get("event", "")
+            if re.search(r'\bn\.s\.a\.?\b', ev_title, re.I):
+                ev_title = re.sub(r'\bn\.s\.a\.?\b', '未季調 (n.s.a.)', ev_title, flags=re.I)
+            elif re.search(r'\bs\.a\.?\b', ev_title, re.I):
+                ev_title = re.sub(r'\bs\.a\.?\b', '季調後 (s.a.)', ev_title, flags=re.I)
+
+            chosen_copy = dict(chosen)
+            chosen_copy["event"] = ev_title
+            deduped.append(chosen_copy)
+
+        return deduped
 
     # =========================================================================
     # 4. 重磅總體經濟行事曆 (Economic Calendar)
@@ -402,8 +443,9 @@ class InvestingService:
                     consensus = row_m.group(6) or "—"
                     previous = row_m.group(7) or "—"
 
-                    # 篩選感興趣的國家或全球核心事件
-                    if country in allowed or "US" in allowed or any(k in event_title.upper() for k in ("CPI", "FOMC", "PAYROLLS", "FED", "GDP", "PCE")):
+                    # 篩選感興趣的國家或全球核心核彈級事件 (FED/FOMC/CPI/PCE/PAYROLL/GDP)
+                    is_core_global = any(k in event_title.upper() for k in ("CPI", "FOMC", "PAYROLLS", "FED", "GDP", "PCE", "INTEREST RATE DECISION"))
+                    if country in allowed or is_core_global:
                         # 標註是否為市場核彈級指標
                         is_high_impact = any(h in event_title.upper() for h in ("CPI", "PCE", "PAYROLL", "FOMC", "INTEREST RATE", "GDP", "UNEMPLOYMENT"))
 
@@ -419,6 +461,7 @@ class InvestingService:
                         })
 
             if events:
+                events = cls._clean_and_dedup_economic_events(events)
                 cls._write_cache(cache_key, events[:25])
                 return events[:25]
 
@@ -455,17 +498,24 @@ class InvestingService:
             commodities = fut_comm.result()
             economic_calendar = fut_econ.result()
 
-        # 提煉今日與明日重點警示
-        high_impact_events = [e for e in (economic_calendar or []) if e.get("is_high_impact")][:3]
+        # 提煉今日與明日重點警示 (去重且多元)
+        clean_econ = cls._clean_and_dedup_economic_events(economic_calendar or [])
+        high_impact_events = [e for e in clean_econ if e.get("is_high_impact")]
         catalyst_alerts = []
+        seen_alert_keys = set()
         for e in high_impact_events:
-            catalyst_alerts.append(f"⚠️ {e.get('date', '')} {e.get('time', '')} [{e.get('country', '')}] {e.get('event')}")
+            alert_k = f"{e.get('country', '')}_{e.get('event', '')}"
+            if alert_k not in seen_alert_keys:
+                seen_alert_keys.add(alert_k)
+                catalyst_alerts.append(f"⚠️ {e.get('date', '')} {e.get('time', '')} [{e.get('country', '')}] {e.get('event')}")
+            if len(catalyst_alerts) >= 3:
+                break
 
         result = {
             "fed_rate": fed_rate,
             "earnings_calendar": (earnings or [])[:15],
             "commodities": commodities,
-            "economic_calendar": (economic_calendar or [])[:10],
+            "economic_calendar": (clean_econ or [])[:10],
             "catalyst_alerts": catalyst_alerts,
             "timestamp": datetime.datetime.now().isoformat()
         }

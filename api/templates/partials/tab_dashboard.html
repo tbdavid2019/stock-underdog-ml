@@ -185,13 +185,17 @@
                 </div>
 
                 <div v-if="macro.fed_rate" class="space-y-2">
-                    <div class="p-2.5 rounded-lg border text-xs"
-                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700'">
-                        <div class="font-bold mb-1 text-emerald-400">
+                    <div class="p-2.5 rounded-xl border text-xs transition-all shadow-xs"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-emerald-50/70 border-emerald-200/90'">
+                        <div class="font-bold mb-1 leading-relaxed text-xs sm:text-sm"
+                             :class="isDark ? 'text-emerald-300' : 'text-emerald-950'">
                             {{ macro.fed_rate.summary || 'FOMC 利率預期' }}
                         </div>
-                        <div v-if="macro.fed_rate.countdown" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                            會議倒數: <span class="font-bold">{{ macro.fed_rate.countdown }}</span>
+                        <div v-if="macro.fed_rate.countdown" class="text-xs flex items-center space-x-1"
+                             :class="isDark ? 'text-slate-400' : 'text-emerald-900/80'">
+                            <span>會議倒數:</span>
+                            <span class="font-bold font-mono px-1.5 py-0.2 rounded"
+                                  :class="isDark ? 'bg-white/10 text-slate-200' : 'bg-emerald-100 text-emerald-950 font-black'">{{ macro.fed_rate.countdown }}</span>
                         </div>
                     </div>
 
@@ -242,51 +246,52 @@
                     </div>
                 </div>
 
-                <!-- 1. Time Focus Filter Pills (今天為主) -->
-                <div class="flex items-center justify-between text-xs pt-0.5 border-b pb-2"
+                <!-- 1. Time Focus Filter Pills (4-Column Segmented Control: 徹底解決折行與左右位移) -->
+                <div class="pt-0.5 border-b pb-2"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="flex items-center space-x-1 overflow-x-auto">
+                    <div class="grid grid-cols-4 gap-1 p-1 rounded-xl border text-xs"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-slate-100/90 border-slate-200'">
                         <button @click="setEarningsTimeFilter('TODAY')"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="earningsTimeFilter === 'TODAY' ? 'bg-rose-500 text-white shadow-sm' : (isDark ? 'bg-[#0D0E11] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-black')">
-                            <span class="material-symbols-outlined text-[13px] leading-none text-rose-200">local_fire_department</span>
+                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                :class="earningsTimeFilter === 'TODAY' ? 'bg-rose-500 text-white shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                            <span class="material-symbols-outlined text-[12px] leading-none text-rose-200 hidden sm:inline">local_fire_department</span>
                             <span>今天</span>
-                            <span v-if="earningsTodayCount > 0" class="px-1 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ earningsTodayCount }}</span>
+                            <span v-if="earningsTodayCount > 0" class="px-1 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ earningsTodayCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('UPCOMING')"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="earningsTimeFilter === 'UPCOMING' ? 'bg-amber-500 text-black shadow-sm' : (isDark ? 'bg-[#0D0E11] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-black')">
-                            <span class="material-symbols-outlined text-[13px] leading-none">bolt</span>
-                            <span>即將召開</span>
-                            <span v-if="earningsUpcomingCount > 0" class="px-1 py-0.2 rounded-full text-[10px] bg-black/20 text-black font-mono">{{ earningsUpcomingCount }}</span>
+                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                :class="earningsTimeFilter === 'UPCOMING' ? 'bg-amber-500 text-black shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                            <span>即將</span>
+                            <span v-if="earningsUpcomingCount > 0" class="px-1 rounded-full text-[10px] font-mono"
+                                  :class="earningsTimeFilter === 'UPCOMING' ? 'bg-black/20 text-black' : (isDark ? 'bg-white/10 text-slate-300' : 'bg-black/10 text-slate-600')">{{ earningsUpcomingCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('PAST')"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="earningsTimeFilter === 'PAST' ? (isDark ? 'bg-slate-200 text-black shadow-sm' : 'bg-slate-800 text-white shadow-sm') : (isDark ? 'bg-[#0D0E11] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-black')">
-                            <span class="material-symbols-outlined text-[13px] leading-none">history</span>
-                            <span>近期回放</span>
-                            <span v-if="earningsPastCount > 0" class="px-1 py-0.2 rounded-full text-[10px] font-mono opacity-80">{{ earningsPastCount }}</span>
+                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                :class="earningsTimeFilter === 'PAST' ? (isDark ? 'bg-slate-200 text-black shadow-sm' : 'bg-slate-800 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                            <span>歷史</span>
+                            <span v-if="earningsPastCount > 0" class="px-1 rounded-full text-[10px] font-mono opacity-80"
+                                  :class="earningsTimeFilter === 'PAST' ? '' : (isDark ? 'bg-white/10 text-slate-300' : 'bg-black/10 text-slate-600')">{{ earningsPastCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('ALL')"
-                                class="px-2 py-1 rounded-lg text-xs font-bold transition-all"
-                                :class="earningsTimeFilter === 'ALL' ? (isDark ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : 'bg-amber-50 text-amber-800 border border-amber-300') : (isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')">
-                            全部
+                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center whitespace-nowrap truncate"
+                                :class="earningsTimeFilter === 'ALL' ? (isDark ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : 'bg-white text-amber-800 shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                            <span>全部</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 2. Market & Weight Stock Filter Pills -->
+                <!-- 2. Market & Weight Stock Filter Pills (防折行與收窄適配) -->
                 <div class="flex items-center justify-between text-xs pt-0.5">
-                    <div class="flex items-center space-x-1 overflow-x-auto">
+                    <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
                         <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all"
+                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all whitespace-nowrap shrink-0"
                                 :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             {{ m === 'ALL' ? '全市場' : (m === 'TW' ? '台股' : (m === 'US' ? '美股' : (m === 'JP' ? '日股' : '韓股'))) }}
                         </button>
                     </div>
                     <button @click="toggleEarningsWeightOnly()"
-                            class="px-2 py-0.5 rounded-md text-xs font-bold border transition-all flex items-center space-x-0.5"
+                            class="px-2 py-0.5 rounded-md text-xs font-bold border transition-all flex items-center space-x-0.5 whitespace-nowrap shrink-0 ml-1"
                             :class="earningsWeightOnly ? (isDark ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-amber-100 text-amber-800 border-amber-300') : (isDark ? 'border-[#262626] text-slate-500 hover:text-slate-300' : 'border-[#E5E7EB] text-slate-400 hover:text-slate-600')">
                         <span class="material-symbols-outlined text-[13px] text-amber-400">star</span>
                         <span>權值</span>
@@ -441,7 +446,7 @@
                         </div>
                         <div class="text-right space-y-0.5">
                             <div class="font-bold num-font text-xs"
-                                 :class="item.daily_change && item.daily_change.startsWith('-') ? 'text-rose-500' : 'text-emerald-400'">
+                                 :class="item.daily_change && item.daily_change.startsWith('-') ? 'text-rose-500' : (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black')">
                                 日 {{ item.daily_change || '—' }}
                             </div>
                             <div class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
@@ -1548,36 +1553,36 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t"
                      :class="isDark ? 'border-[#1E2028]' : 'border-slate-100'">
                     <!-- Market Tabs (BigGo exact labels) -->
-                    <div class="flex items-center space-x-1 overflow-x-auto">
+                    <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
                         <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0"
                                 :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white bg-[#14161C]' : 'text-slate-600 hover:text-black bg-slate-100')">
                             {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '台灣市場' : (m === 'US' ? '美國市場' : (m === 'JP' ? '日本市場' : '韓國市場'))) }}
                         </button>
                     </div>
 
                     <!-- Time Focus Pills (今天 / 未來 / 歷史) -->
-                    <div class="flex items-center space-x-1 overflow-x-auto">
+                    <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
                         <button @click="setCalendarTimeFilter('ALL')"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all"
+                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all whitespace-nowrap shrink-0"
                                 :class="calendarTimeFilter === 'ALL' ? (isDark ? 'bg-slate-700 text-white' : 'bg-slate-900 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             全部日程
                         </button>
                         <button @click="setCalendarTimeFilter('TODAY')"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5"
+                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5 whitespace-nowrap shrink-0"
                                 :class="calendarTimeFilter === 'TODAY' ? 'bg-rose-500 text-white shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             <span class="material-symbols-outlined text-[13px] leading-none text-rose-200">local_fire_department</span>
                             <span>今天</span>
                         </button>
                         <button @click="setCalendarTimeFilter('UPCOMING')"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5"
+                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5 whitespace-nowrap shrink-0"
                                 :class="calendarTimeFilter === 'UPCOMING' ? 'bg-amber-500 text-black shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             <span class="material-symbols-outlined text-[13px] leading-none">bolt</span>
                             <span>即將召開</span>
                         </button>
                         <button @click="setCalendarTimeFilter('PAST')"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5"
+                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all flex items-center space-x-0.5 whitespace-nowrap shrink-0"
                                 :class="calendarTimeFilter === 'PAST' ? (isDark ? 'bg-slate-200 text-black' : 'bg-slate-800 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             <span class="material-symbols-outlined text-[13px] leading-none">history</span>
                             <span>歷史回放</span>

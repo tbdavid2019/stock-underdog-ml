@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.18)
+
+### Fixed & Enhanced (Commodity Nomenclature, Economic Deduplication, Segmented Control & Typography Contrast)
+- **🎨 視覺層次與使用者體驗工藝優化（Impeccable UI Craftsmanship & Accessibility Polish）**：
+  1. **大宗商品標準名稱校正（`銅 (Copper)`）**：
+     - 將原俗稱「銅博士 (Copper)」全面校正為金融標準資產名稱「銅 (Copper)」，維持與「黃金 (Gold)」、「WTI 原油 (Crude Oil)」一致的權威規格。
+     - 同步更新 API 模型、OpenAPI Schema、MCP 工具描述與 Skill 指南。
+  2. **總經數據季調／未季調雙軌智慧清洗（`s.a.` vs `n.s.a.` Deduplication）**：
+     - 診斷痛點：瑞士（CH）等國統計局於同時間發布 `Unemployment Rate s.a.`（季調後）與 `n.s.a.`（未季調），導致催化劑警示與行事曆清單重複出現兩筆相同時間事件。
+     - 核心升級：實作 `_clean_and_dedup_economic_events`，當同一機構同時公布季調與未季調數據時，依國際機構標準優先採用最具市場參考價值之 **`s.a.`（季調後）**，並自動於標題補齊繁體中文解讀標籤（如 `季調後 (s.a.)` / `未季調 (n.s.a.)`），徹底消除重疊顯示。
+     - 修正國家篩選邏輯，非預設目標國家僅在觸發全球核心事件（FOMC/CPI/PCE/利率決策）時納入。
+  3. **法人說明會篩選膠囊升級 4 欄分段控制（Segmented Control）**：
+     - 診斷痛點：原面板時間按鈕於小尺寸卡片（寬度 <320px）中觸發 flex 擠壓折行，造成中文字元垂直斷行（`即\n將\n召\n開`）且橫向溢出滑動（「發生左右位移」）。
+     - 核心升級：全面重構成等寬 4 欄 Segmented Control（`grid grid-cols-4 gap-1`），採用精簡膠囊標籤（`今天`、`即將`、`歷史`、`全部`），並加入 `whitespace-nowrap truncate` 與 `shrink-0`，徹底根絕折行與橫向位移。
+  4. **FOMC 降息預期文字可讀性與對比度提升（WCAG AAA 達標）**：
+     - 診斷痛點：白晝模式下原標題文字使用淺亮綠色（`text-emerald-400`），在白底對比度僅 1.8:1，肉眼閱讀極度費力。
+     - 核心升級：淺色模式重構為深墨綠（`text-emerald-950`）搭配高質感淡綠卡片背景（`bg-emerald-50/70 border-emerald-200/90`），對比度躍升至 >10:1；暗黑模式維持極客螢光綠（`text-emerald-300`），大宗商品日漲跌亦同步優化淺色對比。
+
 ## 2026-10-15 (v2.4.17)
 
 ### Added & Enhanced (TSMC & Global Corporate Benchmark Earnings Integration, Fallback Defense & Deterministic Testing)

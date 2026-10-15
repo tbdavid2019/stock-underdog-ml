@@ -79,7 +79,7 @@ def get_economic_calendar(refresh: bool = False, force_refresh: bool = False):
 
 @router.get("/investing/commodities", summary="取得關鍵大宗商品與原物料行情")
 def get_commodities(refresh: bool = False, force_refresh: bool = False):
-    """取得黃金、銅博士、WTI 原油之即時行情與週期漲跌"""
+    """取得黃金、銅、WTI 原油之即時行情與週期漲跌"""
     from data.investing_service import InvestingService
     do_refresh = refresh or force_refresh
     data = InvestingService.get_commodities_summary(force_refresh=do_refresh)

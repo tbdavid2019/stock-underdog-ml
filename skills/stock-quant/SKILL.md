@@ -77,7 +77,7 @@ graph TD
 | `get_fed_rate_monitor` | `force_refresh` | CME FedWatch 聯準會利率決策機率分布表與 FOMC 倒數 |
 | `get_us_earnings_calendar` | `force_refresh`, `limit` | Investing.com 美股近期重量級財報行事曆（EPS、營收預估） |
 | `get_economic_calendar` | `force_refresh`, `limit` | 全球重大總經行事曆（CPI、非農 NFP、GDP、PCE） |
-| `get_commodities_summary` | `force_refresh` | 關鍵大宗商品（黃金 Gold、銅博士 Copper、WTI 原油）實時行情 |
+| `get_commodities_summary` | `force_refresh` | 關鍵大宗商品（黃金 Gold、銅 Copper、WTI 原油）實時行情 |
 | `resolve_stock_ticker` | `query` | 將中英文股票名稱模糊解析為標準交易代號（如台積電 ➔ 2330.TW） |
 | `get_polymarket_macro_sentiment` | `category`, `force_refresh` | Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率） |
 | `get_clef_stock_verdict` | `ticker`, `macro_regime` | Clef-Flash System One 決策大模型推論（strong_buy / buy / hold_watch / avoid 機率、確信度評分與勝率預期） |
@@ -101,7 +101,7 @@ graph TD
 - `GET /api/v1/macro/polymarket/sentiment` - Polymarket 宏觀情緒與聯準會降息真金白銀預測機率
 - `GET /api/v1/macro/investing/fed-rate` - 聯準會利率決策機率與 FOMC 倒數
 - `GET /api/v1/macro/investing/earnings-calendar` - 美股重量級企業財報行事曆
-- `GET /api/v1/macro/investing/commodities` - 黃金、原油、銅博士實時報價
+- `GET /api/v1/macro/investing/commodities` - 黃金、原油、銅實時報價
 - `GET /api/v1/macro/investing/economic-calendar` - 全球重磅總經行事曆
 - `GET /api/v1/earnings-call/upcoming` - 跨市場近期法說會清單 (台股/美股/日股/韓股)
 - `GET /api/v1/earnings-call/calendar` - 月度法人說明會每日聚合統計

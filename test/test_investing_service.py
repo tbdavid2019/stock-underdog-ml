@@ -84,6 +84,7 @@ Future Price:_96.313_
         self.assertIn("gold", comms)
         self.assertIn("copper", comms)
         self.assertIn("crude_oil", comms)
+        self.assertEqual(comms["copper"]["name"], "銅 (Copper)")
         self.assertEqual(comms["gold"]["daily_change"], "-0.06%")
         self.assertEqual(comms["copper"]["weekly_change"], "+0.11%")
         self.assertEqual(comms["crude_oil"]["daily_change"], "-0.17%")
@@ -114,6 +115,20 @@ Future Price:_96.313_
         self.assertEqual(events[0]["forecast"], "160K")
         self.assertEqual(events[0]["previous"], "114K")
         self.assertTrue(events[0]["is_high_impact"])
+
+    @patch("data.investing_service.InvestingService._fetch_url_markdown")
+    def test_economic_calendar_dedup_sa_nsa(self, mock_fetch):
+        """測試同一機構同時發布 s.a. (季調後) 與 n.s.a. (未季調) 時，自動優先保留 s.a. 並消弭重複"""
+        mock_fetch.return_value = """
+| Tuesday, October 6, 2026 |
+| 07:00 CH | 07:00 | CH | [Unemployment Rate n.s.a. (Sep)](https://www.investing.com/economic-calendar/unemployment-rate-nsa) Act: 2.5% Cons: 2.5% Prev.: 2.4% |
+| 07:00 CH | 07:00 | CH | [Unemployment Rate s.a. (Sep)](https://www.investing.com/economic-calendar/unemployment-rate-sa) Act: 2.6% Cons: 2.6% Prev.: 2.6% |
+"""
+        # 傳入 filter_countries=["CH"] 測試清洗與去重邏輯
+        events = InvestingService.get_economic_calendar(filter_countries=["CH"], force_refresh=True)
+        self.assertEqual(len(events), 1)
+        self.assertIn("季調後 (s.a.)", events[0]["event"])
+        self.assertEqual(events[0]["actual"], "2.6%")
 
     @patch("data.investing_service.InvestingService._fetch_url_markdown")
     def test_persistent_disk_caching(self, mock_fetch):

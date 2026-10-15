@@ -323,7 +323,7 @@ def get_llms_txt():
 - [Investing Macro Summary](/api/v1/macro/investing/summary): 整合 2MD 一站式總經數據（FedWatch、美股財報、大宗商品、行事曆）
 - [CME FedWatch Interest Rate Monitor](/api/v1/macro/investing/fed-rate): 查詢下次 FOMC 利率決策機率分布表與倒數天數
 - [US Corporate Earnings Calendar](/api/v1/macro/investing/earnings-calendar): 查詢近期美股重量級企業財報行事曆（EPS、營收預估、市值）
-- [Key Commodities Summary](/api/v1/macro/investing/commodities): 查詢黃金 (Gold)、銅博士 (Copper)、原油 (WTI) 實時報價與週期走勢
+- [Key Commodities Summary](/api/v1/macro/investing/commodities): 查詢黃金 (Gold)、銅 (Copper)、原油 (WTI) 實時報價與週期走勢
 - [Global Economic Calendar](/api/v1/macro/investing/economic-calendar): 查詢全球重磅總經行事曆（CPI、非農 NFP、GDP、PCE）
 - [Polymarket Real-Money Sentiment](/api/v1/macro/polymarket/sentiment): 透過 2MD 與 DoH (8.8.8.8) 查詢 Polymarket 真金白銀預測市場；機率欄位統一為 0~100 百分比，上游失敗會回傳 `success=false`，可用舊快取時標記 `stale=true`
 
@@ -359,7 +359,7 @@ def get_llms_txt():
 - `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率。
 - `get_us_earnings_calendar`: 透過 2MD 查詢美股重量級企業財報行事曆。
 - `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆。
-- `get_commodities_summary`: 透過 2MD 查詢黃金、原油、銅博士行情。
+- `get_commodities_summary`: 透過 2MD 查詢黃金、原油、銅行情。
 - `resolve_stock_ticker`: 將模糊搜尋之公司名稱快速解析為標準交易代號。
 - `get_polymarket_macro_sentiment`: 透過 2MD/DoH 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒。
 - `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback）推論交易動作機率分佈、確信度評分與勝率預期。
@@ -471,7 +471,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - `GET /api/v1/macro/investing/summary`: 整合 CME FedWatch、美股財報、大宗商品與財經日曆。
 - `GET /api/v1/macro/investing/fed-rate`: 聯準會利率決策機率分布與 FOMC 倒數。
 - `GET /api/v1/macro/investing/earnings-calendar`: 美股重量級企業財報公布行事曆。
-- `GET /api/v1/macro/investing/commodities`: 黃金、銅博士、WTI 原油行情與週期漲跌。
+- `GET /api/v1/macro/investing/commodities`: 黃金、銅、WTI 原油行情與週期漲跌。
 - `GET /api/v1/macro/investing/economic-calendar`: 全球重磅總經行事曆（CPI、非農等）。
 - `GET /api/v1/macro/polymarket/sentiment`: Polymarket 真金白銀預測市場宏觀情緒（FOMC 利率、地緣關稅、科技巨頭、經濟衰退）；機率為 0~100 百分比，並回傳 `success`/`stale`/`error` 狀態。
 
