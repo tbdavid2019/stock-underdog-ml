@@ -238,11 +238,54 @@ class TestEarningsCallFetcher(unittest.TestCase):
         kr_calls = db.get_earnings_calls(market="KR", start_date="2026-10-14", end_date="2026-10-14")
         self.assertTrue(any(c["ticker"] == "005930.KS" for c in kr_calls))
 
-        # 查詢 ALL
-        all_calls = db.get_earnings_calls(market="ALL", start_date="2026-10-14", end_date="2026-10-14")
-        tickers = {c["ticker"] for c in all_calls}
-        self.assertIn("7203.T", tickers)
-        self.assertIn("005930.KS", tickers)
+        # 查詢 Calendar (結構化輸出測試)
+        cal = db.get_earnings_calendar(year=2026, month=10, market="ALL")
+        self.assertTrue(len(cal) > 0)
+        day_14 = next((d for d in cal if d["call_date"] == "2026-10-14"), None)
+        self.assertIsNotNone(day_14)
+        self.assertEqual(day_14["total_calls"], 2)
+        self.assertIn("calls", day_14)
+        self.assertEqual(len(day_14["calls"]), 2)
+        self.assertIn(day_14["calls"][0]["market"], ("JP", "KR"))
+        self.assertEqual(day_14["weekday"], "星期三")
+
+    def test_upcoming_endpoint_time_filtering(self):
+        from fastapi.testclient import TestClient
+        from api.main import app
+
+        client = TestClient(app)
+
+        # 1. 查詢 ALL
+        resp = client.get("/api/v1/earnings-call/upcoming?market=ALL&limit=10")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertIn("today_count", data)
+        self.assertIn("upcoming_count", data)
+        self.assertIn("past_count", data)
+
+        # 2. 查詢 PAST
+        resp_past = client.get("/api/v1/earnings-call/upcoming?market=ALL&time_filter=PAST&limit=10")
+        self.assertEqual(resp_past.status_code, 200)
+        data_past = resp_past.json()
+        self.assertTrue(data_past["success"])
+
+        # 3. 查詢 Calendar API
+        resp_cal = client.get("/api/v1/earnings-call/calendar?year=2026&month=10&market=ALL")
+        self.assertEqual(resp_cal.status_code, 200)
+        data_cal = resp_cal.json()
+        self.assertTrue(data_cal["success"])
+        if data_cal["data"]:
+            self.assertIn("calls", data_cal["data"][0])
+
+        # 4. 查詢指定明確時間區間 (Explicit bounded date range)
+        resp_bounded = client.get("/api/v1/earnings-call/upcoming?start_date=2026-10-01&end_date=2026-10-14&market=ALL")
+        self.assertEqual(resp_bounded.status_code, 200)
+        data_bounded = resp_bounded.json()
+        self.assertTrue(data_bounded["success"])
+        for item in data_bounded["data"]:
+            self.assertGreaterEqual(item["call_date"], "2026-10-01")
+            self.assertLessEqual(item["call_date"], "2026-10-14")
 
 
 if __name__ == "__main__":

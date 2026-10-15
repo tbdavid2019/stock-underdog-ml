@@ -83,18 +83,27 @@ export const app = createApp({
             // Earnings Calls State (Task B)
             upcomingEarningsCalls: [],
             earningsLoading: false,
-            earningsMarket: 'ALL', // 'ALL' | 'TW' | 'US'
+            earningsMarket: 'ALL', // 'ALL' | 'TW' | 'US' | 'JP' | 'KR'
+            earningsTimeFilter: 'ALL', // 'ALL' | 'TODAY' | 'UPCOMING' | 'PAST'
+            earningsTodayCount: 0,
+            earningsUpcomingCount: 0,
+            earningsPastCount: 0,
             earningsWeightOnly: false,
             drawerActiveSubTab: 'profile', // 'profile' | 'earnings'
             drawerEarningsMap: {},
             drawerEarningsLoading: false,
             showEarningsModal: false,
+            calendarTodayStr: (() => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            })(),
             calendarYear: new Date().getFullYear(),
             calendarMonth: new Date().getMonth() + 1,
             calendarData: [],
             calendarLoading: false,
             calendarTimezone: 'CST', // 'CST' | 'EST'
             calendarSearch: '',
+            calendarTimeFilter: 'ALL', // 'ALL' | 'TODAY' | 'UPCOMING' | 'PAST'
 
             // Podcast Radar State (Task C) - Persistent Cache Hydration (SWR)
             podcastEpisodes: (() => {
@@ -417,16 +426,27 @@ export const app = createApp({
                     market: this.earningsMarket,
                     days: 30,
                     isWeightStock: this.earningsWeightOnly ? true : null,
-                    limit: 30
+                    timeFilter: this.earningsTimeFilter,
+                    limit: 50
                 });
                 if (res && res.data) {
                     this.upcomingEarningsCalls = res.data;
+                    this.earningsTodayCount = res.today_count || 0;
+                    this.earningsUpcomingCount = res.upcoming_count || 0;
+                    this.earningsPastCount = res.past_count || 0;
                 }
             } catch (e) {
                 console.warn("Failed to load upcoming earnings calls:", e);
             } finally {
                 this.earningsLoading = false;
             }
+        },
+        setEarningsTimeFilter(tf) {
+            this.earningsTimeFilter = tf;
+            this.loadUpcomingEarnings();
+        },
+        setCalendarTimeFilter(tf) {
+            this.calendarTimeFilter = tf;
         },
         setEarningsMarket(m) {
             this.earningsMarket = m;
@@ -458,6 +478,8 @@ export const app = createApp({
             }
         },
         async openEarningsCalendar() {
+            const d = new Date();
+            this.calendarTodayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             this.showEarningsModal = true;
             document.body.classList.add('overflow-hidden');
             await this.loadCalendarData();
@@ -499,6 +521,30 @@ export const app = createApp({
             } finally {
                 this.calendarLoading = false;
             }
+        },
+        isCallMatchingSearch(call, query) {
+            if (!query) return true;
+            const q = query.trim().toLowerCase();
+            if (!q) return true;
+            return !!(
+                (call.ticker && call.ticker.toLowerCase().includes(q)) ||
+                (call.name && call.name.toLowerCase().includes(q)) ||
+                (call.remarks && call.remarks.toLowerCase().includes(q)) ||
+                (call.financial_period && call.financial_period.toLowerCase().includes(q)) ||
+                (call.guidance_summary && call.guidance_summary.toLowerCase().includes(q)) ||
+                (call.guidance_outlook && call.guidance_outlook.toLowerCase().includes(q)) ||
+                (call.guidance_margin && call.guidance_margin.toLowerCase().includes(q)) ||
+                (call.guidance_capex && call.guidance_capex.toLowerCase().includes(q)) ||
+                (call.guidance_qa && call.guidance_qa.toLowerCase().includes(q))
+            );
+        },
+        isDayMatchingCalendarSearch(day, query) {
+            if (!query) return true;
+            const q = query.trim().toLowerCase();
+            if (!q) return true;
+            if (day.summary_companies && day.summary_companies.toLowerCase().includes(q)) return true;
+            if (day.calls && day.calls.some(c => this.isCallMatchingSearch(c, q))) return true;
+            return false;
         },
         async syncEarningsNow() {
             try {

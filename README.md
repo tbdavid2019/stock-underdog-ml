@@ -280,9 +280,9 @@ graph TD
 | `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡 |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
-| `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美股即將召開之法人說明會、雙時區（CST/EST）與天數倒數 |
+| `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美日韓跨市場法人說明會、雙時區（CST/EST）、時間維度篩選（ALL/TODAY/UPCOMING/PAST）與天數倒數 |
 | `/api/v1/earnings-call/{ticker}` | `GET` | 查詢單一標的之法說會歷程、官方簡報 PDF 與影音回放網址 |
-| `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次與權值股場次計數 |
+| `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次、權值股場次計數與逐日結構化場次清單 |
 | `/api/v1/earnings-call/sync` | `POST` | 觸發非同步背景跨市場法說會資料全量同步 |
 | `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、AI 繁中 TL;DR 與關聯股票量化資料快照；快照不等同即時行情 |
 | `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表；metadata 來源標記為 `seed_snapshot` |

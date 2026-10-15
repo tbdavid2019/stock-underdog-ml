@@ -121,6 +121,7 @@ class EarningsCallItem(BaseModel):
     guidance_margin: Optional[str] = Field(None, description="毛利率目標指引")
     guidance_capex: Optional[str] = Field(None, description="資本支出規劃")
     guidance_qa: Optional[str] = Field(None, description="機構法人 Q&A 核心要點")
+    weekday: Optional[str] = Field(None, description="星期幾 (如 星期三)")
     source: Optional[str] = Field("BigGo / MOPS", description="資料來源")
 
 
@@ -128,14 +129,19 @@ class UpcomingCallsResponse(BaseModel):
     success: bool = True
     market: str
     total_count: int
+    today_count: int = 0
+    upcoming_count: int = 0
+    past_count: int = 0
     data: List[EarningsCallItem] = Field(default_factory=list)
 
 
 class EarningsCalendarItem(BaseModel):
     call_date: str
+    weekday: Optional[str] = None
     total_calls: int
     weight_stock_calls: int
     summary_companies: Optional[str] = None
+    calls: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class EarningsCalendarResponse(BaseModel):

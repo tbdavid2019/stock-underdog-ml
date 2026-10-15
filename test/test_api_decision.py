@@ -83,7 +83,7 @@ class TestDecisionAPI(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["success"])
-        mock_eval.assert_called_once_with(raw_state=custom_state, macro_regime="bull")
+        mock_eval.assert_called_once_with(candidate=None, raw_state=custom_state, macro_regime="bull")
 
     @patch.dict("os.environ", {"DECISION_API_KEY": "secret_test_key_123"})
     def test_decision_evaluate_api_key_auth(self):

@@ -4,6 +4,31 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.16)
+
+### Added & Enhanced (BigGo-Style Earnings Call UI Overhaul, Today-First Smart Grouping, 2-Column Calendar Grid & Multidimensional Filtering)
+- **📅 法人說明會 UI 頂級工藝改版（BigGo Finance 雙欄卡片風格、今日優先與過去/未來分層排版）**：
+  - **診斷痛點**：
+    1. 首頁法說會面板先前以純日期升序限制 50 筆，導致累積 50 筆歷史過去紀錄將「今天」與「未來」排期擠出查詢範圍之外，首頁切片前 8 筆全為 7 天前的「已召開」歷史事件。
+    2. 全球跨市場法說會月曆彈窗（Modal 6）原先僅以 SQL `STRING_AGG` 串接公司名稱與代號輸出純文字逗號清單，缺乏市場別、時間戳、簡報/影音/財測直連及個股圖譜互動，未對齊 BigGo Finance（`finance.biggo.com.tw/earnings-call`）的卡片視覺規格。
+  - **頂級量化終端工藝升級**：
+    1. **「今天」優先與時序分層查詢架構**：
+       - API `/api/v1/earnings-call/upcoming` 全面重構：將 SQL 查詢切分為 `today_records`（今天）、`upcoming_records`（未來，升序 ASC）、`past_records`（過去歷史，降序 DESC，由昨天往前回溯）。
+       - 新增 `time_filter` 參數（`ALL`, `TODAY`, `UPCOMING`, `PAST`），並於 API 回傳 `today_count`, `upcoming_count`, `past_count` 精確統計。
+       - 補齊每一筆法說會項目之 `weekday`（如 `星期三`）。
+    2. **操盤首頁法說會面板（Dashboard Panel 2）極致改版**：
+       - 新增四大時間膠囊篩選按鈕：`🔥 今天 (N)`、`⚡ 即將召開 (N)`、`📜 近期回放 (N)`、`全部`。
+       - 各市場別切換（`全市場`、`台股`、`美股`、`日股`、`韓股`、`權值股`）。
+       - 導入 BigGo Finance 頭像色彩徽章（依市場別藍/綠/紫/紅區分外框）、粗體等寬代號、公司名稱、場次備註/季度標籤、倒數狀態膠囊（今日/倒數天數/歷史天數）、簡報 PDF 及影音回放按鈕。
+       - 當今天無會議時，呈現沉浸式空狀態卡片並提供快速跳轉「即將召開」或「近期回放」導流。
+    3. **全球法說會月曆彈窗（Modal 6）對齊 BigGo Finance 雙欄卡片網格**：
+       - 徹底揚棄 `STRING_AGG` 純文字清單，改以 DuckDB 取出每場結構化法說會詳細物件清單（`calls`）。
+       - 依日期分組，日期標題列顯示「日期 + 星期 + 總場次 + 權值股徽章」。
+       - 下方採響應式雙欄卡片網格（Desktop 2-col, Mobile 1-col）：公司圓形頭像徽章、市場徽章、股票代號（點擊即時展開歷史量化抽屜）、公司名稱、說明會季度/類型、時區標籤（CST/EST）、`📄 簡報` 直連、`🎥 影音` 直連、`💬 財測指引` 提示。
+       - 彈窗頂部提供月份切換（上個月/下個月）、市場切換膠囊、時間焦點膠囊（`全部日程`、`今天`、`即將召開`、`歷史回放`）、即時搜尋過濾框（即時過濾代號、名稱、財測指引）與時區切換開關。
+
+---
+
 ## 2026-10-15 (v2.4.15)
 
 ### Added & Enhanced (Taiwan Company Network Corporate Hierarchy, DuckDB Caching, FastMCP/WebMCP Tool #20, Stock Drawer Subtab & Visual Force Graph Integration)

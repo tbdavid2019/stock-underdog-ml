@@ -219,11 +219,12 @@ export const ApiClient = {
     /**
      * Upcoming earnings calls
      */
-    async getUpcomingEarningsCalls({ market = 'ALL', days = 14, isWeightStock = null, limit = 30 } = {}) {
+    async getUpcomingEarningsCalls({ market = 'ALL', days = 14, isWeightStock = null, timeFilter = 'ALL', limit = 30 } = {}) {
         const params = new URLSearchParams();
         if (market) params.set('market', market);
         if (days) params.set('days', days.toString());
         if (isWeightStock !== null && isWeightStock !== undefined) params.set('is_weight_stock', isWeightStock ? 'true' : 'false');
+        if (timeFilter && timeFilter !== 'ALL') params.set('time_filter', timeFilter);
         if (limit) params.set('limit', limit.toString());
         const res = await fetch(`/api/v1/earnings-call/upcoming?${params.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

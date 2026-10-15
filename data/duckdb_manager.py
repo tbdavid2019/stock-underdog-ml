@@ -1599,6 +1599,7 @@ class DuckDBManager:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
+                df = df.where(pd.notna(df), None)
                 return df.to_dict(orient="records")
         except Exception as e:
             logger.error(f"❌ 查詢法說會資料失敗: {e}")
@@ -1615,37 +1616,178 @@ class DuckDBManager:
         except Exception:
             return 0
 
+    def get_earnings_call_counts(
+        self,
+        market: str = "ALL",
+        today_str: str = "",
+        future_end_str: str = "",
+        past_start_str: str = "",
+        is_weight_stock: Optional[bool] = None
+    ) -> Dict[str, int]:
+        """單次查詢計算今天、未來與過去法說會精確總數 (不受 LIMIT 截斷影響)"""
+        if not self.enabled:
+            return {"today": 0, "upcoming": 0, "past": 0}
+        try:
+            query = """
+            SELECT
+                COUNT(CASE WHEN call_date = ? THEN 1 END) as today_cnt,
+                COUNT(CASE WHEN call_date > ? AND call_date <= ? THEN 1 END) as upcoming_cnt,
+                COUNT(CASE WHEN call_date < ? AND call_date >= ? THEN 1 END) as past_cnt
+            FROM earnings_calls
+            WHERE 1=1
+            """
+            params = [today_str, today_str, future_end_str, today_str, past_start_str]
+            if isinstance(market, str) and market.strip() and market.upper() != "ALL":
+                query += " AND market = ?"
+                params.append(market.upper())
+            if isinstance(is_weight_stock, bool):
+                query += " AND is_weight_stock = ?"
+                params.append(is_weight_stock)
+
+            with self._get_connection() as con:
+                row = con.execute(query, params).fetchone()
+                if row:
+                    return {
+                        "today": int(row[0] or 0),
+                        "upcoming": int(row[1] or 0),
+                        "past": int(row[2] or 0)
+                    }
+                return {"today": 0, "upcoming": 0, "past": 0}
+        except Exception as e:
+            logger.error(f"❌ 計算法說會類別總數失敗: {e}")
+            return {"today": 0, "upcoming": 0, "past": 0}
+
     def get_earnings_calendar(
         self,
         year: int,
         month: int,
         market: str = "ALL"
     ) -> List[Dict[str, Any]]:
-        """取得指定月份之每日法說會場次計數與摘要"""
+        """取得指定月份之每日法說會場次計數、星期幾與結構化個股明細 (對齊 BigGo 設計)"""
         if not self.enabled:
             return []
         try:
             month_prefix = f"{year:04d}-{month:02d}-%"
-            query = """
-            SELECT 
-                call_date,
-                COUNT(*) as total_calls,
-                SUM(CASE WHEN is_weight_stock THEN 1 ELSE 0 END) as weight_stock_calls,
-                STRING_AGG(name || ' (' || ticker || ')', '、') as summary_companies
-            FROM earnings_calls
-            WHERE call_date LIKE ?
-            """
+            query = "SELECT * FROM earnings_calls WHERE call_date LIKE ?"
             params = [month_prefix]
             if market and market.upper() != "ALL":
                 query += " AND market = ?"
                 params.append(market.upper())
-            query += " GROUP BY call_date ORDER BY call_date ASC;"
+            query += " ORDER BY call_date DESC, call_time ASC;"
 
             with self._get_connection() as con:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
-                return df.to_dict(orient="records")
+                df = df.where(pd.notna(df), None)
+                records = df.to_dict(orient="records")
+
+            def _clean_str(val):
+                if val is None or pd.isna(val):
+                    return None
+                s = str(val).strip()
+                return s if s and s.lower() not in ("nan", "none", "nat") else None
+
+            def _clean_bool(val):
+                if val is None or pd.isna(val):
+                    return False
+                if isinstance(val, bool):
+                    return val
+                if isinstance(val, (int, float)):
+                    return bool(val) and not (isinstance(val, float) and (math.isnan(val) or math.isinf(val)))
+                return str(val).strip().lower() in ("true", "1", "yes", "y", "t")
+
+            weekday_names = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+            grouped: Dict[str, Dict[str, Any]] = {}
+
+            for r in records:
+                c_date = str(r.get("call_date") or "").strip()
+                if not c_date:
+                    continue
+                if c_date not in grouped:
+                    wk = ""
+                    try:
+                        p = [int(x) for x in c_date.split("-")]
+                        dt = datetime.date(p[0], p[1], p[2])
+                        wk = weekday_names[dt.weekday()]
+                    except Exception:
+                        pass
+                    grouped[c_date] = {
+                        "call_date": c_date,
+                        "weekday": wk,
+                        "total_calls": 0,
+                        "weight_stock_calls": 0,
+                        "summary_companies": "",
+                        "calls": []
+                    }
+
+                call_time_val = str(r.get("call_time") or "14:00").strip()
+                call_time_clean = call_time_val + ":00" if len(call_time_val) == 5 else call_time_val
+                tz_val = str(r.get("timezone") or ("America/New_York" if str(r.get("market", "")).upper() == "US" else "Asia/Taipei"))
+                time_cst = call_time_val
+                time_est = call_time_val
+                try:
+                    from zoneinfo import ZoneInfo
+                    dt_naive = datetime.datetime.strptime(f"{c_date} {call_time_clean[:8]}", "%Y-%m-%d %H:%M:%S")
+                    dt_loc = dt_naive.replace(tzinfo=ZoneInfo(tz_val))
+                    time_cst = dt_loc.astimezone(ZoneInfo("Asia/Taipei")).strftime("%H:%M")
+                    time_est = dt_loc.astimezone(ZoneInfo("America/New_York")).strftime("%H:%M")
+                except Exception:
+                    pass
+
+                clean_call = {
+                    "id": _clean_str(r.get("id")) or "",
+                    "market": _clean_str(r.get("market")) or "TW",
+                    "ticker": _clean_str(r.get("ticker")) or "",
+                    "name": _clean_str(r.get("name")) or "",
+                    "call_date": c_date,
+                    "call_time": call_time_val,
+                    "call_time_cst": time_cst,
+                    "call_time_est": time_est,
+                    "timezone": tz_val,
+                    "meeting_type": _clean_str(r.get("meeting_type")) or "online",
+                    "location": _clean_str(r.get("location")),
+                    "webcast_url": _clean_str(r.get("webcast_url")),
+                    "presentation_url": _clean_str(r.get("presentation_url")),
+                    "transcript_url": _clean_str(r.get("transcript_url")),
+                    "is_weight_stock": _clean_bool(r.get("is_weight_stock")),
+                    "remarks": _clean_str(r.get("remarks")),
+                    "financial_period": _clean_str(r.get("financial_period")),
+                    "guidance_summary": _clean_str(r.get("guidance_summary")),
+                    "guidance_outlook": _clean_str(r.get("guidance_outlook")),
+                    "guidance_margin": _clean_str(r.get("guidance_margin")),
+                    "guidance_capex": _clean_str(r.get("guidance_capex")),
+                    "guidance_qa": _clean_str(r.get("guidance_qa")),
+                    "source": _clean_str(r.get("source")) or "BigGo"
+                }
+                grouped[c_date]["calls"].append(clean_call)
+                grouped[c_date]["total_calls"] += 1
+                if clean_call["is_weight_stock"]:
+                    grouped[c_date]["weight_stock_calls"] += 1
+
+            today_str = datetime.date.today().strftime("%Y-%m-%d")
+            result: List[Dict[str, Any]] = []
+
+            for c_date in sorted(grouped.keys(), reverse=True):
+                day_entry = grouped[c_date]
+                names = [f"{c['name']} ({c['ticker']})" for c in day_entry["calls"]]
+                day_entry["summary_companies"] = "、".join(names[:10]) + (" 等" if len(names) > 10 else "")
+                result.append(day_entry)
+
+            # 智慧排序：今天最前 ➔ 未來日程 (由近到遠 ASC) ➔ 過去日程 (由近到遠 DESC，昨天優先)
+            def _date_sort_priority(entry: Dict[str, Any]):
+                d = entry["call_date"]
+                if d == today_str:
+                    return (0, 0)
+                elif d > today_str:
+                    # 未來日期，越早越前
+                    return (1, int(d.replace("-", "")))
+                else:
+                    # 過去日期，越晚越前 (昨天 > 前天)
+                    return (2, -int(d.replace("-", "")))
+
+            result.sort(key=_date_sort_priority)
+            return result
         except Exception as e:
             logger.error(f"❌ 取得法說會日曆彙總失敗: {e}")
             return []

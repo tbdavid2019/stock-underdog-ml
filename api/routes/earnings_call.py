@@ -40,14 +40,15 @@ def _clean_float(val: Any) -> Optional[float]:
 
 
 def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCallItem:
-    """轉換資料庫字典為附帶雙時區與倒數之 Pydantic 物件"""
+    """轉換資料庫字典為附帶雙時區、星期與倒數之 Pydantic 物件"""
     call_date_str = str(row.get("call_date", ""))
     call_time_str = str(row.get("call_time", "14:00") or "14:00")
     timezone_str = str(row.get("timezone", "Asia/Taipei"))
 
-    # 計算倒數天數
+    # 計算倒數天數與星期幾
     countdown = None
     status = "upcoming"
+    weekday_str = None
     try:
         parts = [int(p) for p in call_date_str.split("-")]
         c_date = datetime.date(parts[0], parts[1], parts[2])
@@ -59,6 +60,8 @@ def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCall
             status = "past"
         else:
             status = "upcoming"
+        weekday_names = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+        weekday_str = weekday_names[c_date.weekday()]
     except Exception:
         pass
 
@@ -118,78 +121,168 @@ def _enrich_call_item(row: Dict[str, Any], today: datetime.date) -> EarningsCall
         guidance_margin=_clean_str(row.get("guidance_margin")),
         guidance_capex=_clean_str(row.get("guidance_capex")),
         guidance_qa=_clean_str(row.get("guidance_qa")),
+        weekday=weekday_str,
         source=_clean_str(row.get("source")) or "BigGo / MOPS"
     )
 
 
-@router.get("/upcoming", response_model=UpcomingCallsResponse, summary="取得全球跨市場 (台/美/日/韓) 即將舉行的法說會清單")
+@router.get("/upcoming", response_model=UpcomingCallsResponse, summary="取得全球跨市場 (台/美/日/韓) 法說會清單 (今天優先/智慧排版)")
 def get_upcoming_calls(
     market: str = Query("ALL", description="市場篩選: ALL / TW / US / JP / KR / OTHER"),
     days: int = Query(14, ge=1, le=90, description="查詢未來天數範圍 (預設 14 天)"),
-    start_date: Optional[str] = Query(None, description="起始日期 (YYYY-MM-DD，若指定則優先於 days)"),
+    start_date: Optional[str] = Query(None, description="起始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="截止日期 (YYYY-MM-DD)"),
     is_weight_stock: Optional[bool] = Query(None, description="是否僅顯示重量級權值股"),
+    time_filter: str = Query("ALL", description="時間區間: ALL (全部) / TODAY (今天) / UPCOMING (即將召開) / PAST (近期回放)"),
     limit: int = Query(50, ge=1, le=200, description="返回筆數上限")
 ):
     """
-    查詢近期即將召開之法人說明會，自動換算雙時區與倒數剩餘天數。
+    查詢法人說明會清單：
+    - 結構嚴格對齊 BigGo Finance 設計
+    - 優先展示「今天」進行中法說會
+    - 「未來」排程由近至遠升序排列 (Tomorrow ➔ Next Week)
+    - 「歷史」回放由近至遠降序排列 (Yesterday ➔ Last Week)
     """
     mkt = str(market) if isinstance(market, str) else "ALL"
-    s_date = str(start_date) if isinstance(start_date, str) and start_date else None
-    e_date = str(end_date) if isinstance(end_date, str) and end_date else None
     w_stock = is_weight_stock if isinstance(is_weight_stock, bool) else None
     day_cnt = int(days) if isinstance(days, int) else 14
     lim = int(limit) if isinstance(limit, int) else 50
+    tf = str(time_filter).strip().upper() if time_filter else "ALL"
 
     today = datetime.date.today()
-    s_date = s_date or (today - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
-    e_date = e_date or (today + datetime.timedelta(days=day_cnt)).strftime("%Y-%m-%d")
+    today_str = today.strftime("%Y-%m-%d")
+    tomorrow_str = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_str = (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-    records = duckdb_manager.get_earnings_calls(
-        market=mkt,
-        start_date=s_date,
-        end_date=e_date,
-        is_weight_stock=w_stock,
-        limit=lim
-    )
-
-    # 若特定市場或冷啟動時查無紀錄，即時觸發一次同步以獲取最新法說會
-    if not records and (start_date is None or not isinstance(start_date, str)):
-        fetcher = EarningsCallFetcher(duckdb_manager)
-        fetcher.fetch_all_and_sync()
+    # If caller explicitly provided bounded date range (start_date or end_date), query exact range
+    if start_date is not None or end_date is not None:
         records = duckdb_manager.get_earnings_calls(
             market=mkt,
-            start_date=s_date,
-            end_date=e_date,
+            start_date=start_date,
+            end_date=end_date,
             is_weight_stock=w_stock,
+            order_desc=False,
+            limit=5000
+        )
+        if not records and start_date is None:
+            fetcher = EarningsCallFetcher(duckdb_manager)
+            fetcher.fetch_all_and_sync()
+            records = duckdb_manager.get_earnings_calls(
+                market=mkt,
+                start_date=start_date,
+                end_date=end_date,
+                is_weight_stock=w_stock,
+                order_desc=False,
+                limit=5000
+            )
+        enriched = [_enrich_call_item(r, today) for r in records]
+        today_cnt = sum(1 for r in enriched if r.call_date == today_str)
+        upcoming_cnt = sum(1 for r in enriched if r.call_date > today_str)
+        past_cnt = sum(1 for r in enriched if r.call_date < today_str)
+
+        if tf == "TODAY":
+            filtered = [r for r in enriched if r.call_date == today_str]
+        elif tf == "UPCOMING":
+            filtered = [r for r in enriched if r.call_date >= today_str]
+        elif tf == "PAST":
+            filtered = [r for r in enriched if r.call_date < today_str]
+            filtered.reverse()
+        else:
+            filtered = enriched
+
+        combined = filtered[:lim]
+        return UpcomingCallsResponse(
+            success=True,
+            market=mkt.upper(),
+            total_count=len(combined),
+            today_count=today_cnt,
+            upcoming_count=upcoming_cnt,
+            past_count=past_cnt,
+            data=combined
+        )
+
+    # Default upcoming mode: partition into today, upcoming (ASC), and past (DESC from yesterday)
+    future_end_str = (today + datetime.timedelta(days=day_cnt)).strftime("%Y-%m-%d")
+    past_start_str = (today - datetime.timedelta(days=21)).strftime("%Y-%m-%d")
+
+    today_records: List[Dict[str, Any]] = []
+    upcoming_records: List[Dict[str, Any]] = []
+    past_records: List[Dict[str, Any]] = []
+
+    # 1. 抓取今天
+    if tf in ("ALL", "TODAY", "UPCOMING"):
+        today_records = duckdb_manager.get_earnings_calls(
+            market=mkt,
+            start_date=today_str,
+            end_date=today_str,
+            is_weight_stock=w_stock,
+            order_desc=False,
             limit=lim
         )
 
-    # 若在預設滑動視窗內該市場暫無法說會排程 (例如日韓或低頻市場)，回溯抓取最近召開之歷史法說會，避免清單空白
-    if not records and (start_date is None or not isinstance(start_date, str)):
-        records = duckdb_manager.get_earnings_calls(
+    # 2. 抓取未來 (明天之後)
+    if tf in ("ALL", "UPCOMING"):
+        upcoming_records = duckdb_manager.get_earnings_calls(
             market=mkt,
+            start_date=tomorrow_str,
+            end_date=future_end_str,
+            is_weight_stock=w_stock,
+            order_desc=False,
+            limit=lim
+        )
+
+    # 3. 抓取過去 (昨天以前，降序排序，昨天在最前面)
+    if tf in ("ALL", "PAST"):
+        past_records = duckdb_manager.get_earnings_calls(
+            market=mkt,
+            start_date=past_start_str,
+            end_date=yesterday_str,
             is_weight_stock=w_stock,
             order_desc=True,
             limit=lim
         )
 
-    enriched = [_enrich_call_item(r, today) for r in records]
+    # 若特定市場或冷啟動查無資料，觸發自動同步
+    if not today_records and not upcoming_records and not past_records:
+        fetcher = EarningsCallFetcher(duckdb_manager)
+        fetcher.fetch_all_and_sync()
+        if tf in ("ALL", "TODAY", "UPCOMING"):
+            today_records = duckdb_manager.get_earnings_calls(market=mkt, start_date=today_str, end_date=today_str, is_weight_stock=w_stock, limit=lim)
+        if tf in ("ALL", "UPCOMING"):
+            upcoming_records = duckdb_manager.get_earnings_calls(market=mkt, start_date=tomorrow_str, end_date=future_end_str, is_weight_stock=w_stock, limit=lim)
+        if tf in ("ALL", "PAST"):
+            past_records = duckdb_manager.get_earnings_calls(market=mkt, start_date=past_start_str, end_date=yesterday_str, is_weight_stock=w_stock, order_desc=True, limit=lim)
 
-    # 排序：優先呈現今天 (today) 與即將召開 (upcoming，依倒數天數升序)，隨後呈現近期已召開 (past，依日期降序)
-    def _sort_key(call: EarningsCallItem):
-        prio = 0 if call.status == "today" else (1 if call.status == "upcoming" else 2)
-        countdown = call.countdown_days if (call.countdown_days is not None and call.countdown_days >= 0) else 999
-        date_num = int(call.call_date.replace("-", "")) if (call.call_date and re.match(r"^\d{4}-\d{2}-\d{2}$", call.call_date)) else 0
-        return (prio, countdown, -date_num)
+    today_enriched = [_enrich_call_item(r, today) for r in today_records]
+    upcoming_enriched = [_enrich_call_item(r, today) for r in upcoming_records]
+    past_enriched = [_enrich_call_item(r, today) for r in past_records]
 
-    enriched.sort(key=_sort_key)
+    if tf == "TODAY":
+        combined = today_enriched[:lim]
+    elif tf == "UPCOMING":
+        combined = (today_enriched + upcoming_enriched)[:lim]
+    elif tf == "PAST":
+        combined = past_enriched[:lim]
+    else:  # ALL: 今天優先 ➔ 未來日程 ➔ 過去日程 (昨天優先)
+        combined = (today_enriched + upcoming_enriched + past_enriched)[:lim]
+
+    # 精確取得未受 LIMIT 截斷的類別總數
+    counts = duckdb_manager.get_earnings_call_counts(
+        market=mkt,
+        today_str=today_str,
+        future_end_str=future_end_str,
+        past_start_str=past_start_str,
+        is_weight_stock=w_stock
+    )
 
     return UpcomingCallsResponse(
         success=True,
         market=mkt.upper(),
-        total_count=len(enriched),
-        data=enriched
+        total_count=len(combined),
+        today_count=counts["today"],
+        upcoming_count=counts["upcoming"],
+        past_count=counts["past"],
+        data=combined
     )
 
 
