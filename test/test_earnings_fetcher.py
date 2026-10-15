@@ -306,9 +306,9 @@ class TestEarningsCallFetcher(unittest.TestCase):
         self.assertGreaterEqual(len(benchmarks), 20)
         self.assertTrue(any(b["ticker"] == "2330.TW" for b in benchmarks))
 
-        # 模擬 BigGo API 回傳空字典
+        # 模擬 BigGo API 網路異常或回傳空字典
         fetcher = EarningsCallFetcher(db=unittest.mock.MagicMock())
-        with unittest.mock.patch.object(fetcher, "_fetch_biggo_all_windows", return_value={}):
+        with unittest.mock.patch("urllib.request.urlopen", side_effect=Exception("BigGo API Timeout")):
             results = fetcher.fetch_ticker_calls("2330.TW")
             self.assertGreaterEqual(len(results), 1)
             tsmc = next(r for r in results if r["ticker"] == "2330.TW")
