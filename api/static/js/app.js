@@ -79,6 +79,11 @@ export const app = createApp({
             resolvedName: '',
             historyError: '',
             historyRequestId: 0,
+            historyCompanyData: null,
+            historyCompanyLoading: false,
+            historyDetailSubTab: 'profile', // 'profile' | 'network' | 'earnings' | 'tender'
+            historyEarningsList: [],
+            historyDetailsCollapsed: false,
 
             // Earnings Calls State (Task B)
             upcomingEarningsCalls: [],
@@ -311,6 +316,9 @@ export const app = createApp({
             this.tickerInstHistory = [];
             this.resolvedTicker = '';
             this.resolvedName = '';
+            this.historyCompanyData = null;
+            this.historyEarningsList = [];
+            this.historyDetailsCollapsed = false;
 
             try {
                 const resolution = await ApiClient.resolveTicker(query);
@@ -318,6 +326,14 @@ export const app = createApp({
                 this.resolvedTicker = resolution.ticker;
                 this.resolvedName = resolution.name || '';
                 this.searchTicker = resolution.ticker;
+
+                // 若非台股標的且當前子頁籤為標案或股權網絡，自動重設為基本面與新聞
+                if (!this.isTwStock(resolution.ticker) && (this.historyDetailSubTab === 'tender' || this.historyDetailSubTab === 'network')) {
+                    this.historyDetailSubTab = 'profile';
+                }
+
+                // 並行啟動個股情報中心 (Profile / Network / Earnings / Tender) 查詢
+                this.loadHistoryCompanyData(resolution.ticker, requestId);
 
                 const [historyData, instData] = await Promise.all([
                     ApiClient.getPredictionHistory(resolution.ticker, 40).catch(() => []),
@@ -341,6 +357,86 @@ export const app = createApp({
                 if (requestId === this.historyRequestId) {
                     this.historyLoading = false;
                 }
+            }
+        },
+        async loadHistoryCompanyData(ticker, requestId) {
+            if (!ticker) return;
+            this.historyCompanyLoading = true;
+
+            // Fast-path: SWR 快取即時預先水合
+            if (this.companyProfileCache[ticker]) {
+                this.historyCompanyData = { ...this.companyProfileCache[ticker] };
+            } else {
+                this.historyCompanyData = {
+                    ticker: ticker,
+                    name: this.resolvedName || ticker,
+                    industry: '載入中...',
+                    business_summary: '正在檢索基本資料與即時新聞...',
+                    recent_news: []
+                };
+            }
+
+            if (this.drawerEarningsMap[ticker]) {
+                this.historyEarningsList = this.drawerEarningsMap[ticker];
+            } else {
+                this.historyEarningsList = [];
+            }
+
+            try {
+                const isTw = this.isTwStock(ticker);
+                const [profRes, netRes, earnRes, tenderRes] = await Promise.allSettled([
+                    ApiClient.getCompanyProfile(ticker),
+                    isTw ? ApiClient.getCompanyNetwork(ticker) : Promise.resolve(null),
+                    ApiClient.getTickerEarningsCalls(ticker),
+                    isTw ? ApiClient.getCompanyTender(ticker) : Promise.resolve(null)
+                ]);
+
+                if (requestId !== this.historyRequestId) return;
+
+                const prof = (profRes.status === 'fulfilled' && profRes.value) ? profRes.value : (this.companyProfileCache[ticker] || {});
+                const net = (netRes.status === 'fulfilled') ? netRes.value : (prof.company_network || null);
+                const earnVal = (earnRes.status === 'fulfilled' && earnRes.value) ? earnRes.value : null;
+                const earnList = earnVal ? (earnVal.data || earnVal.items || (Array.isArray(earnVal) ? earnVal : [])) : [];
+                const tender = (tenderRes.status === 'fulfilled') ? tenderRes.value : (prof.company_tender || null);
+
+                this.historyEarningsList = Array.isArray(earnList) ? earnList : [];
+                this.drawerEarningsMap[ticker] = this.historyEarningsList;
+
+                const fullData = {
+                    ...prof,
+                    ticker: ticker,
+                    name: prof.name || this.resolvedName || ticker,
+                    company_network: net,
+                    company_tender: tender
+                };
+
+                if (net) {
+                    if (!fullData.links) fullData.links = {};
+                    if (net.web_url) fullData.links.network_graph = net.web_url;
+                    if (net.image_url) fullData.links.network_image = net.image_url;
+                }
+
+                this.historyCompanyData = fullData;
+                this.companyProfileCache[ticker] = fullData;
+            } catch (e) {
+                console.warn(`Failed to load history company data for ${ticker}:`, e);
+            } finally {
+                if (requestId === this.historyRequestId) {
+                    this.historyCompanyLoading = false;
+                }
+            }
+        },
+        toggleHistoryDetails() {
+            this.historyDetailsCollapsed = !this.historyDetailsCollapsed;
+        },
+        setHistoryDetailSubTab(tab) {
+            this.historyDetailSubTab = tab;
+            const ticker = this.resolvedTicker || this.searchTicker;
+            if (!ticker) return;
+            if (tab === 'tender' && (!this.historyCompanyData || !this.historyCompanyData.company_tender)) {
+                this.ensureCompanyTenderLoaded(ticker);
+            } else if (tab === 'network' && (!this.historyCompanyData || !this.historyCompanyData.company_network)) {
+                this.ensureCompanyNetworkLoaded(ticker);
             }
         },
         renderInstChart() {
@@ -455,12 +551,18 @@ export const app = createApp({
                         this.hoverData.company_network = net;
                     }
                     // 僅在當前展開抽屜仍是該股票時才寫入抽屜狀態，防止切換標的造成串台 (Codex P2)
-                    if (this.expandedRowTicker === ticker) {
+                    if (this.expandedDrawerTicker === ticker) {
                         if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
                         this.expandedDrawerData.company_network = net;
                         if (!this.expandedDrawerData.links) this.expandedDrawerData.links = {};
                         if (net.web_url) this.expandedDrawerData.links.network_graph = net.web_url;
                         if (net.image_url) this.expandedDrawerData.links.network_image = net.image_url;
+                    }
+                    if (this.historyCompanyData && this.historyCompanyData.ticker === ticker) {
+                        this.historyCompanyData.company_network = net;
+                        if (!this.historyCompanyData.links) this.historyCompanyData.links = {};
+                        if (net.web_url) this.historyCompanyData.links.network_graph = net.web_url;
+                        if (net.image_url) this.historyCompanyData.links.network_image = net.image_url;
                     }
                 }
             } catch (e) {
@@ -481,9 +583,12 @@ export const app = createApp({
                         this.hoverData.company_tender = tender;
                     }
                     // 僅在當前展開抽屜仍是該股票時才寫入抽屜狀態，防止切換標的造成串台 (Codex P2)
-                    if (this.expandedRowTicker === ticker) {
+                    if (this.expandedDrawerTicker === ticker) {
                         if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
                         this.expandedDrawerData.company_tender = tender;
+                    }
+                    if (this.historyCompanyData && this.historyCompanyData.ticker === ticker) {
+                        this.historyCompanyData.company_tender = tender;
                     }
                 }
             } catch (e) {

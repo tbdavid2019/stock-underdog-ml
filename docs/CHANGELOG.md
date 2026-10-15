@@ -4,6 +4,26 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.23)
+
+### Added & Enhanced (On-Demand Company Details Hub in Stock History Tab & 4-in-1 Intelligence Parity)
+- **🏢 個股歷史查詢頁籤全面整合 4 合 1 個股情報中心（On-Demand Company Details Hub in Tab History）**：
+  1. **解決痛點**：
+     - 使用者在主頁儀表板（Dashboard）若要探查未進入當日模型推薦榜單（如三重共振、漲幅榜、玄鐵）的非焦點標的（例如軍工指標股漢翔 `2634.TW`），原先在「個股歷史」頁籤僅能查看三大法人籌碼折線圖與預測記錄，無法調用公司詳情抽屜。
+  2. **4 大情報維度無縫調用與多頁籤切換**：
+     - 在「個股歷史」檢索任意台美日韓標的（支援代碼 `2634.TW` 或中文「漢翔」）後，於搜尋卡片下方即時呈現專屬的「個股情報與公司詳情」面板：
+       - 🏢 **基本面與新聞（Profile）**：公司市值、資本額、統編、代表董座、營運業務摘要、集團關聯企業摘要、即時新聞與外開連結（Yahoo、Goodinfo 等）。
+       - 🌐 **集團股權網絡（Network）**：上游控股母公司、下游核心轉投資關係企業（點擊代碼即可直接原地切換查詢該股時序軌跡），並內嵌 Taiwan Company Network 官方 SVG 即時向量拓撲架構圖譜（支援檢視原圖與互動圖譜外開）。
+       - 🎤 **法說會與簡報（Earnings）**：即將召開與近期法說會日程、會議形式、地點與備註、EPS 預估/公佈、官方簡報（PDF）與影音直播回放連結。
+       - 🏛️ **政府標案情報（ToBid Tenders）**：針對台灣上市櫃標的，呈現《政府採購法》第 101/103 條停權黑天鵝風控查核徽章、四大關鍵 KPI（累計得標總額、得標/投標場次、勝出率、獨家投標率）、五大採購機關金主榜、主要競標對手與勝率對比、近期重大得標標案與 ToBid 完整標案庫外開連結。
+  3. **極致人機互動與工藝體驗（Impeccable Craft & Layout Polish）**：
+     - 提供頂部「收合個股詳情 / 展開個股詳情」切換鈕，預設展開呈現，使用者可依需求一鍵收合以專注觀察三大法人累積買賣超折線圖與時間序列紀錄。
+     - 搜尋列之「熱門速查」按鈕新增 `2634.TW`（漢翔），方便使用者一鍵速查軍工指標與公標案情資。
+     - 針對非台股標的自動回退預設為基本面與新聞頁籤，並優化無時序紀錄時之提示文案，引導使用者檢視上方公司情報。
+  4. **前端非同步狀態與防禦性加固（`api/static/js/app.js`）**：
+     - 實作 `loadHistoryCompanyData()`，並行請求 Profile、Network、Earnings 與 Tender API，並具備 SWR 快取水合能力。
+     - 修復 `ensureCompanyNetworkLoaded` 與 `ensureCompanyTenderLoaded` 之抽屜狀態判斷變數（`this.expandedRowTicker` -> `this.expandedDrawerTicker`），避免串台並同步更新 `historyCompanyData`。
+
 ## 2026-10-15 (v2.4.22)
 
 ### Added & Enhanced (ToBid Taiwan Government Tender Integration, WebMCP Tool #22 & Impeccable Multi-View Parity)
