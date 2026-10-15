@@ -506,6 +506,17 @@ class InvestingService:
             commodities = fut_comm.result()
             economic_calendar = fut_econ.result()
 
+        # 混合容災：若任一區塊短暫逾時，平滑沿用前次快取數據，防止介面區塊閃爍或為空
+        prev_cache = cls._read_cache(cache_key, ttl=3600 * 24 * 30, allow_stale=True) or {}
+        if not fed_rate and prev_cache.get("fed_rate"):
+            fed_rate = prev_cache["fed_rate"]
+        if not commodities and prev_cache.get("commodities"):
+            commodities = prev_cache["commodities"]
+        if not earnings and prev_cache.get("earnings_calendar"):
+            earnings = prev_cache["earnings_calendar"]
+        if not economic_calendar and prev_cache.get("economic_calendar"):
+            economic_calendar = prev_cache["economic_calendar"]
+
         # 提煉今日與明日重點警示 (去重且多元)
         clean_econ = cls._clean_and_dedup_economic_events(economic_calendar or [])
         high_impact_events = [e for e in clean_econ if e.get("is_high_impact")]
