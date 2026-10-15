@@ -8,6 +8,7 @@ import re
 import json
 import logging
 import datetime
+import time
 from typing import Dict, List, Optional, Any
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -142,6 +143,7 @@ class PodcastService:
     def __init__(self, db_manager: Optional[DuckDBManager] = None):
         self.db = db_manager or DuckDBManager()
         self.decision_service = DecisionService()
+        self.last_live_sync_at: float = 0.0
         _ensure_cache_dir()
 
     def get_seed_channels(self) -> List[Dict[str, Any]]:
@@ -914,6 +916,163 @@ class PodcastService:
 
         return episodes
 
+    def fetch_biggo_live_episodes(self, max_pages: int = 3, page_size: int = 50) -> int:
+        """
+        從 BigGo 財經 Podcast API 即時抓取最新單集、自動萃取觀點/標的/情緒，並同步存入 DuckDB。
+        """
+        seed_channels = self.get_seed_channels()
+        source_map = {c.get("source_id"): c.get("channel_id") for c in seed_channels if c.get("source_id")}
+
+        headers = {
+            "Site": "finance.biggo.com.tw",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json"
+        }
+
+        total_saved = 0
+        new_channels_map = {}
+
+        for page in range(1, max_pages + 1):
+            url = f"https://api.biggo.com/api/v1/finance/podcast/list?page={page}&size={page_size}"
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+            except Exception as e:
+                logger.warning(f"⚠️ BigGo Podcast API 抓取失敗 (頁碼 {page}): {e}")
+                break
+
+            episodes_data = resp_data.get("data", {}).get("episodes", [])
+            if not episodes_data:
+                logger.info(f"ℹ️ BigGo API 第 {page} 頁無更多單集")
+                break
+
+            batch_records = []
+            for ep in episodes_data:
+                ep_id = str(ep.get("id") or "").strip()
+                if not ep_id:
+                    continue
+
+                src_id = ep.get("source_id")
+                ch_id = source_map.get(src_id)
+                if not ch_id:
+                    ch_id = f"biggo-{src_id}" if src_id else "unknown-channel"
+                    if src_id and src_id not in new_channels_map:
+                        new_channels_map[src_id] = {
+                            "channel_id": ch_id,
+                            "title": ep.get("source_name") or f"Podcast {src_id}",
+                            "author": ep.get("source_name") or "Unknown",
+                            "description": ep.get("source_description") or "",
+                            "image_url": ep.get("source_image_url") or "",
+                            "rss_url": f"https://api.biggo.com/api/v1/finance/podcast?source={src_id}",
+                            "youtube_channel_url": None,
+                            "follower_count": int(ep.get("source_follower_count") or 0),
+                            "episode_count": int(ep.get("source_episode_count") or 0),
+                            "category": "Finance & Technology",
+                            "language": ep.get("language") or "zh",
+                            "is_subscribed": True
+                        }
+
+                # 處理發布時間 (epoch timestamp -> UTC ISO 8601)
+                raw_pub = ep.get("published_at")
+                if isinstance(raw_pub, (int, float)) and raw_pub > 0:
+                    pub_dt_str = datetime.datetime.fromtimestamp(raw_pub, tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                elif isinstance(raw_pub, str) and raw_pub:
+                    pub_dt_str = raw_pub
+                else:
+                    pub_dt_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+                # 主持人與來賓萃取
+                speakers = ep.get("speakers") or []
+                hosts = [s.get("name") for s in speakers if isinstance(s, dict) and s.get("role") == "Host" and s.get("name")]
+                guests = [s.get("name") for s in speakers if isinstance(s, dict) and s.get("role") == "Guest" and s.get("name")]
+
+                # 關鍵洞察萃取
+                highlights = ep.get("business_highlights") or []
+                takeaways = [h.get("insight") for h in highlights if isinstance(h, dict) and h.get("insight")]
+
+                # 主題與實體標籤
+                topics = ep.get("topics") or []
+                entities = ep.get("key_entities") or []
+                topic_tags = list(dict.fromkeys([t for t in (topics + entities) if t and isinstance(t, str)]))
+
+                # 上市標的代碼與多空立場
+                companies = ep.get("companies") or []
+                tickers = [c.get("symbol") for c in companies if isinstance(c, dict) and c.get("symbol")]
+
+                # 文本輔助萃取台美股額外標的
+                summary_text = ep.get("summary") or ep.get("quick_take") or ""
+                extra_entities, extra_tickers = self.extract_entities_and_tickers(f"{ep.get('title', '')} {summary_text}")
+                tickers = list(dict.fromkeys(tickers + extra_tickers))
+                topic_tags = list(dict.fromkeys(topic_tags + extra_entities))
+
+                # 多空情緒字典
+                ticker_sentiments = {}
+                for c in companies:
+                    if not isinstance(c, dict):
+                        continue
+                    sym = c.get("symbol")
+                    if not sym:
+                        continue
+                    raw_sent = (c.get("sentiment") or "neutral").lower()
+                    stance = "bullish" if raw_sent == "bullish" else ("bearish" if raw_sent == "bearish" else "neutral")
+                    label = "↑ 看多" if stance == "bullish" else ("↓ 看空" if stance == "bearish" else "↔ 中立")
+                    m_count = c.get("mentions", 1)
+                    ticker_sentiments[str(sym).upper()] = {
+                        "stance": stance,
+                        "label": label,
+                        "confidence": 0.85 if stance != "neutral" else 0.5,
+                        "reasoning": f"提及次數: {m_count}, 情感: {raw_sent}"
+                    }
+
+                dur = ep.get("duration")
+                duration_seconds = int(round(dur)) if isinstance(dur, (int, float)) and dur > 0 else None
+
+                rec = {
+                    "id": ep_id,
+                    "channel_id": ch_id,
+                    "title": ep.get("title") or "未命名單集",
+                    "published_at": pub_dt_str,
+                    "audio_url": ep.get("url") or "",
+                    "youtube_url": None,
+                    "duration_seconds": duration_seconds,
+                    "language": ep.get("language") or "zh",
+                    "host": ", ".join(hosts) if hosts else None,
+                    "guest": ", ".join(guests) if guests else None,
+                    "tldr_zh_tw": summary_text,
+                    "key_takeaways": takeaways,
+                    "topic_tags": topic_tags,
+                    "tickers": tickers,
+                    "ticker_sentiments": ticker_sentiments,
+                    "status": "extracted"
+                }
+
+                # 即時推論 5-Tier 決策評級 (本地極速規則 <0.02ms)
+                verdict = self.decision_service.evaluate_podcast_episode(rec, local_only=True)
+                rec["importance_score"] = verdict.importance_score
+                rec["importance_level"] = verdict.importance_level
+                rec["decision_slot"] = verdict.source_slot
+                if verdict.ticker_sentiments:
+                    for k, v in verdict.ticker_sentiments.items():
+                        if k not in rec["ticker_sentiments"]:
+                            rec["ticker_sentiments"][k] = v
+
+                batch_records.append(rec)
+
+            if batch_records:
+                saved = self.db.save_podcast_episodes_batch(batch_records)
+                total_saved += saved
+                logger.info(f"📥 成功同步 BigGo 第 {page} 頁: {saved} 筆單集存入 DuckDB")
+
+        # 若發現新頻道，存入頻道庫
+        if new_channels_map:
+            ch_saved = self.db.save_podcast_channels_batch(list(new_channels_map.values()))
+            logger.info(f"📡 動態收錄 {ch_saved} 個新 Podcast 頻道至資料庫")
+
+        self.last_live_sync_at = time.time()
+        logger.info(f"✅ BigGo 即時單集同步完畢: 共寫入/更新 {total_saved} 筆單集")
+        return total_saved
+
     def backfill_unevaluated_episodes(self, limit: int = 500) -> int:
         """為資料庫中尚未評估決策等級的單集進行確定性本地規則回填持久化"""
         try:
@@ -955,27 +1114,42 @@ class PodcastService:
             return saved
         return 0
 
-    def sync_all(self, fetch_live_rss: bool = False) -> int:
-        """執行全量頻道與情報單集同步"""
+    def sync_all(self, fetch_live_api: bool = True, max_pages: int = 3, fetch_live_rss: bool = False) -> int:
+        """執行全量頻道、即時 BigGo API 與情報單集同步"""
         ch_count = self.sync_seed_channels()
         ep_count = self.seed_initial_curated_episodes()
-        rss_ep_count = 0
-        if fetch_live_rss:
+        live_count = 0
+        if fetch_live_api:
+            live_count = self.fetch_biggo_live_episodes(max_pages=max_pages)
+        elif fetch_live_rss:
             channels = self.db.get_podcast_channels(limit=5)
             for ch in channels:
                 rss_url = ch.get("rss_url")
                 if rss_url:
                     fetched = self.fetch_rss_episodes(rss_url, ch.get("channel_id"), limit=3)
                     if fetched:
-                        rss_ep_count += self.db.save_podcast_episodes_batch(fetched)
+                        live_count += self.db.save_podcast_episodes_batch(fetched)
         backfilled = self.backfill_unevaluated_episodes()
-        return ch_count + ep_count + rss_ep_count + backfilled
+        total = ch_count + ep_count + live_count + backfilled
+        logger.info(f"🎉 Podcast 全量同步完成: 頻道 {ch_count} 筆, 種子 {ep_count} 筆, Live API {live_count} 筆, 回填 {backfilled} 筆 (總計 {total})")
+        return total
 
 
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO)
+    fetch_live = True
+    pages = 3
+    for arg in sys.argv[1:]:
+        if arg == "--no-live":
+            fetch_live = False
+        elif arg.startswith("--pages="):
+            try:
+                pages = int(arg.split("=")[1])
+            except ValueError:
+                pass
     service = PodcastService()
-    total = service.sync_all()
+    total = service.sync_all(fetch_live_api=fetch_live, max_pages=pages)
     print(f"Podcast sync complete: {total} items synchronized.")
+
 

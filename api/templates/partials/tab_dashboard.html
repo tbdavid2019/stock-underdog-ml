@@ -851,68 +851,71 @@
                             <span class="material-symbols-outlined text-[16px] animate-spin">sync</span>
                             <span>查詢 ToBid 政府電子採購網資料庫中...</span>
                         </div>
-                        <div v-else-if="expandedDrawerData?.company_tender && !expandedDrawerData.company_tender.has_data" class="p-3 rounded-xl border text-center space-y-1.5"
+                        <div v-else-if="expandedDrawerData?.company_tender && !expandedDrawerData.company_tender.has_data" class="p-3.5 rounded-xl border text-center space-y-2"
                              :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                            <div class="text-slate-400 font-bold flex items-center justify-center space-x-1">
-                                <span class="material-symbols-outlined text-[16px]">info</span>
+                            <div class="font-bold flex items-center justify-center space-x-1.5 text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="material-symbols-outlined text-[18px] text-amber-500">info</span>
                                 <span>{{ expandedDrawerData.company_tender.message || '查無公家標案紀錄' }}</span>
                             </div>
-                            <p class="text-[11px] text-slate-400">該標的非政府標案依賴型產業。</p>
-                            <a :href="expandedDrawerData.company_tender.web_url" target="_blank" class="inline-block text-amber-400 underline text-xs font-semibold pt-0.5">
+                            <p class="text-xs font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">該標的非政府標案依賴型產業。</p>
+                            <a :href="expandedDrawerData.company_tender.web_url" target="_blank"
+                               class="inline-block text-xs font-bold underline underline-offset-4 pt-0.5"
+                               :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
                                 在 ToBid 查詢 ↗
                             </a>
                         </div>
-                        <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-2.5">
+                        <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-3">
                             <!-- Mobile Compliance Badge -->
-                            <div v-if="expandedDrawerData.company_tender.compliance" class="p-1.5 rounded-lg border text-[11px] font-bold flex items-center justify-between"
-                                 :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400')">
-                                <div class="flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[14px]">{{ expandedDrawerData.company_tender.compliance.currently_debarred ? 'warning' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'help' : 'verified_user') }}</span>
+                            <div v-if="expandedDrawerData.company_tender.compliance" class="p-2 sm:p-2.5 rounded-lg border text-xs font-black flex items-center justify-between gap-2 shadow-sm"
+                                 :class="expandedDrawerData.company_tender.compliance.currently_debarred ? (isDark ? 'bg-rose-950 text-rose-200 border-rose-700' : 'bg-rose-100 text-rose-950 border-rose-400') : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? (isDark ? 'bg-amber-950 text-amber-200 border-amber-700' : 'bg-amber-100 text-amber-950 border-amber-400') : (isDark ? 'bg-emerald-950 text-emerald-200 border-emerald-700' : 'bg-emerald-100 text-emerald-950 border-emerald-400'))">
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="material-symbols-outlined text-[16px]">{{ expandedDrawerData.company_tender.compliance.currently_debarred ? 'warning' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'help' : 'verified_user') }}</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </div>
-                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-[10px] text-slate-400 font-mono">統編: {{ expandedDrawerData.company_tender.tax_id }}</span>
+                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-xs font-mono font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">統編: {{ expandedDrawerData.company_tender.tax_id }}</span>
                             </div>
 
                             <!-- Mobile KPI Row -->
-                            <div class="grid grid-cols-2 gap-1.5">
-                                <div class="p-2 rounded-lg border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-slate-200'">
-                                    <div class="text-[10px] text-slate-400">累計得標金額</div>
-                                    <div class="text-sm font-black num-font text-amber-500">{{ expandedDrawerData.company_tender.known_award_total_formatted }}</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2.5 rounded-lg border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-slate-200'">
+                                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">累計得標金額</div>
+                                    <div class="text-base sm:text-lg font-black num-font text-amber-500 mt-0.5">{{ expandedDrawerData.company_tender.known_award_total_formatted }}</div>
                                 </div>
-                                <div class="p-2 rounded-lg border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-slate-200'">
-                                    <div class="text-[10px] text-slate-400">得標 / 投標 (勝率)</div>
-                                    <div class="text-sm font-black num-font text-emerald-400">
+                                <div class="p-2.5 rounded-lg border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-slate-200'">
+                                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">得標 / 投標 (勝率)</div>
+                                    <div class="text-base sm:text-lg font-black num-font text-emerald-400 mt-0.5">
                                         {{ expandedDrawerData.company_tender.wins }} 案 ({{ expandedDrawerData.company_tender.win_rate_pct }}%)
                                     </div>
                                 </div>
                             </div>
                             <!-- Mobile Top Clients -->
-                            <div v-if="expandedDrawerData.company_tender.top_clients?.length" class="space-y-1">
-                                <div class="text-amber-500 font-bold text-[11px] flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[13px]">account_balance</span>
+                            <div v-if="expandedDrawerData.company_tender.top_clients?.length" class="space-y-1.5">
+                                <div class="font-black text-xs sm:text-sm flex items-center space-x-1" :class="isDark ? 'text-amber-400' : 'text-amber-700'">
+                                    <span class="material-symbols-outlined text-[16px]">account_balance</span>
                                     <span>主要公家客戶:</span>
                                 </div>
-                                <div class="space-y-1">
-                                    <div v-for="(c, cidx) in expandedDrawerData.company_tender.top_clients.slice(0, 3)" :key="cidx"
-                                         class="p-1.5 rounded border flex items-center justify-between text-[11px]"
+                                <div class="space-y-1.5">
+                                    <div v-for="(c, cidx) in expandedDrawerData.company_tender.top_clients.slice(0, 3)" :key="'mc-'+cidx"
+                                         class="p-2 rounded-lg border flex items-center justify-between gap-2 text-xs"
                                          :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                        <span class="truncate max-w-[160px] font-medium" :class="isDark ? 'text-white' : 'text-slate-800'">{{ c.unit }}</span>
-                                        <span class="font-black num-font text-amber-500 shrink-0">{{ c.amount_formatted }}</span>
+                                        <span class="truncate font-bold flex-1 pr-1" :class="isDark ? 'text-white' : 'text-slate-900'" :title="c.unit">{{ c.unit }}</span>
+                                        <span class="font-black num-font text-amber-500 shrink-0 text-xs sm:text-sm">{{ c.amount_formatted }}</span>
                                     </div>
                                 </div>
                             </div>
                             <!-- Mobile Top Rivals -->
-                            <div v-if="expandedDrawerData.company_tender.top_rivals?.length" class="space-y-1">
-                                <div class="text-rose-400 font-bold text-[11px] flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[13px]">swords</span>
+                            <div v-if="expandedDrawerData.company_tender.top_rivals?.length" class="space-y-1.5">
+                                <div class="font-black text-xs sm:text-sm flex items-center space-x-1" :class="isDark ? 'text-rose-400' : 'text-rose-700'">
+                                    <span class="material-symbols-outlined text-[16px]">swords</span>
                                     <span>主要競爭對手:</span>
                                 </div>
-                                <div class="space-y-1">
-                                    <div v-for="(r, ridx) in expandedDrawerData.company_tender.top_rivals.slice(0, 3)" :key="ridx"
-                                         class="p-1.5 rounded border flex items-center justify-between text-[11px]"
+                                <div class="space-y-1.5">
+                                    <div v-for="(r, ridx) in expandedDrawerData.company_tender.top_rivals.slice(0, 3)" :key="'mr-'+ridx"
+                                         class="p-2 rounded-lg border flex items-center justify-between gap-2 text-xs"
                                          :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                        <span class="truncate max-w-[150px]" :class="isDark ? 'text-white' : 'text-slate-800'">{{ r.name }}</span>
-                                        <span class="font-bold text-[10px]" :class="r.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'">
+                                        <span class="truncate font-bold flex-1 pr-1" :class="isDark ? 'text-white' : 'text-slate-900'" :title="r.name">{{ r.name }}</span>
+                                        <span class="font-black num-font px-1.5 py-0.5 rounded text-xs shrink-0"
+                                              :class="r.win_rate >= 50 ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-900 border border-emerald-300') : (isDark ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-rose-100 text-rose-900 border border-rose-300')">
                                             勝率 {{ r.win_rate }}% ({{ r.this_vendor_wins }}/{{ r.met }})
                                         </span>
                                     </div>
@@ -921,7 +924,8 @@
                             <!-- ToBid Web Link -->
                             <div class="pt-1 text-center">
                                 <a :href="expandedDrawerData.company_tender.web_url" target="_blank"
-                                   class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
+                                   class="text-xs sm:text-sm font-bold underline underline-offset-4 inline-flex items-center space-x-1"
+                                   :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
                                     <span>在 ToBid 查看完整標案歷程 ↗</span>
                                 </a>
                             </div>
@@ -1149,7 +1153,7 @@
                                                 <span v-for="(up, uidx) in (expandedDrawerData.company_network.relationships?.upstream || [])" :key="'up-'+uidx"
                                                       class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
                                                       :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
-                                                    <span class="text-[10px] font-bold opacity-75">母/控股</span>
+                                                    <span class="text-xs font-bold opacity-80">母/控股</span>
                                                     <span>{{ up.name }}</span>
                                                 </span>
                                                 <button v-for="(down, didx) in (expandedDrawerData.company_network.relationships?.downstream || []).slice(0, 6)" :key="'down-'+didx"
@@ -1366,7 +1370,7 @@
                                                                 title="點擊載入此標的歷史量化分析">
                                                             {{ down.code }} ↗
                                                         </button>
-                                                        <span v-else class="text-[10px] text-slate-500 shrink-0">非上市</span>
+                                                        <span v-else class="text-xs font-bold text-slate-500 shrink-0">非上市</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1433,30 +1437,35 @@
                                     <!-- Rich Tender Intelligence Dashboard -->
                                     <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-4">
                                         <!-- Compliance & Source Status Bar -->
-                                        <div v-if="expandedDrawerData.company_tender.compliance" class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border"
-                                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/10 border-amber-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
-                                            <div class="flex items-center space-x-2">
+                                        <div v-if="expandedDrawerData.company_tender.compliance" class="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl border shadow-sm"
+                                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? (isDark ? 'bg-rose-950/60 border-rose-700' : 'bg-rose-50 border-rose-300') : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? (isDark ? 'bg-amber-950/60 border-amber-700' : 'bg-amber-50 border-amber-300') : (isDark ? 'bg-[#14161C] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
+                                            <div class="flex items-center flex-wrap gap-2.5">
                                                 <span v-if="expandedDrawerData.company_tender.compliance.currently_debarred"
-                                                      class="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center space-x-1">
-                                                    <span class="material-symbols-outlined text-[15px]">warning</span>
+                                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                                      :class="isDark ? 'bg-rose-950 text-rose-200 border-2 border-rose-600' : 'bg-rose-100 text-rose-950 border-2 border-rose-400'">
+                                                    <span class="material-symbols-outlined text-[18px]">warning</span>
                                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                                 </span>
                                                 <span v-else-if="expandedDrawerData.company_tender.compliance.status === 'UNKNOWN'"
-                                                      class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center space-x-1">
-                                                    <span class="material-symbols-outlined text-[15px]">help</span>
+                                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                                      :class="isDark ? 'bg-amber-950 text-amber-200 border-2 border-amber-600' : 'bg-amber-100 text-amber-950 border-2 border-amber-400'">
+                                                    <span class="material-symbols-outlined text-[18px]">help</span>
                                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                                 </span>
                                                 <span v-else
-                                                      class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
-                                                    <span class="material-symbols-outlined text-[15px]">verified_user</span>
+                                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                                      :class="isDark ? 'bg-emerald-950 text-emerald-200 border-2 border-emerald-600' : 'bg-emerald-100 text-emerald-950 border-2 border-emerald-400'">
+                                                    <span class="material-symbols-outlined text-[18px]">verified_user</span>
                                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                                 </span>
-                                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-xs text-slate-400 font-mono">
+                                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-xs sm:text-sm font-mono font-bold"
+                                                      :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                                     統一編號: {{ expandedDrawerData.company_tender.tax_id }}
                                                 </span>
                                             </div>
                                             <a :href="expandedDrawerData.company_tender.web_url" target="_blank" rel="noopener"
-                                               class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
+                                               class="text-xs sm:text-sm font-bold inline-flex items-center space-x-1 hover:underline underline-offset-4"
+                                               :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
                                                 <span>ToBid 完整標案檔案 ↗</span>
                                             </a>
                                         </div>
@@ -1464,57 +1473,57 @@
                                         <!-- Top KPI 4-Card Summary -->
                                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                             <!-- 1. Known Award Total -->
-                                            <div class="p-3.5 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="text-xs font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                    <span class="material-symbols-outlined text-[15px] text-amber-500">payments</span>
+                                            <div class="p-3.5 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                                    <span class="material-symbols-outlined text-[18px] text-amber-500">payments</span>
                                                     <span>累計得標總額</span>
                                                 </div>
                                                 <div class="text-xl sm:text-2xl font-black num-font text-amber-500 mt-1">
                                                     {{ expandedDrawerData.company_tender.known_award_total_formatted }}
                                                 </div>
-                                                <div class="text-[11px] mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                     政府採購網已公開案
                                                 </div>
                                             </div>
 
                                             <!-- 2. Wins / Participations -->
-                                            <div class="p-3.5 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="text-xs font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                    <span class="material-symbols-outlined text-[15px] text-emerald-500">verified</span>
+                                            <div class="p-3.5 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                                    <span class="material-symbols-outlined text-[18px] text-emerald-500">verified</span>
                                                     <span>得標場次 / 總投標</span>
                                                 </div>
                                                 <div class="text-xl sm:text-2xl font-black num-font text-emerald-400 mt-1">
-                                                    {{ expandedDrawerData.company_tender.wins.toLocaleString() }} <span class="text-xs font-normal" :class="isDark ? 'text-slate-400' : 'text-slate-600'">/ {{ expandedDrawerData.company_tender.participations.toLocaleString() }}</span>
+                                                    {{ expandedDrawerData.company_tender.wins.toLocaleString() }} <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">/ {{ expandedDrawerData.company_tender.participations.toLocaleString() }}</span>
                                                 </div>
-                                                <div class="text-[11px] mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                     累積參標履歷紀錄
                                                 </div>
                                             </div>
 
                                             <!-- 3. Win Rate -->
-                                            <div class="p-3.5 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="text-xs font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                    <span class="material-symbols-outlined text-[15px] text-blue-500">trending_up</span>
+                                            <div class="p-3.5 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                                    <span class="material-symbols-outlined text-[18px] text-blue-500">trending_up</span>
                                                     <span>得標勝率</span>
                                                 </div>
                                                 <div class="text-xl sm:text-2xl font-black num-font text-blue-400 mt-1">
                                                     {{ expandedDrawerData.company_tender.win_rate_pct }}%
                                                 </div>
-                                                <div class="text-[11px] mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                     平均標案競爭勝出率
                                                 </div>
                                             </div>
 
                                             <!-- 4. Sole Bid Rate -->
-                                            <div class="p-3.5 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="text-xs font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                    <span class="material-symbols-outlined text-[15px] text-teal-500">stars</span>
+                                            <div class="p-3.5 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                                    <span class="material-symbols-outlined text-[18px] text-teal-500">stars</span>
                                                     <span>獨家投標率</span>
                                                 </div>
                                                 <div class="text-xl sm:text-2xl font-black num-font text-teal-400 mt-1">
                                                     {{ expandedDrawerData.company_tender.sole_bid_rate_pct }}%
                                                 </div>
-                                                <div class="text-[11px] mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                     無競爭獨家規格得標
                                                 </div>
                                             </div>
@@ -1523,65 +1532,65 @@
                                         <!-- Two Columns: Top Clients (Left) & Top Rivals (Right) -->
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                                             <!-- Left: Top 5 Government Clients -->
-                                            <div class="p-4 rounded-xl border space-y-3" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                                    <div class="flex items-center space-x-2 font-bold text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                                        <span class="material-symbols-outlined text-[17px] text-amber-500">account_balance</span>
+                                            <div class="p-4 rounded-xl border space-y-3 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                                    <div class="flex items-center space-x-2 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                        <span class="material-symbols-outlined text-[18px] text-amber-500">account_balance</span>
                                                         <span>前五大採購機關金主 (Top Clients)</span>
                                                     </div>
-                                                    <span class="text-xs text-slate-400 font-mono">得標次數 / 累積金額</span>
+                                                    <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">得標次數 / 累積金額</span>
                                                 </div>
-                                                <div v-if="!expandedDrawerData.company_tender.top_clients || expandedDrawerData.company_tender.top_clients.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                                                <div v-if="!expandedDrawerData.company_tender.top_clients || expandedDrawerData.company_tender.top_clients.length === 0" class="text-xs sm:text-sm font-medium py-4 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                                     無主要機關客戶統計
                                                 </div>
                                                 <div v-else class="space-y-2">
-                                                    <div v-for="(client, cidx) in expandedDrawerData.company_tender.top_clients" :key="cidx"
-                                                         class="p-2.5 rounded-lg border text-xs space-y-1.5"
+                                                    <div v-for="(client, cidx) in expandedDrawerData.company_tender.top_clients" :key="'tc-'+cidx"
+                                                         class="p-2.5 rounded-lg border text-xs sm:text-sm space-y-1.5"
                                                          :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                                        <div class="flex items-center justify-between">
-                                                            <span class="font-bold truncate max-w-[220px] sm:max-w-[280px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
+                                                        <div class="flex items-center justify-between gap-2">
+                                                            <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
                                                                 {{ cidx + 1 }}. {{ client.unit }}
                                                             </span>
-                                                            <span class="font-black num-font text-amber-500 whitespace-nowrap text-sm">
+                                                            <span class="font-black num-font text-amber-500 whitespace-nowrap text-sm sm:text-base">
                                                                 {{ client.amount_formatted }}
                                                             </span>
                                                         </div>
-                                                        <div class="flex items-center justify-between text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                            <span>得標次數: <strong class="text-amber-400 font-bold">{{ client.wins }}</strong> 場</span>
-                                                            <span class="text-[10px] text-slate-400">公家採購核心往來機關</span>
+                                                        <div class="flex items-center justify-between text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                                            <span>得標次數: <strong class="text-amber-400 font-bold num-font">{{ client.wins }}</strong> 場</span>
+                                                            <span>公家採購核心往來機關</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <!-- Right: Top 5 Rivals -->
-                                            <div class="p-4 rounded-xl border space-y-3" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                                    <div class="flex items-center space-x-2 font-bold text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                                        <span class="material-symbols-outlined text-[17px] text-rose-500">swords</span>
+                                            <div class="p-4 rounded-xl border space-y-3 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                                    <div class="flex items-center space-x-2 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                        <span class="material-symbols-outlined text-[18px] text-rose-500">swords</span>
                                                         <span>主要競標對手與對戰勝率 (Top Rivals)</span>
                                                     </div>
-                                                    <span class="text-xs text-slate-400 font-mono">交手次數 / 勝負</span>
+                                                    <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">交手次數 / 勝負</span>
                                                 </div>
-                                                <div v-if="!expandedDrawerData.company_tender.top_rivals || expandedDrawerData.company_tender.top_rivals.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                                                <div v-if="!expandedDrawerData.company_tender.top_rivals || expandedDrawerData.company_tender.top_rivals.length === 0" class="text-xs sm:text-sm font-medium py-4 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                                     無主要競標對手統計（多為獨標）
                                                 </div>
                                                 <div v-else class="space-y-2">
-                                                    <div v-for="(rival, ridx) in expandedDrawerData.company_tender.top_rivals" :key="ridx"
-                                                         class="p-2.5 rounded-lg border text-xs space-y-1.5"
+                                                    <div v-for="(rival, ridx) in expandedDrawerData.company_tender.top_rivals" :key="'tr-'+ridx"
+                                                         class="p-2.5 rounded-lg border text-xs sm:text-sm space-y-1.5"
                                                          :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                                        <div class="flex items-center justify-between">
-                                                            <span class="font-bold truncate max-w-[200px] sm:max-w-[260px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
+                                                        <div class="flex items-center justify-between gap-2">
+                                                            <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
                                                                 {{ rival.name }}
                                                             </span>
-                                                            <span class="px-2 py-0.5 rounded text-[10px] font-black"
-                                                                  :class="rival.win_rate >= 50 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'">
+                                                            <span class="px-2 py-0.5 rounded-md text-xs sm:text-sm font-black num-font"
+                                                                  :class="rival.win_rate >= 50 ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-900 border border-emerald-300') : (isDark ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-rose-100 text-rose-900 border border-rose-300')">
                                                                 勝率 {{ rival.win_rate }}%
                                                             </span>
                                                         </div>
-                                                        <div class="flex items-center justify-between text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                                            <span>交手 {{ rival.met }} 次</span>
-                                                            <span>我方贏 <strong class="text-emerald-400 font-bold">{{ rival.this_vendor_wins }}</strong> / 對手贏 <strong class="text-rose-400 font-bold">{{ rival.rival_wins }}</strong></span>
+                                                        <div class="flex items-center justify-between text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                                            <span>交手 <strong class="num-font">{{ rival.met }}</strong> 次</span>
+                                                            <span>我方贏 <strong class="text-emerald-400 font-bold num-font">{{ rival.this_vendor_wins }}</strong> / 對手贏 <strong class="text-rose-400 font-bold num-font">{{ rival.rival_wins }}</strong></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1591,31 +1600,31 @@
                                         <!-- Recent Awards & Yearly Trend -->
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                                             <!-- Left: Yearly Trend -->
-                                            <div class="p-4 rounded-xl border space-y-2.5" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="flex items-center space-x-1.5 font-bold text-xs sm:text-sm pb-1.5 border-b" :class="isDark ? 'border-[#222] text-slate-200' : 'border-slate-100 text-slate-800'">
-                                                    <span class="material-symbols-outlined text-[17px] text-amber-500">bar_chart</span>
+                                            <div class="p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base pb-1.5 border-b" :class="isDark ? 'border-[#222] text-white' : 'border-slate-200 text-slate-900'">
+                                                    <span class="material-symbols-outlined text-[18px] text-amber-500">bar_chart</span>
                                                     <span>近五年得標走勢</span>
                                                 </div>
-                                                <div v-if="!expandedDrawerData.company_tender.yearly_awards || expandedDrawerData.company_tender.yearly_awards.length === 0" class="text-xs text-slate-400 py-3 text-center">
+                                                <div v-if="!expandedDrawerData.company_tender.yearly_awards || expandedDrawerData.company_tender.yearly_awards.length === 0" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                                     無年度數據
                                                 </div>
                                                 <div v-else class="space-y-1.5">
                                                     <div v-for="y in expandedDrawerData.company_tender.yearly_awards" :key="y.year"
-                                                         class="flex items-center justify-between p-2 rounded-lg text-xs"
+                                                         class="flex items-center justify-between p-2.5 rounded-lg text-xs sm:text-sm"
                                                          :class="isDark ? 'bg-[#121316]' : 'bg-slate-50'">
-                                                        <span class="font-mono font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ y.year }} 年</span>
-                                                        <span class="text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-600'">{{ y.cases }} 案</span>
-                                                        <span class="font-black num-font text-amber-500">{{ y.amount_formatted }}</span>
+                                                        <span class="font-mono font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ y.year }} 年</span>
+                                                        <span class="text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">{{ y.cases }} 案</span>
+                                                        <span class="font-black num-font text-amber-500 text-sm sm:text-base">{{ y.amount_formatted }}</span>
                                                     </div>
                                                 </div>
 
                                                 <!-- Main Product Keyword Tags -->
-                                                <div v-if="expandedDrawerData.company_tender.main_products && expandedDrawerData.company_tender.main_products.length > 0" class="pt-2 border-t space-y-1.5" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                                    <div class="text-[11px] font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">主力得標品項關鍵字</div>
-                                                    <div class="flex flex-wrap gap-1">
+                                                <div v-if="expandedDrawerData.company_tender.main_products && expandedDrawerData.company_tender.main_products.length > 0" class="pt-2.5 border-t space-y-2" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                                    <div class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">主力得標品項關鍵字</div>
+                                                    <div class="flex flex-wrap gap-1.5">
                                                         <span v-for="p in expandedDrawerData.company_tender.main_products" :key="p.term"
-                                                              class="px-2 py-0.5 rounded text-[10px] font-semibold border"
-                                                              :class="isDark ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' : 'bg-amber-50 text-amber-800 border-amber-200'">
+                                                              class="px-2.5 py-1 rounded-md text-xs font-bold border"
+                                                              :class="isDark ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-900 border-amber-300'">
                                                             {{ p.term }} ({{ p.cases }})
                                                         </span>
                                                     </div>
@@ -1623,39 +1632,39 @@
                                             </div>
 
                                             <!-- Right: Recent Awards (Span 2 cols) -->
-                                            <div class="md:col-span-2 p-4 rounded-xl border space-y-3" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                                    <div class="flex items-center space-x-2 font-bold text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                                        <span class="material-symbols-outlined text-[17px] text-emerald-500">assignment_turned_in</span>
+                                            <div class="md:col-span-2 p-4 rounded-xl border space-y-3 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                                    <div class="flex items-center space-x-2 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                        <span class="material-symbols-outlined text-[18px] text-emerald-500">assignment_turned_in</span>
                                                         <span>近期重大得標標案明細 (Recent Awards)</span>
                                                     </div>
-                                                    <span class="text-xs text-slate-400 font-mono">已決標公告</span>
+                                                    <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">已決標公告</span>
                                                 </div>
-                                                <div v-if="!expandedDrawerData.company_tender.recent_awards || expandedDrawerData.company_tender.recent_awards.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                                                <div v-if="!expandedDrawerData.company_tender.recent_awards || expandedDrawerData.company_tender.recent_awards.length === 0" class="text-xs sm:text-sm font-medium py-4 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                                     無近期得標案件
                                                 </div>
                                                 <div v-else class="space-y-2">
-                                                    <div v-for="(aw, aidx) in expandedDrawerData.company_tender.recent_awards" :key="aidx"
-                                                         class="p-3 rounded-lg border text-xs space-y-2 transition-colors"
+                                                    <div v-for="(aw, aidx) in expandedDrawerData.company_tender.recent_awards" :key="'taw-'+aidx"
+                                                         class="p-3 rounded-lg border text-xs sm:text-sm space-y-2 transition-colors"
                                                          :class="isDark ? 'bg-[#121316] border-[#262626] hover:border-amber-500/40' : 'bg-slate-50 border-slate-200 hover:border-amber-400'">
                                                         <div class="flex items-start justify-between gap-2">
-                                                            <div class="font-bold leading-snug text-xs sm:text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                            <div class="font-bold leading-snug text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                                 {{ aw.title }}
                                                             </div>
                                                             <div class="font-black num-font text-emerald-400 whitespace-nowrap text-sm sm:text-base">
                                                                 {{ aw.award_amount_formatted }}
                                                             </div>
                                                         </div>
-                                                        <div class="flex items-center justify-between text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                                                        <div class="flex items-center justify-between text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                             <span class="truncate max-w-[260px]" :title="aw.unit_name">{{ aw.unit_name }}</span>
                                                             <div class="flex items-center space-x-2 shrink-0">
-                                                                <span v-if="aw.sole_bid" class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                                <span v-if="aw.sole_bid" class="px-2 py-0.5 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
                                                                     獨家投標
                                                                 </span>
-                                                                <span v-else class="text-[11px] text-slate-400">
+                                                                <span v-else class="text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                                                     {{ aw.bidders }} 家投標
                                                                 </span>
-                                                                <span class="font-mono text-slate-400">{{ aw.date }}</span>
+                                                                <span class="font-mono">{{ aw.date }}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1946,7 +1955,7 @@
                                 <span v-for="(up, uidx) in (expandedDrawerData.company_network.relationships?.upstream || [])" :key="'up-'+uidx"
                                       class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
                                       :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
-                                    <span class="text-[10px] font-bold opacity-75">母/控股</span>
+                                    <span class="text-xs font-bold opacity-80">母/控股</span>
                                     <span>{{ up.name }}</span>
                                 </span>
                                 <button v-for="(down, didx) in (expandedDrawerData.company_network.relationships?.downstream || []).slice(0, 5)" :key="'down-'+didx"
@@ -2155,7 +2164,7 @@
                                                 title="點擊載入此標的歷史走勢">
                                             {{ down.code }} ↗
                                         </button>
-                                        <span v-else class="text-[10px] text-slate-500 shrink-0">非上市</span>
+                                        <span v-else class="text-xs font-bold text-slate-500 shrink-0">非上市</span>
                                     </div>
                                 </div>
                             </div>
@@ -2202,173 +2211,179 @@
 
                     <!-- No Data State (Non-procurement dependent) -->
                     <div v-else-if="expandedDrawerData?.company_tender && !expandedDrawerData.company_tender.has_data"
-                         class="p-4 sm:p-5 rounded-xl border text-center space-y-2"
+                         class="p-5 sm:p-6 rounded-xl border text-center space-y-2.5"
                          :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                        <div class="flex items-center justify-center space-x-1.5 text-slate-400">
-                            <span class="material-symbols-outlined text-xl">info</span>
-                            <span class="text-xs sm:text-sm font-bold">{{ expandedDrawerData.company_tender.message || '該公司查無政府採購標案得標紀錄' }}</span>
+                        <div class="flex items-center justify-center space-x-2" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            <span class="material-symbols-outlined text-2xl text-amber-500">info</span>
+                            <span class="text-sm sm:text-base font-bold">{{ expandedDrawerData.company_tender.message || '該公司查無政府採購標案得標紀錄' }}</span>
                         </div>
-                        <p class="text-[11px] text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        <p class="text-xs sm:text-sm max-w-md mx-auto leading-relaxed font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                             該標的屬於半導體出口、消費電子或純民營內需產業，營收動能非源自台灣公家機關採購案。
                         </p>
-                        <div class="pt-0.5">
+                        <div class="pt-1">
                             <a :href="expandedDrawerData.company_tender.web_url" target="_blank" rel="noopener"
-                               class="inline-flex items-center space-x-1 text-xs text-amber-400 hover:underline font-semibold">
+                               class="inline-flex items-center space-x-1.5 text-xs sm:text-sm font-bold hover:underline"
+                                :class="isDark ? 'text-amber-400' : 'text-amber-800'">
                                 <span>在 ToBid 官方標案庫檢索更多關聯 ↗</span>
                             </a>
                         </div>
                     </div>
 
-                    <!-- Rich Tender Intelligence Dashboard -->
-                    <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-3.5">
+                    <!-- Rich Tender Intelligence Dashboard (WCAG 2.1 AA Compliant High Contrast & Large Typography) -->
+                    <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-4">
                         <!-- Compliance & Source Status Bar -->
-                        <div v-if="expandedDrawerData.company_tender.compliance" class="p-2 sm:p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-1.5"
-                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/10 border-amber-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
-                            <div class="flex items-center space-x-1.5">
+                        <div v-if="expandedDrawerData.company_tender.compliance" class="p-3 sm:p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 shadow-sm"
+                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? (isDark ? 'bg-rose-950/60 border-rose-700' : 'bg-rose-50 border-rose-300') : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? (isDark ? 'bg-amber-950/60 border-amber-700' : 'bg-amber-50 border-amber-300') : (isDark ? 'bg-[#14161C] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
+                            <div class="flex items-center flex-wrap gap-2.5">
                                 <span v-if="expandedDrawerData.company_tender.compliance.currently_debarred"
-                                      class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[14px]">warning</span>
+                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                      :class="isDark ? 'bg-rose-950 text-rose-200 border-2 border-rose-600' : 'bg-rose-100 text-rose-950 border-2 border-rose-400'">
+                                    <span class="material-symbols-outlined text-[18px]">warning</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </span>
                                 <span v-else-if="expandedDrawerData.company_tender.compliance.status === 'UNKNOWN'"
-                                      class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[14px]">help</span>
+                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                      :class="isDark ? 'bg-amber-950 text-amber-200 border-2 border-amber-600' : 'bg-amber-100 text-amber-950 border-2 border-amber-400'">
+                                    <span class="material-symbols-outlined text-[18px]">help</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </span>
                                 <span v-else
-                                      class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                                      class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                      :class="isDark ? 'bg-emerald-950 text-emerald-200 border-2 border-emerald-600' : 'bg-emerald-100 text-emerald-950 border-2 border-emerald-400'">
+                                    <span class="material-symbols-outlined text-[18px]">verified_user</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </span>
-                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-[10px] text-slate-400 font-mono">
-                                    統編: {{ expandedDrawerData.company_tender.tax_id }}
+                                <span v-if="expandedDrawerData.company_tender.tax_id" class="text-xs sm:text-sm font-mono font-bold"
+                                      :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    統一編號: {{ expandedDrawerData.company_tender.tax_id }}
                                 </span>
                             </div>
                             <a :href="expandedDrawerData.company_tender.web_url" target="_blank" rel="noopener"
-                               class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
-                                <span>ToBid ↗</span>
+                               class="text-xs sm:text-sm font-bold inline-flex items-center space-x-1 hover:underline underline-offset-4"
+                               :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
+                                <span>ToBid 官方標案庫 ↗</span>
                             </a>
                         </div>
 
                         <!-- Top KPI 4-Card Summary -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             <!-- 1. Known Award Total -->
-                            <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                    <span class="material-symbols-outlined text-[14px] text-amber-500">payments</span>
+                            <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    <span class="material-symbols-outlined text-[18px] text-amber-500">payments</span>
                                     <span>累計得標總額</span>
                                 </div>
-                                <div class="text-base sm:text-lg font-black num-font text-amber-500 mt-1">
+                                <div class="text-lg sm:text-2xl font-black num-font text-amber-500 mt-1.5">
                                     {{ expandedDrawerData.company_tender.known_award_total_formatted }}
                                 </div>
-                                <div class="text-[10px] mt-0.5 text-slate-400">
+                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                     已公開採購決標
                                 </div>
                             </div>
 
                             <!-- 2. Wins / Participations -->
-                            <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                    <span class="material-symbols-outlined text-[14px] text-emerald-500">verified</span>
+                            <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    <span class="material-symbols-outlined text-[18px] text-emerald-500">verified</span>
                                     <span>得標 / 投標</span>
                                 </div>
-                                <div class="text-base sm:text-lg font-black num-font text-emerald-400 mt-1">
-                                    {{ expandedDrawerData.company_tender.wins.toLocaleString() }} <span class="text-xs font-normal text-slate-400">/ {{ expandedDrawerData.company_tender.participations.toLocaleString() }}</span>
+                                <div class="text-lg sm:text-2xl font-black num-font text-emerald-400 mt-1.5">
+                                    {{ expandedDrawerData.company_tender.wins.toLocaleString() }} <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">/ {{ expandedDrawerData.company_tender.participations.toLocaleString() }}</span>
                                 </div>
-                                <div class="text-[10px] mt-0.5 text-slate-400">
+                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                     累積參標履歷
                                 </div>
                             </div>
 
                             <!-- 3. Win Rate -->
-                            <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                    <span class="material-symbols-outlined text-[14px] text-blue-500">trending_up</span>
+                            <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    <span class="material-symbols-outlined text-[18px] text-blue-500">trending_up</span>
                                     <span>得標勝率</span>
                                 </div>
-                                <div class="text-base sm:text-lg font-black num-font text-blue-400 mt-1">
+                                <div class="text-lg sm:text-2xl font-black num-font text-blue-400 mt-1.5">
                                     {{ expandedDrawerData.company_tender.win_rate_pct }}%
                                 </div>
-                                <div class="text-[10px] mt-0.5 text-slate-400">
+                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                     競爭標案勝出率
                                 </div>
                             </div>
 
                             <!-- 4. Sole Bid Rate -->
-                            <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                    <span class="material-symbols-outlined text-[14px] text-teal-500">stars</span>
+                            <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    <span class="material-symbols-outlined text-[18px] text-teal-500">stars</span>
                                     <span>獨家投標率</span>
                                 </div>
-                                <div class="text-base sm:text-lg font-black num-font text-teal-400 mt-1">
+                                <div class="text-lg sm:text-2xl font-black num-font text-teal-400 mt-1.5">
                                     {{ expandedDrawerData.company_tender.sole_bid_rate_pct }}%
                                 </div>
-                                <div class="text-[10px] mt-0.5 text-slate-400">
+                                <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                     無競爭獨標比率
                                 </div>
                             </div>
                         </div>
 
                         <!-- Top Clients (Left) & Top Rivals (Right) -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <!-- Top 5 Government Clients -->
-                            <div class="p-3 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                    <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                        <span class="material-symbols-outlined text-[15px] text-amber-500">account_balance</span>
+                            <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                    <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                        <span class="material-symbols-outlined text-[18px] text-amber-500">account_balance</span>
                                         <span>五大採購機關金主</span>
                                     </div>
-                                    <span class="text-[10px] text-slate-400 font-mono">金額</span>
+                                    <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">金額</span>
                                 </div>
-                                <div v-if="!expandedDrawerData.company_tender.top_clients?.length" class="text-xs text-slate-400 py-2 text-center">
+                                <div v-if="!expandedDrawerData.company_tender.top_clients?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                     無主要機關客戶統計
                                 </div>
-                                <div v-else class="space-y-1.5">
-                                    <div v-for="(client, cidx) in expandedDrawerData.company_tender.top_clients" :key="cidx"
-                                         class="p-1.5 rounded-lg border text-xs"
+                                <div v-else class="space-y-2">
+                                    <div v-for="(client, cidx) in expandedDrawerData.company_tender.top_clients" :key="'d-cli-'+cidx"
+                                         class="p-2.5 rounded-lg border text-xs sm:text-sm"
                                          :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                        <div class="flex items-center justify-between">
-                                            <span class="font-bold truncate max-w-[150px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
                                                 {{ cidx + 1 }}. {{ client.unit }}
                                             </span>
-                                            <span class="font-black num-font text-amber-500 whitespace-nowrap text-xs">
+                                            <span class="font-black num-font text-amber-500 whitespace-nowrap text-sm sm:text-base">
                                                 {{ client.amount_formatted }}
                                             </span>
                                         </div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">
-                                            得標: {{ client.wins }} 場
+                                        <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                            得標場次: <strong class="num-font font-bold">{{ client.wins }}</strong> 場
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Top 5 Rivals -->
-                            <div class="p-3 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                                <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                    <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                        <span class="material-symbols-outlined text-[15px] text-rose-500">swords</span>
+                            <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                    <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                        <span class="material-symbols-outlined text-[18px] text-rose-500">swords</span>
                                         <span>主要競標對手</span>
                                     </div>
-                                    <span class="text-[10px] text-slate-400 font-mono">勝率</span>
+                                    <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">勝率</span>
                                 </div>
-                                <div v-if="!expandedDrawerData.company_tender.top_rivals?.length" class="text-xs text-slate-400 py-2 text-center">
+                                <div v-if="!expandedDrawerData.company_tender.top_rivals?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                     無主要競標對手統計
                                 </div>
-                                <div v-else class="space-y-1.5">
-                                    <div v-for="(rival, ridx) in expandedDrawerData.company_tender.top_rivals" :key="ridx"
-                                         class="p-1.5 rounded-lg border text-xs"
+                                <div v-else class="space-y-2">
+                                    <div v-for="(rival, ridx) in expandedDrawerData.company_tender.top_rivals" :key="'d-riv-'+ridx"
+                                         class="p-2.5 rounded-lg border text-xs sm:text-sm"
                                          :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                        <div class="flex items-center justify-between">
-                                            <span class="font-bold truncate max-w-[140px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
                                                 {{ rival.name }}
                                             </span>
-                                            <span class="px-1 py-0.2 rounded text-[10px] font-black"
-                                                  :class="rival.win_rate >= 50 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'">
+                                            <span class="px-2 py-0.5 rounded-md text-xs sm:text-sm font-black num-font"
+                                                  :class="rival.win_rate >= 50 ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-900 border border-emerald-300') : (isDark ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-rose-100 text-rose-900 border border-rose-300')">
                                                 {{ rival.win_rate }}%
                                             </span>
                                         </div>
-                                        <div class="text-[10px] text-slate-400 mt-0.5">
-                                            交手 {{ rival.met }} 次 (勝 {{ rival.this_vendor_wins }} / 負 {{ rival.rival_wins }})
+                                        <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                            交手 <strong class="num-font">{{ rival.met }}</strong> 次 (勝 {{ rival.this_vendor_wins }} / 負 {{ rival.rival_wins }})
                                         </div>
                                     </div>
                                 </div>
@@ -2376,43 +2391,44 @@
                         </div>
 
                         <!-- Recent Awards List -->
-                        <div class="p-3 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                    <span class="material-symbols-outlined text-[15px] text-emerald-500">assignment_turned_in</span>
+                        <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                    <span class="material-symbols-outlined text-[18px] text-emerald-500">assignment_turned_in</span>
                                     <span>近期重大得標標案</span>
                                 </div>
-                                <span class="text-[10px] text-slate-400 font-mono">已決標</span>
+                                <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">已決標</span>
                             </div>
-                            <div v-if="!expandedDrawerData.company_tender.recent_awards?.length" class="text-xs text-slate-400 py-2 text-center">
+                            <div v-if="!expandedDrawerData.company_tender.recent_awards?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                 無近期得標案件
                             </div>
-                            <div v-else class="space-y-1.5">
-                                <div v-for="(aw, aidx) in expandedDrawerData.company_tender.recent_awards.slice(0, 4)" :key="aidx"
-                                     class="p-2 rounded-lg border text-xs space-y-1"
+                            <div v-else class="space-y-2">
+                                <div v-for="(aw, aidx) in expandedDrawerData.company_tender.recent_awards.slice(0, 4)" :key="'d-aw-'+aidx"
+                                     class="p-2.5 rounded-lg border text-xs sm:text-sm space-y-1.5"
                                      :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                    <div class="flex items-start justify-between gap-1.5">
-                                        <span class="font-bold leading-tight line-clamp-1" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <span class="font-bold leading-snug text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                             {{ aw.title }}
                                         </span>
-                                        <span class="font-black num-font text-emerald-400 whitespace-nowrap text-xs">
+                                        <span class="font-black num-font text-emerald-400 whitespace-nowrap text-sm sm:text-base">
                                             {{ aw.award_amount_formatted }}
                                         </span>
                                     </div>
-                                    <div class="flex items-center justify-between text-[10px] text-slate-400">
-                                        <span class="truncate max-w-[160px]">{{ aw.unit_name }}</span>
-                                        <span>{{ aw.date }}</span>
+                                    <div class="flex items-center justify-between text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                        <span>{{ aw.unit_name }}</span>
+                                        <span class="num-font">{{ aw.date }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Footer ToBid Link -->
-                        <div class="pt-1 flex items-center justify-between text-xs">
-                            <span class="text-[10px] text-slate-400">來源: ToBid / 工程會採購網</span>
+                        <div class="pt-2 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-bold">
+                            <span :class="isDark ? 'text-slate-300' : 'text-slate-600'">資料來源: ToBid / 行政院公共工程委員會採購網</span>
                             <a :href="expandedDrawerData.company_tender.web_url" target="_blank" rel="noopener"
-                               class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
-                                <span>前往 ToBid 查看完整標案歷程 ↗</span>
+                               class="inline-flex items-center space-x-1 hover:underline underline-offset-4"
+                               :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
+                                <span>前往 ToBid 查看完整標案履歷 ↗</span>
                             </a>
                         </div>
                     </div>

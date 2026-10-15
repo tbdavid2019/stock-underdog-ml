@@ -2064,6 +2064,19 @@ class DuckDBManager:
         except Exception:
             return 0
 
+    def get_latest_podcast_published_at(self) -> Optional[str]:
+        """取得資料庫中最新單集的發布時間戳記"""
+        if not self.enabled:
+            return None
+        try:
+            with self._get_connection() as con:
+                res = con.execute("SELECT MAX(published_at) FROM podcast_episodes;").fetchone()
+                return str(res[0]) if res and res[0] else None
+        except Exception as e:
+            logger.warning(f"⚠️ 查詢最新 Podcast 發布時間失敗: {e}")
+            return None
+
+
     def save_podcast_episodes_batch(self, records: List[Dict[str, Any]]) -> int:
         """批次寫入或更新單集 AI 萃取情報"""
         if not self.enabled or not records:

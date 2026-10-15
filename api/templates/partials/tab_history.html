@@ -44,46 +44,46 @@
         <!-- Header: Company Identity & Fold Toggle -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-            <div class="flex items-center flex-wrap gap-2">
-                <span class="material-symbols-outlined text-[22px] text-amber-500 leading-none">business</span>
-                <h3 class="text-base sm:text-lg font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
+            <div class="flex items-center flex-wrap gap-2.5">
+                <span class="material-symbols-outlined text-[24px] text-amber-500 leading-none">business</span>
+                <h3 class="text-lg sm:text-2xl font-black tracking-tight flex items-center space-x-1.5" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span>{{ historyCompanyData?.name || resolvedName || resolvedTicker }}</span>
                     <span class="num-font text-amber-500 ml-1.5">{{ resolvedTicker }}</span>
                 </h3>
 
                 <!-- Industry Badge -->
-                <span v-if="historyCompanyData?.industry" class="px-2 py-0.5 text-xs font-bold rounded-lg border"
-                      :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
+                <span v-if="historyCompanyData?.industry" class="px-3 py-1 text-xs sm:text-sm font-bold rounded-lg border"
+                      :class="isDark ? 'bg-amber-500/10 text-amber-300 border-amber-500/40' : 'bg-amber-100 text-amber-900 border-amber-300'">
                     {{ historyCompanyData.industry }}
                 </span>
 
                 <!-- Quick Tender Debarment Warning / Compliance Mini-Badge (TW Stocks only) -->
-                <span v-if="historyCompanyData?.company_tender?.compliance" class="px-2 py-0.5 rounded-lg text-xs font-bold border inline-flex items-center space-x-1"
-                      :class="historyCompanyData.company_tender.compliance.currently_debarred ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border-emerald-300'))">
-                    <span class="material-symbols-outlined text-[13px] leading-none">{{ historyCompanyData.company_tender.compliance.currently_debarred ? 'warning' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? 'help' : 'verified_user') }}</span>
-                    <span>{{ historyCompanyData.company_tender.compliance.currently_debarred ? '停權中' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? '採購法查核暫不可用' : '採購法合格') }}</span>
+                <span v-if="historyCompanyData?.company_tender?.compliance" class="px-3 py-1 rounded-lg text-xs sm:text-sm font-black border inline-flex items-center space-x-1.5 shadow-sm"
+                      :class="historyCompanyData.company_tender.compliance.currently_debarred ? (isDark ? 'bg-rose-950 text-rose-200 border-rose-600' : 'bg-rose-100 text-rose-950 border-rose-400') : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? (isDark ? 'bg-amber-950 text-amber-200 border-amber-600' : 'bg-amber-100 text-amber-950 border-amber-400') : (isDark ? 'bg-emerald-950 text-emerald-200 border-emerald-600' : 'bg-emerald-100 text-emerald-950 border-emerald-400'))">
+                    <span class="material-symbols-outlined text-[16px] leading-none">{{ historyCompanyData.company_tender.compliance.currently_debarred ? 'warning' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? 'help' : 'verified_user') }}</span>
+                    <span>{{ historyCompanyData.company_tender.compliance.currently_debarred ? '停權中 (不得標)' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? '採購法查核暫不可用' : '採購法合格 (無停權)') }}</span>
                 </span>
 
                 <!-- Meta stats: Market Cap / Capital / Chairman / Tax ID -->
-                <span v-if="historyCompanyData?.market_cap" class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span v-if="historyCompanyData?.market_cap" class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                     市值: {{ historyCompanyData.market_cap }}
                 </span>
-                <span v-if="historyCompanyData?.capital" class="text-xs num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span v-if="historyCompanyData?.capital" class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                     資本額: {{ historyCompanyData.capital }}
                 </span>
-                <span v-if="historyCompanyData?.unified_id" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span v-if="historyCompanyData?.unified_id" class="text-xs sm:text-sm font-mono font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                     統編: {{ historyCompanyData.unified_id }}
                 </span>
-                <span v-if="historyCompanyData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                <span v-if="historyCompanyData?.chairman" class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                     董座: {{ historyCompanyData.chairman }}
                 </span>
             </div>
 
             <!-- Right: Expand/Collapse Details Toggle -->
             <button @click="toggleHistoryDetails()"
-                    class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1.5 self-start sm:self-auto shadow-sm"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
-                <span class="material-symbols-outlined text-[15px] leading-none">{{ historyDetailsCollapsed ? 'unfold_more' : 'unfold_less' }}</span>
+                    class="px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5 self-start sm:self-auto shadow-sm"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
+                <span class="material-symbols-outlined text-[17px] leading-none">{{ historyDetailsCollapsed ? 'unfold_more' : 'unfold_less' }}</span>
                 <span>{{ historyDetailsCollapsed ? '展開個股詳情' : '收合個股詳情' }}</span>
             </button>
         </div>
@@ -91,24 +91,24 @@
         <!-- Body: 4 Sub-Tabs & Detailed Content (shown when NOT collapsed) -->
         <div v-show="!historyDetailsCollapsed" class="space-y-4 pt-1">
             <!-- Sub-tab Nav Pills -->
-            <div class="flex items-center flex-wrap gap-2 pb-2 border-b"
+            <div class="flex items-center flex-wrap gap-2.5 pb-2.5 border-b"
                  :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                 <!-- Tab 1: Profile -->
                 <button @click="setHistoryDetailSubTab('profile')"
-                        class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
-                        :class="historyDetailSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                    <span class="material-symbols-outlined text-[15px] leading-none">business</span>
+                        class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
+                        :class="historyDetailSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                    <span class="material-symbols-outlined text-[18px] leading-none">business</span>
                     <span>基本面與新聞</span>
                 </button>
 
                 <!-- Tab 2: Network (TW Stocks) -->
                 <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_network"
                         @click="setHistoryDetailSubTab('network')"
-                        class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
-                        :class="historyDetailSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                    <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                        class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
+                        :class="historyDetailSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                    <span class="material-symbols-outlined text-[18px] leading-none">account_tree</span>
                     <span>集團股權網絡</span>
-                    <span v-if="(historyCompanyData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                    <span v-if="(historyCompanyData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                           :class="historyDetailSubTab === 'network' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                         {{ (historyCompanyData.company_network.relationships?.downstream || []).length }}
                     </span>
@@ -116,11 +116,11 @@
 
                 <!-- Tab 3: Earnings -->
                 <button @click="setHistoryDetailSubTab('earnings')"
-                        class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
-                        :class="historyDetailSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                    <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
+                        class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
+                        :class="historyDetailSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                    <span class="material-symbols-outlined text-[18px] leading-none">event_note</span>
                     <span>法說會與簡報</span>
-                    <span v-if="historyEarningsList.length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                    <span v-if="historyEarningsList.length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                           :class="historyDetailSubTab === 'earnings' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                         {{ historyEarningsList.length }}
                     </span>
@@ -129,11 +129,11 @@
                 <!-- Tab 4: Tender (TW Stocks) -->
                 <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_tender"
                         @click="setHistoryDetailSubTab('tender')"
-                        class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
-                        :class="historyDetailSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                    <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
+                        class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
+                        :class="historyDetailSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                    <span class="material-symbols-outlined text-[18px] leading-none">account_balance</span>
                     <span>政府標案 (ToBid)</span>
-                    <span v-if="historyCompanyData?.company_tender?.wins" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                    <span v-if="historyCompanyData?.company_tender?.wins" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                           :class="historyDetailSubTab === 'tender' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                         {{ historyCompanyData.company_tender.wins }} 案
                     </span>
@@ -141,171 +141,171 @@
             </div>
 
             <!-- Loading State for Company Details -->
-            <div v-if="historyCompanyLoading && !historyCompanyData" class="py-6 text-center text-amber-400 animate-pulse text-xs space-y-2">
-                <span class="material-symbols-outlined text-[24px] animate-spin">progress_activity</span>
-                <div>正在檢索個股情報、集團網絡、法說會與標案資料...</div>
+            <div v-if="historyCompanyLoading && !historyCompanyData" class="py-8 text-center text-amber-400 animate-pulse text-sm space-y-2">
+                <span class="material-symbols-outlined text-[28px] animate-spin">progress_activity</span>
+                <div class="font-bold">正在檢索個股情報、集團網絡、法說會與標案資料...</div>
             </div>
 
             <!-- Sub-tab 1: Profile (基本面與新聞) -->
-            <div v-else-if="historyDetailSubTab === 'profile'" class="space-y-3.5">
+            <div v-else-if="historyDetailSubTab === 'profile'" class="space-y-4">
                 <!-- Business Summary -->
-                <div class="space-y-1.5">
-                    <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
-                        <span class="material-symbols-outlined text-[15px] leading-none">info</span>
-                        <span>公司業務簡介:</span>
+                <div class="space-y-2">
+                    <div class="text-sm font-black text-amber-500 flex items-center space-x-1.5">
+                        <span class="material-symbols-outlined text-[17px] leading-none">info</span>
+                        <span>公司業務營運簡介:</span>
                     </div>
-                    <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                    <p class="text-sm sm:text-base leading-relaxed font-normal" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                         {{ historyCompanyData?.business_summary || '暫無詳細業務描述' }}
                     </p>
                 </div>
 
                 <!-- Corporate Network Quick Highlights -->
-                <div v-if="historyCompanyData?.company_network" class="pt-2 border-t space-y-2" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="text-xs font-bold text-amber-500 flex items-center justify-between">
-                        <div class="flex items-center space-x-1">
-                            <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                <div v-if="historyCompanyData?.company_network" class="pt-3 border-t space-y-2" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                    <div class="text-sm font-black text-amber-500 flex items-center justify-between">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="material-symbols-outlined text-[17px] leading-none">account_tree</span>
                             <span>集團與轉投資關係企業:</span>
                         </div>
-                        <button @click.stop="setHistoryDetailSubTab('network')" class="text-xs text-amber-400 hover:underline flex items-center space-x-0.5">
+                        <button @click.stop="setHistoryDetailSubTab('network')" class="text-xs sm:text-sm font-bold text-amber-500 hover:underline flex items-center space-x-0.5">
                             <span>完整拓撲圖譜</span>
-                            <span class="material-symbols-outlined text-[12px] leading-none">chevron_right</span>
+                            <span class="material-symbols-outlined text-[14px] leading-none">chevron_right</span>
                         </button>
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-2">
                         <span v-for="(up, uidx) in (historyCompanyData.company_network.relationships?.upstream || [])" :key="'h-up-'+uidx"
-                              class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
-                              :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
-                            <span class="text-[10px] font-bold opacity-75">母/控股</span>
+                              class="px-3 py-1 rounded-lg text-xs sm:text-sm border font-bold inline-flex items-center space-x-1.5"
+                              :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-900'">
+                            <span class="text-xs font-black opacity-75">母/控股</span>
                             <span>{{ up.name }}</span>
                             <button v-if="up.code" @click="searchTickerHistory(up.ticker || up.code)"
-                                    class="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40">
+                                    class="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40">
                                 {{ up.code }} ↗
                             </button>
                         </span>
                         <button v-for="(down, didx) in (historyCompanyData.company_network.relationships?.downstream || []).slice(0, 8)" :key="'h-down-'+didx"
                                 @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
                                 :disabled="!down.is_listed"
-                                class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1 transition-all"
-                                :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-600 cursor-default')">
+                                class="px-3 py-1 rounded-lg text-xs sm:text-sm border font-bold inline-flex items-center space-x-1.5 transition-all"
+                                :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-700 cursor-default')">
                             <span>{{ down.name }}</span>
-                            <span v-if="down.code" class="text-[10px] font-mono font-bold px-1 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
+                            <span v-if="down.code" class="text-xs font-mono font-bold px-1.5 py-0.2 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
                         </button>
                         <span v-if="(historyCompanyData.company_network.relationships?.downstream || []).length > 8"
                               @click.stop="setHistoryDetailSubTab('network')"
-                              class="px-2 py-0.5 rounded-md text-xs border font-medium cursor-pointer"
-                              :class="isDark ? 'bg-[#1a1b20] border-[#2a2c33] text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'">
+                              class="px-3 py-1 rounded-lg text-xs sm:text-sm border font-bold cursor-pointer"
+                              :class="isDark ? 'bg-[#1a1b20] border-[#2a2c33] text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-800 hover:text-black'">
                             +{{ historyCompanyData.company_network.relationships.downstream.length - 8 }} 更多
                         </span>
                     </div>
                 </div>
 
                 <!-- Recent News -->
-                <div v-if="historyCompanyData?.recent_news && historyCompanyData.recent_news.length > 0" class="pt-2 border-t space-y-1.5" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
-                        <span class="material-symbols-outlined text-[15px] leading-none">newspaper</span>
+                <div v-if="historyCompanyData?.recent_news && historyCompanyData.recent_news.length > 0" class="pt-3 border-t space-y-2" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                    <div class="text-sm font-black text-amber-500 flex items-center space-x-1.5">
+                        <span class="material-symbols-outlined text-[17px] leading-none">newspaper</span>
                         <span>即時最新動態:</span>
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-2">
                         <a v-for="(news, nidx) in historyCompanyData.recent_news.slice(0, 3)" :key="nidx"
                            :href="news.url" target="_blank" rel="noopener"
-                           class="block p-2 rounded-lg border text-xs leading-normal transition-all truncate hover:underline"
-                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-800 hover:bg-white'">
+                           class="block p-3 rounded-xl border text-xs sm:text-sm font-bold leading-normal transition-all truncate hover:underline"
+                           :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-900 hover:bg-white'">
                             • {{ news.title }}
                         </a>
                     </div>
                 </div>
 
                 <!-- External Links Bar -->
-                <div class="pt-2 border-t flex flex-wrap items-center gap-2 text-xs font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <div class="pt-3 border-t flex flex-wrap items-center gap-2.5 text-xs sm:text-sm font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <button v-if="historyCompanyData?.company_network"
                             @click.stop="setHistoryDetailSubTab('network')"
-                            class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
-                            :class="isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'">
-                        <span class="material-symbols-outlined text-[13px] leading-none">account_tree</span>
+                            class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                            :class="isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100'">
+                        <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
                         <span>股權拓撲圖</span>
                     </button>
                     <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_tender"
                             @click.stop="setHistoryDetailSubTab('tender')"
-                            class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
-                            :class="isDark ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'">
-                        <span class="material-symbols-outlined text-[13px] leading-none">account_balance</span>
+                            class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                            :class="isDark ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'">
+                        <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
                         <span>政府標案情報</span>
                     </button>
                     <a v-if="historyCompanyData?.links?.yahoo" :href="historyCompanyData.links.yahoo" target="_blank" rel="noopener"
-                       class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
-                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
+                       class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                         <span>Yahoo 奇摩</span>
-                        <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                     </a>
                     <a v-if="historyCompanyData?.links?.goodinfo" :href="historyCompanyData.links.goodinfo" target="_blank" rel="noopener"
-                       class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
-                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
+                       class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                         <span>Goodinfo! 股市資訊網</span>
-                        <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                        <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                     </a>
                 </div>
             </div>
 
             <!-- Sub-tab 2: Network (集團股權網絡) -->
-            <div v-else-if="historyDetailSubTab === 'network'" class="space-y-3.5 text-xs">
-                <div v-if="historyCompanyLoading && !historyCompanyData?.company_network" class="py-6 text-center text-amber-400 animate-pulse space-y-2">
-                    <span class="material-symbols-outlined text-[24px] animate-spin">progress_activity</span>
-                    <div>正在解析集團股權網絡與官方拓撲圖譜...</div>
+            <div v-else-if="historyDetailSubTab === 'network'" class="space-y-4 text-xs sm:text-sm">
+                <div v-if="historyCompanyLoading && !historyCompanyData?.company_network" class="py-8 text-center text-amber-400 animate-pulse space-y-2">
+                    <span class="material-symbols-outlined text-[28px] animate-spin">progress_activity</span>
+                    <div class="font-bold">正在解析集團股權網絡與官方拓撲圖譜...</div>
                 </div>
-                <div v-else-if="historyCompanyData?.company_network" class="space-y-3.5">
+                <div v-else-if="historyCompanyData?.company_network" class="space-y-4">
                     <!-- Top Meta Header -->
-                    <div class="p-3 sm:p-4 rounded-xl border space-y-2.5" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b" :class="isDark ? 'border-[#22242B]' : 'border-slate-200'">
-                            <div class="flex items-center flex-wrap gap-1.5">
-                                <span class="font-bold text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <div class="p-4 sm:p-5 rounded-xl border space-y-3" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" :class="isDark ? 'border-[#22242B]' : 'border-slate-200'">
+                            <div class="flex items-center flex-wrap gap-2">
+                                <span class="font-black text-base sm:text-lg" :class="isDark ? 'text-white' : 'text-slate-900'">
                                     {{ historyCompanyData.company_network.name }}
                                 </span>
-                                <span v-if="historyCompanyData.company_network.unified_id" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
-                                      :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
+                                <span v-if="historyCompanyData.company_network.unified_id" class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-mono font-bold"
+                                      :class="isDark ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                                     統編: {{ historyCompanyData.company_network.unified_id }}
                                 </span>
-                                <span v-if="historyCompanyData.company_network.capital_formatted" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
-                                      :class="isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
+                                <span v-if="historyCompanyData.company_network.capital_formatted" class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-mono font-bold"
+                                      :class="isDark ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'">
                                     資本額: {{ historyCompanyData.company_network.capital_formatted }}
                                 </span>
-                                <span v-if="historyCompanyData.company_network.representative" class="px-2 py-0.5 rounded text-xs font-semibold"
-                                      :class="isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'">
+                                <span v-if="historyCompanyData.company_network.representative" class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold"
+                                      :class="isDark ? 'bg-slate-800 text-slate-200 border border-slate-700' : 'bg-slate-200 text-slate-800 border border-slate-300'">
                                     代表董座: {{ historyCompanyData.company_network.representative }}
                                 </span>
                             </div>
                             <a :href="historyCompanyData.company_network.web_url" target="_blank" rel="noopener"
-                               class="px-3 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-sm flex items-center justify-center space-x-1 shrink-0">
-                                <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                               class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-sm flex items-center justify-center space-x-1 shrink-0">
+                                <span class="material-symbols-outlined text-[17px] leading-none">account_tree</span>
                                 <span>開啟互動圖譜</span>
-                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                                <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                             </a>
                         </div>
-                        <p v-if="historyCompanyData.company_network.address" class="text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                        <p v-if="historyCompanyData.company_network.address" class="text-xs sm:text-sm font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                             登記地址: {{ historyCompanyData.company_network.address }}
                         </p>
                     </div>
 
                     <!-- Upstream & Downstream Lists -->
-                    <div class="grid grid-cols-1 gap-2.5">
+                    <div class="grid grid-cols-1 gap-3">
                         <!-- Upstream Parents -->
-                        <div class="p-3 sm:p-4 rounded-xl border space-y-2" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
-                            <div class="flex items-center space-x-1.5 text-xs font-bold text-indigo-400">
-                                <span class="material-symbols-outlined text-[15px] leading-none">arrow_upward</span>
+                        <div class="p-4 sm:p-5 rounded-xl border space-y-2.5" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                            <div class="flex items-center space-x-2 text-sm sm:text-base font-black text-indigo-400">
+                                <span class="material-symbols-outlined text-[18px] leading-none">arrow_upward</span>
                                 <span>上游母公司 / 控股法人</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-500/20 text-indigo-300">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-mono font-black bg-indigo-500/20 text-indigo-300">
                                     {{ (historyCompanyData.company_network.relationships?.upstream || []).length }}
                                 </span>
                             </div>
-                            <div v-if="(historyCompanyData.company_network.relationships?.upstream || []).length === 0" class="text-xs text-slate-500 italic py-1">
+                            <div v-if="(historyCompanyData.company_network.relationships?.upstream || []).length === 0" class="text-xs sm:text-sm text-slate-500 font-medium italic py-1">
                                 無外部單一控股母公司或為頂層集團控股主體
                             </div>
-                            <div v-else class="flex flex-wrap gap-1.5 pt-1">
+                            <div v-else class="flex flex-wrap gap-2 pt-1">
                                 <div v-for="(up, uidx) in historyCompanyData.company_network.relationships.upstream" :key="'net-up-'+uidx"
-                                     class="px-2.5 py-1 rounded-lg border flex items-center space-x-1.5 text-xs"
+                                     class="px-3 py-1.5 rounded-lg border flex items-center space-x-2 text-xs sm:text-sm font-bold"
                                      :class="isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200'">
-                                    <span class="font-medium" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ up.name }}</span>
+                                    <span class="font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ up.name }}</span>
                                     <button v-if="up.code" @click="searchTickerHistory(up.ticker || up.code)"
-                                            class="px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
+                                            class="px-2 py-0.5 rounded text-xs font-mono font-black bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
                                         {{ up.code }} ↗
                                     </button>
                                 </div>
@@ -313,31 +313,31 @@
                         </div>
 
                         <!-- Downstream Subsidiaries -->
-                        <div class="p-3 sm:p-4 rounded-xl border space-y-2" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
-                            <div class="flex items-center space-x-1.5 text-xs font-bold text-emerald-400">
-                                <span class="material-symbols-outlined text-[15px] leading-none">arrow_downward</span>
+                        <div class="p-4 sm:p-5 rounded-xl border space-y-2.5" :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                            <div class="flex items-center space-x-2 text-sm sm:text-base font-black text-emerald-400">
+                                <span class="material-symbols-outlined text-[18px] leading-none">arrow_downward</span>
                                 <span>下游轉投資與核心關係企業</span>
-                                <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-mono font-black bg-emerald-500/20 text-emerald-300">
                                     {{ (historyCompanyData.company_network.relationships?.downstream || []).length }}
                                 </span>
                             </div>
-                            <div v-if="(historyCompanyData.company_network.relationships?.downstream || []).length === 0" class="text-xs text-slate-500 italic py-1">
+                            <div v-if="(historyCompanyData.company_network.relationships?.downstream || []).length === 0" class="text-xs sm:text-sm text-slate-500 font-medium italic py-1">
                                 無公開轉投資子企業資料
                             </div>
-                            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                                 <div v-for="(down, didx) in historyCompanyData.company_network.relationships.downstream" :key="'net-down-'+didx"
-                                     class="p-2 rounded-lg border flex items-center justify-between text-xs transition-all"
+                                     class="p-2.5 rounded-lg border flex items-center justify-between text-xs sm:text-sm transition-all"
                                      :class="down.is_listed ? (isDark ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300') : (isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200')">
-                                    <span class="font-medium truncate mr-1" :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="down.name">
+                                    <span class="font-bold truncate mr-2 text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="down.name">
                                         {{ down.name }}
                                     </span>
                                     <button v-if="down.code" @click="searchTickerHistory(down.ticker || down.code)"
-                                            class="px-1.5 py-0.2 rounded text-[11px] font-mono font-bold shrink-0 transition-all"
+                                            class="px-2 py-0.5 rounded text-xs font-mono font-black shrink-0 transition-all"
                                             :class="isDark ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40' : 'bg-emerald-200 text-emerald-900 hover:bg-emerald-300'"
                                             title="點擊載入此標的歷史走勢">
                                         {{ down.code }} ↗
                                     </button>
-                                    <span v-else class="text-[10px] text-slate-500 shrink-0">非上市</span>
+                                    <span v-else class="text-xs font-bold text-slate-500 shrink-0">非上市</span>
                                 </div>
                             </div>
                         </div>
@@ -345,264 +345,270 @@
 
                     <!-- SVG 拓撲圖譜 (官方 SVG 向量架構) -->
                     <div v-if="historyCompanyData.company_network.image_url"
-                         class="p-3 sm:p-4 rounded-xl border space-y-2.5 transition-all mt-3"
+                         class="p-4 sm:p-5 rounded-xl border space-y-3 transition-all mt-3"
                          :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-1.5 text-xs font-bold text-amber-500">
-                                <span class="material-symbols-outlined text-[17px] leading-none">hub</span>
+                            <div class="flex items-center space-x-2 text-sm sm:text-base font-black text-amber-500">
+                                <span class="material-symbols-outlined text-[19px] leading-none">hub</span>
                                 <span>集團股權拓撲圖譜 (官方 SVG 即時向量架構)</span>
                             </div>
                             <a :href="historyCompanyData.company_network.image_url" target="_blank" rel="noopener"
-                               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all border inline-flex items-center space-x-1"
-                               :class="isDark ? 'bg-[#181A22] border-[#262833] text-amber-300 hover:border-amber-500' : 'bg-white border-slate-200 text-amber-800 hover:border-amber-400'">
+                               class="px-3 py-1 rounded-lg text-xs sm:text-sm font-bold transition-all border inline-flex items-center space-x-1"
+                               :class="isDark ? 'bg-[#181A22] border-[#262833] text-amber-300 hover:border-amber-500' : 'bg-white border-slate-200 text-amber-900 hover:border-amber-400'">
                                 <span>檢視原圖</span>
-                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                                <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                             </a>
                         </div>
-                        <div class="w-full rounded-xl overflow-hidden border p-2 sm:p-4 flex items-center justify-center shadow-inner"
+                        <div class="w-full rounded-xl overflow-hidden border p-3 sm:p-5 flex items-center justify-center shadow-inner"
                              :class="isDark ? 'bg-[#0B0C10] border-[#262833]' : 'bg-white border-slate-200'">
                             <img :src="historyCompanyData.company_network.image_url"
                                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3C/svg%3E"
                                  :alt="historyCompanyData.company_network.name + ' 關係拓撲圖'"
-                                 class="w-full h-auto max-h-[420px] object-contain select-none transition-transform hover:scale-[1.01]"
+                                 class="w-full h-auto max-h-[460px] object-contain select-none transition-transform hover:scale-[1.01]"
                                  loading="lazy" />
                         </div>
                     </div>
                 </div>
-                <div v-else class="py-4 text-center text-slate-400 text-xs">
+                <div v-else class="py-4 text-center text-slate-500 text-xs sm:text-sm font-medium">
                     此標的目前尚無公開集團控股或轉投資股權關聯資料
                 </div>
             </div>
 
             <!-- Sub-tab 3: Earnings (法說會與簡報) -->
-            <div v-else-if="historyDetailSubTab === 'earnings'" class="space-y-3">
-                <div v-if="historyCompanyLoading && !historyEarningsList.length" class="py-4 text-center text-amber-400 animate-pulse text-xs">
+            <div v-else-if="historyDetailSubTab === 'earnings'" class="space-y-3.5">
+                <div v-if="historyCompanyLoading && !historyEarningsList.length" class="py-6 text-center text-amber-400 animate-pulse text-sm font-bold">
                     查詢法說會資料中...
                 </div>
-                <div v-else-if="historyEarningsList.length" class="space-y-2">
+                <div v-else-if="historyEarningsList.length" class="space-y-2.5">
                     <div v-for="(ec, ecIdx) in historyEarningsList" :key="ec.id || ecIdx"
-                         class="p-3 rounded-xl border text-xs space-y-2"
+                         class="p-3.5 sm:p-4 rounded-xl border text-xs sm:text-sm space-y-2.5"
                          :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-1.5">
-                                <span class="px-2 py-0.5 rounded text-[11px] font-black"
-                                      :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-black"
+                                      :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-300 border border-slate-700')">
                                     {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                 </span>
-                                <span class="font-bold text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <span class="font-bold text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                     {{ ec.datetime_cst || (ec.call_date + ' ' + (ec.call_time || '')) }}
                                 </span>
                             </div>
-                            <span class="text-slate-400 text-[11px]">
+                            <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                 {{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }}
                             </span>
                         </div>
-                        <div v-if="ec.location || ec.remarks" class="text-[11px]" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                        <div v-if="ec.location || ec.remarks" class="text-xs sm:text-sm font-medium" :class="isDark ? 'text-slate-200' : 'text-slate-700'">
                             <div v-if="ec.location">地點 / 方式: {{ ec.location }}</div>
-                            <div v-if="ec.remarks" class="text-amber-400/90">備註: {{ ec.remarks }}</div>
+                            <div v-if="ec.remarks" class="text-amber-500 font-bold">備註: {{ ec.remarks }}</div>
                         </div>
-                        <div class="flex items-center justify-between pt-1 border-t" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
-                            <div v-if="ec.eps_estimate || ec.eps_actual" class="text-[11px] flex items-center space-x-2">
-                                <span v-if="ec.eps_estimate" class="text-slate-400">預估: <strong class="text-amber-400">{{ ec.eps_estimate }}</strong></span>
-                                <span v-if="ec.eps_actual" class="text-emerald-400 font-bold">公佈: {{ ec.eps_actual }}</span>
+                        <div class="flex items-center justify-between pt-2 border-t" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                            <div v-if="ec.eps_estimate || ec.eps_actual" class="text-xs sm:text-sm font-bold flex items-center space-x-2">
+                                <span v-if="ec.eps_estimate" :class="isDark ? 'text-slate-300' : 'text-slate-600'">預估: <strong class="text-amber-400 font-black">{{ ec.eps_estimate }}</strong></span>
+                                <span v-if="ec.eps_actual" class="text-emerald-400 font-black">公佈: {{ ec.eps_actual }}</span>
                             </div>
-                            <div class="flex items-center space-x-1.5 ml-auto">
+                            <div class="flex items-center space-x-2 ml-auto">
                                 <a v-if="ec.presentation_url" :href="ec.presentation_url" target="_blank" rel="noopener"
-                                   class="px-2.5 py-1 rounded-lg text-xs font-bold text-amber-400 hover:text-amber-300 border flex items-center space-x-1"
-                                   :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200'">
-                                    <span class="material-symbols-outlined text-[14px] leading-none">description</span>
+                                   class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 border flex items-center space-x-1"
+                                   :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200 text-amber-900'">
+                                    <span class="material-symbols-outlined text-[15px] leading-none">description</span>
                                     <span>簡報</span>
                                 </a>
                                 <a v-if="ec.webcast_url" :href="ec.webcast_url" target="_blank" rel="noopener"
-                                   class="px-2.5 py-1 rounded-lg text-xs font-bold text-sky-400 hover:text-sky-300 border flex items-center space-x-1"
-                                   :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200'">
-                                    <span class="material-symbols-outlined text-[14px] leading-none">videocam</span>
+                                   class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-sky-400 hover:text-sky-300 border flex items-center space-x-1"
+                                   :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200 text-sky-900'">
+                                    <span class="material-symbols-outlined text-[15px] leading-none">videocam</span>
                                     <span>影音</span>
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div v-else class="py-4 text-center text-slate-400 text-xs">近期無公開法人說明會日程</div>
+                <div v-else class="py-6 text-center text-slate-500 text-xs sm:text-sm font-medium">近期無公開法人說明會日程</div>
             </div>
 
             <!-- Sub-tab 4: Tender (政府標案 ToBid) -->
-            <div v-else-if="historyDetailSubTab === 'tender'" class="space-y-3.5">
+            <div v-else-if="historyDetailSubTab === 'tender'" class="space-y-4">
                 <!-- Loading State -->
-                <div v-if="historyCompanyLoading && !historyCompanyData?.company_tender" class="py-8 text-center text-amber-400 animate-pulse text-xs flex flex-col items-center justify-center space-y-2">
-                    <span class="material-symbols-outlined text-2xl animate-spin">sync</span>
+                <div v-if="historyCompanyLoading && !historyCompanyData?.company_tender" class="py-10 text-center text-amber-400 animate-pulse text-sm font-bold flex flex-col items-center justify-center space-y-2">
+                    <span class="material-symbols-outlined text-3xl animate-spin">sync</span>
                     <span>正在連線 ToBid 官方電子採購網資料庫檢索標案情報與對手情報...</span>
                 </div>
 
                 <!-- No Data State (Non-procurement dependent) -->
                 <div v-else-if="historyCompanyData?.company_tender && !historyCompanyData.company_tender.has_data"
-                     class="p-4 sm:p-5 rounded-xl border text-center space-y-2"
+                     class="p-5 sm:p-6 rounded-xl border text-center space-y-2.5"
                      :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                    <div class="flex items-center justify-center space-x-1.5 text-slate-400">
-                        <span class="material-symbols-outlined text-xl">info</span>
-                        <span class="text-xs sm:text-sm font-bold">{{ historyCompanyData.company_tender.message || '該公司查無政府採購標案得標紀錄' }}</span>
+                    <div class="flex items-center justify-center space-x-2" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                        <span class="material-symbols-outlined text-2xl text-amber-500">info</span>
+                        <span class="text-sm sm:text-base font-bold">{{ historyCompanyData.company_tender.message || '該公司查無政府採購標案得標紀錄' }}</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 max-w-sm mx-auto leading-relaxed">
+                    <p class="text-xs sm:text-sm max-w-md mx-auto leading-relaxed font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                         該標的屬於半導體出口、消費電子或純民營內需產業，營收動能非源自台灣公家機關採購案。
                     </p>
-                    <div class="pt-0.5">
+                    <div class="pt-1">
                         <a :href="historyCompanyData.company_tender.web_url" target="_blank" rel="noopener"
-                           class="inline-flex items-center space-x-1 text-xs text-amber-400 hover:underline font-semibold">
+                           class="inline-flex items-center space-x-1.5 text-xs sm:text-sm font-bold hover:underline"
+                           :class="isDark ? 'text-amber-400' : 'text-amber-800'">
                             <span>在 ToBid 官方標案庫檢索更多關聯 ↗</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- Rich Tender Intelligence Dashboard -->
-                <div v-else-if="historyCompanyData?.company_tender && historyCompanyData.company_tender.has_data" class="space-y-3.5">
+                <!-- Rich Tender Intelligence Dashboard (WCAG 2.1 AA Compliant High Contrast & Large Typography) -->
+                <div v-else-if="historyCompanyData?.company_tender && historyCompanyData.company_tender.has_data" class="space-y-4">
                     <!-- Compliance & Source Status Bar -->
-                    <div v-if="historyCompanyData.company_tender.compliance" class="p-2 sm:p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-1.5"
-                         :class="historyCompanyData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/10 border-amber-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
-                        <div class="flex items-center space-x-1.5">
+                    <div v-if="historyCompanyData.company_tender.compliance" class="p-3 sm:p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 shadow-sm"
+                         :class="historyCompanyData.company_tender.compliance.currently_debarred ? (isDark ? 'bg-rose-950/60 border-rose-700' : 'bg-rose-50 border-rose-300') : (historyCompanyData.company_tender.compliance.status === 'UNKNOWN' ? (isDark ? 'bg-amber-950/60 border-amber-700' : 'bg-amber-50 border-amber-300') : (isDark ? 'bg-[#14161C] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
+                        <div class="flex items-center flex-wrap gap-2.5">
                             <span v-if="historyCompanyData.company_tender.compliance.currently_debarred"
-                                  class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center space-x-1">
-                                <span class="material-symbols-outlined text-[14px]">warning</span>
+                                  class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                  :class="isDark ? 'bg-rose-950 text-rose-200 border-2 border-rose-600' : 'bg-rose-100 text-rose-950 border-2 border-rose-400'">
+                                <span class="material-symbols-outlined text-[18px]">warning</span>
                                 <span>{{ historyCompanyData.company_tender.compliance.label }}</span>
                             </span>
                             <span v-else-if="historyCompanyData.company_tender.compliance.status === 'UNKNOWN'"
-                                  class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center space-x-1">
-                                <span class="material-symbols-outlined text-[14px]">help</span>
+                                  class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                  :class="isDark ? 'bg-amber-950 text-amber-200 border-2 border-amber-600' : 'bg-amber-100 text-amber-950 border-2 border-amber-400'">
+                                <span class="material-symbols-outlined text-[18px]">help</span>
                                 <span>{{ historyCompanyData.company_tender.compliance.label }}</span>
                             </span>
                             <span v-else
-                                  class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
-                                <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                                  class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black flex items-center space-x-1.5 shadow-sm"
+                                  :class="isDark ? 'bg-emerald-950 text-emerald-200 border-2 border-emerald-600' : 'bg-emerald-100 text-emerald-950 border-2 border-emerald-400'">
+                                <span class="material-symbols-outlined text-[18px]">verified_user</span>
                                 <span>{{ historyCompanyData.company_tender.compliance.label }}</span>
                             </span>
-                            <span v-if="historyCompanyData.company_tender.tax_id" class="text-[10px] text-slate-400 font-mono">
-                                統編: {{ historyCompanyData.company_tender.tax_id }}
+                            <span v-if="historyCompanyData.company_tender.tax_id" class="text-xs sm:text-sm font-mono font-bold"
+                                  :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                統一編號: {{ historyCompanyData.company_tender.tax_id }}
                             </span>
                         </div>
                         <a :href="historyCompanyData.company_tender.web_url" target="_blank" rel="noopener"
-                           class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
-                            <span>ToBid ↗</span>
+                           class="text-xs sm:text-sm font-bold inline-flex items-center space-x-1 hover:underline underline-offset-4"
+                           :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
+                            <span>ToBid 官方標案庫 ↗</span>
                         </a>
                     </div>
 
                     <!-- Top KPI 4-Card Summary -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                         <!-- 1. Known Award Total -->
-                        <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                <span class="material-symbols-outlined text-[14px] text-amber-500">payments</span>
+                        <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="material-symbols-outlined text-[18px] text-amber-500">payments</span>
                                 <span>累計得標總額</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-amber-500 mt-1">
+                            <div class="text-lg sm:text-2xl font-black num-font text-amber-500 mt-1.5">
                                 {{ historyCompanyData.company_tender.known_award_total_formatted }}
                             </div>
-                            <div class="text-[10px] mt-0.5 text-slate-400">
+                            <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                 已公開採購決標
                             </div>
                         </div>
 
                         <!-- 2. Wins / Participations -->
-                        <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                <span class="material-symbols-outlined text-[14px] text-emerald-500">verified</span>
+                        <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="material-symbols-outlined text-[18px] text-emerald-500">verified</span>
                                 <span>得標 / 投標</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-emerald-400 mt-1">
-                                {{ historyCompanyData.company_tender.wins.toLocaleString() }} <span class="text-xs font-normal text-slate-400">/ {{ historyCompanyData.company_tender.participations.toLocaleString() }}</span>
+                            <div class="text-lg sm:text-2xl font-black num-font text-emerald-400 mt-1.5">
+                                {{ historyCompanyData.company_tender.wins.toLocaleString() }} <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">/ {{ historyCompanyData.company_tender.participations.toLocaleString() }}</span>
                             </div>
-                            <div class="text-[10px] mt-0.5 text-slate-400">
+                            <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                 累積參標履歷
                             </div>
                         </div>
 
                         <!-- 3. Win Rate -->
-                        <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                <span class="material-symbols-outlined text-[14px] text-blue-500">trending_up</span>
+                        <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="material-symbols-outlined text-[18px] text-blue-500">trending_up</span>
                                 <span>得標勝率</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-blue-400 mt-1">
+                            <div class="text-lg sm:text-2xl font-black num-font text-blue-400 mt-1.5">
                                 {{ historyCompanyData.company_tender.win_rate_pct }}%
                             </div>
-                            <div class="text-[10px] mt-0.5 text-slate-400">
+                            <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                 競爭標案勝出率
                             </div>
                         </div>
 
                         <!-- 4. Sole Bid Rate -->
-                        <div class="p-2.5 sm:p-3 rounded-xl border" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="text-[11px] font-medium flex items-center space-x-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                                <span class="material-symbols-outlined text-[14px] text-teal-500">stars</span>
+                        <div class="p-3 sm:p-4 rounded-xl border shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs sm:text-sm font-bold flex items-center space-x-1.5" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span class="material-symbols-outlined text-[18px] text-teal-500">stars</span>
                                 <span>獨家投標率</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-teal-400 mt-1">
+                            <div class="text-lg sm:text-2xl font-black num-font text-teal-400 mt-1.5">
                                 {{ historyCompanyData.company_tender.sole_bid_rate_pct }}%
                             </div>
-                            <div class="text-[10px] mt-0.5 text-slate-400">
+                            <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                 無競爭獨標比率
                             </div>
                         </div>
                     </div>
 
                     <!-- Top Clients (Left) & Top Rivals (Right) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <!-- Top 5 Government Clients -->
-                        <div class="p-3 sm:p-4 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                    <span class="material-symbols-outlined text-[15px] text-amber-500">account_balance</span>
+                        <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                    <span class="material-symbols-outlined text-[18px] text-amber-500">account_balance</span>
                                     <span>五大採購機關金主</span>
                                 </div>
-                                <span class="text-[10px] text-slate-400 font-mono">金額</span>
+                                <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">金額</span>
                             </div>
-                            <div v-if="!historyCompanyData.company_tender.top_clients?.length" class="text-xs text-slate-400 py-2 text-center">
+                            <div v-if="!historyCompanyData.company_tender.top_clients?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                 無主要機關客戶統計
                             </div>
-                            <div v-else class="space-y-1.5">
+                            <div v-else class="space-y-2">
                                 <div v-for="(client, cidx) in historyCompanyData.company_tender.top_clients" :key="'h-cli-'+cidx"
-                                     class="p-2 rounded-lg border text-xs"
+                                     class="p-2.5 rounded-lg border text-xs sm:text-sm"
                                      :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-bold truncate max-w-[150px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="client.unit">
                                             {{ cidx + 1 }}. {{ client.unit }}
                                         </span>
-                                        <span class="font-black num-font text-amber-500 whitespace-nowrap text-xs">
+                                        <span class="font-black num-font text-amber-500 whitespace-nowrap text-sm sm:text-base">
                                             {{ client.amount_formatted }}
                                         </span>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mt-0.5">
-                                        得標: {{ client.wins }} 場
+                                    <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                        得標場次: <strong class="num-font font-bold">{{ client.wins }}</strong> 場
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Top 5 Rivals -->
-                        <div class="p-3 sm:p-4 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                            <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                                <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                    <span class="material-symbols-outlined text-[15px] text-rose-500">swords</span>
+                        <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                                <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                    <span class="material-symbols-outlined text-[18px] text-rose-500">swords</span>
                                     <span>主要競標對手</span>
                                 </div>
-                                <span class="text-[10px] text-slate-400 font-mono">勝率</span>
+                                <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">勝率</span>
                             </div>
-                            <div v-if="!historyCompanyData.company_tender.top_rivals?.length" class="text-xs text-slate-400 py-2 text-center">
+                            <div v-if="!historyCompanyData.company_tender.top_rivals?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                 無主要競標對手統計
                             </div>
-                            <div v-else class="space-y-1.5">
+                            <div v-else class="space-y-2">
                                 <div v-for="(rival, ridx) in historyCompanyData.company_tender.top_rivals" :key="'h-riv-'+ridx"
-                                     class="p-2 rounded-lg border text-xs"
+                                     class="p-2.5 rounded-lg border text-xs sm:text-sm"
                                      :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-bold truncate max-w-[140px]" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-bold flex-1 pr-2 leading-snug" :class="isDark ? 'text-white' : 'text-slate-900'" :title="rival.name">
                                             {{ rival.name }}
                                         </span>
-                                        <span class="px-1 py-0.2 rounded text-[10px] font-black"
-                                              :class="rival.win_rate >= 50 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'">
+                                        <span class="px-2 py-0.5 rounded-md text-xs sm:text-sm font-black num-font"
+                                              :class="rival.win_rate >= 50 ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-900 border border-emerald-300') : (isDark ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-rose-100 text-rose-900 border border-rose-300')">
                                             {{ rival.win_rate }}%
                                         </span>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mt-0.5">
-                                        交手 {{ rival.met }} 次 (勝 {{ rival.this_vendor_wins }} / 負 {{ rival.rival_wins }})
+                                    <div class="text-xs font-semibold mt-1" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                        交手 <strong class="num-font">{{ rival.met }}</strong> 次 (勝 {{ rival.this_vendor_wins }} / 負 {{ rival.rival_wins }})
                                     </div>
                                 </div>
                             </div>
@@ -610,42 +616,43 @@
                     </div>
 
                     <!-- Recent Awards List -->
-                    <div class="p-3 sm:p-4 rounded-xl border space-y-2" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-100'">
-                            <div class="flex items-center space-x-1 font-bold text-xs" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                <span class="material-symbols-outlined text-[15px] text-emerald-500">assignment_turned_in</span>
+                    <div class="p-3.5 sm:p-4 rounded-xl border space-y-2.5 shadow-sm" :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#222]' : 'border-slate-200'">
+                            <div class="flex items-center space-x-1.5 font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <span class="material-symbols-outlined text-[18px] text-emerald-500">assignment_turned_in</span>
                                 <span>近期重大得標標案</span>
                             </div>
-                            <span class="text-[10px] text-slate-400 font-mono">已決標</span>
+                            <span class="text-xs sm:text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">已決標</span>
                         </div>
-                        <div v-if="!historyCompanyData.company_tender.recent_awards?.length" class="text-xs text-slate-400 py-2 text-center">
+                        <div v-if="!historyCompanyData.company_tender.recent_awards?.length" class="text-xs sm:text-sm font-medium py-3 text-center" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                             無近期得標案件
                         </div>
-                        <div v-else class="space-y-1.5">
+                        <div v-else class="space-y-2">
                             <div v-for="(aw, aidx) in historyCompanyData.company_tender.recent_awards.slice(0, 4)" :key="'h-aw-'+aidx"
-                                 class="p-2 rounded-lg border text-xs space-y-1"
+                                 class="p-2.5 rounded-lg border text-xs sm:text-sm space-y-1.5"
                                  :class="isDark ? 'bg-[#121316] border-[#262626]' : 'bg-slate-50 border-slate-200'">
-                                <div class="flex items-start justify-between gap-1.5">
-                                    <span class="font-bold leading-tight line-clamp-1" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="font-bold leading-snug text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                         {{ aw.title }}
                                     </span>
-                                    <span class="font-black num-font text-emerald-400 whitespace-nowrap text-xs">
+                                    <span class="font-black num-font text-emerald-400 whitespace-nowrap text-sm sm:text-base">
                                         {{ aw.award_amount_formatted }}
                                     </span>
                                 </div>
-                                <div class="flex items-center justify-between text-[10px] text-slate-400">
-                                    <span class="truncate max-w-[180px]">{{ aw.unit_name }}</span>
-                                    <span>{{ aw.date }}</span>
+                                <div class="flex items-center justify-between text-xs font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                                    <span>{{ aw.unit_name }}</span>
+                                    <span class="num-font">{{ aw.date }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Footer ToBid Link -->
-                    <div class="pt-1 flex items-center justify-between text-xs">
-                        <span class="text-[10px] text-slate-400">來源: ToBid / 工程會採購網</span>
+                    <div class="pt-2 flex items-center justify-between text-xs sm:text-sm">
+                        <span class="font-semibold" :class="isDark ? 'text-slate-300' : 'text-slate-600'">資料來源: ToBid / 行政院公共工程委員會採購網</span>
                         <a :href="historyCompanyData.company_tender.web_url" target="_blank" rel="noopener"
-                           class="text-xs text-amber-400 hover:underline font-bold inline-flex items-center space-x-0.5">
+                           class="font-bold inline-flex items-center space-x-1 hover:underline underline-offset-4"
+                           :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
                             <span>前往 ToBid 查看完整標案歷程 ↗</span>
                         </a>
                     </div>

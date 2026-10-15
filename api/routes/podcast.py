@@ -4,6 +4,7 @@ api/routes/podcast.py - AI Financial & Tech Podcast Intelligence Radar REST API
 """
 
 import datetime
+import time
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks
 
@@ -27,6 +28,7 @@ podcast_service = PodcastService(duckdb_manager)
 
 @router.get("/episodes", response_model=PodcastEpisodesResponse, summary="取得 Podcast 單集情報列表與量化資料快照")
 def get_episodes(
+    background_tasks: BackgroundTasks,
     topic: Optional[str] = Query(None, description="依實體或主題篩選 (例如 Claude, OpenAI, NVIDIA, TSMC)"),
     ticker: Optional[str] = Query(None, description="依股票代號篩選 (例如 NVDA, 2330.TW)"),
     channel_id: Optional[str] = Query(None, description="依特定頻道 ID 篩選 (例如 all-in, odd-lots)"),
@@ -49,7 +51,7 @@ def get_episodes(
     # 僅在資料庫完全為空或少於配置種子數時，進行冷啟動同步
     if not any([topic, ticker, channel_id]) and (not lang or lang.upper() == "ALL") and offset == 0:
         if duckdb_manager.get_total_episodes_count() < 50:
-            podcast_service.sync_all()
+            podcast_service.sync_all(fetch_live_api=True, max_pages=3)
             episodes = duckdb_manager.get_podcast_episodes(
                 topic=topic,
                 ticker=ticker,
@@ -58,6 +60,12 @@ def get_episodes(
                 limit=limit,
                 offset=offset
             )
+        else:
+            # SWR (Stale-While-Revalidate) 自動背景刷新：若超過 2 小時未同步，非同步排入背景任務抓取最新單集
+            now_ts = time.time()
+            if now_ts - podcast_service.last_live_sync_at > 7200:
+                podcast_service.last_live_sync_at = now_ts
+                background_tasks.add_task(podcast_service.fetch_biggo_live_episodes, max_pages=2)
 
     # 批次進行即時行情與時長格式化增強 (一次性 SQL 查詢消除 N+1)
     enriched = podcast_service.enrich_episodes_batch(episodes)
@@ -123,12 +131,12 @@ def get_topics(
 @router.post("/sync", response_model=PodcastSyncResponse, summary="觸發 Podcast 頻道與單集情報非同步同步")
 def trigger_podcast_sync(background_tasks: BackgroundTasks):
     """
-    手動或排程觸發最新 Podcast RSS Feed 擷取與 AI 萃取。
+    手動或排程觸發最新 Podcast 即時單集與 AI 萃取 (含 BigGo Live API)。
     """
-    background_tasks.add_task(podcast_service.sync_all, fetch_live_rss=True)
+    background_tasks.add_task(podcast_service.sync_all, fetch_live_api=True, max_pages=5)
     return PodcastSyncResponse(
         success=True,
-        message="Podcast 頻道與單集同步任務已於背景排隊執行",
+        message="Podcast 頻道與單集同步任務已於背景排隊執行 (含 BigGo Live API)",
         timestamp=datetime.datetime.now().isoformat()
     )
 

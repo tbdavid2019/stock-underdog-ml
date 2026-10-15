@@ -109,7 +109,7 @@
                                 <span>{{ typeof formatFollowers === 'function' ? formatFollowers(ch.follower_count) : (ch.follower_count || '0') }} 追蹤者</span>
                             </span>
                         </div>
-                        <div class="text-[11px] truncate max-w-[210px] mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                        <div class="text-xs truncate max-w-[210px] mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                             {{ ch.author || ch.description }}
                         </div>
                     </div>
@@ -374,7 +374,7 @@
                         
                         <!-- AI Sentiment Stance Badge -->
                         <span v-if="quote.stance" 
-                              class="px-1.5 py-0.5 rounded text-[11px] font-bold"
+                              class="px-1.5 py-0.5 rounded text-xs font-bold"
                               :class="quote.stance === 'bullish' 
                                   ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800 border border-emerald-200') 
                                   : (quote.stance === 'bearish' 
