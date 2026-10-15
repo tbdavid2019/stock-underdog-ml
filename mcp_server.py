@@ -521,6 +521,25 @@ def get_ticker_earnings_calls(
     return res.model_dump()
 
 
+@mcp.tool(
+    name="get_company_network",
+    description="查詢台股上市櫃企業之經濟部官方登記資本額、統一編號、董事長/代表人、上游母控股/實質控制人、下游轉投資子企業 (自動標記上市櫃代碼) 與互動式股權網絡圖連結 (Taiwan Company Network)。"
+)
+def get_company_network(
+    ticker: str
+) -> Dict[str, Any]:
+    """
+    Fetch corporate hierarchy, group structure, upstream controlling shareholders, downstream subsidiaries, and official registration details for Taiwan companies.
+    """
+    from data.company_network import CompanyNetworkService
+    from data.duckdb_manager import DuckDBManager
+    db = DuckDBManager() if DuckDBManager else None
+    res = CompanyNetworkService.get_company_network(ticker, db=db)
+    if not res:
+        return {"success": False, "ticker": ticker, "data": None, "message": "查無該標的之台灣企業網絡資料"}
+    return {"success": True, "ticker": ticker, "data": res}
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

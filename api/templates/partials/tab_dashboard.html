@@ -682,6 +682,13 @@
                             <span class="material-symbols-outlined text-[14px] leading-none">event_note</span>
                             <span>法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})</span>
                         </button>
+                        <button v-if="expandedDrawerData?.company_network"
+                                @click.stop="drawerActiveSubTab = 'network'"
+                                class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                                :class="drawerActiveSubTab === 'network' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
+                            <span class="material-symbols-outlined text-[14px] leading-none">account_tree</span>
+                            <span>集團網絡</span>
+                        </button>
                     </div>
                     <!-- Sub-tab 1: Profile -->
                     <div v-if="drawerActiveSubTab === 'profile'">
@@ -707,6 +714,34 @@
                             </div>
                         </div>
                         <div v-else class="text-xs text-slate-400 py-1">近期無法人說明會日程</div>
+                    </div>
+                    <!-- Sub-tab 3: Network (Mobile) -->
+                    <div v-if="drawerActiveSubTab === 'network'" class="space-y-2 text-xs">
+                        <div v-if="expandedDrawerData?.company_network" class="space-y-2">
+                            <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                                <div class="font-bold text-amber-500">
+                                    統編: {{ expandedDrawerData.company_network.unified_id || '無' }}
+                                    <span v-if="expandedDrawerData.company_network.capital_formatted" class="ml-1 text-slate-400 font-normal">
+                                        ({{ expandedDrawerData.company_network.capital_formatted }})
+                                    </span>
+                                </div>
+                                <a :href="expandedDrawerData.company_network.web_url" target="_blank" class="text-amber-400 underline font-bold flex items-center space-x-0.5">
+                                    <span>股權圖</span>
+                                    <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                                </a>
+                            </div>
+                            <div v-if="expandedDrawerData.company_network.relationships?.downstream?.length" class="space-y-1">
+                                <div class="text-slate-400 font-bold text-[11px]">轉投資關係企業:</div>
+                                <div class="flex flex-wrap gap-1">
+                                    <span v-for="(down, didx) in expandedDrawerData.company_network.relationships.downstream.slice(0, 6)" :key="didx"
+                                          @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
+                                          class="px-2 py-0.5 rounded text-xs border"
+                                          :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') : 'text-slate-400 border-slate-700'">
+                                        {{ down.name }} <strong v-if="down.code">({{ down.code }})</strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -848,12 +883,23 @@
                                             {{ drawerEarningsMap[item.ticker].length }}
                                         </span>
                                     </button>
+                                    <button v-if="expandedDrawerData?.company_network"
+                                            @click="drawerActiveSubTab = 'network'"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
+                                            :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                        <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
+                                        <span>集團股權網絡</span>
+                                        <span v-if="(expandedDrawerData.company_network.relationships?.downstream || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
+                                              :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
+                                            {{ (expandedDrawerData.company_network.relationships?.downstream || []).length }}
+                                        </span>
+                                    </button>
                                 </div>
 
                                 <!-- Subtab 1: Company Profile & News -->
                                 <div v-if="drawerActiveSubTab === 'profile'" class="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div class="space-y-2 max-w-3xl">
-                                        <div class="flex items-center space-x-3">
+                                        <div class="flex items-center flex-wrap gap-2">
                                             <span class="text-xl font-black num-font text-amber-500">{{ item.ticker }}</span>
                                             <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                 {{ expandedDrawerData?.name || item.name || item.ticker }}
@@ -864,6 +910,12 @@
                                             </span>
                                             <span v-if="expandedDrawerData?.market_cap" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 市值: {{ expandedDrawerData.market_cap }}
+                                            </span>
+                                            <span v-if="expandedDrawerData?.capital" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                資本額: {{ expandedDrawerData.capital }}
+                                            </span>
+                                            <span v-if="expandedDrawerData?.unified_id" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                統編: {{ expandedDrawerData.unified_id }}
                                             </span>
                                             <span v-if="expandedDrawerData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 董座: {{ expandedDrawerData.chairman }}
@@ -885,6 +937,42 @@
                                             {{ expandedDrawerData?.business_summary || '正在連線 2md 即時爬取公司基本資料與新聞...' }}
                                         </p>
 
+                                        <!-- Corporate Network Quick Highlights -->
+                                        <div v-if="expandedDrawerData?.company_network" class="pt-2 space-y-1.5">
+                                            <div class="text-xs font-bold text-amber-500 flex items-center justify-between">
+                                                <div class="flex items-center space-x-1">
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
+                                                    <span>集團與轉投資關係企業:</span>
+                                                </div>
+                                                <button @click="drawerActiveSubTab = 'network'" class="text-xs text-amber-400 hover:underline flex items-center space-x-0.5">
+                                                    <span>完整架構</span>
+                                                    <span class="material-symbols-outlined text-[13px] leading-none">chevron_right</span>
+                                                </button>
+                                            </div>
+                                            <div class="flex flex-wrap gap-1.5">
+                                                <span v-for="(up, uidx) in (expandedDrawerData.company_network.relationships?.upstream || [])" :key="'up-'+uidx"
+                                                      class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
+                                                      :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
+                                                    <span class="text-[10px] font-bold opacity-75">母/控股</span>
+                                                    <span>{{ up.name }}</span>
+                                                </span>
+                                                <button v-for="(down, didx) in (expandedDrawerData.company_network.relationships?.downstream || []).slice(0, 6)" :key="'down-'+didx"
+                                                        @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
+                                                        :disabled="!down.is_listed"
+                                                        class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1 transition-all"
+                                                        :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-600 cursor-default')">
+                                                    <span>{{ down.name }}</span>
+                                                    <span v-if="down.code" class="text-[11px] font-mono font-bold px-1 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
+                                                </button>
+                                                <span v-if="(expandedDrawerData.company_network.relationships?.downstream || []).length > 6"
+                                                      @click="drawerActiveSubTab = 'network'"
+                                                      class="px-2 py-0.5 rounded-md text-xs border font-medium cursor-pointer"
+                                                      :class="isDark ? 'bg-[#1a1b20] border-[#2a2c33] text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'">
+                                                    +{{ expandedDrawerData.company_network.relationships.downstream.length - 6 }} 更多
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         <!-- Recent News -->
                                         <div v-if="expandedDrawerData?.recent_news && expandedDrawerData.recent_news.length > 0" class="pt-2 space-y-1.5">
                                             <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
@@ -904,6 +992,12 @@
 
                                     <!-- Right: External Portals & Shortcuts -->
                                     <div class="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 self-start">
+                                        <a v-if="expandedDrawerData?.links?.network_graph" :href="expandedDrawerData.links.network_graph" target="_blank"
+                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1"
+                                           :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-400 hover:text-amber-300 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-800 hover:bg-[#F4F4F6]'">
+                                            <span>股權關係網絡圖</span>
+                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                        </a>
                                         <a v-if="expandedDrawerData?.links?.yahoo" :href="expandedDrawerData.links.yahoo" target="_blank"
                                            class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
@@ -978,6 +1072,105 @@
                                     </div>
                                     <div v-else class="py-6 text-center text-xs text-slate-400">
                                         此標的近期尚無法說會或財報發布排程紀錄
+                                    </div>
+                                </div>
+
+                                <!-- Subtab 3: Taiwan Company Network (Corporate Hierarchy & Graph) -->
+                                <div v-if="drawerActiveSubTab === 'network'" class="space-y-4">
+                                    <div class="p-4 rounded-2xl border"
+                                         :class="isDark ? 'bg-[#0E1015] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                                        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b gap-3"
+                                             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                                            <div>
+                                                <div class="flex items-center flex-wrap gap-2">
+                                                    <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                        {{ expandedDrawerData?.company_network?.name || expandedDrawerData?.name }}
+                                                    </span>
+                                                    <span v-if="expandedDrawerData?.company_network?.unified_id" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
+                                                          :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
+                                                        統編: {{ expandedDrawerData.company_network.unified_id }}
+                                                    </span>
+                                                    <span v-if="expandedDrawerData?.company_network?.capital_formatted" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
+                                                          :class="isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
+                                                        資本額: {{ expandedDrawerData.company_network.capital_formatted }}
+                                                    </span>
+                                                    <span v-if="expandedDrawerData?.company_network?.representative" class="px-2 py-0.5 rounded text-xs font-semibold"
+                                                          :class="isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'">
+                                                        代表董座: {{ expandedDrawerData.company_network.representative }}
+                                                    </span>
+                                                </div>
+                                                <p v-if="expandedDrawerData?.company_network?.address" class="text-xs mt-1" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                                    登記地址: {{ expandedDrawerData.company_network.address }}
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center space-x-2 shrink-0">
+                                                <a :href="expandedDrawerData?.company_network?.web_url" target="_blank"
+                                                   class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center space-x-1.5">
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
+                                                    <span>開啟互動式股權關係圖</span>
+                                                    <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                            <!-- Upstream Holding / Controlling -->
+                                            <div class="p-3.5 rounded-xl border space-y-2"
+                                                 :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                                                <div class="flex items-center space-x-2 text-xs font-bold text-indigo-400">
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">arrow_upward</span>
+                                                    <span>上游母公司 / 控股法人 (Upstream)</span>
+                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-500/20 text-indigo-300">
+                                                        {{ (expandedDrawerData?.company_network?.relationships?.upstream || []).length }}
+                                                    </span>
+                                                </div>
+                                                <div v-if="(expandedDrawerData?.company_network?.relationships?.upstream || []).length === 0" class="text-xs text-slate-500 italic py-2">
+                                                    無外部單一控股母公司或為頂層集團控股主體
+                                                </div>
+                                                <div v-else class="space-y-1.5">
+                                                    <div v-for="(up, uidx) in expandedDrawerData.company_network.relationships.upstream" :key="uidx"
+                                                         class="p-2 rounded-lg border flex items-center justify-between text-xs"
+                                                         :class="isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200'">
+                                                        <span class="font-medium" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ up.name }}</span>
+                                                        <button v-if="up.code" @click="searchTickerHistory(up.ticker || up.code)"
+                                                                class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
+                                                            {{ up.code }} ↗
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Downstream Subsidiaries & Affiliates -->
+                                            <div class="p-3.5 rounded-xl border space-y-2"
+                                                 :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                                                <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400">
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">arrow_downward</span>
+                                                    <span>下游轉投資與核心關係企業 (Downstream)</span>
+                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
+                                                        {{ (expandedDrawerData?.company_network?.relationships?.downstream || []).length }}
+                                                    </span>
+                                                </div>
+                                                <div v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length === 0" class="text-xs text-slate-500 italic py-2">
+                                                    無公開轉投資子企業資料
+                                                </div>
+                                                <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div v-for="(down, didx) in expandedDrawerData.company_network.relationships.downstream" :key="didx"
+                                                         class="p-2 rounded-lg border flex items-center justify-between text-xs transition-all"
+                                                         :class="down.is_listed ? (isDark ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300') : (isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200')">
+                                                        <span class="font-medium truncate mr-1" :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="down.name">
+                                                            {{ down.name }}
+                                                        </span>
+                                                        <button v-if="down.code" @click="searchTickerHistory(down.ticker || down.code)"
+                                                                class="px-2 py-0.5 rounded text-xs font-mono font-bold shrink-0 transition-all"
+                                                                :class="isDark ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40' : 'bg-emerald-200 text-emerald-900 hover:bg-emerald-300'"
+                                                                title="點擊載入此標的歷史量化分析">
+                                                            {{ down.code }} ↗
+                                                        </button>
+                                                        <span v-else class="text-[10px] text-slate-500 shrink-0">非上市</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -1129,6 +1322,13 @@
                         <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
                         <span>法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})</span>
                     </button>
+                    <button v-if="expandedDrawerData?.company_network"
+                            @click.stop="drawerActiveSubTab = 'network'"
+                            class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                            :class="drawerActiveSubTab === 'network' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
+                        <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                        <span>集團網絡</span>
+                    </button>
                 </div>
 
                 <!-- Sub-tab 1: Profile -->
@@ -1167,6 +1367,35 @@
                         </div>
                     </div>
                     <div v-else class="py-2 text-center text-slate-400">近期查無法說會排程</div>
+                </div>
+
+                <!-- Sub-tab 3: Network -->
+                <div v-if="drawerActiveSubTab === 'network'" class="space-y-2 text-xs">
+                    <div v-if="expandedDrawerData?.company_network" class="space-y-2">
+                        <div class="flex items-center justify-between pb-1 border-b" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                            <div class="font-bold text-amber-500">
+                                統編: {{ expandedDrawerData.company_network.unified_id || '無' }}
+                                <span v-if="expandedDrawerData.company_network.capital_formatted" class="ml-1 text-slate-400 font-normal">
+                                    ({{ expandedDrawerData.company_network.capital_formatted }})
+                                </span>
+                            </div>
+                            <a :href="expandedDrawerData.company_network.web_url" target="_blank" class="text-amber-400 underline font-bold flex items-center space-x-0.5">
+                                <span>股權網絡圖</span>
+                                <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                            </a>
+                        </div>
+                        <div v-if="expandedDrawerData.company_network.relationships?.downstream?.length" class="space-y-1">
+                            <div class="text-slate-400 font-bold text-[11px]">轉投資關係企業:</div>
+                            <div class="flex flex-wrap gap-1">
+                                <span v-for="(down, didx) in expandedDrawerData.company_network.relationships.downstream.slice(0, 8)" :key="didx"
+                                      @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
+                                      class="px-2 py-0.5 rounded text-xs border"
+                                      :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') : 'text-slate-400 border-slate-700'">
+                                    {{ down.name }} <strong v-if="down.code">({{ down.code }})</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

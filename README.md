@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫** 與 **17 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **20 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -217,7 +217,7 @@ graph TD
 }
 ```
 
-**支援之 16 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
+**支援之 20 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
 
 1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
 2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振、🔮雙ML共振焦點多策略交集個股。
@@ -228,7 +228,7 @@ graph TD
 7. `get_latest_market_snapshot`: 最新全市場日報批次數據快照。
 8. `get_top_institutional_flows`: 三大法人（外資、投信、自營商）買賣超焦點股排行榜。
 9. `get_broker_trades_for_stock`: 關鍵券商主力分點進出明細與累計買賣超。
-10. `get_company_profile`: 2MD 繁中公司營運簡介與即時新聞。
+10. `get_company_profile`: 2MD 繁中公司營運簡介、董監事持股、即時新聞與集團網絡連結。
 11. `get_fed_rate_monitor`: CME FedWatch 利率決策機率與 FOMC 倒數。
 12. `get_us_earnings_calendar`: 美股重量級企業財報公布行事曆（EPS、營收預估）。
 13. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
@@ -236,9 +236,13 @@ graph TD
 15. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
 16. `get_polymarket_macro_sentiment`: Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率）。
 17. `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback：create360 / aiurl.tw / jev）推論交易動作機率分佈、確信度評分與勝率預期。
+18. `get_upcoming_earnings_calls`: 查詢台美日韓跨市場即將召開之法人說明會時程、雙時區與官方簡報/影音回放。
+19. `get_ticker_earnings_calls`: 查詢單一標的之歷史法說會紀錄、管理層財測指引（營收/毛利率/CapEx）與機構 Q&A。
+20. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
+> 💡 **動態最新拉取提示**：平台機能快速演進，建議外部 AI Agent（Claude, Cursor, Antigravity）在執行任務前隨時重新發送 HTTP GET 請求至 `/skill`、`/llms.txt` 或 `/.well-known/mcp.json`，取得即時更新之 MCP 函數契約與資料字典。
 
 ### 4. 核心 REST API 端點清單
 
@@ -247,7 +251,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (17 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (20 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -272,6 +276,8 @@ graph TD
 | `/api/v1/macro/investing/economic-calendar` | `GET` | 全球重大總經行事曆（CPI、非農 NFP 等） |
 | `/api/v1/market/institutional/top` | `GET` | 三大法人買賣超焦點排行 |
 | `/api/v1/market/universe` | `GET` | 全球證券清冊、來源 snapshot 與 stale/cache freshness 狀態 |
+| `/api/v1/market/company-profile/{ticker}` | `GET` | 查詢公司中文營運簡介、董監事持股、即時新聞與集團網絡連結 |
+| `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡 |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 | `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美股即將召開之法人說明會、雙時區（CST/EST）與天數倒數 |

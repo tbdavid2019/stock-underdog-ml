@@ -65,6 +65,24 @@ class TestMarketAPI(unittest.TestCase):
         self.assertIn("dates", data)
         self.assertIn("series", data)
 
+    def test_get_company_network_endpoint(self):
+        resp = self.client.get("/api/v1/market/company-network/2330")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        net = data.get("data")
+        self.assertIsNotNone(net)
+        self.assertEqual(net["unified_id"], "22099131")
+        self.assertIn("relationships", net)
+        self.assertIn("downstream", net["relationships"])
+
+    def test_get_company_network_not_found(self):
+        resp = self.client.get("/api/v1/market/company-network/INVALID999")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("success"))
+        self.assertIsNone(data.get("data"))
+
 
 if __name__ == "__main__":
     unittest.main()

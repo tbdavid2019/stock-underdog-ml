@@ -326,12 +326,16 @@ class CompanyProfileResponse(BaseModel):
     ticker: str
     raw_code: str
     name: str
+    registered_name: Optional[str] = ""
+    unified_id: Optional[str] = ""
+    capital: Optional[str] = ""
     industry: Optional[str] = "綜合產業"
     business_summary: Optional[str] = ""
     chairman: Optional[str] = ""
     market_cap: Optional[str] = ""
     established: Optional[str] = ""
     recent_news: List[Dict[str, str]] = []
+    company_network: Optional[Dict[str, Any]] = None
     links: Dict[str, str] = {}
     source: str = "2md"
 
@@ -344,7 +348,8 @@ def get_company_profile_endpoint(
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    透過 2md.aiurl.tw 與 Yahoo 股市實時提取公司繁體中文簡介、核心營運業務與最新新聞。
+    透過 2md.aiurl.tw 與 Yahoo 股市實時提取公司繁體中文簡介、核心營運業務與最新新聞，
+    並無縫串接 Taiwan Company Network 注入統一編號、資本額、董事長與關係企業網絡。
     """
     from data.company_profile import CompanyProfileService
     target = ticker or query
@@ -358,17 +363,45 @@ def get_company_profile_endpoint(
             ticker=profile["ticker"],
             raw_code=profile["raw_code"],
             name=profile["name"],
+            registered_name=profile.get("registered_name", ""),
+            unified_id=profile.get("unified_id", ""),
+            capital=profile.get("capital", ""),
             industry=profile.get("industry", "綜合產業"),
             business_summary=profile.get("business_summary", ""),
             chairman=profile.get("chairman", ""),
             market_cap=profile.get("market_cap", ""),
             established=profile.get("established", ""),
             recent_news=profile.get("recent_news", []),
+            company_network=profile.get("company_network"),
             links=profile.get("links", {}),
             source=profile.get("source", "2md")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"取得公司資訊失敗: {e}")
+
+
+@router.get("/company-network/{ticker}", summary="取得特定股票之集團股權網絡與關係企業 (Taiwan Company Network)")
+@router.get("/company-network", summary="取得特定股票之集團股權網絡與關係企業 (Taiwan Company Network)")
+def get_company_network_endpoint(
+    ticker: Optional[str] = None,
+    query: Optional[str] = Query(None, description="股票代號或名稱，如 2330, 2330.TW, 台積電, 鴻海"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    查詢台股上市公司之經濟部官方登記資本額、統編、上游母控股、下游轉投資子企業與股權關係網絡圖。
+    """
+    from data.company_network import CompanyNetworkService
+    target = ticker or query
+    if not target:
+        raise HTTPException(status_code=400, detail="請提供股票代號或名稱")
+
+    try:
+        net = CompanyNetworkService.get_company_network(target, db=db)
+        if not net:
+            return {"success": False, "ticker": target, "data": None, "message": "查無該標的之台灣企業網絡資料"}
+        return {"success": True, "ticker": target, "data": net}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查詢企業網絡失敗: {e}")
 
 
 class BatchCompanyProfilesRequest(BaseModel):

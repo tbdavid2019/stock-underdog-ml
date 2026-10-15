@@ -278,7 +278,8 @@ def get_webmcp_manifest():
             "get_polymarket_macro_sentiment",
             "get_clef_stock_verdict",
             "get_upcoming_earnings_calls",
-            "get_ticker_earnings_calls"
+            "get_ticker_earnings_calls",
+            "get_company_network"
         ]
     })
 
@@ -343,7 +344,7 @@ def get_llms_txt():
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 19 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 20 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙ML共振焦點股。
 - `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日漲跌幅排行與盈虧比。
@@ -353,7 +354,8 @@ def get_llms_txt():
 - `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
 - `get_top_institutional_flows`: 查詢三大法人買賣超焦點股排行榜。
 - `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細。
-- `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞。
+- `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞，並整合 Taiwan Company Network 官方資料。
+- `get_company_network`: 查詢台股企業之經濟部官方統編、資本額、董事長、上游控股、下游轉投資企業與互動式股權網絡圖。
 - `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率。
 - `get_us_earnings_calendar`: 透過 2MD 查詢美股重量級企業財報行事曆。
 - `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆。
@@ -489,7 +491,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (19 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`.
+- Tools (20 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -712,6 +714,21 @@ def get_webmcp_bridge():
             },
             execute: async (args) => {
                 let url = '/api/v1/earnings-call/' + encodeURIComponent(args.ticker) + '?limit=' + (args?.limit || 20);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_company_network',
+            description: '查詢台股企業之經濟部統編、資本額、董事長、上游控股、下游轉投資企業與互動式股權網絡圖',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    ticker: { type: 'string', description: '股票代號或名稱 (如 2330.TW, 2317, 台積電)' }
+                },
+                required: ['ticker']
+            },
+            execute: async (args) => {
+                let url = '/api/v1/market/company-network?ticker=' + encodeURIComponent(args.ticker);
                 return JSON.stringify(await (await fetch(url)).json());
             }
         }

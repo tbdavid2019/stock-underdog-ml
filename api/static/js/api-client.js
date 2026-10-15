@@ -181,6 +181,15 @@ export const ApiClient = {
     },
 
     /**
+     * Taiwan Company Network (corporate structure & relationships)
+     */
+    async getCompanyNetwork(ticker, signal) {
+        const res = await fetch(`/api/v1/market/company-network?ticker=${encodeURIComponent(ticker)}`, { signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
      * Batch prefetch company profiles
      */
     async getCompanyProfilesBatch(tickers) {

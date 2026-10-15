@@ -212,7 +212,7 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["name"], "stock-quant-engine")
         self.assertEqual(data["transport"], "sse")
-        self.assertEqual(len(data["tools"]), 19)
+        self.assertEqual(len(data["tools"]), 20)
         self.assertIn("get_market_macro_regime", data["tools"])
         self.assertIn("get_fed_rate_monitor", data["tools"])
         self.assertIn("get_us_earnings_calendar", data["tools"])
@@ -221,12 +221,13 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("get_polymarket_macro_sentiment", data["tools"])
         self.assertIn("get_upcoming_earnings_calls", data["tools"])
         self.assertIn("get_ticker_earnings_calls", data["tools"])
+        self.assertIn("get_company_network", data["tools"])
 
         # Test alias /mcp.json
         resp_alias = self.client.get("/mcp.json")
         self.assertEqual(resp_alias.status_code, 200)
         self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
-        self.assertEqual(len(resp_alias.json()["tools"]), 19)
+        self.assertEqual(len(resp_alias.json()["tools"]), 20)
 
     def test_macro_investing_endpoints(self):
         from unittest.mock import patch
@@ -316,13 +317,14 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
         self.assertEqual(data_wk["version"], APP_VERSION)
-        self.assertEqual(len(data_wk.get("tools", [])), 19)
+        self.assertEqual(len(data_wk.get("tools", [])), 20)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
         self.assertIn("get_commodities_summary", data_wk.get("tools", []))
         self.assertIn("resolve_stock_ticker", data_wk.get("tools", []))
         self.assertIn("get_polymarket_macro_sentiment", data_wk.get("tools", []))
         self.assertIn("get_upcoming_earnings_calls", data_wk.get("tools", []))
         self.assertIn("get_ticker_earnings_calls", data_wk.get("tools", []))
+        self.assertIn("get_company_network", data_wk.get("tools", []))
 
     def test_macro_polymarket_sentiment_endpoint(self):
         from unittest.mock import patch

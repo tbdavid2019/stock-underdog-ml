@@ -144,25 +144,35 @@ class CompanyProfileService:
             "ticker": ticker,
             "raw_code": raw_code,
             "name": stock_name or raw_code,
+            "registered_name": "",
+            "unified_id": "",
+            "capital": "",
             "industry": "綜合產業",
             "business_summary": "",
             "chairman": "",
             "market_cap": "",
             "established": "",
             "recent_news": [],
+            "company_network": None,
             "links": cls._build_stock_links(ticker, raw_code, is_tw),
             "source": "2md"
         }
 
-        # 3. 並發非同步獲取基本資料與新聞（美股與台股分流）
+        # 3. 並發非同步獲取基本資料、新聞與企業股權網絡（美股與台股分流）
         from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             if not is_tw:
                 f_prof = executor.submit(cls._fallback_yfinance, profile_data, ticker)
                 f_news = executor.submit(cls._fetch_news_from_2md, profile_data, False)
+                f_net = None
             else:
                 f_prof = executor.submit(cls._fetch_profile_from_2md, profile_data, True)
                 f_news = executor.submit(cls._fetch_news_from_2md, profile_data, True)
+                try:
+                    from data.company_network import CompanyNetworkService
+                    f_net = executor.submit(CompanyNetworkService.get_company_network, ticker, db)
+                except Exception:
+                    f_net = None
             
             # 等待時間放寬至 12.0 秒，容納 Chromium 渲染完成
             try:
@@ -173,6 +183,23 @@ class CompanyProfileService:
                 f_news.result(timeout=cls.TASK_WAIT_TIMEOUT)
             except Exception as e:
                 logger.debug(f"News fetch task ended: {e}")
+            if f_net:
+                try:
+                    network = f_net.result(timeout=cls.TASK_WAIT_TIMEOUT)
+                    if network:
+                        profile_data["company_network"] = network
+                        if network.get("unified_id") and not profile_data.get("unified_id"):
+                            profile_data["unified_id"] = network["unified_id"]
+                        if network.get("capital_formatted") and not profile_data.get("capital"):
+                            profile_data["capital"] = network["capital_formatted"]
+                        if network.get("representative") and not profile_data.get("chairman"):
+                            profile_data["chairman"] = network["representative"]
+                        if network.get("name") and not profile_data.get("registered_name"):
+                            profile_data["registered_name"] = network["name"]
+                        if network.get("web_url") and "links" in profile_data:
+                            profile_data["links"]["network_graph"] = network["web_url"]
+                except Exception as e:
+                    logger.debug(f"Company network task ended: {e}")
 
         # 4. 若未取得足夠簡介，使用 yfinance 終極快速備援
         if not profile_data.get("business_summary"):
@@ -429,7 +456,8 @@ class CompanyProfileService:
                 "yahoo": f"https://tw.stock.yahoo.com/quote/{ticker}",
                 "goodinfo": f"https://goodinfo.tw/tw/BasicInfo.asp?STOCK_ID={raw_code}",
                 "cnyes": f"https://www.cnyes.com/twstock/{raw_code}",
-                "tradingview": f"https://www.tradingview.com/symbols/TWSE-{raw_code}/"
+                "tradingview": f"https://www.tradingview.com/symbols/TWSE-{raw_code}/",
+                "network_graph": f"https://taiwan-company-network.david888.com/graph?company={raw_code}"
             }
         else:
             return {
