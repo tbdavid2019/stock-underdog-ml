@@ -523,7 +523,7 @@ def get_ticker_earnings_calls(
 
 @mcp.tool(
     name="get_company_network",
-    description="查詢台股上市櫃企業之經濟部官方登記資本額、統一編號、董事長/代表人、上游母控股/實質控制人、下游轉投資子企業 (自動標記上市櫃代碼) 與互動式股權網絡圖連結 (Taiwan Company Network)。"
+    description="查詢台股上市櫃企業之經濟部官方登記資本額、統一編號、董事長/代表人、上游母控股/實質控制人、下游轉投資子企業 (自動標記上市櫃代碼)、靜態 SVG 關係圖與互動式股權網絡圖連結 (Taiwan Company Network)。"
 )
 def get_company_network(
     ticker: str
@@ -538,6 +538,34 @@ def get_company_network(
     if not res:
         return {"success": False, "ticker": ticker, "data": None, "message": "查無該標的之台灣企業網絡資料"}
     return {"success": True, "ticker": ticker, "data": res}
+
+
+@mcp.tool(
+    name="open_company_network",
+    description="取得特定台股企業之視覺化股權拓撲關係圖譜連結 (web_url) 與官方靜態 SVG 向量拓撲圖 (image_url)，支援在瀏覽器中直接開啟圖譜 (Taiwan Company Network)。"
+)
+def open_company_network(
+    company: str,
+    direction: str = "both"
+) -> Dict[str, Any]:
+    """
+    Retrieve interactive graph URL and static SVG diagram for Taiwan companies.
+    """
+    from data.company_network import CompanyNetworkService
+    from data.duckdb_manager import DuckDBManager
+    db = DuckDBManager() if DuckDBManager else None
+    res = CompanyNetworkService.get_company_network(company, db=db)
+    if not res:
+        return {"success": False, "company": company, "message": "查無該標的之企業網絡資料"}
+    return {
+        "success": True,
+        "company": res.get("name", company),
+        "ticker": res.get("ticker"),
+        "web_url": res.get("web_url"),
+        "image_url": res.get("image_url"),
+        "direction": direction,
+        "message": f"已取得「{res.get('name', company)}」之股權關係圖譜連結。"
+    }
 
 
 if __name__ == "__main__":

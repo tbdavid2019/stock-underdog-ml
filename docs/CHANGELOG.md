@@ -4,6 +4,29 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.19)
+
+### Fixed & Enhanced (FedWatch 2MD Error Interception, Resilient Fallback Restoration, Taiwan Company Network SVG Topology & WebMCP Tool #21)
+- **🛡️ FedWatch 降息監控 2MD 錯誤攔截與四層容災恢復（FedWatch 2MD Defense & Guaranteed Uptime）**：
+  1. **2MD 上游錯誤標記全面攔截（`BLOCKED_OR_ERROR_MARKERS`）**：
+     - **診斷痛點**：部分 2MD 代理伺服器在面對 Investing.com 反爬蟲 403 阻擋時，會回傳 `Warning: Target URL returned error 403: Forbidden` 短文，字元數（152 字元）略大於原先 100 字元門檻，導致系統誤將錯誤頁面視為成功，解析利率機率失敗並覆寫快取，造成儀表板顯示「暫無 FedWatch 數據」。
+     - **核心升級**：建立全面之錯誤標記防線（包含 `Target URL returned error`、`403: Forbidden`、`error 403`、`Access Denied`、`CAPTCHA`、`Cloudflare Ray ID` 等），遭遇阻擋立刻拋棄並無縫切換下一可用鏡像。
+  2. **節點路由優先權優化**：
+     - 將測試驗證可穩定抓取 11KB 完整 Markdown 之 `https://2md.aiurl.tw` 提拔為首選主節點。
+  3. **四層防護降級架構（Multi-Tier Fallback）**：
+     - 解析失敗或短暫逾時時，依序讀取：L1 記憶體 ➔ L2 磁碟 ➔ L3 DuckDB 宏觀快照 ➔ 權威官方基準（Oct 28 FOMC 利率預期），確保儀表板與量化決策 100% 具備利率數據，杜絕資料空窗。
+  4. **API 別名與相容性強化**：
+     - 新增 `GET /api/v1/macro/investing/fed-rate-monitor` 作為 `GET /api/v1/macro/investing/fed-rate` 之相容別名，杜絕 404 情況。
+
+- **🌐 Taiwan Company Network 官方新功能整合（SVG 拓撲圖內嵌與第 21 大 WebMCP 工具）**：
+  1. **官方 SVG 拓撲關係圖（`imageUrl`）抽取與個股抽屜內嵌**：
+     - 後端 `data/company_network.py` 與 `data/company_profile.py` 完整提取分片之 `imageUrl` 並存入 DuckDB。
+     - 個股深度側欄（Stock Drawer）的「集團股權網絡」頁籤新增「官方 SVG 向量拓撲圖」卡片，以高質感自適應卡片直接呈現上下游股權關聯圖，無需跳出網站即可一眼洞察控股結構，並提供「新分頁檢視原圖」捷徑。
+  2. **第 21 大 FastMCP / WebMCP 原生工具（`open_company_network`）**：
+     - 註冊第 21 號原生量化工具 `open_company_network(company, direction)`，供 AI Agent、Chrome WebMCP 與 Claude Desktop 調用，支援透過股票代號、公司全名或別名直接在瀏覽器導航開啟關係圖譜。
+     - 前端 Chrome WebMCP 動態註冊全套 21 大工具至 `window.document.modelContext`。
+     - 同步更新 `/.well-known/mcp.json`、`/.webmcp/bridge.js`、`/llms.txt`、`/llms-full.txt`、`skills/stock-quant/SKILL.md` 與 `README.md`。
+
 ## 2026-10-15 (v2.4.18)
 
 ### Fixed & Enhanced (Commodity Nomenclature, Economic Deduplication, Segmented Control & Typography Contrast)

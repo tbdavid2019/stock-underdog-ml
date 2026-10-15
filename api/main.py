@@ -279,7 +279,8 @@ def get_webmcp_manifest():
             "get_clef_stock_verdict",
             "get_upcoming_earnings_calls",
             "get_ticker_earnings_calls",
-            "get_company_network"
+            "get_company_network",
+            "open_company_network"
         ]
     })
 
@@ -365,6 +366,7 @@ def get_llms_txt():
 - `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback）推論交易動作機率分佈、確信度評分與勝率預期。
 - `get_upcoming_earnings_calls`: 查詢跨市場 (台/美/日/韓/全球) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放。
 - `get_ticker_earnings_calls`: 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載。
+- `open_company_network`: 在瀏覽器中導航開啟特定台股企業之互動式集團股權拓撲關係圖譜 (Taiwan Company Network)。
 
 ## Agent & Developer Discovery Standards
 
@@ -491,7 +493,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (20 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`.
+- Tools (21 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -730,6 +732,28 @@ def get_webmcp_bridge():
             execute: async (args) => {
                 let url = '/api/v1/market/company-network?ticker=' + encodeURIComponent(args.ticker);
                 return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'open_company_network',
+            description: '在瀏覽器中開啟特定台股企業之互動式集團股權拓撲關係圖譜',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    company: { type: 'string', description: '公司正式全名、股票代號或別名 (如 2330, 台積電)' },
+                    direction: { type: 'string', enum: ['both', 'upstream', 'downstream'], description: '關係展開方向，預設 both' }
+                },
+                required: ['company']
+            },
+            execute: async (args) => {
+                let url = '/api/v1/market/company-network?ticker=' + encodeURIComponent(args.company);
+                let res = await (await fetch(url)).json();
+                let net = res?.data || res;
+                let graphUrl = net?.web_url || ('https://taiwan-company-network.david888.com/graph?company=' + encodeURIComponent(args.company));
+                if (typeof window !== 'undefined' && window.open) {
+                    window.open(graphUrl, '_blank');
+                }
+                return JSON.stringify({ navigated: true, company: args.company, url: graphUrl, direction: args?.direction || 'both', message: '已在瀏覽器新分頁中開啟「' + args.company + '」之集團股權關係圖譜。' });
             }
         }
     ];

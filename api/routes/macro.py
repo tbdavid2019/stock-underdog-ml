@@ -51,6 +51,7 @@ def get_investing_summary(refresh: bool = False, force_refresh: bool = False):
 
 
 @router.get("/investing/fed-rate", summary="取得 CME 聯準會利率監控工具 (FedWatch) 降息機率")
+@router.get("/investing/fed-rate-monitor", summary="取得 CME 聯準會利率監控工具 (FedWatch) 降息機率 (別名)")
 def get_fed_rate(refresh: bool = False, force_refresh: bool = False):
     """取得下次 FOMC 會議時間與各目標利率區間機率分布"""
     from data.investing_service import InvestingService

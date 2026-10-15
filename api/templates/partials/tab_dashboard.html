@@ -1242,6 +1242,31 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- SVG 向量拓撲圖卡片 (Taiwan Company Network 官方靜態圖譜) -->
+                                        <div v-if="expandedDrawerData?.company_network?.image_url"
+                                             class="p-4 rounded-xl border space-y-3 transition-all mt-4"
+                                             :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center space-x-2 text-xs font-bold text-amber-500">
+                                                    <span class="material-symbols-outlined text-[18px] leading-none">hub</span>
+                                                    <span>集團股權拓撲圖譜 (官方 SVG 即時向量架構)</span>
+                                                </div>
+                                                <a :href="expandedDrawerData.company_network.image_url" target="_blank"
+                                                   class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all border inline-flex items-center space-x-1"
+                                                   :class="isDark ? 'bg-[#181A22] border-[#262833] text-amber-300 hover:border-amber-500' : 'bg-white border-slate-200 text-amber-800 hover:border-amber-400'">
+                                                    <span>開新分頁檢視原圖</span>
+                                                    <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                                </a>
+                                            </div>
+                                            <div class="w-full rounded-xl overflow-hidden border p-3 flex items-center justify-center shadow-inner"
+                                                 :class="isDark ? 'bg-[#0B0C10] border-[#262833]' : 'bg-white border-slate-200'">
+                                                <img :src="expandedDrawerData.company_network.image_url"
+                                                     :alt="expandedDrawerData.company_network.name + ' 關係拓撲圖'"
+                                                     class="w-full h-auto max-h-[420px] object-contain select-none transition-transform hover:scale-[1.01]"
+                                                     loading="lazy" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>

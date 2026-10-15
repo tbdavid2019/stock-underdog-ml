@@ -152,6 +152,10 @@ class CompanyProfileService:
                             if "links" not in cached:
                                 cached["links"] = {}
                             cached["links"]["network_graph"] = network["web_url"]
+                        if network.get("image_url"):
+                            if "links" not in cached:
+                                cached["links"] = {}
+                            cached["links"]["network_image"] = network["image_url"]
                         cls._write_cache(ticker, cached)
                 except Exception as e:
                     logger.debug(f"Backfill company network failed: {e}")
@@ -220,6 +224,8 @@ class CompanyProfileService:
                             profile_data["registered_name"] = network["name"]
                         if network.get("web_url") and "links" in profile_data:
                             profile_data["links"]["network_graph"] = network["web_url"]
+                        if network.get("image_url") and "links" in profile_data:
+                            profile_data["links"]["network_image"] = network["image_url"]
                 except Exception as e:
                     logger.debug(f"Company network task ended: {e}")
 

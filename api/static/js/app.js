@@ -1282,6 +1282,43 @@ export const app = createApp({
                     execute: async ({ ticker }) => JSON.stringify(await ApiClient.getCompanyProfile(ticker))
                 });
 
+                await modelCtx.registerTool({
+                    name: 'get_company_network',
+                    description: '查詢台股企業之經濟部統編、資本額、董事長、上游控股、下游轉投資企業與股權關係網絡圖。',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            ticker: { type: 'string', description: '股票代號或公司名稱（例如 2330.TW, 2454, 台積電）' }
+                        },
+                        required: ['ticker']
+                    },
+                    execute: async ({ ticker }) => JSON.stringify(await ApiClient.getCompanyNetwork(ticker))
+                });
+
+                await modelCtx.registerTool({
+                    name: 'open_company_network',
+                    description: '在瀏覽器中開啟特定台股企業之視覺化股權拓撲關係圖譜或於看盤抽屜中檢視。',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            company: { type: 'string', description: '公司正式全名、股票代號或別名（例如 2330, 台積電）' },
+                            direction: { type: 'string', enum: ['both', 'upstream', 'downstream'], description: '關係展開方向，預設 both' }
+                        },
+                        required: ['company']
+                    },
+                    execute: async ({ company, direction }) => {
+                        try {
+                            const res = await ApiClient.getCompanyNetwork(company);
+                            const net = res?.data || res;
+                            const url = net?.web_url || `https://taiwan-company-network.david888.com/graph?company=${encodeURIComponent(company)}`;
+                            window.open(url, '_blank');
+                            return JSON.stringify({ navigated: true, company, url, direction: direction || 'both', message: `已在瀏覽器新分頁中開啟「${company}」之集團股權關係圖譜。` });
+                        } catch (e) {
+                            return JSON.stringify({ navigated: false, error: e.message });
+                        }
+                    }
+                });
+
                 console.log('[Chrome WebMCP] Registered native tools to document.modelContext');
             } catch (e) {
                 console.warn('[Chrome WebMCP] Registration warning:', e);

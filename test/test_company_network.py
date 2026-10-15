@@ -87,7 +87,8 @@ class TestCompanyNetworkService(unittest.TestCase):
                             "未上市公司科技"
                         ]
                     },
-                    "webUrl": "https://taiwan-company-network.david888.com/graph?company=test"
+                    "webUrl": "https://taiwan-company-network.david888.com/graph?company=test",
+                    "imageUrl": "https://taiwan-company-network.david888.com/api/v1/images/test.svg"
                 }
             }
         }
@@ -107,6 +108,7 @@ class TestCompanyNetworkService(unittest.TestCase):
         self.assertEqual(network["capital"], 280500000000)
         self.assertIn("億元", network["capital_formatted"])
         self.assertEqual(network["web_url"], "https://taiwan-company-network.david888.com/graph?company=test")
+        self.assertEqual(network["image_url"], "https://taiwan-company-network.david888.com/api/v1/images/test.svg")
 
         # Verify downstream enrichment with tickers
         downstream = network["relationships"]["downstream"]

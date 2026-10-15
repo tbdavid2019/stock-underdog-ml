@@ -344,6 +344,7 @@ class CompanyNetworkService:
         encoded_name = urllib.parse.quote(registered_name)
         default_graph_url = f"https://taiwan-company-network.david888.com/graph?company={encoded_name}"
         web_url = entry.get("webUrl") or default_graph_url
+        image_url = entry.get("imageUrl")
 
         code = company_info.get("code") or raw_code
         market = company_info.get("market", "TWSE")
@@ -364,6 +365,7 @@ class CompanyNetworkService:
                 "downstream": enriched_downstream
             },
             "web_url": web_url,
+            "image_url": image_url,
             "source": "taiwan-company-network"
         }
 

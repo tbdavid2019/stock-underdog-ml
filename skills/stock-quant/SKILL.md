@@ -59,7 +59,7 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表 (20 大標準 FastMCP / WebMCP 工具)
+## 4. MCP Tools 快速對照表 (21 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
@@ -83,6 +83,7 @@ graph TD
 | `get_clef_stock_verdict` | `ticker`, `macro_regime` | Clef-Flash System One 決策大模型推論（strong_buy / buy / hold_watch / avoid 機率、確信度評分與勝率預期） |
 | `get_upcoming_earnings_calls` | `market`, `days`, `limit` | 查詢跨市場 (台/美/日/韓) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放 |
 | `get_ticker_earnings_calls` | `ticker`, `limit` | 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載 |
+| `open_company_network` | `company`, `direction` | 取得特定台股企業之視覺化股權拓撲關係圖譜連結 (web_url) 與官方靜態 SVG 向量拓撲圖 (image_url)，支援在瀏覽器中直接開啟圖譜 (Taiwan Company Network) |
 
 ---
 
@@ -90,7 +91,7 @@ graph TD
 
 - `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
 - `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (20 大原生量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (21 大原生量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
 - `POST /api/v1/decision/evaluate` - Clef-Flash System One 決策模型評估端點
 - `GET /api/v1/decision/health` - Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev)

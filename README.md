@@ -232,13 +232,14 @@ graph TD
 11. `get_fed_rate_monitor`: CME FedWatch 利率決策機率與 FOMC 倒數。
 12. `get_us_earnings_calendar`: 美股重量級企業財報公布行事曆（EPS、營收預估）。
 13. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
-14. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅博士 Copper、原油 WTI）實時行情。
+14. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅 Copper、原油 WTI）實時行情。
 15. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
 16. `get_polymarket_macro_sentiment`: Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率）。
 17. `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback：create360 / aiurl.tw / jev）推論交易動作機率分佈、確信度評分與勝率預期。
 18. `get_upcoming_earnings_calls`: 查詢台美日韓跨市場即將召開之法人說明會時程、雙時區與官方簡報/影音回放。
 19. `get_ticker_earnings_calls`: 查詢單一標的之歷史法說會紀錄、管理層財測指引（營收/毛利率/CapEx）與機構 Q&A。
 20. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
+21. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
@@ -251,7 +252,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (20 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (21 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
