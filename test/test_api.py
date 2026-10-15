@@ -405,6 +405,12 @@ class TestFastAPIService(unittest.TestCase):
         self.assertTrue(data_jp["success"])
         self.assertEqual(data_jp["market"], "JP")
 
+        resp_kr = self.client.get("/api/v1/earnings-call/upcoming?market=KR&limit=5")
+        self.assertEqual(resp_kr.status_code, 200)
+        data_kr = resp_kr.json()
+        self.assertTrue(data_kr["success"])
+        self.assertEqual(data_kr["market"], "KR")
+
         # 2. Monthly Calendar
         resp_cal = self.client.get("/api/v1/earnings-call/calendar?market=ALL")
         self.assertEqual(resp_cal.status_code, 200)

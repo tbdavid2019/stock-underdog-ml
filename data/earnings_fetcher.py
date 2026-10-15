@@ -415,25 +415,38 @@ class EarningsCallFetcher:
             market_param = f"&market={m_str.lower()}"
 
         raw_items_map: Dict[str, Dict[str, Any]] = {}
-        network_success = False
+        # 1. 分頁榜單任務 (對齊 stockbot: 抓取最新跨市場榜單與日韓分頁)
+        fetch_urls: List[str] = []
+        if m_str == "ALL":
+            fetch_urls.extend([
+                f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=100",
+                f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=60&market=tw",
+                f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=60&market=us",
+                f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=60&market=jp",
+                f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=40&market=kr"
+            ])
+        else:
+            fetch_urls.append(f"{BIGGO_API_BASE}/stock/earnings-calls/list?page=1&size=100{market_param}")
 
-        def _fetch_window(w: Tuple[str, str]) -> List[Dict[str, Any]]:
-            w_start, w_end = w
-            url = f"{BIGGO_API_BASE}/stock/earnings-calls/list?start_date={w_start}&end_date={w_end}{market_param}"
+        # 2. 6 滾動日期視窗任務
+        for w_start, w_end in windows:
+            fetch_urls.append(f"{BIGGO_API_BASE}/stock/earnings-calls/list?start_date={w_start}&end_date={w_end}{market_param}")
+
+        def _fetch_url(u: str) -> List[Dict[str, Any]]:
             try:
-                req = urllib.request.Request(url, headers=BIGGO_HEADERS)
+                req = urllib.request.Request(u, headers=BIGGO_HEADERS)
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
                     if payload.get("result"):
                         return payload.get("data", {}).get("list", [])
             except Exception as e:
-                logger.debug(f"BigGo 視窗抓取失敗 ({w_start} ~ {w_end}): {e}")
+                logger.debug(f"BigGo 抓取失敗 ({u}): {e}")
             return []
 
-        # 6 視窗並行抓取，秒級完成
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(windows)) as executor:
-            future_to_win = {executor.submit(_fetch_window, w): w for w in windows}
-            for fut in concurrent.futures.as_completed(future_to_win):
+        # 並行抓取所有分頁與視窗，秒級完成
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(fetch_urls), 10)) as executor:
+            future_to_url = {executor.submit(_fetch_url, u): u for u in fetch_urls}
+            for fut in concurrent.futures.as_completed(future_to_url):
                 items = fut.result()
                 if items:
                     network_success = True

@@ -3,6 +3,7 @@ api/routes/earnings_call.py - 法人說明會與財報催化劑 REST API 路由
 """
 
 import datetime
+import re
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks
 
@@ -141,7 +142,7 @@ def get_upcoming_calls(
     lim = int(limit) if isinstance(limit, int) else 50
 
     today = datetime.date.today()
-    s_date = s_date or today.strftime("%Y-%m-%d")
+    s_date = s_date or (today - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
     e_date = e_date or (today + datetime.timedelta(days=day_cnt)).strftime("%Y-%m-%d")
 
     records = duckdb_manager.get_earnings_calls(
@@ -165,6 +166,15 @@ def get_upcoming_calls(
         )
 
     enriched = [_enrich_call_item(r, today) for r in records]
+
+    # 排序：優先呈現今天 (today) 與即將召開 (upcoming，依倒數天數升序)，隨後呈現近期已召開 (past，依日期降序)
+    def _sort_key(call: EarningsCallItem):
+        prio = 0 if call.status == "today" else (1 if call.status == "upcoming" else 2)
+        countdown = call.countdown_days if (call.countdown_days is not None and call.countdown_days >= 0) else 999
+        date_num = int(call.call_date.replace("-", "")) if (call.call_date and re.match(r"^\d{4}-\d{2}-\d{2}$", call.call_date)) else 0
+        return (prio, countdown, -date_num)
+
+    enriched.sort(key=_sort_key)
 
     return UpcomingCallsResponse(
         success=True,
