@@ -317,5 +317,15 @@ class TestEarningsCallFetcher(unittest.TestCase):
             self.assertIn("investor.tsmc.com", tsmc["webcast_url"])
 
 
+    def test_fetch_biggo_calls_network_failure_no_unbound_local(self):
+        """測試當網路完全失敗時，fetch_biggo_calls 不會拋出 UnboundLocalError"""
+        fetcher = EarningsCallFetcher(db_manager=MagicMock())
+        with patch("urllib.request.urlopen", side_effect=Exception("Connection refused")):
+            with patch("os.path.exists", return_value=False):
+                res = fetcher.fetch_biggo_calls(market="ALL", past_windows=1, future_windows=1)
+                self.assertEqual(res, [])
+
+
 if __name__ == "__main__":
     unittest.main()
+

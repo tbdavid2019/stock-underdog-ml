@@ -4,6 +4,14 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.21)
+
+### Fixed (Earnings Fetcher Network Fallback & CI/CD Stability)
+- **🛠️ BigGo 法說會多視窗並行網路異常防禦修復（Earnings Fetcher Fallback Fix）**：
+  - 修復 `data/earnings_fetcher.py` 中 `network_success` 變數在網路請求全數逾時或阻擋時未定義之 `UnboundLocalError`。
+  - 明確初始化 `network_success = False`，確保在 CI/CD 離線環境或上游無回應時能穩定平滑退回本機快取與官方基準庫。
+  - 新增 `test_fetch_biggo_calls_network_failure_no_unbound_local` 回歸測試，確保 CI/CD 單元測試 232 項全數綠燈通過。
+
 ## 2026-10-15 (v2.4.20)
 
 ### Fixed & Enhanced (Card Mode Corporate Network Parity, SVG Topology Graph, Multi-Tab Expansion & Hover Popover Upgrade)

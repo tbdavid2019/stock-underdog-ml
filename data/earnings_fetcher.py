@@ -429,6 +429,7 @@ class EarningsCallFetcher:
             market_param = f"&market={m_str.lower()}"
 
         raw_items_map: Dict[str, Dict[str, Any]] = {}
+        network_success = False
         # 1. 分頁榜單任務 (對齊 stockbot: 抓取最新跨市場榜單與日韓分頁)
         fetch_urls: List[str] = []
         if m_str == "ALL":
