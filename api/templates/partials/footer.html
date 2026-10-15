@@ -132,8 +132,46 @@
             </div>
         </div>
 
+        <!-- Corporate Network Quick Highlight (Taiwan Company Network) -->
+        <div v-if="hoverData.company_network" class="pt-2 border-t space-y-1.5" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div class="text-xs sm:text-sm font-bold flex items-center justify-between" :class="isDark ? 'text-slate-300' : 'text-slate-800'">
+                <div class="flex items-center space-x-1 text-amber-500">
+                    <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                    <span>集團股權關係網絡</span>
+                </div>
+                <button @click="toggleRowDrawer(hoverData.ticker, 'network'); hideCompanyHover(true)"
+                        class="text-xs text-amber-400 hover:underline flex items-center space-x-0.5">
+                    <span>拓撲圖譜</span>
+                    <span class="material-symbols-outlined text-[12px] leading-none">chevron_right</span>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-1 items-center">
+                <span v-for="up in (hoverData.company_network.relationships?.upstream || []).slice(0, 1)" :key="up.name"
+                      class="px-2 py-0.5 rounded text-[11px] font-medium border"
+                      :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
+                    母: {{ up.name }}
+                </span>
+                <span v-for="down in (hoverData.company_network.relationships?.downstream || []).slice(0, 3)" :key="down.name"
+                      class="px-2 py-0.5 rounded text-[11px] font-medium border"
+                      :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') : 'text-slate-400 border-slate-700'">
+                    {{ down.name }}<strong v-if="down.code">({{ down.code }})</strong>
+                </span>
+                <span v-if="(hoverData.company_network.relationships?.downstream || []).length > 3" class="text-[11px] text-slate-400">
+                    +{{ hoverData.company_network.relationships.downstream.length - 3 }} 關係企業
+                </span>
+            </div>
+        </div>
+
         <!-- External Link Buttons -->
-        <div class="pt-2 border-t flex items-center justify-between gap-1.5 text-xs font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+        <div class="pt-2 border-t flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <button v-if="hoverData.company_network"
+                    @click="toggleRowDrawer(hoverData.ticker, 'network'); hideCompanyHover(true)"
+                    class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
+                    :class="isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'"
+                    title="在卡片中展開集團股權網絡與官方拓撲圖譜">
+                <span class="material-symbols-outlined text-[13px] leading-none">account_tree</span>
+                <span>集團網絡</span>
+            </button>
             <a v-if="hoverData.links?.yahoo" :href="hoverData.links.yahoo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
                 <span>Yahoo</span>

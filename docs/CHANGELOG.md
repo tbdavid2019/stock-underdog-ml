@@ -4,6 +4,30 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.20)
+
+### Fixed & Enhanced (Card Mode Corporate Network Parity, SVG Topology Graph, Multi-Tab Expansion & Hover Popover Upgrade)
+- **🎴 卡片模式（Card Mode）集團股權網絡與完整情報全面對齊（Card Mode Full Parity & Impeccable Polish）**：
+  1. **卡片底部操作列與意圖直覺化**：
+     - **診斷痛點**：卡片檢視（Grid Card View）底部原僅有一顆按鈕標記為「法說 / 簡報 ⌵」，讓使用者誤以為卡片模式僅能查看法說會，無法探查公司基本面與剛發布的「集團股權網絡」拓撲圖；且點擊展開後之抽屜內容亦嚴重閹割，缺乏上游母公司與官方 SVG 拓撲圖。
+     - **核心升級**：卡片底部重新設計，提供三大清晰操作按鈕群組：
+       - `[詳情 ⌵]`：展開/收合完整公司背景、營運摘要、即時新聞與外部情報連結。
+       - `[集團網絡]`：直達「集團股權網絡」頁籤，一鍵展開上下游關係企業與 SVG 拓撲關係圖。
+       - `[法說會]`：直達「法說會日程」頁籤，並帶有法說會場次徽章計數。
+  2. **卡片抽屜「集團股權網絡」完整移植與官方 SVG 拓撲圖內嵌**：
+     - 補齊卡片抽屜中的「統編、實收資本額、代表董座、登記地址」與「開啟互動圖譜」外開按鈕。
+     - 支援「上游母公司／控股法人」與「下游轉投資與核心關係企業」完整清單，標示上市狀態與點擊代號速查時序量化。
+     - 完整內嵌 **Taiwan Company Network 官方 SVG 即時向量拓撲架構卡片**，支援開新分頁檢視原圖與懸停微縮放互動。
+     - 補齊基本面頁籤之集團企業快速摘要（Quick Highlights）與即時新聞列表，並修復法說會頁籤詳細資訊（包含會議形式、地點、EPS 預估/公佈、官方簡報與影音直播回放）。
+  3. **個股懸停浮窗（Hover Popover）同步增強**：
+     - 在滑鼠停留於股票代號與名稱時所浮現的即時視窗中，新增「集團股權關係網絡」重點摘要（顯示母公司與核心關係企業）。
+     - 浮窗底部功能列新增 `[集團網絡]` 專屬按鈕，點擊可直接在下方卡片中展開並切換至股權網絡頁籤，無需手動尋找。
+  4. **手機版響應式卡片（Mobile Responsive Cards）同步升級**：
+     - 手機版表格卡片（`< md`）之抽屜頁籤同樣全面補齊「上游控股法人」、「完整轉投資關係企業」與「SVG 向量拓撲圖」內嵌預覽。
+  5. **前端動態狀態管理強化（`toggleRowDrawer`）**：
+     - `toggleRowDrawer(ticker, targetTab)` 支援傳入目標分頁（`profile` / `network` / `earnings`），若抽屜已開啟可平滑切換分頁而不中斷；若未載入關係網絡則自動透過 `ensureCompanyNetworkLoaded` 進行防禦性延遲補抓。
+     - 新增 `isTwStock(ticker)` 輔助判斷，確保所有台股標的在卡片與表格檢視中皆能即時呈現「集團股權網絡」入口。
+
 ## 2026-10-15 (v2.4.19)
 
 ### Fixed & Enhanced (FedWatch 2MD Error Interception, Resilient Fallback Restoration, Taiwan Company Network SVG Topology & WebMCP Tool #21)

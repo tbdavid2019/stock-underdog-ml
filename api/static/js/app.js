@@ -375,22 +375,36 @@ export const app = createApp({
                 chartManager.renderBrokerChart('brokerChartCanvas', this.brokerDates, this.brokerSeries, this.isDark);
             });
         },
-        async toggleRowDrawer(ticker) {
+        async toggleRowDrawer(ticker, targetTab = null) {
             if (this.expandedDrawerTicker === ticker) {
+                if (targetTab && this.drawerActiveSubTab !== targetTab) {
+                    this.drawerActiveSubTab = targetTab;
+                    if (targetTab === 'network' && (!this.expandedDrawerData || !this.expandedDrawerData.company_network)) {
+                        this.ensureCompanyNetworkLoaded(ticker);
+                    }
+                    return;
+                }
                 this.expandedDrawerTicker = null;
                 this.expandedDrawerData = null;
                 return;
             }
 
             this.expandedDrawerTicker = ticker;
-            this.drawerActiveSubTab = 'profile';
+            this.drawerActiveSubTab = targetTab || 'profile';
 
             // Also load earnings call history for this ticker
             this.loadTickerEarnings(ticker);
 
+            if (targetTab === 'network') {
+                this.ensureCompanyNetworkLoaded(ticker);
+            }
+
             if (this.companyProfileCache[ticker]) {
                 this.expandedDrawerData = this.companyProfileCache[ticker];
                 this.expandedDrawerLoading = false;
+                if (targetTab === 'network' && !this.expandedDrawerData.company_network) {
+                    this.ensureCompanyNetworkLoaded(ticker);
+                }
                 return;
             }
 
@@ -417,6 +431,30 @@ export const app = createApp({
                 if (this.expandedDrawerTicker === ticker) {
                     this.expandedDrawerLoading = false;
                 }
+            }
+        },
+        async ensureCompanyNetworkLoaded(ticker) {
+            if (!ticker) return;
+            try {
+                const net = await ApiClient.getCompanyNetwork(ticker);
+                if (net && net.name) {
+                    if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
+                    this.expandedDrawerData.company_network = net;
+                    if (!this.expandedDrawerData.links) this.expandedDrawerData.links = {};
+                    if (net.web_url) this.expandedDrawerData.links.network_graph = net.web_url;
+                    if (net.image_url) this.expandedDrawerData.links.network_image = net.image_url;
+                    if (this.companyProfileCache[ticker]) {
+                        this.companyProfileCache[ticker].company_network = net;
+                        if (!this.companyProfileCache[ticker].links) this.companyProfileCache[ticker].links = {};
+                        if (net.web_url) this.companyProfileCache[ticker].links.network_graph = net.web_url;
+                        if (net.image_url) this.companyProfileCache[ticker].links.network_image = net.image_url;
+                    }
+                    if (this.hoverVisible && this.hoverData?.ticker === ticker) {
+                        this.hoverData.company_network = net;
+                    }
+                }
+            } catch (e) {
+                console.debug("Failed to lazily load company network:", e);
             }
         },
         async loadUpcomingEarnings() {
@@ -1011,6 +1049,11 @@ export const app = createApp({
                         .catch(e => console.debug("Prefetch batch skipped:", e));
                 }, (i / chunkSize) * 300);
             }
+        },
+        isTwStock(ticker) {
+            if (!ticker) return false;
+            const t = String(ticker).toUpperCase();
+            return t.endsWith('.TW') || t.endsWith('.TWO') || /^\d{4,5}$/.test(t);
         },
         stripEmojis(str) {
             if (!str) return '';
