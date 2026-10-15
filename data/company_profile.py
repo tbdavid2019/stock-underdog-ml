@@ -133,6 +133,28 @@ class CompanyProfileService:
         # 1. 檢查快取 (L1 記憶體 -> L2 磁碟 20天)
         cached = cls._read_cache(ticker)
         if cached:
+            is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
+            if is_tw and not cached.get("company_network"):
+                try:
+                    from data.company_network import CompanyNetworkService
+                    network = CompanyNetworkService.get_company_network(ticker, db)
+                    if network:
+                        cached["company_network"] = network
+                        if network.get("unified_id") and not cached.get("unified_id"):
+                            cached["unified_id"] = network["unified_id"]
+                        if network.get("capital_formatted") and not cached.get("capital"):
+                            cached["capital"] = network["capital_formatted"]
+                        if network.get("representative") and not cached.get("chairman"):
+                            cached["chairman"] = network["representative"]
+                        if network.get("name") and not cached.get("registered_name"):
+                            cached["registered_name"] = network["name"]
+                        if network.get("web_url"):
+                            if "links" not in cached:
+                                cached["links"] = {}
+                            cached["links"]["network_graph"] = network["web_url"]
+                        cls._write_cache(ticker, cached)
+                except Exception as e:
+                    logger.debug(f"Backfill company network failed: {e}")
             return cached
 
         # 2. 解析公司基本名稱
