@@ -128,6 +128,7 @@ class DecisionService:
 
         return {
             "success": True,
+            "any_available": True,
             "any_remote_available": all_remote_healthy,
             "local_rules_ready": True,
             "endpoints": health
