@@ -445,11 +445,6 @@ export const app = createApp({
             try {
                 const net = await ApiClient.getCompanyNetwork(ticker);
                 if (net && net.name) {
-                    if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
-                    this.expandedDrawerData.company_network = net;
-                    if (!this.expandedDrawerData.links) this.expandedDrawerData.links = {};
-                    if (net.web_url) this.expandedDrawerData.links.network_graph = net.web_url;
-                    if (net.image_url) this.expandedDrawerData.links.network_image = net.image_url;
                     if (this.companyProfileCache[ticker]) {
                         this.companyProfileCache[ticker].company_network = net;
                         if (!this.companyProfileCache[ticker].links) this.companyProfileCache[ticker].links = {};
@@ -458,6 +453,14 @@ export const app = createApp({
                     }
                     if (this.hoverVisible && this.hoverData?.ticker === ticker) {
                         this.hoverData.company_network = net;
+                    }
+                    // 僅在當前展開抽屜仍是該股票時才寫入抽屜狀態，防止切換標的造成串台 (Codex P2)
+                    if (this.expandedRowTicker === ticker) {
+                        if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
+                        this.expandedDrawerData.company_network = net;
+                        if (!this.expandedDrawerData.links) this.expandedDrawerData.links = {};
+                        if (net.web_url) this.expandedDrawerData.links.network_graph = net.web_url;
+                        if (net.image_url) this.expandedDrawerData.links.network_image = net.image_url;
                     }
                 }
             } catch (e) {
@@ -471,13 +474,16 @@ export const app = createApp({
             try {
                 const tender = await ApiClient.getCompanyTender(ticker);
                 if (tender) {
-                    if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
-                    this.expandedDrawerData.company_tender = tender;
                     if (this.companyProfileCache[ticker]) {
                         this.companyProfileCache[ticker].company_tender = tender;
                     }
                     if (this.hoverVisible && this.hoverData?.ticker === ticker) {
                         this.hoverData.company_tender = tender;
+                    }
+                    // 僅在當前展開抽屜仍是該股票時才寫入抽屜狀態，防止切換標的造成串台 (Codex P2)
+                    if (this.expandedRowTicker === ticker) {
+                        if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
+                        this.expandedDrawerData.company_tender = tender;
                     }
                 }
             } catch (e) {

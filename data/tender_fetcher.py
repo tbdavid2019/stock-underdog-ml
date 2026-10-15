@@ -228,8 +228,8 @@ class TenderService:
             if ok_comp and isinstance(res_comp, dict):
                 compliance_data = res_comp
 
-        # 若查無此廠商，回傳明確標記並寫入快取，避免重複請求
-        if is_not_found or not report_data:
+        # 若查無此廠商（ToBid 明確回傳 NOT_FOUND），回傳明確標記並寫入 7 天快取，避免重複請求
+        if is_not_found:
             empty_result = {
                 "ticker": canonical_ticker,
                 "raw_code": raw_code,
@@ -242,6 +242,18 @@ class TenderService:
             # 寫入各級快取
             cls._save_to_all_caches(raw_code, empty_result, db=db)
             return empty_result
+
+        # 若是網路超時或暫時性異常而未取得 report_data，不寫入持久快取，回傳暫時無法取得 (Codex P2)
+        if not report_data:
+            return {
+                "ticker": canonical_ticker,
+                "raw_code": raw_code,
+                "name": company_name,
+                "has_data": False,
+                "message": f"ToBid 標案資料庫連線逾時（{res_rep or '服務異常'}），請稍後重試",
+                "web_url": f"https://tobid.tw/?q={urllib.parse.quote(company_name)}",
+                "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
 
         # 6. 組裝豐富化標案情報資料結構
         award_total = report_data.get("known_award_total") or 0
@@ -334,16 +346,6 @@ class TenderService:
             yearly_awards = yearly_awards[:5]
 
         # 風控查核 (政府採購法第 101 條停權／黑天鵝查核)
-        compliance_obj = {
-            "currently_debarred": False,
-            "status": "PASSED",
-            "label": "🛡️ 採購法第 101 條正常（無停權處分）",
-            "debarments": [],
-            "debarment_count": 0,
-            "article_101_cases_count": 0,
-            "revoked_count": 0,
-            "quality_awards_count": 0
-        }
         if compliance_data and isinstance(compliance_data, dict):
             is_debarred = bool(compliance_data.get("currently_debarred"))
             debarments = compliance_data.get("debarments") or []
@@ -360,6 +362,19 @@ class TenderService:
                 "revoked_count": len(revoked),
                 "quality_awards_count": len(awards),
                 "sources": compliance_data.get("sources") or {}
+            }
+        else:
+            # 上游風控查詢逾時或未成功時，明確保留 UNKNOWN 狀態，避免誤將未查核視為通過 (Codex P1)
+            compliance_obj = {
+                "currently_debarred": False,
+                "status": "UNKNOWN",
+                "label": "⚠️ 採購法查核暫不可用（連線逾時）",
+                "debarments": [],
+                "debarment_count": 0,
+                "article_101_cases_count": 0,
+                "revoked_count": 0,
+                "quality_awards_count": 0,
+                "sources": {}
             }
 
         result_data = {

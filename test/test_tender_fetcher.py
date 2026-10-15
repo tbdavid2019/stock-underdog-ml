@@ -5,6 +5,7 @@ test/test_tender_fetcher.py - Unit tests for ToBid Taiwan Government Tender Serv
 import os
 import shutil
 import unittest
+import requests
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
@@ -260,6 +261,57 @@ class TestTenderService(unittest.TestCase):
         self.assertEqual(data["compliance"]["status"], "DEBARRED")
         self.assertIn("停權生效中", data["compliance"]["label"])
         self.assertEqual(data["compliance"]["debarment_count"], 1)
+
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_get_company_tender_compliance_failure_reports_unknown(self, mock_post, mock_resolve):
+        mock_resolve.return_value = {
+            "name": "漢翔航空工業股份有限公司",
+            "code": "2634",
+            "market": "TWSE"
+        }
+        report_payload = {"known_award_total": 1000000, "wins": 5, "participations": 10}
+
+        def mock_post_side_effect(url, json=None, **kwargs):
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            tool_name = json.get("params", {}).get("name") if json else ""
+            if tool_name == "vendor_report":
+                mock_resp.json.return_value = {"result": {"content": [{"type": "text", "text": __import__("json").dumps(report_payload)}]}}
+            elif tool_name == "vendor_awards":
+                mock_resp.json.return_value = {"result": {"content": [{"type": "text", "text": __import__("json").dumps({"items": [], "yearly": []})}]}}
+            elif tool_name == "vendor_compliance":
+                # Mock compliance timeout / failure
+                raise requests.Timeout("Connection timed out")
+            return mock_resp
+
+        mock_post.side_effect = mock_post_side_effect
+        data = TenderService.get_company_tender("2634.TW")
+        self.assertIsNotNone(data)
+        self.assertTrue(data.get("has_data"))
+        self.assertIn("compliance", data)
+        # Verify status is UNKNOWN instead of blindly PASSED (Codex P1)
+        self.assertEqual(data["compliance"]["status"], "UNKNOWN")
+        self.assertIn("暫不可用", data["compliance"]["label"])
+
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_get_company_tender_transient_failure_not_cached(self, mock_post, mock_resolve):
+        mock_resolve.return_value = {
+            "name": "漢翔航空工業股份有限公司",
+            "code": "2634",
+            "market": "TWSE"
+        }
+        # Mock transient timeout on vendor_report
+        mock_post.side_effect = requests.Timeout("Gateway Timeout")
+
+        data = TenderService.get_company_tender("2634.TW")
+        self.assertIsNotNone(data)
+        self.assertFalse(data.get("has_data"))
+        self.assertIn("連線逾時", data.get("message", ""))
+
+        # Verify it was NOT persisted to L1 cache (Codex P2)
+        self.assertNotIn("2634", TenderService._MEM_CACHE)
 
     def test_duckdb_cache_integration(self):
         mock_db = MagicMock()

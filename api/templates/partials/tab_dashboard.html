@@ -865,9 +865,9 @@
                         <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-2.5">
                             <!-- Mobile Compliance Badge -->
                             <div v-if="expandedDrawerData.company_tender.compliance" class="p-1.5 rounded-lg border text-[11px] font-bold flex items-center justify-between"
-                                 :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'">
+                                 :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400')">
                                 <div class="flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[14px]">{{ expandedDrawerData.company_tender.compliance.currently_debarred ? 'warning' : 'verified_user' }}</span>
+                                    <span class="material-symbols-outlined text-[14px]">{{ expandedDrawerData.company_tender.compliance.currently_debarred ? 'warning' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'help' : 'verified_user') }}</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </div>
                                 <span v-if="expandedDrawerData.company_tender.tax_id" class="text-[10px] text-slate-400 font-mono">統編: {{ expandedDrawerData.company_tender.tax_id }}</span>
@@ -1434,11 +1434,16 @@
                                     <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-4">
                                         <!-- Compliance & Source Status Bar -->
                                         <div v-if="expandedDrawerData.company_tender.compliance" class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border"
-                                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200')">
+                                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/10 border-amber-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
                                             <div class="flex items-center space-x-2">
                                                 <span v-if="expandedDrawerData.company_tender.compliance.currently_debarred"
                                                       class="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center space-x-1">
                                                     <span class="material-symbols-outlined text-[15px]">warning</span>
+                                                    <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
+                                                </span>
+                                                <span v-else-if="expandedDrawerData.company_tender.compliance.status === 'UNKNOWN'"
+                                                      class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center space-x-1">
+                                                    <span class="material-symbols-outlined text-[15px]">help</span>
                                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                                 </span>
                                                 <span v-else
@@ -2218,11 +2223,16 @@
                     <div v-else-if="expandedDrawerData?.company_tender && expandedDrawerData.company_tender.has_data" class="space-y-3.5">
                         <!-- Compliance & Source Status Bar -->
                         <div v-if="expandedDrawerData.company_tender.compliance" class="p-2 sm:p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-1.5"
-                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200')">
+                             :class="expandedDrawerData.company_tender.compliance.currently_debarred ? 'bg-rose-500/10 border-rose-500/30' : (expandedDrawerData.company_tender.compliance.status === 'UNKNOWN' ? 'bg-amber-500/10 border-amber-500/30' : (isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'))">
                             <div class="flex items-center space-x-1.5">
                                 <span v-if="expandedDrawerData.company_tender.compliance.currently_debarred"
                                       class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center space-x-1">
                                     <span class="material-symbols-outlined text-[14px]">warning</span>
+                                    <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
+                                </span>
+                                <span v-else-if="expandedDrawerData.company_tender.compliance.status === 'UNKNOWN'"
+                                      class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center space-x-1">
+                                    <span class="material-symbols-outlined text-[14px]">help</span>
                                     <span>{{ expandedDrawerData.company_tender.compliance.label }}</span>
                                 </span>
                                 <span v-else

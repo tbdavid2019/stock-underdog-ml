@@ -27,6 +27,10 @@
      - **手機版自適應視圖（Mobile Drawer）**：精簡版指標展示，快速檢視得標總額、勝率、核心客戶與對手。
      - **個股懸停浮窗（Hover Popover）**：台股標的浮窗底部操作列新增 `[政府標案]` 捷徑，一鍵展開並切換至標案面板。
      - 嚴格遵守 `impeccable` 頂級工藝標準，完全消除 AI 套版色彩反模式，採用高對比度金融級色彩調色盤（Emerald / Sky / Amber / Teal）。
+  5. **Codex Code Review 審查優化與防禦性加固**：
+     - **[P1] 風控查核失敗時保留 UNKNOWN 未查核狀態**：當 `vendor_compliance` 呼叫逾時或異常時，明確標記為 `status: UNKNOWN`（`⚠️ 採購法查核暫不可用`），杜絕將連線中斷誤判為審核合格。
+     - **[P2] 嚴格隔離暫態網路錯誤與確定查無資料**：僅在 ToBid 明確回傳 `NOT_FOUND` 時寫入 7 天負向持久快取；若為網路逾時或暫態異常則不寫入持久快取，避免暫態斷線造成永久資料空窗。
+     - **[P2] 前端抽屜防串台競態校驗**：在 `ensureCompanyNetworkLoaded` 與 `ensureCompanyTenderLoaded` 非同步回傳後，比對 `this.expandedRowTicker === ticker`，防止快速切換股票時資料寫入錯誤抽屜。
 
 ## 2026-10-15 (v2.4.21)
 
