@@ -165,6 +165,15 @@ def get_upcoming_calls(
             limit=lim
         )
 
+    # 若在預設滑動視窗內該市場暫無法說會排程 (例如日韓或低頻市場)，回溯抓取最近召開之歷史法說會，避免清單空白
+    if not records and (start_date is None or not isinstance(start_date, str)):
+        records = duckdb_manager.get_earnings_calls(
+            market=mkt,
+            is_weight_stock=w_stock,
+            order_desc=True,
+            limit=lim
+        )
+
     enriched = [_enrich_call_item(r, today) for r in records]
 
     # 排序：優先呈現今天 (today) 與即將召開 (upcoming，依倒數天數升序)，隨後呈現近期已召開 (past，依日期降序)

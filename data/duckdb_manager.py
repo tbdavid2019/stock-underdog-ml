@@ -1544,6 +1544,7 @@ class DuckDBManager:
         end_date: Optional[str] = None,
         ticker: Optional[str] = None,
         is_weight_stock: Optional[bool] = None,
+        order_desc: bool = False,
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """查詢法說會時程與歷史清單"""
@@ -1571,7 +1572,8 @@ class DuckDBManager:
                 params.append(is_weight_stock)
             
             lim = int(limit) if isinstance(limit, (int, str)) and str(limit).isdigit() else 100
-            query += " ORDER BY call_date ASC, call_time ASC LIMIT ?"
+            order_clause = "ORDER BY call_date DESC, call_time DESC" if order_desc else "ORDER BY call_date ASC, call_time ASC"
+            query += f" {order_clause} LIMIT ?"
             params.append(lim)
 
             with self._get_connection() as con:
