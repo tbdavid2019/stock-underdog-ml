@@ -89,7 +89,8 @@ export const app = createApp({
             earningsUpcomingCount: 0,
             earningsPastCount: 0,
             earningsWeightOnly: false,
-            drawerActiveSubTab: 'profile', // 'profile' | 'earnings'
+            drawerActiveSubTab: 'profile', // 'profile' | 'network' | 'earnings' | 'tender'
+            companyTenderLoading: false,
             drawerEarningsMap: {},
             drawerEarningsLoading: false,
             showEarningsModal: false,
@@ -381,6 +382,8 @@ export const app = createApp({
                     this.drawerActiveSubTab = targetTab;
                     if (targetTab === 'network' && (!this.expandedDrawerData || !this.expandedDrawerData.company_network)) {
                         this.ensureCompanyNetworkLoaded(ticker);
+                    } else if (targetTab === 'tender' && (!this.expandedDrawerData || !this.expandedDrawerData.company_tender)) {
+                        this.ensureCompanyTenderLoaded(ticker);
                     }
                     return;
                 }
@@ -397,6 +400,8 @@ export const app = createApp({
 
             if (targetTab === 'network') {
                 this.ensureCompanyNetworkLoaded(ticker);
+            } else if (targetTab === 'tender') {
+                this.ensureCompanyTenderLoaded(ticker);
             }
 
             if (this.companyProfileCache[ticker]) {
@@ -404,6 +409,8 @@ export const app = createApp({
                 this.expandedDrawerLoading = false;
                 if (targetTab === 'network' && !this.expandedDrawerData.company_network) {
                     this.ensureCompanyNetworkLoaded(ticker);
+                } else if (targetTab === 'tender' && !this.expandedDrawerData.company_tender) {
+                    this.ensureCompanyTenderLoaded(ticker);
                 }
                 return;
             }
@@ -455,6 +462,28 @@ export const app = createApp({
                 }
             } catch (e) {
                 console.debug("Failed to lazily load company network:", e);
+            }
+        },
+        async ensureCompanyTenderLoaded(ticker) {
+            if (!ticker || !this.isTwStock(ticker)) return;
+            if (this.expandedDrawerData && this.expandedDrawerData.company_tender) return;
+            this.companyTenderLoading = true;
+            try {
+                const tender = await ApiClient.getCompanyTender(ticker);
+                if (tender) {
+                    if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
+                    this.expandedDrawerData.company_tender = tender;
+                    if (this.companyProfileCache[ticker]) {
+                        this.companyProfileCache[ticker].company_tender = tender;
+                    }
+                    if (this.hoverVisible && this.hoverData?.ticker === ticker) {
+                        this.hoverData.company_tender = tender;
+                    }
+                }
+            } catch (e) {
+                console.debug("Failed to lazily load company tender:", e);
+            } finally {
+                this.companyTenderLoading = false;
             }
         },
         async loadUpcomingEarnings() {
@@ -1360,6 +1389,19 @@ export const app = createApp({
                             return JSON.stringify({ navigated: false, error: e.message });
                         }
                     }
+                });
+
+                await modelCtx.registerTool({
+                    name: 'get_company_tenders',
+                    description: '透過 ToBid 查詢台股企業之政府採購得標統計、得標率、累計金額、主要機關金主與競標對手情報。',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            ticker: { type: 'string', description: '股票代號或公司名稱（例如 2634.TW, 1519, 漢翔）' }
+                        },
+                        required: ['ticker']
+                    },
+                    execute: async ({ ticker }) => JSON.stringify(await ApiClient.getCompanyTender(ticker))
                 });
 
                 console.log('[Chrome WebMCP] Registered native tools to document.modelContext');

@@ -280,7 +280,8 @@ def get_webmcp_manifest():
             "get_upcoming_earnings_calls",
             "get_ticker_earnings_calls",
             "get_company_network",
-            "open_company_network"
+            "open_company_network",
+            "get_company_tenders"
         ]
     })
 
@@ -367,6 +368,7 @@ def get_llms_txt():
 - `get_upcoming_earnings_calls`: 查詢跨市場 (台/美/日/韓/全球) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放。
 - `get_ticker_earnings_calls`: 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載。
 - `open_company_network`: 在瀏覽器中導航開啟特定台股企業之互動式集團股權拓撲關係圖譜 (Taiwan Company Network)。
+- `get_company_tenders`: 透過 ToBid 查詢台股企業之政府電子採購網得標案件統計、累計金額、主要機關金主與競標對手情報。
 
 ## Agent & Developer Discovery Standards
 
@@ -493,7 +495,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (21 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`.
+- Tools (22 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -754,6 +756,21 @@ def get_webmcp_bridge():
                     window.open(graphUrl, '_blank');
                 }
                 return JSON.stringify({ navigated: true, company: args.company, url: graphUrl, direction: args?.direction || 'both', message: '已在瀏覽器新分頁中開啟「' + args.company + '」之集團股權關係圖譜。' });
+            }
+        },
+        {
+            name: 'get_company_tenders',
+            description: '查詢台股企業之政府採購得標統計、得標率、累計金額、主要機關金主與競標對手情報 (ToBid)',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    ticker: { type: 'string', description: '股票代號或名稱 (如 2634.TW, 漢翔, 華城)' }
+                },
+                required: ['ticker']
+            },
+            execute: async (args) => {
+                let url = '/api/v1/market/company-tender?ticker=' + encodeURIComponent(args.ticker);
+                return JSON.stringify(await (await fetch(url)).json());
             }
         }
     ];

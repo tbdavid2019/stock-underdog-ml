@@ -240,6 +240,7 @@ graph TD
 19. `get_ticker_earnings_calls`: 查詢單一標的之歷史法說會紀錄、管理層財測指引（營收/毛利率/CapEx）與機構 Q&A。
 20. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
 21. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
+22. `get_company_tenders`: 查詢台灣上市櫃公司之政府電子採購網得標情報（累計得標總金額、勝率、獨標率、核心採購機關金主、競標對手與大案清單，串接 ToBid MCP）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
@@ -252,7 +253,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (21 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (22 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -279,6 +280,7 @@ graph TD
 | `/api/v1/market/universe` | `GET` | 全球證券清冊、來源 snapshot 與 stale/cache freshness 狀態 |
 | `/api/v1/market/company-profile/{ticker}` | `GET` | 查詢公司中文營運簡介、董監事持股、即時新聞與集團網絡連結 |
 | `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡 |
+| `/api/v1/market/company-tender/{ticker}` | `GET` | 查詢台股標的之政府採購得標金額、勝率、獨標率、採購機關與對手標案情資 (ToBid) |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 | `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美日韓跨市場法人說明會、雙時區（CST/EST）、時間維度篩選（ALL/TODAY/UPCOMING/PAST）與天數倒數 |

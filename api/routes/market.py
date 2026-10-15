@@ -404,6 +404,31 @@ def get_company_network_endpoint(
         raise HTTPException(status_code=500, detail=f"查詢企業網絡失敗: {e}")
 
 
+@router.get("/company-tender/{ticker}", summary="取得特定股票之政府標案得標統計與金主對手情報 (ToBid)")
+@router.get("/company-tender", summary="取得特定股票之政府標案得標統計與金主對手情報 (ToBid)")
+def get_company_tender_endpoint(
+    ticker: Optional[str] = None,
+    query: Optional[str] = Query(None, description="股票代號或名稱，如 2634, 2634.TW, 漢翔, 華城"),
+    force_refresh: bool = Query(False, description="是否強制重新抓取"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    查詢台股上市櫃企業之政府電子採購網得標案件統計、累計金額、主要機關金主與競標對手情報 (ToBid MCP)。
+    """
+    from data.tender_fetcher import TenderService
+    target = ticker or query
+    if not target:
+        raise HTTPException(status_code=400, detail="請提供股票代號或名稱")
+
+    try:
+        tender = TenderService.get_company_tender(target, db=db, force_refresh=force_refresh)
+        if not tender:
+            return {"success": False, "ticker": target, "data": None, "message": "無法取得該標的之政府標案情報"}
+        return {"success": True, "ticker": target, "data": tender}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查詢標案情報失敗: {e}")
+
+
 class BatchCompanyProfilesRequest(BaseModel):
     tickers: List[str]
 

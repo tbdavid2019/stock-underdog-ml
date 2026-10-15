@@ -4,6 +4,30 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-15 (v2.4.22)
+
+### Added & Enhanced (ToBid Taiwan Government Tender Integration, WebMCP Tool #22 & Impeccable Multi-View Parity)
+- **🏛️ 台灣政府電子採購網標案情資整合（ToBid MCP Integration & Multi-Tier Caching）**：
+  1. **ToBid MCP 後端服務（`data/tender_fetcher.py`）**：
+     - 整合 `https://tobid.tw/guide/mcp` 之公開標準 JSON-RPC MCP 端點（`https://api.tobid.tw/mcp`）。
+     - 結合 Taiwan Company Network 實體名稱消歧義（Entity Resolution），自動將上市櫃股票代碼（例如 `2634.TW`、`1519.TW`）轉換為中華民國經濟部登記正式全稱（如「漢翔航空工業股份有限公司」、「華城電機股份有限公司」）以精準檢索。
+     - 並行發送 `vendor_report`、`vendor_awards` 與 `vendor_compliance` 工具調用，彙整五大關鍵面向：累計已知得標總金額、投標總場次、得標總場次、平均勝出率、獨家規格投標率，以及基本面黑天鵝風控（《政府採購法》第 101/103 條停權／拒絕往來廠商與申訴審查狀態）。
+     - 提取 Top 5 採購機關金主（機關名稱、得標次數、累積金額與幣別友善格式化）、Top 5 競爭對手與正面勝率對比、核心採購品項標籤、近期落標原因分析、近 6 筆得標大案與近 5 年得標趨勢。
+     - 實作三層快取架構（L1 記憶體 -> L2 DuckDB `company_tenders` 資料表 -> L3 磁碟快取，7 天 TTL），並對非政府標案型企業實作負向快取（Negative Caching），杜絕重複無效對外查詢。
+  2. **DuckDB 標案資料持久化（`data/duckdb_manager.py`）**：
+     - 新增 `company_tenders` 資料表（ticker, company_name, data, updated_at），提供 `save_company_tender` 與 `get_company_tender` 支援高效本機結構化快取與離線檢索。
+  3. **REST API 與 WebMCP 第 22 大原生工具（`get_company_tenders`）**：
+     - 新增 `GET /api/v1/market/company-tender` 與 `GET /api/v1/market/company-tender/{ticker}` 端點。
+     - 註冊第 22 號 FastMCP / WebMCP 原生工具 `get_company_tenders(ticker)`，支援 Claude Desktop、Cursor、Cline、Windsurf 與 Chrome WebMCP 動態調用。
+     - 同步更新 `/.well-known/mcp.json`、`/.webmcp/bridge.js`、`/llms.txt`、`/llms-full.txt` 與前端 `document.modelContext` 工具清單。
+  4. **前端四重視圖全面支援（Desktop Table, Card Mode, Mobile Cards & Hover Popover）**：
+     - **黑天鵝風控警戒徽章**：於桌面版、卡片版與手機版抽屜頂部清晰呈現《政府採購法》第 101 條查核狀態（綠色防護盾「🛡️ 採購法查核正常」/ 紅色警戒「🚨 採購法第 101 條停權生效中」）。
+     - **桌面版表格（Desktop Table Drawer）**：新增 `[政府標案]` 專屬抽屜頁籤，具備四大精緻指標卡片、採購機關與競爭對手雙欄對比、採購品項標籤、落標檢討分析、近五年得標走勢與得標案清單。
+     - **卡片模式（Card View Drawer）**：底部按鈕區新增 `[標案]` 快捷鍵，展開抽屜具備完整標案分頁與高質感數據卡片，支援一鍵切換與平滑導覽。
+     - **手機版自適應視圖（Mobile Drawer）**：精簡版指標展示，快速檢視得標總額、勝率、核心客戶與對手。
+     - **個股懸停浮窗（Hover Popover）**：台股標的浮窗底部操作列新增 `[政府標案]` 捷徑，一鍵展開並切換至標案面板。
+     - 嚴格遵守 `impeccable` 頂級工藝標準，完全消除 AI 套版色彩反模式，採用高對比度金融級色彩調色盤（Emerald / Sky / Amber / Teal）。
+
 ## 2026-10-15 (v2.4.21)
 
 ### Fixed (Earnings Fetcher Network Fallback & CI/CD Stability)

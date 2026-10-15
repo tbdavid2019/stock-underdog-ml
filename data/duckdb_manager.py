@@ -266,6 +266,19 @@ class DuckDBManager:
                     updated_at VARCHAR NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS company_tenders (
+                    ticker VARCHAR PRIMARY KEY,
+                    name VARCHAR NOT NULL,
+                    tax_id VARCHAR,
+                    wins INTEGER,
+                    participations INTEGER,
+                    win_rate DOUBLE,
+                    award_total DOUBLE,
+                    data_json VARCHAR NOT NULL,
+                    web_url VARCHAR,
+                    updated_at VARCHAR NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS podcast_channels (
                     channel_id VARCHAR PRIMARY KEY,
                     title VARCHAR NOT NULL,
@@ -1909,6 +1922,59 @@ class DuckDBManager:
                 return json.loads(data_json)
         except Exception as e:
             logger.debug(f"DuckDB 讀取企業網絡快取失敗 ({ticker}): {e}")
+            return None
+
+    # ==================== Company Tender Methods (ToBid) ====================
+
+    def save_company_tender(self, ticker: str, data: Dict[str, Any]) -> bool:
+        """寫入企業政府採購標案統計與情報至 DuckDB"""
+        if not self.enabled or not ticker or not data:
+            return False
+        try:
+            now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+            data_json = json.dumps(data, ensure_ascii=False)
+            name = str(data.get("name") or ticker)
+            tax_id = str(data.get("tax_id") or "")
+            wins = int(data.get("wins", 0))
+            participations = int(data.get("participations", 0))
+            win_rate = float(data.get("win_rate_pct", 0.0))
+            award_total = float(data.get("known_award_total", 0.0))
+            web_url = str(data.get("web_url") or "")
+
+            with self._get_connection() as con:
+                con.execute("""
+                INSERT OR REPLACE INTO company_tenders 
+                (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """, [ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️ 寫入企業標案情報至 DuckDB 失敗 ({ticker}): {e}")
+            return False
+
+    def get_company_tender(self, ticker: str, max_age_seconds: Optional[int] = 86400 * 7) -> Optional[Dict[str, Any]]:
+        """從 DuckDB 讀取企業標案資料，支援效期檢查（預設 7 天）"""
+        if not self.enabled or not ticker:
+            return None
+        try:
+            with self._get_connection() as con:
+                row = con.execute("""
+                SELECT data_json, updated_at FROM company_tenders WHERE ticker = ?;
+                """, [ticker]).fetchone()
+                if not row:
+                    return None
+                data_json, updated_at = row
+                if max_age_seconds is not None:
+                    try:
+                        up_time = datetime.datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ_TAIPEI)
+                        now_time = datetime.datetime.now(TZ_TAIPEI)
+                        if (now_time - up_time).total_seconds() > max_age_seconds:
+                            return None
+                    except Exception:
+                        pass
+                return json.loads(data_json)
+        except Exception as e:
+            logger.debug(f"DuckDB 讀取企業標案快取失敗 ({ticker}): {e}")
             return None
 
     # ==================== Podcast Radar Methods ====================

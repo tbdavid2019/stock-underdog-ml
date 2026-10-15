@@ -84,6 +84,7 @@ graph TD
 | `get_upcoming_earnings_calls` | `market`, `days`, `limit` | 查詢跨市場 (台/美/日/韓) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放 |
 | `get_ticker_earnings_calls` | `ticker`, `limit` | 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載 |
 | `open_company_network` | `company`, `direction` | 取得特定台股企業之視覺化股權拓撲關係圖譜連結 (web_url) 與官方靜態 SVG 向量拓撲圖 (image_url)，支援在瀏覽器中直接開啟圖譜 (Taiwan Company Network) |
+| `get_company_tenders` | `ticker` | 查詢台股企業之政府採購電子公報標案情資（累計得標總金額、投標勝率、獨家投標率、採購機關金主、競標對手與大案清單，串接 ToBid MCP） |
 
 ---
 
@@ -91,12 +92,13 @@ graph TD
 
 - `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
 - `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (21 大原生量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (22 大原生量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
 - `POST /api/v1/decision/evaluate` - Clef-Flash System One 決策模型評估端點
 - `GET /api/v1/decision/health` - Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev)
 - `GET /api/v1/market/company-profile?ticker=2330` - 個股繁中簡介、最新新聞與企業網絡
 - `GET /api/v1/market/company-network?ticker=2330` - 企業股權網絡、上下游轉投資與官方登記資料
+- `GET /api/v1/market/company-tender?ticker=2634` - 政府採購得標金額、勝率、獨標率、採購機關與對手標案情資 (ToBid)
 - `GET /api/v1/macro/latest` - 宏觀風控狀態與建議曝險
 - `GET /api/v1/macro/investing/summary` - 一站式總經數據彙整 (FedWatch、財報、大宗商品、日曆)
 - `GET /api/v1/macro/polymarket/sentiment` - Polymarket 宏觀情緒與聯準會降息真金白銀預測機率

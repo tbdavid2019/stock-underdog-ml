@@ -83,6 +83,21 @@ class TestMarketAPI(unittest.TestCase):
         self.assertFalse(data.get("success"))
         self.assertIsNone(data.get("data"))
 
+    def test_get_company_tender_endpoint(self):
+        resp = self.client.get("/api/v1/market/company-tender/2634.TW")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertIn("data", data)
+        self.assertEqual(data["data"]["ticker"], "2634.TW")
+
+    def test_get_company_tender_not_found(self):
+        resp = self.client.get("/api/v1/market/company-tender/INVALID999")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertFalse(data["data"].get("has_data", True))
+
 
 if __name__ == "__main__":
     unittest.main()

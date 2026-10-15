@@ -172,6 +172,14 @@
                 <span class="material-symbols-outlined text-[13px] leading-none">account_tree</span>
                 <span>集團網絡</span>
             </button>
+            <button v-if="isTwStock(hoverData.ticker)"
+                    @click="toggleRowDrawer(hoverData.ticker, 'tender'); hideCompanyHover(true)"
+                    class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
+                    :class="isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'"
+                    title="在卡片中查看政府電子採購標案情資">
+                <span class="material-symbols-outlined text-[13px] leading-none">gavel</span>
+                <span>政府標案</span>
+            </button>
             <a v-if="hoverData.links?.yahoo" :href="hoverData.links.yahoo" target="_blank" class="px-2 py-1 rounded-md border transition-all text-center flex-1 flex items-center justify-center space-x-0.5"
                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
                 <span>Yahoo</span>

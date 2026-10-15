@@ -190,6 +190,16 @@ export const ApiClient = {
     },
 
     /**
+     * Government Procurement & Tender Intelligence (ToBid MCP)
+     */
+    async getCompanyTender(ticker, signal) {
+        const res = await fetch(`/api/v1/market/company-tender?ticker=${encodeURIComponent(ticker)}`, { signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        return json.success ? json.data : null;
+    },
+
+    /**
      * Batch prefetch company profiles
      */
     async getCompanyProfilesBatch(tickers) {
