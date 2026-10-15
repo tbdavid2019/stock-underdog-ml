@@ -307,7 +307,7 @@ class TestEarningsCallFetcher(unittest.TestCase):
         self.assertTrue(any(b["ticker"] == "2330.TW" for b in benchmarks))
 
         # 模擬 BigGo API 回傳空字典
-        fetcher = EarningsCallFetcher(db=None)
+        fetcher = EarningsCallFetcher(db=unittest.mock.MagicMock())
         with unittest.mock.patch.object(fetcher, "_fetch_biggo_all_windows", return_value={}):
             results = fetcher.fetch_ticker_calls("2330.TW")
             self.assertGreaterEqual(len(results), 1)

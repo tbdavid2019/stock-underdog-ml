@@ -391,9 +391,10 @@ def fetch_biggo_call_enrichment(
 class EarningsCallFetcher:
     """跨市場法人說明會資料獲取器 (支援 TW, US, JP, KR 及全球)"""
 
-    def __init__(self, db_manager: Optional[Any] = None):
-        if db_manager is not None:
-            self.db = db_manager
+    def __init__(self, db_manager: Optional[Any] = None, db: Optional[Any] = None):
+        target_db = db if db is not None else db_manager
+        if target_db is not None:
+            self.db = target_db
         else:
             try:
                 from data.duckdb_manager import DuckDBManager
