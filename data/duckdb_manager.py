@@ -910,7 +910,11 @@ class DuckDBManager:
         ),
         resonance_rows AS (
             SELECT p.*,
-                   ROW_NUMBER() OVER (PARTITION BY p.ticker ORDER BY p.potential DESC NULLS LAST) as rn
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.ticker 
+                       ORDER BY CASE WHEN p.model_name = '多維共振' OR p.strategy_type = '多維共振' THEN 0 ELSE 1 END,
+                                p.potential DESC NULLS LAST
+                   ) as rn
             FROM predictions p
             JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
             WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%' OR p.dual_model_consensus = TRUE)
