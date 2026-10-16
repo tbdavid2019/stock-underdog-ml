@@ -12,7 +12,7 @@ import logging
 import datetime
 import json
 import threading
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 import pandas as pd
 import duckdb
 
