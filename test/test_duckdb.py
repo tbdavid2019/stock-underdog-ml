@@ -563,6 +563,77 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertEqual(snap["timestral_predicted_price"], 1035.0)
         self.assertTrue(snap["dual_model_consensus"])
 
+    def test_get_ticker_history_deduplication(self):
+        # 寫入同一天但不同批次（例如 台灣50 在 13:59:33 與 台灣中型100 在 13:59:48）的重複資料
+        records = [
+            # 13:59:33 (台灣50)
+            {
+                "index_name": "台灣50",
+                "model_name": "TimesFM",
+                "strategy_type": "TimesFM預測",
+                "ticker": "2360.TW",
+                "current_price": 2025.0,
+                "predicted_price": 2038.8,
+                "potential": 1.68,
+                "timestamp": "2026-10-16T13:59:33.504356+08:00"
+            },
+            {
+                "index_name": "台灣50",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral預測",
+                "ticker": "2360.TW",
+                "current_price": 2025.0,
+                "predicted_price": 2049.3,
+                "potential": 2.21,
+                "timestamp": "2026-10-16T13:59:33.504356+08:00"
+            },
+            # 13:59:48 (台灣中型100) - 重複跑
+            {
+                "index_name": "台灣中型100",
+                "model_name": "TimesFM",
+                "strategy_type": "TimesFM預測",
+                "ticker": "2360.TW",
+                "current_price": 2025.0,
+                "predicted_price": 2038.8,
+                "potential": 1.68,
+                "timestamp": "2026-10-16T13:59:48.341102+08:00"
+            },
+            {
+                "index_name": "台灣中型100",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral預測",
+                "ticker": "2360.TW",
+                "current_price": 2025.0,
+                "predicted_price": 2049.3,
+                "potential": 2.21,
+                "timestamp": "2026-10-16T13:59:48.341102+08:00"
+            },
+            # 前一天 2026-10-15 的正常歷史資料
+            {
+                "index_name": "台灣50",
+                "model_name": "TimesFM",
+                "strategy_type": "TimesFM預測",
+                "ticker": "2360.TW",
+                "current_price": 2000.0,
+                "predicted_price": 2020.0,
+                "potential": 1.0,
+                "timestamp": "2026-10-15T14:00:00.000000+08:00"
+            }
+        ]
+        self.mgr.save_predictions_batch(records)
+
+        history = self.mgr.get_ticker_history("2360.TW", limit=10)
+        # 預期：2026-10-16 僅保留 1 筆 TimesFM 與 1 筆 Timestral，不可有 4 筆；加上 10-15 的 1 筆，共 3 筆
+        self.assertEqual(len(history), 3, f"歷史紀錄應依日期與模型去重，實際取得 {len(history)} 筆")
+        
+        # 且 2026-10-16 的記錄若台灣50存在，優先保留台灣50歸屬
+        oct16_records = [r for r in history if r["timestamp"].startswith("2026-10-16")]
+        self.assertEqual(len(oct16_records), 2)
+        models_oct16 = {r["model_name"] for r in oct16_records}
+        self.assertEqual(models_oct16, {"TimesFM", "Timestral"})
+        for r in oct16_records:
+            self.assertEqual(r["index_name"], "台灣50")
+
 
 if __name__ == "__main__":
     unittest.main()

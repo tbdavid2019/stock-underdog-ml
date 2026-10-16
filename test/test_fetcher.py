@@ -57,5 +57,23 @@ class TestStockFetcher(unittest.TestCase):
         self.assertEqual(name_map["2454.TW"], "聯發科")
 
 
+    @patch.object(StockFetcher, "get_tw0050_stocks", return_value=["2330.TW", "2360.TW"])
+    @patch("data.fetcher.StockFetcher._fetch_index_with_cache_fallback")
+    def test_tw0051_deduplicates_tw0050_stocks(self, mock_fetch, mock_tw50):
+        # 模擬 upstream 回傳中型100含有 2360.TW (致茂) 與 2603.TW
+        mock_fetch.return_value = (["2360.TW", "2603.TW"], {"2360.TW": "致茂", "2603.TW": "長榮"})
+        stocks = StockFetcher.get_tw0051_stocks(exclude_tw0050=True)
+        self.assertNotIn("2360.TW", stocks, "2360.TW 已存在於台灣50，中型100必須自動排除")
+        self.assertIn("2603.TW", stocks)
+
+    @patch.object(StockFetcher, "get_tw0050_stocks", return_value=["2330.TW", "2360.TW"])
+    @patch("data.fetcher.StockFetcher._fetch_index_with_cache_fallback")
+    def test_get_index_name_map_midcap_excludes_tw50(self, mock_fetch, mock_tw50):
+        mock_fetch.return_value = (["2360.TW", "2603.TW"], {"2360.TW": "致茂", "2603.TW": "長榮"})
+        name_map = StockFetcher.get_index_name_map("台灣中型100")
+        self.assertNotIn("2360.TW", name_map)
+        self.assertIn("2603.TW", name_map)
+
+
 if __name__ == "__main__":
     unittest.main()

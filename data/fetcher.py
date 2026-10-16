@@ -109,8 +109,11 @@ class StockFetcher:
         return stocks
 
     @classmethod
-    def get_tw0051_stocks(cls) -> List[str]:
+    def get_tw0051_stocks(cls, exclude_tw0050: bool = True) -> List[str]:
         stocks, _ = cls._fetch_index_with_cache_fallback("TW0051", config.api.TW0051_URL, "TW0051", suffix=".TW")
+        if exclude_tw0050:
+            tw50 = set(cls.get_tw0050_stocks())
+            stocks = [s for s in stocks if s not in tw50]
         return stocks
 
     @classmethod
@@ -157,6 +160,9 @@ class StockFetcher:
                 name_map.setdefault("DXYZ", "Destiny Tech100 / SpaceX (DXYZ)")
                 name_map.setdefault("ASTS", "AST SpaceMobile (ASTS)")
                 name_map.setdefault("RKLB", "Rocket Lab (RKLB)")
+            elif index_name in ("台灣中型100", "TW0051", "0051"):
+                tw50_stocks = set(cls.get_tw0050_stocks())
+                name_map = {k: v for k, v in name_map.items() if k not in tw50_stocks}
             return name_map
         return {}
 

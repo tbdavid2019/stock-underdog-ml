@@ -1179,14 +1179,26 @@ class DuckDBManager:
         return self._clean_df_records(df)
 
     def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
-        """取得特定股票代碼之歷史預測軌跡"""
+        """
+        取得特定股票代碼之歷史預測軌跡。
+        依日期與模型去重，同天若因多指數重疊或多次執行產生多筆記錄，優先保留主要指數 (台灣50) 或最新之預測。
+        """
         sql = """
-        SELECT *
-        FROM predictions
-        WHERE ticker = ?
-          AND index_name NOT LIKE '%TEST%'
-          AND index_name NOT LIKE '%DEBUG%'
-          AND index_name NOT LIKE '%SERVICE_KEY%'
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY SUBSTRING(timestamp, 1, 10), COALESCE(model_name, strategy_type, 'UNKNOWN')
+                       ORDER BY CASE WHEN index_name IN ('台灣50', 'TW0050') THEN 0 ELSE 1 END, timestamp DESC
+                   ) as rn
+            FROM predictions
+            WHERE ticker = ?
+              AND index_name NOT LIKE '%TEST%'
+              AND index_name NOT LIKE '%DEBUG%'
+              AND index_name NOT LIKE '%SERVICE_KEY%'
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
         ORDER BY timestamp DESC
         LIMIT ?;
         """

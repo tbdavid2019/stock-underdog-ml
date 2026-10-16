@@ -296,6 +296,16 @@ class PipelineOrchestrator:
                 logger.warning(f"⚠️ 指數 {index_name} 成分股為空，跳過")
                 continue
             is_tw = index_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051")
+
+            # 若為中型100，二次確保排除與台灣50重疊成分股（避免重複運算與寫入）
+            if index_name in ("台灣中型100", "TW0051", "0051"):
+                tw50_stocks = set(indices.get("台灣50", []) or indices.get("TW0050", []) or indices.get("0050", []))
+                if tw50_stocks:
+                    orig_len = len(stock_list)
+                    stock_list = [s for s in stock_list if s not in tw50_stocks]
+                    if len(stock_list) < orig_len:
+                        logger.info(f"🛡️ 已過濾中型100中與台灣50重疊的 {orig_len - len(stock_list)} 檔成分股")
+
             target_macro = macro_states_map.get("TW" if is_tw else "US") or MacroRegimeAnalyzer.evaluate_market(index_name, period=period)
             rep = self.run_index_analysis(
                 index_name, 

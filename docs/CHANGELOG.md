@@ -4,6 +4,21 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-16 (v2.4.32)
+
+### Fixed & Optimized (Constituent Deduplication & Daily History Uniqueness)
+- **🛡️ 徹底修復台股中型100與台灣50成分股重疊導致重複計算問題（Index Constituent Deduplication）**：
+  - **根本原因診斷**：上游 API（`https://answerbook.david888.com/TW0051`）成分股清單因季度調整包含 110 檔標的，其中有 12 檔標的（如 `2360.TW` 致茂、`1216.TW` 統一、`2059.TW` 川湖、`2344.TW` 華邦電、`2368.TW` 金像電、`2408.TW` 南亞科、`2449.TW` 京元電子、`3443.TW` 創意、`3653.TW` 健策、`3665.TW` 貿聯-KY、`4958.TW` 臻鼎-KY、`8046.TW` 南電）同時存在於台灣50與台灣中型100。排程循序執行時，相隔 15 秒重複呼叫模型推論並重複寫入 DuckDB `predictions` 資料表。
+  - **成分股層級去重 (`data/fetcher.py`)**：
+    - `StockFetcher.get_tw0051_stocks(exclude_tw0050=True)`：嚴格遵循富時台灣證券交易所指數定義（台灣50為前50大市值，中型100為第51-150大市值，兩者在定義上互斥），在中型100清單中自動剔除台灣50成分股，杜絕 12 檔標的之雙重算力開銷。
+    - `StockFetcher.get_index_name_map("台灣中型100")`：同步剔除台灣50成分股，確保代號與名稱映射與成分股清單一致。
+  - **排程編排器雙重防禦 (`pipeline/orchestrator.py`)**：於 `run_all_indices` 加入二次防禦過濾機制，即便傳入自訂或快取成分股，中型100運算前亦自動過濾已於台灣50處理之標的。
+- **📊 個股歷史查詢時間序列去重優化 (`data/duckdb_manager.py`)**：
+  - **`get_ticker_history` 去重**：採用 SQL 視窗函式 `ROW_NUMBER() OVER (PARTITION BY SUBSTRING(timestamp, 1, 10), COALESCE(model_name, strategy_type, 'UNKNOWN') ORDER BY CASE WHEN index_name IN ('台灣50', 'TW0050') THEN 0 ELSE 1 END, timestamp DESC)`，確保歷史軌跡各交易日各模型（TimesFM、Timestral、多維共振等）僅呈現 1 筆最新預測，並優先保留主要權值指數（台灣50）歸屬，徹底消除歷史表格與圖表重複計算與多重時間點跳變問題。
+- **🧪 完整單元測試覆蓋 (`test/test_fetcher.py`, `test/test_duckdb.py`)**：
+  - 新增 `test_tw0051_deduplicates_tw0050_stocks` 與 `test_get_index_name_map_midcap_excludes_tw50`，驗證成分股互斥去重。
+  - 新增 `test_get_ticker_history_deduplication`，驗證同日跨批次重複寫入之去重與權威歸屬。
+
 ## 2026-10-16 (v2.4.31)
 
 ### Changed & Enhanced (UI Explanations, Tooltips & Complete Documentation Parity)
