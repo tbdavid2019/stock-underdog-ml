@@ -26,6 +26,7 @@
     - **策略優先級判定修正**：`chart-manager.js` 中調升「多維共振」判定權重至 generic `lstm` 之前，避免複合策略（如 `Resonance (LSTM+MA)`）被誤歸類為單一模型。
     - **Canvas 生命週期與防禦**：`loadHistory()` 初始化即刻強制銷毀先前標的之舊圖表實例（`chartManager.destroy`），防止空資料搜尋時遺留 Detached Canvas 記憶體洩漏；並以可選鏈（`chart.options?.scales?.x?.grid`）與 `try/catch` 加固主題動態切換更新。
     - **版本規格同步**：更新 `core/version.py` 為 `2.4.29`，模板自動注入動態指紋 `APP_VERSION.mtime`。
+    - **個股查詢網址列即時同步（URL State Synchronization Fix）**：修正 `loadHistory()` 查詢新股票時網址未更新之問題，於查詢時發動 `pushState`、標的標準化解析完成後發動 `replaceState`，確保書籤分享、重新整理或複製連結皆能正確鎖定當前搜尋標的。
 
 ## 2026-10-16 (v2.4.28)
 

@@ -355,6 +355,7 @@ export const app = createApp({
             this.historyCompanyData = null;
             this.historyEarningsList = [];
             this.historyDetailsCollapsed = false;
+            this.updateUrl();
 
             try {
                 const resolution = await ApiClient.resolveTicker(query);
@@ -362,6 +363,7 @@ export const app = createApp({
                 this.resolvedTicker = resolution.ticker;
                 this.resolvedName = resolution.name || '';
                 this.searchTicker = resolution.ticker;
+                this.updateUrl(true);
 
                 // 若非台股標的且當前子頁籤為標案或股權網絡，自動重設為基本面與新聞
                 if (!this.isTwStock(resolution.ticker) && (this.historyDetailSubTab === 'tender' || this.historyDetailSubTab === 'network')) {
