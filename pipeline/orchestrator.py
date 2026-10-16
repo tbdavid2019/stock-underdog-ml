@@ -17,12 +17,19 @@ from strategies.base import StockContext, StrategyResult
 from strategies.registry import StrategyRegistry
 # Import strategy modules to trigger registration
 import strategies.xuantie
-import strategies.lstm
 import strategies.sector_rotation
 import strategies.institutional
 try:
+    import strategies.timestral
+except Exception:
+    pass
+try:
     import strategies.timesfm
-except Exception as e:
+except Exception:
+    pass
+try:
+    import strategies.lstm
+except Exception:
     pass
 
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
@@ -115,14 +122,16 @@ class PipelineOrchestrator:
             # Map canonical keys
             if "玄鐵" in strat.name or strat.name == "xuantie":
                 strat_key = "xuantie"
-            elif "LSTM" in strat.name or strat.name == "lstm":
+            elif "timestral" in strat.name.lower():
+                strat_key = "timestral"
+            elif "timesfm" in strat.name.lower():
+                strat_key = "timesfm"
+            elif "lstm" in strat.name.lower():
                 strat_key = "lstm"
             elif "板塊" in strat.name or strat.name == "sector_rotation":
                 strat_key = "sector_rotation"
             elif "籌碼" in strat.name or strat.name == "institutional":
                 strat_key = "institutional"
-            elif "TimesFM" in strat.name or strat.name.lower() == "timesfm":
-                strat_key = "timesfm"
 
             logger.info(f"   ▶ 正在執行策略: {strat.name} ({strat.category})...")
             results = strat.evaluate_batch(contexts)
@@ -162,8 +171,9 @@ class PipelineOrchestrator:
 
         report_dict = {
             "xuantie_results": report.xuantie_results,
-            "lstm_results": report.lstm_results,
+            "timestral_results": getattr(report, "timestral_results", []),
             "timesfm_results": getattr(report, "timesfm_results", []),
+            "lstm_results": getattr(report, "lstm_results", []),
             "overlap_results": report.overlap_results,
             "overlap_candidates": getattr(report, "overlap_candidates", []),
             "ranked_stocks": getattr(report, "ranked_stocks", []),

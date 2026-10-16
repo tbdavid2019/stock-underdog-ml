@@ -69,15 +69,53 @@ class TestAINarrativeEngine(unittest.TestCase):
 
         # 1. 驗證 prompt 中是否注入 TimesFM 指標與雙ML共振提示
         prompt = engine._build_context_prompt("台灣50", macro, sample_report)
-        self.assertIn("TimesFM 時序大模型預測完成: 2 支", prompt)
+        self.assertIn("Google TimesFM (200M) 預測完成: 2 支", prompt)
         self.assertIn("TimesFM +5.80%(盈虧比2.60x)", prompt)
         self.assertIn("🔮雙ML共振", prompt)
 
         # 2. 驗證純程式規則模板是否包含雙 ML 預期
         template = engine._generate_template_narrative("台灣50", macro, sample_report)
         self.assertIn("2330.TW", template)
-        self.assertIn("LSTM +4.50% / TimesFM +5.80%", template)
+        self.assertIn("TimesFM +5.80% / LSTM +4.50%", template)
         self.assertIn("👑四重共振", template)
+
+    def test_timestral_in_prompt_and_narrative(self):
+        engine = AINarrativeEngine()
+        macro = MacroState(regime_name="全面多頭 (Strong Bull)", exposure=1.0, vix=14.0)
+        sample_report = {
+            "xuantie_results": [{"ticker": "2330.TW"}],
+            "timesfm_results": [
+                {"ticker": "2330.TW", "potential": 5.8, "risk_reward_ratio": 2.6}
+            ],
+            "timestral_results": [
+                {"ticker": "2330.TW", "potential": 6.2, "risk_reward_ratio": 2.8}
+            ],
+            "overlap_results": [{
+                "ticker": "2330.TW",
+                "timesfm_potential": 5.8,
+                "timestral_potential": 6.2,
+                "timestral_p10": 980.0,
+                "timestral_p90": 1050.0,
+                "risk_reward_ratio": 2.8,
+                "tags": ["🏆雙模型共振", "高盈虧比"],
+                "pullback_type": "MA60 (+1.8%)",
+                "pe": 22.0,
+                "pb": 5.0
+            }]
+        }
+
+        # 1. 驗證 prompt 中是否注入 TimesFM 與 Timestral 雙模型共振提示
+        prompt = engine._build_context_prompt("台灣50", macro, sample_report)
+        self.assertIn("Google TimesFM (200M) 預測完成: 1 支", prompt)
+        self.assertIn("Mistral Timestral (209M) 預測完成: 1 支", prompt)
+        self.assertIn("Timestral +6.20%[980.0~1050.0]", prompt)
+        self.assertIn("🏆雙模型共振", prompt)
+
+        # 2. 驗證純程式規則模板是否包含雙 Foundation Model 預期
+        template = engine._generate_template_narrative("台灣50", macro, sample_report)
+        self.assertIn("2330.TW", template)
+        self.assertIn("TimesFM +5.80% / Timestral +6.20%", template)
+        self.assertIn("🏆雙模型共振", template)
 
 
 if __name__ == "__main__":

@@ -60,12 +60,12 @@ class PipelineConfig:
     INDEX_CACHE_MAX_AGE_DAYS: int = 90
     DEFAULT_DEVICE: str = os.getenv("DEVICE", "auto")
     ENABLED_STRATEGIES: List[str] = [
-        s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,lstm,timesfm").split(",") if s.strip()
+        s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,timesfm,timestral").split(",") if s.strip()
     ]
     STRATEGY_WEIGHTS: Dict[str, float] = {
         "xuantie": 0.35,
-        "lstm": 0.25,
         "timesfm": 0.25,
+        "timestral": 0.25,
         "institutional": 0.15,
     }
     # TimesFM Model Configurations
@@ -73,6 +73,12 @@ class PipelineConfig:
     TIMESFM_HORIZON: int = int(os.getenv("TIMESFM_HORIZON", "5"))
     TIMESFM_CONTEXT_LEN: int = int(os.getenv("TIMESFM_CONTEXT_LEN", "128"))
     TIMESFM_MIN_POTENTIAL: float = float(os.getenv("TIMESFM_MIN_POTENTIAL", "1.0"))
+
+    # Timestral Model Configurations
+    TIMESTRAL_MODEL_ID: str = os.getenv("TIMESTRAL_MODEL_ID", "mistralai/Timestral-209M")
+    TIMESTRAL_HORIZON: int = int(os.getenv("TIMESTRAL_HORIZON", "5"))
+    TIMESTRAL_CONTEXT_LEN: int = int(os.getenv("TIMESTRAL_CONTEXT_LEN", "128"))
+    TIMESTRAL_MIN_POTENTIAL: float = float(os.getenv("TIMESTRAL_MIN_POTENTIAL", "1.0"))
 
 
 class LLMConfig:

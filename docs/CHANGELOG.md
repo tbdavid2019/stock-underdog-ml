@@ -4,6 +4,47 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-16 (v2.4.30)
+
+### Added & Overhauled (Mistral Timestral-209M Integration & Dual Foundation Model Resonance)
+- **🔮 全面淘汰 1997 年舊版單層 LSTM 模型，引入 Mistral Timestral-209M 時序大模型（Mistral Timestral-209M Integration & Legacy LSTM Deprecation）**：
+  - **解決痛點與架構革新**：全面解決舊版單層 LSTM 預測頻繁落後與失準之結構性缺陷，正式引入 Mistral AI 最新開源發表的 **Timestral-209M** (`mistralai/Timestral-209M`) 時序基礎大模型。
+  - **高效線程安全模型封裝 (`models/timestral_model.py`)**：
+    - 建立 `TimestralWrapper` 雙重檢查鎖定（Double-Checked Locking）單例 `get_timestral_model()`，支援線程安全懶載入。
+    - 實作固定 128 根 K 棒歷史長度（Uniform Context Collation），自動前向補齊或向後截斷。
+    - 加入 CPU 線程上限保護（預設限制 8 線程），杜絕多行程併發時 CPU 資源耗盡。
+    - 在無 PyTorch 之開發/測試環境自動以 `contextlib.nullcontext` 容錯，確保跨環境平穩執行。
+  - **蒙地卡羅風控分位數輸出與非對稱盈虧比**：
+    - 支援輸出明日預測與 5 日前瞻中位數（P50）、悲觀風控下限（P10）與樂觀上限（P90）。
+    - 實作單調性修剪與零除保護之盈虧比計算公式：
+      $$\text{Risk/Reward} = \min\left(\frac{\max(P_{90} - P_{\text{current}}, 0)}{\max(P_{\text{current}} - P_{10}, P_{\text{current}} \times 0.005, 10^{-4})}, 50.0\right)$$
+  - **策略註冊與依賴解耦 (`strategies/timestral.py`)**：
+    - 於 `StrategyRegistry` 註冊 `TimestralStrategy`，提供 5 日時間視野預測回報率評估。
+    - 註解解耦重型 `tensorflow`/`keras` 依賴，`models/lstm.py` 與 `strategies/lstm.py` 標記為 Deprecated，維持向下相容存根。
+- **🏆 多維共振（Multi-Dimensional Resonance）升級為「雙時序大模型共振」（Dual Foundation Model Resonance）**：
+  - **核心交集架構升級**：
+    - 淘汰原先直接複製 LSTM 目標價之單一依賴缺陷。升級為 Google Research TimesFM (200M) 與 Mistral AI Timestral (209M) 雙時序大模型同步看漲共振（`dual_model_consensus`）。
+    - 整合技術面「玄鐵季線/半年線支撐回調」與籌碼面「三大法人/投信主力合買鎖碼」，達成高勝率多維共振。
+  - **防禦性目標價與期望報酬合成（Defensive Target Synthesis）**：
+    $$P_{\text{Resonance}} = 0.5 \times P_{\text{TimesFM}} + 0.5 \times P_{\text{Timestral, P50}}$$
+    當任一時序模型缺失時自動平滑回退至可用模型，確保目標價估值穩健可信。
+- **💾 DuckDB 儲存綱要演進與 Binder 修復（DuckDB Storage Schema Evolution & Binder Fix）**：
+  - 表 `predictions` 演進新增 5 欄位：`timestral_predicted_price`, `timestral_potential`, `timestral_p10`, `timestral_p90`, `dual_model_consensus`。
+  - **修復 DuckDB `BinderError`（CRIT-01）**：重構 `save_predictions_batch`，將舊式 `INSERT INTO ... SELECT *` 改為顯式欄位清單綁定，杜絕 `ALTER TABLE` 欄位順序或個數變更時的寫入崩潰。
+  - 查詢函式 `get_resonance_candidates`, `get_timestral_top_bullish`, `get_timestral_top_bearish` 支援新指標由高至低排序。
+- **🔌 FastAPI REST API 與 FastMCP 端點現代化與平滑過渡**：
+  - 新增端點 `GET /api/v1/predictions/timestral/top-bullish` 與 `/top-bearish`。
+  - 舊版 `GET /api/v1/predictions/lstm/*` 端點自動透明代理至 Timestral 預測，並於 HTTP 回應頭中附加 `X-Deprecation-Warning`。
+  - FastMCP 伺服器註冊 `@mcp.tool(name="get_timestral_top_predictions")`，同步更新 `get_triple_resonance_stocks` 與 `get_lstm_top_predictions` 規格。
+- **📢 多管道推播與 AI 操盤研報全面升級（Telegram, Discord, Email, Terminal）**：
+  - 各渠道候選標的高級卡片同步呈現 `TimesFM` 與 `Timestral [P10~P90]` 分位數及盈虧比。
+  - 推播分項新增 `🔮 時序大模型 (Timestral-209M TOP 5)`，保留 LSTM 作為舊版備援。
+  - `evaluators/ai_narrative.py`: 操盤總評 Prompt 注入雙時序大模型共識與真實盈虧比洞察。
+- **💻 金融終端級可視化折線圖與前端儀表板升級（Financial Terminal UI & Charting）**：
+  - 個股時間序列圖表新增 Timestral P50 目標價走勢線（青綠色 `#06B6D4`）與 P10~P90 蒙地卡羅風控半透明置信區間（Shaded Band）。
+  - 支援獨立圖例晶片即時點擊開關（`timestral`, `timestralBands`），動態適應 Light / Obsidian Dark 終端模式。
+  - 儀表板策略選單新增 `Timestral 看漲 TOP` 與 `Timestral 避險` 標籤，標籤系統新增 `🏆雙模型共振` 與 `Timestral` 專屬徽章。
+
 ## 2026-10-16 (v2.4.29)
 
 ### Added & Enhanced (Stock Price vs AI Target Price Trajectory Chart)

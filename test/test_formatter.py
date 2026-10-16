@@ -273,6 +273,59 @@ class TestFormatter(unittest.TestCase):
             close_b = chunk.count("</b>")
             self.assertEqual(open_b, close_b, f"Chunk {idx} 內 <b> 與 </b> 數量不平衡: {chunk}")
 
+    def test_formatter_with_timestral_dual_foundation_models(self):
+        """驗證 Timestral-209M 時序大模型預測與雙模型共振之多管道輸出排版"""
+        timestral_candidates = [
+            {
+                "ticker": "2330.TW",
+                "current_price": 1005.0,
+                "composite_score": 95.0,
+                "resonance_tier": "👑雙時序共振",
+                "tags": ["🏆雙模型共振", "玄鐵買點", "TimesFM看漲", "Timestral看漲", "高盈虧比", "土洋合買"],
+                "timesfm_potential": 4.1,
+                "timestral_potential": 4.8,
+                "timestral_p10": 980.0,
+                "timestral_p90": 1060.0,
+                "risk_reward_ratio": 3.2,
+                "pullback_type": "MA60 (+2.0%)",
+                "fundamentals": {"pe": 22.0, "pb": 5.0},
+                "institutional": {"is_sync_buy": True, "trust_streak": 4}
+            }
+        ]
+        timestral_results = [
+            {
+                "ticker": "2330.TW",
+                "potential": 4.8,
+                "current_price": 1005.0,
+                "predicted_price": 1053.24,
+                "p10": 980.0,
+                "p90": 1060.0,
+                "risk_reward_ratio": 3.2
+            }
+        ]
+        results = {
+            "overlap_candidates": timestral_candidates,
+            "xuantie_results": self.xuantie_df,
+            "timestral_results": timestral_results,
+            "timesfm_results": self.timesfm_results,
+            "macro_state": self.macro,
+            "ai_summary": "雙大模型 TimesFM 與 Timestral 形成強共振。"
+        }
+        res = format_dual_strategy_message("台灣50", results, "2026-10-16 10:00:00", name_map=self.name_map)
+        
+        # Telegram checks
+        self.assertIn("Timestral-209M", res["telegram"])
+        self.assertIn("Timestral <b>+4.8%</b>", res["telegram"])
+        self.assertIn("TFM <b>+4.1%</b>", res["telegram"])
+        
+        # Discord checks
+        self.assertIn("Timestral-209M", res["discord"])
+        self.assertIn("Timestral **+4.8%**", res["discord"])
+        
+        # Email checks
+        self.assertIn("Timestral-209M", res["email"])
+        self.assertIn("Timestral: +4.8%", res["email"])
+
 
 if __name__ == "__main__":
     unittest.main()

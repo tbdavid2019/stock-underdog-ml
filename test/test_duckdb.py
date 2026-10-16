@@ -509,6 +509,60 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertIsNotNone(n2)
         self.assertEqual(n2["representative"], "張_華")
 
+    def test_timestral_predictions_and_dual_model_consensus(self):
+        """驗證 Timestral 預測儲存、查詢與雙大模型共振旗標"""
+        ts = "2026-10-16T12:00:00"
+        records = [
+            {
+                "index_name": "台灣50",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral預測",
+                "ticker": "2330.TW",
+                "current_price": 1000.0,
+                "predicted_price": 1035.0,
+                "potential": 3.5,
+                "timestral_predicted_price": 1035.0,
+                "timestral_potential": 3.5,
+                "timestral_p10": 980.0,
+                "timestral_p90": 1060.0,
+                "timestamp": ts,
+                "tags": "Timestral強 | 高風報比"
+            },
+            {
+                "index_name": "台灣50",
+                "model_name": "多維共振",
+                "strategy_type": "多維共振",
+                "ticker": "2330.TW",
+                "current_price": 1000.0,
+                "predicted_price": 1040.0,
+                "potential": 4.0,
+                "timestral_predicted_price": 1035.0,
+                "timestral_potential": 3.5,
+                "timesfm_predicted_price": 1045.0,
+                "timesfm_potential": 4.5,
+                "dual_model_consensus": True,
+                "timestamp": ts,
+                "tags": "🏆多維共振 | 雙大模型共振"
+            }
+        ]
+        saved = self.mgr.save_predictions_batch(records)
+        self.assertEqual(saved, 2)
+
+        # 驗證 Timestral top bullish 查詢
+        bullish = self.mgr.get_timestral_top_bullish("台灣50", limit=5)
+        self.assertTrue(any(r["ticker"] == "2330.TW" for r in bullish))
+
+        # 驗證多維共振查詢命中 dual_model_consensus
+        resonance = self.mgr.get_resonance_candidates("台灣50", limit=5)
+        self.assertTrue(any(r["ticker"] == "2330.TW" for r in resonance))
+
+        # 驗證 candidate snapshot 能合併 Timestral 欄位
+        snap = self.mgr.get_latest_candidate_snapshot("2330.TW")
+        self.assertIsNotNone(snap)
+        self.assertEqual(snap["timestral_potential"], 3.5)
+        self.assertEqual(snap["timestral_predicted_price"], 1035.0)
+        self.assertTrue(snap["dual_model_consensus"])
+
 
 if __name__ == "__main__":
     unittest.main()

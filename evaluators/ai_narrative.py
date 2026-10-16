@@ -182,13 +182,18 @@ class AINarrativeEngine:
         for r in overlap_list[:3]:
             ticker = r.get("ticker", "")
             pot_parts = []
-            if r.get("lstm_potential") is not None and pd.notna(r.get("lstm_potential")):
-                pot_parts.append(f"LSTM {r['lstm_potential']:+.2f}%")
             if r.get("timesfm_potential") is not None and pd.notna(r.get("timesfm_potential")):
                 rr_val = r.get("risk_reward_ratio")
                 rr_str = f"(盈虧比{rr_val:.2f}x)" if rr_val else ""
                 pot_parts.append(f"TimesFM {r['timesfm_potential']:+.2f}%{rr_str}")
-            pot_str = " / ".join(pot_parts) if pot_parts else f"預測潛力 {r.get('potential', 0.0):+.2f}%"
+            if r.get("timestral_potential") is not None and pd.notna(r.get("timestral_potential")):
+                p10 = r.get("timestral_p10")
+                p90 = r.get("timestral_p90")
+                range_str = f"[{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None else ""
+                pot_parts.append(f"Timestral {r['timestral_potential']:+.2f}%{range_str}")
+            elif r.get("lstm_potential") is not None and pd.notna(r.get("lstm_potential")):
+                pot_parts.append(f"LSTM(Legacy) {r['lstm_potential']:+.2f}%")
+            pot_str = " / ".join(pot_parts) if pot_parts else f"合成預測潛力 {r.get('potential', 0.0):+.2f}%"
             raw_tags = r.get("tags", [])
             tags = ",".join(raw_tags) if isinstance(raw_tags, list) else str(raw_tags)
             pe = r.get("pe", "N/A")
@@ -198,20 +203,33 @@ class AINarrativeEngine:
 
         xuantie_raw = report_data.get("xuantie_results")
         xuantie_hits = len(xuantie_raw) if xuantie_raw is not None else 0
-        lstm_raw = report_data.get("lstm_results")
-        lstm_predictions = len(lstm_raw) if lstm_raw is not None else 0
+        timestral_raw = report_data.get("timestral_results")
+        timestral_predictions = len(timestral_raw) if timestral_raw is not None else 0
         timesfm_raw = report_data.get("timesfm_results")
         timesfm_predictions = len(timesfm_raw) if timesfm_raw is not None else 0
 
-        timesfm_top_str = ""
+        fm_top_str = ""
+        top_parts = []
         if timesfm_raw and isinstance(timesfm_raw, list):
             top_tfm = []
-            for t_res in timesfm_raw[:3]:
+            for t_res in timesfm_raw[:2]:
                 rr_v = t_res.get("risk_reward_ratio")
                 rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
                 top_tfm.append(f"{t_res.get('ticker')}: 漲幅 {t_res.get('potential', 0.0):+.2f}%{rr_info}")
             if top_tfm:
-                timesfm_top_str = f"\n- TimesFM 時序大模型看漲焦點: " + "; ".join(top_tfm)
+                top_parts.append("TimesFM看漲: " + "; ".join(top_tfm))
+
+        if timestral_raw and isinstance(timestral_raw, list):
+            top_tml = []
+            for m_res in timestral_raw[:2]:
+                rr_v = m_res.get("risk_reward_ratio")
+                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
+                top_tml.append(f"{m_res.get('ticker')}: 漲幅 {m_res.get('potential', 0.0):+.2f}%{rr_info}")
+            if top_tml:
+                top_parts.append("Timestral看漲: " + "; ".join(top_tml))
+
+        if top_parts:
+            fm_top_str = "\n- 時序大模型看漲焦點: " + " | ".join(top_parts)
 
         prompt = f"""
 目標市場: {market_type} - {index_name}
@@ -220,13 +238,13 @@ class AINarrativeEngine:
 
 【量化數據概況】
 - 技術買點 (玄鐵重劍符合): {xuantie_hits} 支
-- LSTM 短線預測完成: {lstm_predictions} 支
-- TimesFM 時序大模型預測完成: {timesfm_predictions} 支{timesfm_top_str}
-- ⭐ 重點交集/多維共振推薦標的:
-{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙重/三重共振股票，建議維持防禦觀望'}
+- Google TimesFM (200M) 預測完成: {timesfm_predictions} 支
+- Mistral Timestral (209M) 預測完成: {timestral_predictions} 支{fm_top_str}
+- ⭐ 雙時序大模型共振/重點交集推薦標的:
+{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙模型共振股票，建議維持防禦觀望'}
 
 請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
-【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「🔮雙ML共振」或「高盈虧比」個股，請特別提示其動量與風險收益比優勢。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「🏆雙模型共振」或「高盈虧比」個股，請特別提示其雙時序大模型共識與風險收益比優勢。
 """
         return prompt.strip()
 
@@ -258,10 +276,12 @@ class AINarrativeEngine:
         if overlap_list:
             top_stock = overlap_list[0].get("ticker", "")
             pot_parts = []
-            if overlap_list[0].get("lstm_potential") is not None and pd.notna(overlap_list[0].get("lstm_potential")):
-                pot_parts.append(f"LSTM {overlap_list[0]['lstm_potential']:+.2f}%")
             if overlap_list[0].get("timesfm_potential") is not None and pd.notna(overlap_list[0].get("timesfm_potential")):
                 pot_parts.append(f"TimesFM {overlap_list[0]['timesfm_potential']:+.2f}%")
+            if overlap_list[0].get("timestral_potential") is not None and pd.notna(overlap_list[0].get("timestral_potential")):
+                pot_parts.append(f"Timestral {overlap_list[0]['timestral_potential']:+.2f}%")
+            elif overlap_list[0].get("lstm_potential") is not None and pd.notna(overlap_list[0].get("lstm_potential")):
+                pot_parts.append(f"LSTM {overlap_list[0]['lstm_potential']:+.2f}%")
             top_pot = " / ".join(pot_parts) if pot_parts else f"預期潛力 {overlap_list[0].get('potential', 0.0):+.2f}%"
 
             raw_tags = overlap_list[0].get("tags", [])

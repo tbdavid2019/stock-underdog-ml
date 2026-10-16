@@ -85,17 +85,26 @@ def _format_telegram_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
     details = []
 
     # 1. ML 模型預測
-    lstm_pot = cand.get("lstm_potential")
-    if lstm_pot is not None and pd.notna(lstm_pot):
-        pot_val = float(lstm_pot)
-        details.append(f"LSTM <b>{pot_val:+.1f}%</b>")
-
+    fm_details = []
     tfm_pot = cand.get("timesfm_potential")
     if tfm_pot is not None and pd.notna(tfm_pot):
         pot_val = float(tfm_pot)
         rr = cand.get("risk_reward_ratio")
         rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        details.append(f"TFM <b>{pot_val:+.1f}%</b>{rr_str}")
+        fm_details.append(f"TFM <b>{pot_val:+.1f}%</b>{rr_str}")
+
+    tml_pot = cand.get("timestral_potential")
+    if tml_pot is not None and pd.notna(tml_pot):
+        pot_val = float(tml_pot)
+        p10 = cand.get("timestral_p10")
+        p90 = cand.get("timestral_p90")
+        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+        fm_details.append(f"Timestral <b>{pot_val:+.1f}%</b>{q_str}")
+    elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
+        pot_val = float(cand.get("lstm_potential"))
+        fm_details.append(f"LSTM <b>{pot_val:+.1f}%</b>")
+
+    details.extend(fm_details)
 
     # 2. 均線技術買點
     pb_type = cand.get("pullback_type")
@@ -157,6 +166,7 @@ def format_telegram_message(
     """格式化量化結果為適合手機 Telegram 閱讀的高級 HTML 訊息 (去雜亂表情符號，強化層次)"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
+    timestral_results = results.get("timestral_results", [])
     lstm_results = results.get("lstm_results", [])
     timesfm_results = results.get("timesfm_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
@@ -264,9 +274,23 @@ def format_telegram_message(
     else:
         msg += "<i>(本期無符合波段買點標的)</i>\n\n"
 
-    # 短線操作 (LSTM)
-    msg += "<b>【短線操作 (LSTM 預測 TOP 5)】</b>\n"
-    if lstm_results:
+    # 時序大模型 (Timestral-209M)
+    if timestral_results:
+        msg += "<b>【時序大模型 (Timestral-209M 預測 TOP 5)】</b>\n"
+        for idx, result in enumerate(timestral_results[:5], 1):
+            ticker_label = html.escape(format_ticker_label(result['ticker'], lookup))
+            pot = result['potential']
+            curr_p = result['current_price']
+            pred_p = result.get('predicted_price', curr_p)
+            rr = result.get('risk_reward_ratio')
+            rr_str = f" | 盈虧比: <b>{rr:.1f}x</b>" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f" | 區間 <code>{p10:.1f}~{p90:.1f}</code>" if p10 is not None and p90 is not None else ""
+            msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b> (<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>{band_str}{rr_str})\n"
+        msg += "\n"
+    elif lstm_results:
+        msg += "<b>【短線操作 (LSTM 預測 TOP 5)】</b>\n"
         for idx, result in enumerate(lstm_results[:5], 1):
             ticker_label = html.escape(format_ticker_label(result['ticker'], lookup))
             pot = result['potential']
@@ -274,8 +298,6 @@ def format_telegram_message(
             pred_p = result.get('predicted_price', curr_p)
             msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b> (<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>)\n"
         msg += "\n"
-    else:
-        msg += "<i>(本期無 LSTM 預測結果)</i>\n\n"
 
     # 時序大模型 (TimesFM)
     if timesfm_results:
@@ -414,17 +436,26 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
     details = []
 
     # 1. ML 模型預測
-    lstm_pot = cand.get("lstm_potential")
-    if lstm_pot is not None and pd.notna(lstm_pot):
-        pot_val = float(lstm_pot)
-        details.append(f"LSTM **{pot_val:+.1f}%**")
-
+    fm_details = []
     tfm_pot = cand.get("timesfm_potential")
     if tfm_pot is not None and pd.notna(tfm_pot):
         pot_val = float(tfm_pot)
         rr = cand.get("risk_reward_ratio")
         rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        details.append(f"TFM **{pot_val:+.1f}%**{rr_str}")
+        fm_details.append(f"TFM **{pot_val:+.1f}%**{rr_str}")
+
+    tml_pot = cand.get("timestral_potential")
+    if tml_pot is not None and pd.notna(tml_pot):
+        pot_val = float(tml_pot)
+        p10 = cand.get("timestral_p10")
+        p90 = cand.get("timestral_p90")
+        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+        fm_details.append(f"Timestral **{pot_val:+.1f}%**{q_str}")
+    elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
+        pot_val = float(cand.get("lstm_potential"))
+        fm_details.append(f"LSTM **{pot_val:+.1f}%**")
+
+    details.extend(fm_details)
 
     # 2. 均線技術買點
     pb_type = cand.get("pullback_type")
@@ -486,6 +517,7 @@ def format_discord_message(
     """格式化量化結果為 Discord Markdown 訊息"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
+    timestral_results = results.get("timestral_results", [])
     lstm_results = results.get("lstm_results", [])
     timesfm_results = results.get("timesfm_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
@@ -570,9 +602,23 @@ def format_discord_message(
     else:
         msg += "*(本期無符合波段買點標的)*\n\n"
 
-    # 短線操作
-    msg += "**【短線操作 (LSTM 預測 TOP 5)】**\n"
-    if lstm_results:
+    # 時序大模型 (Timestral-209M)
+    if timestral_results:
+        msg += "**【時序大模型 (Timestral-209M 預測 TOP 5)】**\n"
+        for idx, result in enumerate(timestral_results[:5], 1):
+            ticker_label = format_ticker_label(result['ticker'], lookup)
+            pot = result['potential']
+            curr_p = result['current_price']
+            pred_p = result.get('predicted_price', curr_p)
+            rr = result.get('risk_reward_ratio')
+            rr_str = f" | 盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f" | 區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None else ""
+            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`{band_str}{rr_str})\n"
+        msg += "\n"
+    elif lstm_results:
+        msg += "**【短線操作 (LSTM 預測 TOP 5)】**\n"
         for idx, result in enumerate(lstm_results[:5], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             pot = result['potential']
@@ -613,6 +659,7 @@ def format_email_message(
     """格式化量化結果為 Email 純文字格式"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
+    timestral_results = results.get("timestral_results", [])
     lstm_results = results.get("lstm_results", [])
     timesfm_results = results.get("timesfm_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
@@ -649,15 +696,23 @@ def format_email_message(
             ticker_label = format_ticker_label(cand.get("ticker", ""), lookup)
             price_val = cand.get("current_price", 0.0)
             tier_str = cand.get("resonance_tier", "多維共振")
-            lstm_p = cand.get("lstm_potential")
+            tml_p = cand.get("timestral_potential")
             tfm_p = cand.get("timesfm_potential")
+            lstm_p = cand.get("lstm_potential")
             rr = cand.get("risk_reward_ratio")
-            ml_p_str = ""
-            if lstm_p is not None:
-                ml_p_str += f"LSTM: {float(lstm_p):+.1f}% "
+            ml_p_parts = []
             if tfm_p is not None:
                 rr_info = f"({float(rr):.1f}x)" if rr and pd.notna(rr) else ""
-                ml_p_str += f"TimesFM: {float(tfm_p):+.1f}%{rr_info}"
+                ml_p_parts.append(f"TimesFM: {float(tfm_p):+.1f}%{rr_info}")
+            if tml_p is not None:
+                p10 = cand.get("timestral_p10")
+                p90 = cand.get("timestral_p90")
+                q_info = f"[{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None else ""
+                ml_p_parts.append(f"Timestral: {float(tml_p):+.1f}%{q_info}")
+            elif lstm_p is not None:
+                ml_p_parts.append(f"LSTM: {float(lstm_p):+.1f}%")
+
+            ml_p_str = " | ".join(ml_p_parts)
 
             tags_str = " · ".join(cand.get("tags", []))
             pe_val = cand.get("pe") or (cand.get("fundamentals") or {}).get("pe")
@@ -687,9 +742,23 @@ def format_email_message(
             msg += f"{idx+1}. {ticker_label} 現價: {row['current_price']:,.2f} | 回調: {row.get('pullback_type', '')} | {pe_str} · {pb_str}\n"
         msg += "\n"
 
-    # 🤖 LSTM
-    msg += f"🤖 短線操作 (LSTM) - 預測完成: {len(lstm_results)} 支\n\n"
-    if lstm_results:
+    # 🔮 Timestral-209M
+    if timestral_results:
+        msg += f"🔮 時序大模型 (Timestral-209M) - 預測完成: {len(timestral_results)} 支\n\n"
+        msg += "📈 Timestral 看漲 TOP 10 (含 5 日目標價、P10/P90 分位數與盈虧比)\n"
+        for idx, result in enumerate(timestral_results[:10], 1):
+            ticker_label = format_ticker_label(result['ticker'], lookup)
+            rr = result.get('risk_reward_ratio')
+            rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None else ""
+            curr_p = result['current_price']
+            pred_p = result.get('predicted_price', curr_p)
+            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str})\n"
+        msg += "\n"
+    elif lstm_results:
+        msg += f"🤖 短線操作 (LSTM) - 預測完成: {len(lstm_results)} 支\n\n"
         msg += "📈 預測上漲 TOP 10\n"
         for idx, result in enumerate(lstm_results[:10], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
@@ -745,6 +814,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     logger = log or default_logger
     index_name = report.index_name
     xuantie_df = report.xuantie_results
+    timestral_results = getattr(report, "timestral_results", [])
     lstm_results = report.lstm_results
     timesfm_results = getattr(report, "timesfm_results", [])
     overlap_df = report.overlap_results
@@ -780,26 +850,33 @@ def print_evaluation_report(report: EvaluationReport, log=None):
         logger.info("")
 
     # ====== 多策略交集 / 多維共振 ======
-    logger.info("⭐ 【優先推薦】多維共振 (四重共振 / 三重共振 / 雙ML共振)")
+    logger.info("⭐ 【優先推薦】雙時序大模型共振 (TimesFM × Timestral ∩ 玄鐵 ∩ 法人鎖碼)")
     logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
 
     if not overlap_df.empty:
-        logger.info(f"   {'排名':<4} {'等級':<8} {'代碼':<10} {'LSTM':>8} {'TimesFM':>8} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
-        logger.info(f"   {'-'*4} {'-'*8} {'-'*10} {'-'*8} {'-'*8} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
+        logger.info(f"   {'排名':<4} {'等級':<8} {'代碼':<10} {'TimesFM':>8} {'Timestral':>10} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
+        logger.info(f"   {'-'*4} {'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
         for idx, row in overlap_df.iterrows():
             cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
             tier_str = (cand.get("resonance_tier") or row.get("resonance_tier") or "共振") if cand else (row.get("resonance_tier") or "共振")
             tags_str = " | ".join(cand["tags"]) if cand and cand.get("tags") else (" | ".join(row.get("tags", [])) if row.get("tags") else "觀察")
 
-            lstm_str = f"{row['lstm_potential']:>+7.2f}%" if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None else "    N/A"
             tfm_str = f"{row['timesfm_potential']:>+7.2f}%" if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None else "    N/A"
+            tml_val = row.get('timestral_potential')
+            if pd.notna(tml_val) and tml_val is not None:
+                tml_str = f"{tml_val:>+9.2f}%"
+            elif pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None:
+                tml_str = f"{row['lstm_potential']:>+9.2f}%"
+            else:
+                tml_str = "      N/A"
+
             rr_val = row.get('risk_reward_ratio')
             rr_str = f"{rr_val:>6.2f}x" if pd.notna(rr_val) and rr_val is not None else "   N/A"
 
             logger.info(
                 f"   {idx+1:<4} {tier_str:<8} {row['ticker']:<10} "
-                f"{lstm_str} "
                 f"{tfm_str} "
+                f"{tml_str} "
                 f"{rr_str} "
                 f"{str(row.get('pullback_type', ''))[:6]:>6} "
                 f"{format_value(row.get('ma60')):>8} "
@@ -833,11 +910,29 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     logger.info("")
 
-    # ====== 軌道 2: LSTM 預測 ======
-    logger.info("🤖 【短線操作】LSTM 預測 (持有 1-7 天) - 預測漲幅排行")
-    logger.info(f"   預測完成: {len(lstm_results)} 支\n")
-
-    if lstm_results:
+    # ====== 軌道 2: Timestral-209M / LSTM ======
+    if timestral_results:
+        logger.info("🔮 【時序大模型】Mistral Timestral-209M (持有 1-5 天) - 預測漲幅排行與風控分位數")
+        logger.info(f"   預測完成: {len(timestral_results)} 支\n")
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'預測價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
+        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")
+        for i, result in enumerate(timestral_results[:10], 1):
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f"{p10:.1f}~{p90:.1f}" if p10 is not None and p90 is not None else "N/A"
+            rr_val = result.get('risk_reward_ratio')
+            rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "    N/A"
+            logger.info(
+                f"   {i:<4} {result['ticker']:<10} "
+                f"{result['potential']:>+9.2f}% "
+                f"{result['current_price']:>8.2f} {'→':^3} "
+                f"{result['predicted_price']:>8.2f} "
+                f"{band_str:>16} "
+                f"{rr_str:>8}"
+            )
+    elif lstm_results:
+        logger.info("🤖 【短線操作】LSTM 預測 (持有 1-7 天) - 預測漲幅排行")
+        logger.info(f"   預測完成: {len(lstm_results)} 支\n")
         logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'預測價':>8} {'PE':>6} {'PB':>6}")
         logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*6} {'-'*6}")
         for i, result in enumerate(lstm_results[:10], 1):
@@ -850,7 +945,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
                 f"{format_value(result.get('pb')):>6}"
             )
     else:
-        logger.info("   (本期無 LSTM 預測結果)")
+        logger.info("   (本期無時序大模型預測結果)")
 
     logger.info("")
 

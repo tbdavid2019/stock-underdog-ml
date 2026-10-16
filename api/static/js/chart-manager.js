@@ -186,6 +186,19 @@ export class ChartManager {
     setDatasetVisibility(chartKey, seriesKey, isVisible) {
         const chart = this.instances[chartKey];
         if (!chart || !chart.data || !chart.data.datasets) return false;
+        if (seriesKey === 'timestralBands') {
+            let found = false;
+            for (const d of chart.data.datasets) {
+                if (d.key === 'timestralBandsUpper' || d.key === 'timestralBandsLower') {
+                    d.hidden = !isVisible;
+                    found = true;
+                }
+            }
+            if (found) {
+                chart.update();
+                return true;
+            }
+        }
         const ds = chart.data.datasets.find(d => d.key === seriesKey);
         if (ds) {
             ds.hidden = !isVisible;
@@ -225,6 +238,9 @@ export class ChartManager {
                     ma60: null,
                     lstm: null,
                     timesfm: null,
+                    timestral: null,
+                    timestralP10: null,
+                    timestralP90: null,
                     resonance: null
                 });
             }
@@ -233,16 +249,36 @@ export class ChartManager {
             if (!isNaN(curPrice) && curPrice > 0) item.price = curPrice;
             const ma60 = Number(r.ma60);
             if (!isNaN(ma60) && ma60 > 0) item.ma60 = ma60;
+
+            if (r.timestral_predicted_price) {
+                const tp = Number(r.timestral_predicted_price);
+                if (!isNaN(tp) && tp > 0) item.timestral = tp;
+            }
+            if (r.timestral_p10) {
+                const p10 = Number(r.timestral_p10);
+                if (!isNaN(p10) && p10 > 0) item.timestralP10 = p10;
+            }
+            if (r.timestral_p90) {
+                const p90 = Number(r.timestral_p90);
+                if (!isNaN(p90) && p90 > 0) item.timestralP90 = p90;
+            }
+            if (r.timesfm_predicted_price) {
+                const tfp = Number(r.timesfm_predicted_price);
+                if (!isNaN(tfp) && tfp > 0) item.timesfm = tfp;
+            }
+
             const predPrice = Number(r.predicted_price);
             if (!isNaN(predPrice) && predPrice > 0) {
                 const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
-                // Check resonance first to prevent Resonance (LSTM+MA) from being misclassified as pure LSTM
+                // Check resonance first to prevent Resonance from being misclassified
                 if (strat.includes('共振') || strat.includes('resonance')) {
                     item.resonance = predPrice;
-                } else if (strat.includes('lstm')) {
-                    item.lstm = predPrice;
+                } else if (strat.includes('timestral')) {
+                    item.timestral = predPrice;
                 } else if (strat.includes('timesfm')) {
                     item.timesfm = predPrice;
+                } else if (strat.includes('lstm')) {
+                    item.lstm = predPrice;
                 }
             }
         }
@@ -253,10 +289,13 @@ export class ChartManager {
         const theme = this.getThemeTokens(isDark);
 
         const dataPrice = labels.map(d => dateMap.get(d).price);
-        const dataLstm = labels.map(d => dateMap.get(d).lstm);
+        const dataTimestral = labels.map(d => dateMap.get(d).timestral);
+        const dataTimestralP10 = labels.map(d => dateMap.get(d).timestralP10);
+        const dataTimestralP90 = labels.map(d => dateMap.get(d).timestralP90);
         const dataTimesfm = labels.map(d => dateMap.get(d).timesfm);
         const dataResonance = labels.map(d => dateMap.get(d).resonance);
         const dataMa60 = labels.map(d => dateMap.get(d).ma60);
+        const dataLstm = labels.map(d => dateMap.get(d).lstm);
 
         const chart = new Chart(el, {
             type: 'line',
@@ -279,20 +318,50 @@ export class ChartManager {
                         hidden: visibility.price === false
                     },
                     {
-                        key: 'lstm',
-                        label: 'LSTM 目標價',
-                        data: dataLstm,
-                        borderColor: '#F59E0B',
+                        key: 'timestral',
+                        label: 'Timestral 目標價 (P50)',
+                        data: dataTimestral,
+                        borderColor: '#06B6D4',
                         backgroundColor: 'transparent',
-                        borderDash: [5, 4],
+                        borderDash: [4, 3],
                         borderWidth: 2.2,
                         tension: 0.25,
                         pointRadius: labels.length > 40 ? 2 : 4,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#F59E0B',
-                        pointStyle: 'circle',
+                        pointBackgroundColor: '#06B6D4',
+                        pointStyle: 'rect',
                         spanGaps: true,
-                        hidden: visibility.lstm === false
+                        hidden: visibility.timestral === false
+                    },
+                    {
+                        key: 'timestralBandsUpper',
+                        label: 'Timestral P90 (樂觀上限)',
+                        data: dataTimestralP90,
+                        borderColor: 'rgba(6, 182, 212, 0.4)',
+                        backgroundColor: isDark ? 'rgba(6, 182, 212, 0.12)' : 'rgba(6, 182, 212, 0.08)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        tension: 0.25,
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: '+1',
+                        spanGaps: true,
+                        hidden: visibility.timestralBands === false
+                    },
+                    {
+                        key: 'timestralBandsLower',
+                        label: 'Timestral P10 (悲觀下限)',
+                        data: dataTimestralP10,
+                        borderColor: 'rgba(6, 182, 212, 0.4)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        tension: 0.25,
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        hidden: visibility.timestralBands === false
                     },
                     {
                         key: 'timesfm',
@@ -312,7 +381,7 @@ export class ChartManager {
                     },
                     {
                         key: 'resonance',
-                        label: '多維共振目標價',
+                        label: '雙時序共振目標價',
                         data: dataResonance,
                         borderColor: '#10B981',
                         backgroundColor: 'transparent',
@@ -339,6 +408,22 @@ export class ChartManager {
                         pointBackgroundColor: isDark ? '#94A3B8' : '#64748B',
                         spanGaps: true,
                         hidden: visibility.ma60 !== true
+                    },
+                    {
+                        key: 'lstm',
+                        label: 'LSTM 目標價 (舊版)',
+                        data: dataLstm,
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 4],
+                        borderWidth: 1.8,
+                        tension: 0.25,
+                        pointRadius: labels.length > 40 ? 1.5 : 3.5,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#F59E0B',
+                        pointStyle: 'circle',
+                        spanGaps: true,
+                        hidden: visibility.lstm !== true
                     }
                 ]
             },
@@ -373,6 +458,10 @@ export class ChartManager {
                                 const dateIdx = ctx.dataIndex;
                                 const priceDs = ctx.chart.data.datasets.find(d => d.key === 'price');
                                 const actual = priceDs ? priceDs.data[dateIdx] : null;
+
+                                if (ctx.dataset.key === 'timestralBandsUpper' || ctx.dataset.key === 'timestralBandsLower') {
+                                    return ` ${label}: ${formatted}`;
+                                }
 
                                 if (actual && actual > 0 && ctx.dataset.key !== 'price' && ctx.dataset.key !== 'ma60') {
                                     const diff = ((val - actual) / actual) * 100;

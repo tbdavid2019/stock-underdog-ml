@@ -1,7 +1,7 @@
 import threading
 import time
 from typing import Optional, List, Dict, Tuple, Any
-from fastapi import APIRouter, Query, HTTPException, Depends
+from fastapi import APIRouter, Query, HTTPException, Depends, Response
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
 from data.duckdb_manager import DuckDBManager
 
@@ -91,14 +91,15 @@ def get_latest_predictions(
     return response_obj
 
 
-@router.get("/resonance", response_model=PredictionResponse, summary="查詢多策略交集與 🏆 三重共振焦點股")
+@router.get("/resonance", response_model=PredictionResponse, summary="查詢雙時序大模型共振 (TimesFM × Timestral ∩ 玄鐵 ∩ 法人鎖碼)")
 def get_resonance_candidates(
     index_name: Optional[str] = Query(None, description="指數篩選"),
     limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    篩選同時符合「技術面均線買點 ∩ LSTM 看漲 ∩ 投信/法人鎖碼」的多策略共振股票。
+    篩選同時符合「技術面均線買點 ∩ Google TimesFM 看漲 ∩ Mistral Timestral 看漲 ∩ 投信/法人鎖碼」的雙時序大模型共振股票。
+    目標價由 TimesFM 與 Timestral P50 中位數加權合成，提供極致穩健的預測視野。
     """
     cache_key = f"resonance_{index_name}_{limit}"
     cached = _get_from_cache(cache_key)
@@ -132,29 +133,65 @@ def get_xuantie_candidates(
     return response_obj
 
 
-@router.get("/lstm/top-bullish", response_model=PredictionResponse, summary="查詢 LSTM 預測漲幅 TOP N 潛力股")
-def get_top_bullish(
+@router.get("/timestral/top-bullish", response_model=PredictionResponse, summary="查詢 Mistral Timestral-209M 預測漲幅 TOP N 潛力股")
+def get_timestral_top_bullish(
     index_name: Optional[str] = Query(None, description="指數篩選"),
     limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    依據 LSTM 深度學習模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得短線看漲排行。
+    依據 Mistral Timestral-209M 時序大模型輸出之潛在漲幅百分比（P50 Potential %）由高到低排序，取得看漲排行。
     """
-    records = db.get_top_bullish(index_name=index_name, limit=limit)
+    records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
     return _build_prediction_response(records)
 
 
-@router.get("/lstm/top-bearish", response_model=PredictionResponse, summary="查詢 LSTM 預測跌幅 TOP N 避險/做空股")
-def get_top_bearish(
+@router.get("/timestral/top-bearish", response_model=PredictionResponse, summary="查詢 Mistral Timestral-209M 預測跌幅 TOP N 避險股")
+def get_timestral_top_bearish(
     index_name: Optional[str] = Query(None, description="指數篩選"),
     limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    依據 LSTM 深度學習模型輸出之潛在跌幅由大到小排序，用於避險或潛在放空觀察。
+    依據 Mistral Timestral-209M 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
+    records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
+    return _build_prediction_response(records)
+
+
+@router.get("/lstm/top-bullish", response_model=PredictionResponse, summary="[Deprecated] 查詢 LSTM 預測漲幅 TOP N 潛力股 (已由 Timestral 替代)")
+def get_top_bullish(
+    response: Response,
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    [Deprecated] 舊版 LSTM 預測端點。已全面升級為 Mistral Timestral-209M 時序大模型 (/timestral/top-bullish)。
+    維持向下相容：若 DuckDB 無舊 LSTM 記錄則透明回傳 Timestral 預測。
+    """
+    response.headers["X-Deprecation-Warning"] = "/lstm endpoints are deprecated; please use /timestral endpoints."
+    records = db.get_top_bullish(index_name=index_name, limit=limit)
+    if not records:
+        records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
+    return _build_prediction_response(records)
+
+
+@router.get("/lstm/top-bearish", response_model=PredictionResponse, summary="[Deprecated] 查詢 LSTM 預測跌幅 TOP N 避險股 (已由 Timestral 替代)")
+def get_top_bearish(
+    response: Response,
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    [Deprecated] 舊版 LSTM 預測端點。已全面升級為 Mistral Timestral-209M 時序大模型 (/timestral/top-bearish)。
+    維持向下相容：若 DuckDB 無舊 LSTM 記錄則透明回傳 Timestral 預測。
+    """
+    response.headers["X-Deprecation-Warning"] = "/lstm endpoints are deprecated; please use /timestral endpoints."
     records = db.get_top_bearish(index_name=index_name, limit=limit)
+    if not records:
+        records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
     return _build_prediction_response(records)
 
 

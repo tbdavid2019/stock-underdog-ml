@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**LSTM 價格預測**、**Google TimesFM 2.5 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 三重共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **20 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M 時序大模型**、**Google TimesFM 200M 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 雙模型共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **20 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -46,16 +46,16 @@ graph TD
 
     subgraph S2 [Stage 2: 模組化多策略矩陣]
         Pool --> ST1[🗡️ 玄鐵重劍: MA60/120 趨勢回調買點]
-        Pool --> ST2[🤖 LSTM: 深度學習次日潛力預測]
-        Pool --> ST3[🔮 TimesFM: Google 時序大模型 Zero-Shot]
+        Pool --> ST2[🔮 Timestral: Mistral 時序大模型 209M]
+        Pool --> ST3[🔮 TimesFM: Google 時序大模型 200M Zero-Shot]
         Pool --> ST4[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
         Pool --> ST5[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
     end
 
     subgraph S3 [Stage 3: 綜合評估與 AI 研報]
-        ST1 & ST2 & ST3 & ST4 & ST5 --> Composite[⭐ 多維綜合評估引擎]
+        ST1 & ST2 & ST3 & ST4 & ST5 --> Composite[⭐ 雙 Foundation Model 綜合評估引擎]
         Exposure -.->|宏觀折減| Composite
-        Composite --> Overlap[🏆 三重/👑四重共振 / 雙重符合焦點標的]
+        Composite --> Overlap[👑 四重共振 / 🏆 雙模型共振 / 焦點標的]
         Composite --> LLM[🧠 3-Tier Fallback LLM 操盤解讀<br>Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板]
     end
 
@@ -84,14 +84,16 @@ graph TD
 * 核心思維：「**順大勢（MA60/120 多頭排列）、逆小勢（回踩均線支撐）**」。
 * 精確捕捉股價回測 MA60 季線 (`MA60 Pullback`) 或 MA120 半年線之波段技術買點。
 
-### 3. 🤖 LSTM 深度學習預測 (Deep Learning Forecaster)
-* 針對目標股票最近 60 個交易日量價特徵進行深度學習推論，輸出次日預測目標價與潛在漲跌幅潛力（`Potential %`）。
+### 3. 🔮 Mistral Timestral-209M 時序大模型 (Time Series Foundation Model)
+* 整合 Mistral AI 開源之 **Timestral-209M** (`mistralai/Timestral-209M`) 輕量級時序基礎模型，全面淘汰單層 LSTM 模型。
+* 採用純推論 Zero-Shot 模式，輸入 128 根歷史 K 線，預測未來 5 日目標價位。
+* 輸出嚴格單調的分位數區間 **P10 (下行防守位)**、**P50 (中位目標價)** 與 **P90 (上行獲利位)**，並計算有界非對稱盈虧比（Risk-Reward Ratio）。
 
 ### 4. 🔮 Google Research TimesFM 時序大模型 (Time Series Foundation Model)
-* 採用 Google 預訓練之 **TimesFM 2.5** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
+* 採用 Google 預訓練之 **TimesFM 200M** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
 * 輸出 1~5 日預測目標價軌跡，並同步計算 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**。
 * 以設定 horizon 的 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
-* 與 LSTM 形成 **「雙 ML 交叉驗證」**（微觀個股量價記憶 ∩ 宏觀預訓練波形共振），並支援晉升為 **「👑 四重共振極選」**。
+* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM × Mistral Timestral 雙時序大模型波形共識），並晉升為 **「👑 四重共振極選」**。
 
 ### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
 * 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
@@ -101,9 +103,10 @@ graph TD
 * 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
 * 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
 
-### 7. ⭐ 🏆 三重共振 / 👑 四重共振極選評估 (Multi-Strategy Resonance)
-* 跨維度篩選同時符合 **「技術買點 ∩ ML 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
-* 自動貼上 `👑四重共振`、`🏆三重共振`、`🔮雙ML共振`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
+### 7. ⭐ 👑 四重共振 / 🏆 雙模型共振極選評估 (Dual Foundation Model Resonance)
+* 跨維度篩選同時符合 **「玄鐵技術買點 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
+* 自動貼上 `👑四重共振`、`🏆雙模型共振`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
+* 目標價以 TimesFM 與 Timestral P50 進行等權防禦性合成（$0.5 \times P_{TimesFM} + 0.5 \times P_{Timestral}$），單一模型缺漏時自動優雅退化降級。
 
 ### 8. 🧠 3 級 Fallback AI 研報引擎 (AI Narrative Generator)
 * 支援 **Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 純程式規則模板** 4 級容錯。
@@ -226,27 +229,28 @@ graph TD
 **支援之 20 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
 
 1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
-2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振、🔮雙ML共振焦點多策略交集個股。
+2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆雙模型共振焦點多策略交集個股。
 3. `get_xuantie_pullback_stocks`: 玄鐵重劍 MA60/120 波段回踩買點標的。
-4. `get_lstm_top_predictions`: LSTM 深度學習次日預測漲跌幅排行。
-5. `get_timesfm_top_predictions`: Google Research TimesFM 2.5 5 日預測漲跌榜與真實盈虧比 (Risk/Reward)。
-6. `get_stock_history`: 個股時序預測軌跡與法人籌碼。
-7. `get_latest_market_snapshot`: 最新全市場日報批次數據快照。
-8. `get_top_institutional_flows`: 三大法人（外資、投信、自營商）買賣超焦點股排行榜。
-9. `get_broker_trades_for_stock`: 關鍵券商主力分點進出明細與累計買賣超。
-10. `get_company_profile`: 2MD 繁中公司營運簡介、董監事持股、即時新聞與集團網絡連結。
-11. `get_fed_rate_monitor`: CME FedWatch 利率決策機率與 FOMC 倒數。
-12. `get_us_earnings_calendar`: 美股重量級企業財報公布行事曆（EPS、營收預估）。
-13. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
-14. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅 Copper、原油 WTI）實時行情。
-15. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
-16. `get_polymarket_macro_sentiment`: Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率）。
-17. `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback：create360 / aiurl.tw / jev）推論交易動作機率分佈、確信度評分與勝率預期。
-18. `get_upcoming_earnings_calls`: 查詢台美日韓跨市場即將召開之法人說明會時程、雙時區與官方簡報/影音回放。
-19. `get_ticker_earnings_calls`: 查詢單一標的之歷史法說會紀錄、管理層財測指引（營收/毛利率/CapEx）與機構 Q&A。
-20. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
-21. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
-22. `get_company_tenders`: 查詢台灣上市櫃公司之政府電子採購網得標情報（累計得標總金額、勝率、獨標率、核心採購機關金主、競標對手與大案清單，串接 ToBid MCP）。
+4. `get_timestral_top_predictions`: Mistral Timestral 209M 5 日預測漲跌榜、分位數區間 (P10/P90) 與盈虧比。
+5. `get_timesfm_top_predictions`: Google Research TimesFM 200M 5 日預測漲跌榜與真實盈虧比 (Risk/Reward)。
+6. `get_lstm_top_predictions`: (已棄用別名，自動映射至 Timestral 模型)。
+7. `get_stock_history`: 個股時序預測軌跡與法人籌碼。
+8. `get_latest_market_snapshot`: 最新全市場日報批次數據快照。
+9. `get_top_institutional_flows`: 三大法人（外資、投信、自營商）買賣超焦點股排行榜。
+10. `get_broker_trades_for_stock`: 關鍵券商主力分點進出明細與累計買賣超。
+11. `get_company_profile`: 2MD 繁中公司營運簡介、董監事持股、即時新聞與集團網絡連結。
+12. `get_fed_rate_monitor`: CME FedWatch 利率決策機率與 FOMC 倒數。
+13. `get_us_earnings_calendar`: 美股重量級企業財報公布行事曆（EPS、營收預估）。
+14. `get_economic_calendar`: 全球重大總經行事曆（CPI、非農 NFP 等）。
+15. `get_commodities_summary`: 關鍵大宗商品（黃金 Gold、銅 Copper、原油 WTI）實時行情。
+16. `resolve_stock_ticker`: 中英文公司名稱模糊搜尋與代號解析（如台積電 ➔ `2330.TW`）。
+17. `get_polymarket_macro_sentiment`: Polymarket 真金白銀預測市場宏觀情緒（聯準會降息機率、美股牛熊、科技AI突破、地緣政治衰退機率）。
+18. `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback：create360 / aiurl.tw / jev）推論交易動作機率分佈、確信度評分與勝率預期。
+19. `get_upcoming_earnings_calls`: 查詢台美日韓跨市場即將召開之法人說明會時程、雙時區與官方簡報/影音回放。
+20. `get_ticker_earnings_calls`: 查詢單一標的之歷史法說會紀錄、管理層財測指引（營收/毛利率/CapEx）與機構 Q&A。
+21. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
+22. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
+23. `get_company_tenders`: 查詢台灣上市櫃公司之政府電子採購網得標情報（累計得標總金額、勝率、獨標率、核心採購機關金主、競標對手與大案清單，串接 ToBid MCP）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
@@ -259,7 +263,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (22 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (23 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -267,12 +271,13 @@ graph TD
 | `/api/v1/decision/evaluate` | `POST` | Clef-Flash System One 決策模型評估端點 |
 | `/api/v1/decision/health` | `GET` | Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev) |
 | `/api/v1/predictions/latest` | `GET` | 查詢多指數最新各標的現價、預測價、均線數據、PE/PB 估值與籌碼 |
-| `/api/v1/predictions/resonance` | `GET` | 篩選 **👑四重共振 / 🏆三重共振 / 🔮雙ML共振** 重點焦點股 |
+| `/api/v1/predictions/resonance` | `GET` | 篩選 **👑四重共振 / 🏆雙模型共振** 重點焦點股 |
 | `/api/v1/predictions/xuantie` | `GET` | 篩選 **玄鐵重劍技術買點**（回測 MA60 季線 / MA120 半年線） |
-| `/api/v1/predictions/lstm/top-bullish` | `GET` | 查詢 **LSTM 預測漲幅 TOP N** 短線看漲榜 |
-| `/api/v1/predictions/lstm/top-bearish` | `GET` | 查詢 **LSTM 預測跌幅 TOP N** 避險/放空觀察榜 |
+| `/api/v1/predictions/timestral/top-bullish` | `GET` | 查詢 **Mistral Timestral 預測漲幅 TOP N** 看漲榜與盈虧比 |
+| `/api/v1/predictions/timestral/top-bearish` | `GET` | 查詢 **Mistral Timestral 預測跌幅 TOP N** 避險/破底防禦榜 |
 | `/api/v1/predictions/timesfm/top-bullish` | `GET` | 查詢 **Google TimesFM 預測漲幅 TOP N** 看漲榜與盈虧比 |
 | `/api/v1/predictions/timesfm/top-bearish` | `GET` | 查詢 **Google TimesFM 預測跌幅 TOP N** 避險/破底防禦榜 |
+| `/api/v1/predictions/lstm/*` | `GET` | 已棄用之向後相容別名端點（自動轉譯並回傳 `X-Deprecation-Warning`） |
 | `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
 | `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
 | `/api/v1/macro/latest` | `GET` | 即時取得台美股大盤宏觀風控狀態、建議曝險、FedWatch 降息機率與總經催化劑 |
@@ -438,14 +443,16 @@ stock-underdog-ml/
 │   ├── institutional.py        # TWSE/TPEX 三大法人籌碼分析器
 │   └── macro.py                # 美股宏觀風控分析器 (SPY/VIX/SOX)
 ├── models/                     # 機器學習與時序大模型封裝
-│   ├── lstm.py                 # LSTM 深度學習架構與訓練/推論管線
-│   └── timesfm_model.py        # Google TimesFM 2.5 預訓練模型載入與分位數風險評估
+│   ├── timestral_model.py      # Mistral Timestral-209M 時序大模型 (Zero-Shot P10/P50/P90)
+│   ├── timesfm_model.py        # Google TimesFM 200M 預訓練模型載入與分位數風險評估
+│   └── lstm.py                 # (已棄用) 舊版單層 LSTM 架構向後相容 Stub
 ├── strategies/                 # 插件式量化策略註冊中心
 │   ├── base.py                 # BaseStrategy 抽象基底類別
 │   ├── registry.py             # 策略自動發現與註冊中心
 │   ├── xuantie.py              # 玄鐵重劍均線趨勢回調策略
-│   ├── lstm.py                 # LSTM 深度學習價格預測策略
+│   ├── timestral.py            # Mistral Timestral 209M 5 日時序預測策略
 │   ├── timesfm.py              # Google TimesFM 時序大模型預測策略 (P10/50/90 盈虧比)
+│   ├── lstm.py                 # (已棄用) LSTM 策略相容 Stub
 │   ├── sector_rotation.py      # 7 大板塊資金輪動策略
 │   └── institutional.py        # 三大法人連買與土洋合買策略
 ├── evaluators/                 # 綜合評價與研報引擎

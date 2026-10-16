@@ -80,13 +80,30 @@ class DuckDBManager:
                     trust_net_5d BIGINT,
                     foreign_net_5d BIGINT,
                     tags VARCHAR,
-                    composite_score DOUBLE
+                    composite_score DOUBLE,
+                    timestral_predicted_price DOUBLE,
+                    timestral_potential DOUBLE,
+                    timestral_p10 DOUBLE,
+                    timestral_p90 DOUBLE,
+                    timesfm_predicted_price DOUBLE,
+                    timesfm_potential DOUBLE,
+                    dual_model_consensus BOOLEAN
                 );
                 """)
-                try:
-                    con.execute("ALTER TABLE predictions ADD COLUMN IF NOT EXISTS composite_score DOUBLE;")
-                except Exception:
-                    pass
+                for col_name, col_type in [
+                    ("composite_score", "DOUBLE"),
+                    ("timestral_predicted_price", "DOUBLE"),
+                    ("timestral_potential", "DOUBLE"),
+                    ("timestral_p10", "DOUBLE"),
+                    ("timestral_p90", "DOUBLE"),
+                    ("timesfm_predicted_price", "DOUBLE"),
+                    ("timesfm_potential", "DOUBLE"),
+                    ("dual_model_consensus", "BOOLEAN")
+                ]:
+                    try:
+                        con.execute(f"ALTER TABLE predictions ADD COLUMN IF NOT EXISTS {col_name} {col_type};")
+                    except Exception:
+                        pass
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS macro_regimes (
                     date VARCHAR,
@@ -410,7 +427,11 @@ class DuckDBManager:
             "ma5", "ma10", "ma60", "ma120", "ma250",
             "pullback_type", "pe", "pb", "forward_pe", "ev_ebitda",
             "period", "timestamp", "macro_regime",
-            "trust_net_5d", "foreign_net_5d", "tags", "composite_score"
+            "trust_net_5d", "foreign_net_5d", "tags", "composite_score",
+            "timestral_predicted_price", "timestral_potential",
+            "timestral_p10", "timestral_p90",
+            "timesfm_predicted_price", "timesfm_potential",
+            "dual_model_consensus"
         ]
         for col in expected_cols:
             if col not in df.columns:
@@ -421,9 +442,10 @@ class DuckDBManager:
             df["tags"] = df["tags"].apply(lambda x: " | ".join(x) if isinstance(x, list) else str(x) if x is not None else None)
 
         try:
+            col_names = ", ".join(expected_cols)
             with self._get_connection() as con:
                 con.register("temp_batch_df", df[expected_cols])
-                con.execute("INSERT INTO predictions SELECT * FROM temp_batch_df")
+                con.execute(f"INSERT INTO predictions ({col_names}) SELECT {col_names} FROM temp_batch_df")
             logger.info(f"💾 成功寫入 {len(df)} 筆量化數據至 DuckDB ({self.db_path})")
             return len(df)
         except Exception as e:
@@ -488,20 +510,20 @@ class DuckDBManager:
                     "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
                 })
 
-        # 2. LSTM 預測結果
-        lstm_results = results.get("lstm_results", [])
-        for r in lstm_results:
+        # 2. Timestral 預測結果 (Mistral Foundation Model 209M)
+        timestral_results = results.get("timestral_results", [])
+        for r in timestral_results:
             t = r["ticker"]
             cand = candidates_map.get(t, {})
             inst = inst_summaries.get(t, {})
             cand_tags = cand.get("tags")
-            default_lstm_tag = "LSTM看漲" if float(r["potential"]) > 0 else "LSTM看跌"
-            tags_str = " | ".join(cand_tags) if cand_tags else default_lstm_tag
+            default_timestral_tag = "Timestral看漲" if float(r["potential"]) > 0 else "Timestral看跌"
+            tags_str = " | ".join(cand_tags) if cand_tags else default_timestral_tag
 
             all_data.append({
                 "index_name": index_name,
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral預測",
                 "ticker": t,
                 "current_price": float(r["current_price"]),
                 "predicted_price": float(r["predicted_price"]),
@@ -518,10 +540,17 @@ class DuckDBManager:
                 "trust_net_5d": inst.get("trust_net_5d"),
                 "foreign_net_5d": inst.get("foreign_net_5d"),
                 "tags": tags_str,
-                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
+                "timestral_predicted_price": float(r["predicted_price"]),
+                "timestral_potential": float(r["potential"]),
+                "timestral_p10": float(r.get("p10")) if r.get("p10") is not None and not pd.isna(r.get("p10")) else None,
+                "timestral_p90": float(r.get("p90")) if r.get("p90") is not None and not pd.isna(r.get("p90")) else None,
+                "timesfm_predicted_price": None,
+                "timesfm_potential": None,
+                "dual_model_consensus": False,
             })
 
-        # 2.5 TimesFM 預測結果
+        # 2.5 TimesFM 預測結果 (Google Foundation Model 200M)
         timesfm_results = results.get("timesfm_results", [])
         for r in timesfm_results:
             t = r["ticker"]
@@ -551,10 +580,57 @@ class DuckDBManager:
                 "trust_net_5d": inst.get("trust_net_5d"),
                 "foreign_net_5d": inst.get("foreign_net_5d"),
                 "tags": tags_str,
-                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
+                "timestral_predicted_price": None,
+                "timestral_potential": None,
+                "timestral_p10": None,
+                "timestral_p90": None,
+                "timesfm_predicted_price": float(r["predicted_price"]),
+                "timesfm_potential": float(r["potential"]),
+                "dual_model_consensus": False,
             })
 
-        # 3. 雙重/三重符合結果
+        # 2.8 舊版 LSTM 預測結果 (Legacy Deprecated Fallback)
+        lstm_results = results.get("lstm_results", [])
+        for r in lstm_results:
+            t = r["ticker"]
+            cand = candidates_map.get(t, {})
+            inst = inst_summaries.get(t, {})
+            cand_tags = cand.get("tags")
+            default_lstm_tag = "LSTM看漲" if float(r["potential"]) > 0 else "LSTM看跌"
+            tags_str = " | ".join(cand_tags) if cand_tags else default_lstm_tag
+
+            all_data.append({
+                "index_name": index_name,
+                "model_name": "LSTM",
+                "strategy_type": "LSTM預測",
+                "ticker": t,
+                "current_price": float(r["current_price"]),
+                "predicted_price": float(r["predicted_price"]),
+                "potential": float(r["potential"]),
+                "ma5": None, "ma10": None, "ma60": None, "ma120": None, "ma250": None,
+                "pullback_type": None,
+                "pe": float(r.get("pe")) if r.get("pe") and not pd.isna(r.get("pe")) else None,
+                "pb": float(r.get("pb")) if r.get("pb") and not pd.isna(r.get("pb")) else None,
+                "forward_pe": float(r.get("forward_pe")) if r.get("forward_pe") and not pd.isna(r.get("forward_pe")) else None,
+                "ev_ebitda": float(r.get("ev_ebitda")) if r.get("ev_ebitda") and not pd.isna(r.get("ev_ebitda")) else None,
+                "period": period,
+                "timestamp": timestamp,
+                "macro_regime": macro_regime_str,
+                "trust_net_5d": inst.get("trust_net_5d"),
+                "foreign_net_5d": inst.get("foreign_net_5d"),
+                "tags": tags_str,
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
+                "timestral_predicted_price": None,
+                "timestral_potential": None,
+                "timestral_p10": None,
+                "timestral_p90": None,
+                "timesfm_predicted_price": None,
+                "timesfm_potential": None,
+                "dual_model_consensus": False,
+            })
+
+        # 3. 雙重/多維共振符合結果 (Dual Foundation Model Resonance)
         overlap_df = results.get("overlap_results", pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
             for idx, row in overlap_df.iterrows():
@@ -562,7 +638,15 @@ class DuckDBManager:
                 cand = candidates_map.get(t, {})
                 inst = inst_summaries.get(t, {})
                 cand_tags = cand.get("tags")
-                tags_str = " | ".join(cand_tags) if cand_tags else "🏆三重共振"
+                tags_str = " | ".join(cand_tags) if cand_tags else "🏆多維共振"
+
+                # Defensive target price & potential synthesis: prioritize synthesized values
+                pred_price = float(row["predicted_price"]) if row.get("predicted_price") is not None and not pd.isna(row.get("predicted_price")) else float(row["current_price"])
+                pot_val = float(row["potential"]) if row.get("potential") is not None and not pd.isna(row.get("potential")) else (
+                    float(row["timestral_potential"]) if row.get("timestral_potential") is not None and not pd.isna(row.get("timestral_potential")) else (
+                        float(row["timesfm_potential"]) if row.get("timesfm_potential") is not None and not pd.isna(row.get("timesfm_potential")) else 0.0
+                    )
+                )
 
                 all_data.append({
                     "index_name": index_name,
@@ -570,8 +654,8 @@ class DuckDBManager:
                     "strategy_type": "多維共振",
                     "ticker": t,
                     "current_price": float(row["current_price"]),
-                    "predicted_price": float(row["predicted_price"]) if row.get("predicted_price") is not None and not pd.isna(row.get("predicted_price")) else float(row["current_price"]),
-                    "potential": float(row["lstm_potential"]) if pd.notna(row.get("lstm_potential")) and row.get("lstm_potential") is not None else (float(row.get("timesfm_potential")) if pd.notna(row.get("timesfm_potential")) and row.get("timesfm_potential") is not None else 0.0),
+                    "predicted_price": pred_price,
+                    "potential": pot_val,
                     "ma5": float(row.get("ma5")) if row.get("ma5") and not pd.isna(row.get("ma5")) else None,
                     "ma10": float(row.get("ma10")) if row.get("ma10") and not pd.isna(row.get("ma10")) else None,
                     "ma60": float(row.get("ma60")) if row.get("ma60") and not pd.isna(row.get("ma60")) else None,
@@ -588,7 +672,14 @@ class DuckDBManager:
                     "trust_net_5d": inst.get("trust_net_5d"),
                     "foreign_net_5d": inst.get("foreign_net_5d"),
                     "tags": tags_str,
-                    "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None
+                    "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
+                    "timestral_predicted_price": float(row.get("timestral_predicted_price")) if row.get("timestral_predicted_price") is not None and not pd.isna(row.get("timestral_predicted_price")) else None,
+                    "timestral_potential": float(row.get("timestral_potential")) if row.get("timestral_potential") is not None and not pd.isna(row.get("timestral_potential")) else None,
+                    "timestral_p10": float(row.get("timestral_p10")) if row.get("timestral_p10") is not None and not pd.isna(row.get("timestral_p10")) else None,
+                    "timestral_p90": float(row.get("timestral_p90")) if row.get("timestral_p90") is not None and not pd.isna(row.get("timestral_p90")) else None,
+                    "timesfm_predicted_price": float(row.get("timesfm_predicted_price")) if row.get("timesfm_predicted_price") is not None and not pd.isna(row.get("timesfm_predicted_price")) else None,
+                    "timesfm_potential": float(row.get("timesfm_potential")) if row.get("timesfm_potential") is not None and not pd.isna(row.get("timesfm_potential")) else None,
+                    "dual_model_consensus": bool(row.get("dual_model_consensus", False)),
                 })
 
         return self.save_predictions_batch(all_data)
@@ -822,7 +913,7 @@ class DuckDBManager:
                    ROW_NUMBER() OVER (PARTITION BY p.ticker ORDER BY p.potential DESC NULLS LAST) as rn
             FROM predictions p
             JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
-            WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%')
+            WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%' OR p.dual_model_consensus = TRUE)
               AND (COALESCE(p.tags, '') NOT LIKE '%防守%' AND COALESCE(p.tags, '') NOT LIKE '%深度防守%')
               AND (p.potential IS NULL OR p.potential > -5.0)
               {p_where_sql}
@@ -876,12 +967,83 @@ class DuckDBManager:
         df = self.query(sql, params)
         return self._clean_df_records(df)
 
-    def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """取得 LSTM 預測漲幅最大 TOP N 標的"""
+    def get_timestral_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 Timestral 預測漲幅最大 TOP N 標的 (Mistral AI 209M)"""
         index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
-            "model_name = 'LSTM'",
+            "model_name = 'Timestral'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
+    def get_timestral_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 Timestral 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "model_name = 'Timestral'",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
+    def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得預測漲幅最大 TOP N 標的 (優先 Timestral，向下相容 LSTM)"""
+        # 優先查詢 Timestral
+        timestral_res = self.get_timestral_top_bullish(index_name=index_name, limit=limit)
+        if timestral_res:
+            return timestral_res
+
+        index_name = self._clean_index_name(index_name)
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "(model_name = 'Timestral' OR model_name = 'LSTM')",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -910,11 +1072,15 @@ class DuckDBManager:
         return self._clean_df_records(df)
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """取得 LSTM 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        """取得預測跌幅最大 / 潛在做空 TOP N 標的 (優先 Timestral，向下相容 LSTM)"""
+        timestral_res = self.get_timestral_top_bearish(index_name=index_name, limit=limit)
+        if timestral_res:
+            return timestral_res
+
         index_name = self._clean_index_name(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
-            "model_name = 'LSTM'",
+            "(model_name = 'Timestral' OR model_name = 'LSTM')",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -1066,11 +1232,16 @@ class DuckDBManager:
         cand: Dict[str, Any] = {
             "ticker": ticker,
             "current_price": 0.0,
-            "lstm_potential": None,
+            "timestral_potential": None,
+            "timestral_predicted_price": None,
+            "timestral_p10": None,
+            "timestral_p90": None,
             "timesfm_potential": None,
+            "timesfm_predicted_price": None,
+            "lstm_potential": None,
             "potential": None,
             "predicted_price": None,
-            "timesfm_predicted_price": None,
+            "dual_model_consensus": False,
             "pullback_type": None,
             "ma5": None,
             "ma10": None,
@@ -1131,19 +1302,33 @@ class DuckDBManager:
             pot = r.get("potential")
             pred = r.get("predicted_price")
 
-            if "LSTM" in m_name or "LSTM" in s_type:
+            if "TIMESTRAL" in m_name or "TIMESTRAL" in s_type:
                 if pot is not None:
-                    cand["lstm_potential"] = float(pot)
+                    cand["timestral_potential"] = float(pot)
                 if pred is not None:
+                    cand["timestral_predicted_price"] = float(pred)
                     cand["predicted_price"] = float(pred)
+                if r.get("timestral_p10") is not None:
+                    cand["timestral_p10"] = float(r["timestral_p10"])
+                if r.get("timestral_p90") is not None:
+                    cand["timestral_p90"] = float(r["timestral_p90"])
             elif "TIMESFM" in m_name or "TIMESFM" in s_type:
                 if pot is not None:
                     cand["timesfm_potential"] = float(pot)
                 if pred is not None:
                     cand["timesfm_predicted_price"] = float(pred)
             elif "多維共振" in m_name or "多維共振" in s_type:
-                if pot is not None and cand["potential"] is None:
+                if pot is not None:
                     cand["potential"] = float(pot)
+                if pred is not None:
+                    cand["predicted_price"] = float(pred)
+                if r.get("dual_model_consensus") is not None:
+                    cand["dual_model_consensus"] = bool(r["dual_model_consensus"])
+            elif "LSTM" in m_name or "LSTM" in s_type:
+                if pot is not None:
+                    cand["lstm_potential"] = float(pot)
+                if pred is not None and cand["predicted_price"] is None:
+                    cand["predicted_price"] = float(pred)
 
             # Composite score (preserve valid 0.0 scores from macro risk control)
             c_score = r.get("composite_score")
@@ -1153,7 +1338,12 @@ class DuckDBManager:
 
         # Reconcile potential
         if cand["potential"] is None:
-            cand["potential"] = cand["lstm_potential"] if cand["lstm_potential"] is not None else cand["timesfm_potential"]
+            if cand["timestral_potential"] is not None:
+                cand["potential"] = cand["timestral_potential"]
+            elif cand["timesfm_potential"] is not None:
+                cand["potential"] = cand["timesfm_potential"]
+            else:
+                cand["potential"] = cand["lstm_potential"]
 
         cand["score"] = cand["composite_score"]
         cand["tags"] = list(merged_tags)

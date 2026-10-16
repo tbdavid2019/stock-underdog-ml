@@ -1,10 +1,19 @@
 """
 Stock prediction models package
 """
-from . import lstm
+try:
+    from . import timestral_model
+except Exception:
+    pass
+
 try:
     from . import timesfm_model
 except Exception:
     pass
 
-__all__ = ['lstm', 'timesfm_model']
+try:
+    from . import lstm
+except Exception:
+    pass
+
+__all__ = ['timestral_model', 'timesfm_model', 'lstm']

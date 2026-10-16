@@ -243,5 +243,59 @@ class TestCompositeEvaluator(unittest.TestCase):
         self.assertNotEqual(cand_3008["resonance_tier"], "🏆三重共振")
         self.assertEqual(cand_3008["resonance_tier"], "🔮雙ML共振")
 
+    def test_dual_foundation_model_confluence_and_synthesis(self):
+        """驗證 Google TimesFM 與 Mistral Timestral 雙大模型共振與合成目標價"""
+        evaluator = CompositeEvaluator()
+
+        # 標的 A: 雙大模型看多 + 玄鐵 + 法人 -> 四重大模型共振
+        # 標的 B: TimesFM 看多，但 Timestral 深度看跌 (-6.0%) -> 應被判定防守並排除共振
+        # 標的 C: 僅 Timestral 有預測 (TimesFM 缺失) -> 防禦性單模型目標價降級
+        strategy_outputs = {
+            "xuantie": [
+                StrategyResult(ticker="2330.TW", strategy_name="玄鐵重劍", is_hit=True, score=85.0, current_price=1000.0, metrics={"ma60": 980.0}),
+            ],
+            "timesfm": [
+                StrategyResult(ticker="2330.TW", strategy_name="TimesFM", is_hit=True, score=90.0, current_price=1000.0, predicted_price=1060.0, potential=6.0, signals={"risk_reward_ratio": 2.5}),
+                StrategyResult(ticker="2317.TW", strategy_name="TimesFM", is_hit=True, score=70.0, current_price=200.0, predicted_price=206.0, potential=3.0, signals={"risk_reward_ratio": 1.5}),
+            ],
+            "timestral": [
+                StrategyResult(ticker="2330.TW", strategy_name="Timestral", is_hit=True, score=92.0, current_price=1000.0, predicted_price=1040.0, potential=4.0, signals={"risk_reward_ratio": 3.0}),
+                StrategyResult(ticker="2317.TW", strategy_name="Timestral", is_hit=False, score=20.0, current_price=200.0, predicted_price=188.0, potential=-6.0, signals={"risk_reward_ratio": 0.3}),
+                StrategyResult(ticker="2454.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=1200.0, predicted_price=1260.0, potential=5.0, signals={"risk_reward_ratio": 2.2}),
+            ],
+            "institutional": [
+                StrategyResult(ticker="2330.TW", strategy_name="三大法人籌碼", is_hit=True, score=80.0, current_price=1000.0, metadata={"is_sync_buy": True}),
+            ]
+        }
+
+        report = evaluator.evaluate("台灣50", strategy_outputs, {})
+
+        # 1. 驗證 2330.TW (四重大模型共振)
+        cand_2330 = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
+        self.assertIsNotNone(cand_2330)
+        self.assertEqual(cand_2330["resonance_tier"], "👑四重共振")
+        self.assertTrue(cand_2330["dual_model_consensus"])
+        self.assertIn("🔮雙大模型共振", cand_2330["tags"])
+        # 合成目標價應為 0.5 * 1060 + 0.5 * 1040 = 1050.0
+        self.assertEqual(cand_2330["predicted_price"], 1050.0)
+        # 合成潛力應為 (1050 - 1000) / 1000 = 5.0%
+        self.assertEqual(cand_2330["potential"], 5.0)
+
+        # 2. 驗證 2317.TW: 因 Timestral <= -5.0% 嚴重看空，應判定防守並排除出共振候選清單
+        cand_2317_overlap = next((c for c in report.overlap_candidates if c["ticker"] == "2317.TW"), None)
+        self.assertIsNone(cand_2317_overlap)
+        cand_2317_ranked = next((c for c in report.ranked_stocks if c["ticker"] == "2317.TW"), None)
+        self.assertIsNotNone(cand_2317_ranked)
+        self.assertTrue(cand_2317_ranked["is_ml_bearish"])
+        self.assertIn("🔻防守", cand_2317_ranked["tags"])
+
+        # 3. 驗證 2454.TW (僅 Timestral，TimesFM 缺失)
+        cand_2454 = next((c for c in report.ranked_stocks if c["ticker"] == "2454.TW"), None)
+        self.assertIsNotNone(cand_2454)
+        # 防禦降級：目標價取單一有效模型 1260.0，不傳播 NaN
+        self.assertEqual(cand_2454["predicted_price"], 1260.0)
+        self.assertEqual(cand_2454["potential"], 5.0)
+
+
 if __name__ == "__main__":
     unittest.main()

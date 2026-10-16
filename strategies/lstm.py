@@ -9,8 +9,14 @@ import pandas as pd
 
 from strategies.base import BaseStrategy, StockContext, StrategyResult
 from strategies.registry import register_strategy
-from models.lstm import prepare_data, train_lstm_model, predict_next_day
 from core.device import DeviceManager
+
+try:
+    from models.lstm import prepare_data, train_lstm_model, predict_next_day
+except Exception:
+    prepare_data = None
+    train_lstm_model = None
+    predict_next_day = None
 
 logger = logging.getLogger("stock_app.strategies.lstm")
 
@@ -18,8 +24,8 @@ logger = logging.getLogger("stock_app.strategies.lstm")
 @register_strategy("lstm")
 class LSTMStrategy(BaseStrategy):
     """
-    LSTM 深度學習短線預測策略
-    利用過去 90 日 OHLCV 序列預測下一交易日收盤價，計算預期漲跌幅潛力
+    [DEPRECATED] LSTM 深度學習短線預測策略
+    注意：此架構已廢棄，請改用 Mistral Timestral-209M 或 Google TimesFM 時序大模型。
     """
 
     name: str = "LSTM"
@@ -45,6 +51,16 @@ class LSTMStrategy(BaseStrategy):
             )
 
         curr_price = float(df["Close"].iloc[-1])
+
+        if prepare_data is None:
+            return StrategyResult(
+                ticker=ticker,
+                strategy_name=self.name,
+                is_hit=False,
+                score=0.0,
+                current_price=curr_price,
+                signals={"reason": "LSTM 模組已廢棄，請改用 Timestral 或 TimesFM"}
+            )
 
         try:
             # 準備數據 (防止 data leakage)

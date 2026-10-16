@@ -98,12 +98,16 @@ export const ApiClient = {
             url = '/api/v1/predictions/xuantie?limit=' + limit;
         } else if (strategy === 'timesfm_bullish') {
             url = '/api/v1/predictions/timesfm/top-bullish?limit=' + limit;
+        } else if (strategy === 'timestral_bullish') {
+            url = '/api/v1/predictions/timestral/top-bullish?limit=' + limit;
+        } else if (strategy === 'timestral_bearish') {
+            url = '/api/v1/predictions/timestral/top-bearish?limit=' + limit;
+        } else if (strategy === 'timesfm_bearish') {
+            url = '/api/v1/predictions/timesfm/top-bearish?limit=' + limit;
         } else if (strategy === 'bullish') {
             url = '/api/v1/predictions/lstm/top-bullish?limit=' + limit;
         } else if (strategy === 'bearish') {
             url = '/api/v1/predictions/lstm/top-bearish?limit=' + limit;
-        } else if (strategy === 'timesfm_bearish') {
-            url = '/api/v1/predictions/timesfm/top-bearish?limit=' + limit;
         }
 
         if (indexName && indexName !== 'ALL' && indexName !== '全部市場') {

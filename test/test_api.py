@@ -61,6 +61,25 @@ class TestFastAPIService(unittest.TestCase):
             },
             {
                 "index_name": "台灣50",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
+                "ticker": "2330.TW",
+                "current_price": 2400.0,
+                "predicted_price": 2520.0,
+                "potential": 5.0,
+                "timestral_predicted_price": 2520.0,
+                "timestral_potential": 5.0,
+                "timestral_p10": 2380.0,
+                "timestral_p90": 2650.0,
+                "dual_model_consensus": True,
+                "pe": 28.0,
+                "period": "6mo",
+                "timestamp": now_ts,
+                "macro_regime": "全面多頭",
+                "tags": "Timestral看漲"
+            },
+            {
+                "index_name": "台灣50",
                 "model_name": "玄鐵重劍",
                 "strategy_type": "玄鐵重劍",
                 "ticker": "1216.TW",
@@ -124,9 +143,22 @@ class TestFastAPIService(unittest.TestCase):
     def test_lstm_top_bullish_and_bearish(self):
         bull_resp = self.client.get("/api/v1/predictions/lstm/top-bullish?limit=5")
         self.assertEqual(bull_resp.status_code, 200)
+        self.assertIn("x-deprecation-warning", bull_resp.headers)
         
         bear_resp = self.client.get("/api/v1/predictions/lstm/top-bearish?limit=5")
         self.assertEqual(bear_resp.status_code, 200)
+        self.assertIn("x-deprecation-warning", bear_resp.headers)
+
+    def test_timestral_top_bullish_and_bearish(self):
+        bull_resp = self.client.get("/api/v1/predictions/timestral/top-bullish?limit=5")
+        self.assertEqual(bull_resp.status_code, 200)
+        data = bull_resp.json()
+        self.assertTrue(data["success"])
+
+        bear_resp = self.client.get("/api/v1/predictions/timestral/top-bearish?limit=5")
+        self.assertEqual(bear_resp.status_code, 200)
+        data = bear_resp.json()
+        self.assertTrue(data["success"])
 
     def test_timesfm_top_bullish_and_bearish(self):
         bull_resp = self.client.get("/api/v1/predictions/timesfm/top-bullish?limit=5")

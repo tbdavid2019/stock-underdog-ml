@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.4.29';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.29';
+import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.30';
 
 const { createApp } = Vue;
 
@@ -29,12 +29,13 @@ export const app = createApp({
             expandedDrawerLoading: false,
 
             strategyOptions: [
-                { id: 'resonance', label: '三重共振焦點', icon: 'military_tech' },
+                { id: 'resonance', label: '雙時序共振焦點', icon: 'military_tech' },
                 { id: 'xuantie', label: '玄鐵均線波段', icon: 'show_chart' },
                 { id: 'timesfm_bullish', label: 'TimesFM 預測 TOP', icon: 'auto_awesome' },
-                { id: 'bullish', label: 'LSTM 看漲 TOP', icon: 'trending_up' },
-                { id: 'bearish', label: 'LSTM 看跌避險', icon: 'trending_down' },
+                { id: 'timestral_bullish', label: 'Timestral 看漲 TOP', icon: 'smart_toy' },
+                { id: 'timestral_bearish', label: 'Timestral 避險', icon: 'warning' },
                 { id: 'timesfm_bearish', label: 'TimesFM 避險', icon: 'shield' },
+                { id: 'bullish', label: 'LSTM 看漲 (舊版)', icon: 'trending_up' },
                 { id: 'latest', label: '最新全量批次', icon: 'dataset' }
             ],
 
@@ -75,10 +76,12 @@ export const app = createApp({
             historyLoading: false,
             priceChartVisibility: {
                 price: true,
-                lstm: true,
+                timestral: true,
+                timestralBands: true,
                 timesfm: true,
                 resonance: true,
-                ma60: false
+                ma60: false,
+                lstm: false
             },
             tickerInstHistory: [],
             tickerInstLoading: false,
@@ -1098,7 +1101,7 @@ export const app = createApp({
                 this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) ? tab : 'dashboard';
 
                 const strat = params.get('strategy');
-                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
+                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'timestral_bullish', 'timestral_bearish', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
 
                 const idx = params.get('index');
                 this.selectedIndex = (idx && idx !== 'ALL') ? idx : '';
@@ -1302,12 +1305,12 @@ export const app = createApp({
                 } else if (cleanLabel.includes('三重共振')) {
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
+                } else if (cleanLabel.includes('雙時序共振') || cleanLabel.includes('雙模型共振') || cleanLabel.includes('雙ML共振')) {
+                    icon = 'psychology';
+                    badgeType = 'resonance_ml';
                 } else if (cleanLabel.includes('雙重共振')) {
                     icon = 'stars';
                     badgeType = 'resonance_double';
-                } else if (cleanLabel.includes('雙ML共振')) {
-                    icon = 'psychology';
-                    badgeType = 'resonance_ml';
                 } else if (cleanLabel.includes('多維共振')) {
                     icon = 'hub';
                     badgeType = 'resonance_multi';
@@ -1317,6 +1320,9 @@ export const app = createApp({
                 } else if (cleanLabel.includes('玄鐵') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
                     icon = 'show_chart';
                     badgeType = 'technical';
+                } else if (cleanLabel.includes('Timestral')) {
+                    icon = 'smart_toy';
+                    badgeType = 'ai_timestral';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
@@ -1360,8 +1366,10 @@ export const app = createApp({
                         return 'bg-emerald-950/50 text-emerald-300 border-emerald-800/40 font-semibold';
                     case 'technical':
                         return 'bg-sky-950/40 text-sky-300 border-sky-800/40 font-medium';
+                    case 'ai_timestral':
+                        return 'bg-cyan-950/40 text-cyan-300 border-cyan-800/40 font-medium';
                     case 'ai_timesfm':
-                        return 'bg-amber-950/30 text-amber-300 border-amber-800/30 font-medium';
+                        return 'bg-purple-950/40 text-purple-300 border-purple-800/40 font-medium';
                     case 'ai_lstm':
                         return 'bg-blue-950/30 text-blue-300 border-blue-800/30 font-medium';
                     case 'risk_reward':
@@ -1386,8 +1394,10 @@ export const app = createApp({
                         return 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold';
                     case 'technical':
                         return 'bg-sky-50 text-sky-800 border-sky-200 font-medium';
+                    case 'ai_timestral':
+                        return 'bg-cyan-50 text-cyan-800 border-cyan-200 font-medium';
                     case 'ai_timesfm':
-                        return 'bg-amber-50 text-amber-800 border-amber-200 font-medium';
+                        return 'bg-purple-50 text-purple-800 border-purple-200 font-medium';
                     case 'ai_lstm':
                         return 'bg-blue-50 text-blue-800 border-blue-200 font-medium';
                     case 'risk_reward':

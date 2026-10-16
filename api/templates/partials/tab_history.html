@@ -691,13 +691,22 @@
                     <span>真實股價</span>
                 </button>
 
-                <!-- LSTM 目標價 -->
-                <button type="button" @click="togglePriceChartSeries('lstm')"
-                        title="點擊切換顯示 LSTM 預測目標價"
+                <!-- Timestral 目標價 -->
+                <button type="button" @click="togglePriceChartSeries('timestral')"
+                        title="點擊切換顯示 Mistral Timestral 預測目標價 (P50)"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.lstm ? (isDark ? 'bg-amber-500/15 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B] inline-block shadow-sm"></span>
-                    <span>LSTM 目標價</span>
+                        :class="priceChartVisibility.timestral ? (isDark ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300' : 'bg-cyan-50 border-cyan-300 text-cyan-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#06B6D4] inline-block shadow-sm"></span>
+                    <span>Timestral 目標價</span>
+                </button>
+
+                <!-- Timestral P10~P90 蒙地卡羅區間 -->
+                <button type="button" @click="togglePriceChartSeries('timestralBands')"
+                        title="點擊切換顯示 Timestral P10~P90 蒙地卡羅風控分位數區間"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.timestralBands ? (isDark ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200' : 'bg-cyan-100 border-cyan-400 text-cyan-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#06B6D4]/40 border border-[#06B6D4] inline-block"></span>
+                    <span>P10~P90 區間</span>
                 </button>
 
                 <!-- TimesFM 目標價 -->
@@ -709,13 +718,13 @@
                     <span>TimesFM 目標價</span>
                 </button>
 
-                <!-- 多維共振目標價 -->
+                <!-- 雙時序共振目標價 -->
                 <button type="button" @click="togglePriceChartSeries('resonance')"
-                        title="點擊切換顯示多維共振目標價"
+                        title="點擊切換顯示雙時序共振目標價 (TimesFM × Timestral)"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.resonance ? (isDark ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 bg-[#10B981] inline-block shadow-sm transform rotate-45"></span>
-                    <span>多維共振</span>
+                    <span>雙時序共振</span>
                 </button>
 
                 <!-- MA60 季線 -->
@@ -725,6 +734,15 @@
                         :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-0.5 bg-slate-400 inline-block"></span>
                     <span>MA60 季線</span>
+                </button>
+
+                <!-- LSTM 目標價 (舊版) -->
+                <button type="button" @click="togglePriceChartSeries('lstm')"
+                        title="點擊切換顯示歷史 LSTM 預測目標價 (舊版)"
+                        class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
+                        :class="priceChartVisibility.lstm ? (isDark ? 'bg-amber-500/15 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-800') : (isDark ? 'opacity-30 border-transparent bg-transparent text-slate-600 line-through' : 'opacity-30 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2 h-2 rounded-full bg-[#F59E0B] inline-block"></span>
+                    <span>LSTM (舊版)</span>
                 </button>
             </div>
         </div>

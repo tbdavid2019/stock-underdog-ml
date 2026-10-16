@@ -59,7 +59,7 @@ def get_market_macro_regime(
 
 @mcp.tool(
     name="get_triple_resonance_stocks",
-    description="查詢多策略交集與 👑 四重共振 / 🏆 三重共振 / 🔮 雙ML共振焦點股票。篩選同時符合「技術面 MA60/120 買點 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 投信/外資主力連續買超鎖碼 ∩ 低PE估值」之最高信心標的。"
+    description="查詢多策略交集與 👑 雙時序大模型共振 (Google TimesFM × Mistral Timestral ∩ 技術面玄鐵回調 ∩ 投信/外資主力連續買超鎖碼) 之最高信心標的。目標價由雙大模型加權合成。"
 )
 def get_triple_resonance_stocks(
     index_name: Optional[str] = None,
@@ -106,8 +106,39 @@ def get_xuantie_pullback_stocks(
 
 
 @mcp.tool(
+    name="get_timestral_top_predictions",
+    description="查詢 Mistral AI Timestral-209M 時序大模型預測之漲幅 TOP N 潛力榜或跌幅 TOP N 避險榜。包含預測 P50 目標價、潛在漲跌幅 %、P10/P90 蒙地卡羅風控區間與真實盈虧比 (Risk/Reward)。"
+)
+def get_timestral_top_predictions(
+    index_name: Optional[str] = None,
+    direction: str = "bullish",
+    limit: int = 10
+) -> Dict[str, Any]:
+    """
+    Query Mistral Timestral-209M foundation model price prediction rankings.
+
+    Args:
+        index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
+        direction: 'bullish' (看漲排行) 或 'bearish' (看跌排行)
+        limit: 取得前 N 檔 (預設: 10)
+    """
+    if direction.lower() == "bearish":
+        records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
+    else:
+        records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
+
+    return {
+        "success": True,
+        "model": "Timestral-209M",
+        "direction": direction,
+        "count": len(records),
+        "data": records
+    }
+
+
+@mcp.tool(
     name="get_lstm_top_predictions",
-    description="查詢 LSTM 深度學習模型預測之漲幅 TOP N 潛力榜或跌幅 TOP N 避險做空榜。包含預測明日目標價、潛在漲跌幅 %、本益比 PE 與股價淨值比 PB。"
+    description="[Deprecated] 舊版 LSTM 預測工具。已全面升級為 Mistral Timestral-209M (get_timestral_top_predictions)。此工具維持向下相容，若 DuckDB 中無舊 LSTM 記錄則透明回傳 Timestral 預測。"
 )
 def get_lstm_top_predictions(
     index_name: Optional[str] = None,
@@ -115,7 +146,7 @@ def get_lstm_top_predictions(
     limit: int = 10
 ) -> Dict[str, Any]:
     """
-    Query LSTM price prediction rankings.
+    Query LSTM price prediction rankings (Deprecated, fallback to Timestral).
 
     Args:
         index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
@@ -124,12 +155,18 @@ def get_lstm_top_predictions(
     """
     if direction.lower() == "bearish":
         records = db.get_top_bearish(index_name=index_name, limit=limit)
+        if not records:
+            records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
     else:
         records = db.get_top_bullish(index_name=index_name, limit=limit)
+        if not records:
+            records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
 
     return {
         "success": True,
         "direction": direction,
+        "deprecated": True,
+        "warning": "get_lstm_top_predictions is deprecated; please use get_timestral_top_predictions instead.",
         "count": len(records),
         "data": records
     }

@@ -34,8 +34,16 @@ class StockPredictionItem(BaseModel):
     macro_regime: Optional[str] = Field(None, description="當時美股宏觀市場環境")
     trust_net_5d: Optional[int] = Field(None, description="投信 5 日累計買賣超 (張)")
     foreign_net_5d: Optional[int] = Field(None, description="外資 5 日累計買賣超 (張)")
-    risk_reward_ratio: Optional[float] = Field(None, description="盈虧比 (TimesFM 90%分位數上行 / 10%下行)")
-    tags: Optional[str] = Field(None, description="綜合標籤 (如 🏆三重共振 | 土洋合買)")
+    risk_reward_ratio: Optional[float] = Field(None, description="盈虧比 (時序大模型 90%分位數上行 / 10%下行)")
+    tags: Optional[str] = Field(None, description="綜合標籤 (如 🏆雙模型共振 | 🏆三重共振 | 土洋合買)")
+    timesfm_predicted_price: Optional[float] = Field(None, description="Google TimesFM 預測目標價")
+    timesfm_potential: Optional[float] = Field(None, description="Google TimesFM 預期漲跌幅 (%)")
+    timestral_predicted_price: Optional[float] = Field(None, description="Mistral Timestral 預測目標價 (P50)")
+    timestral_potential: Optional[float] = Field(None, description="Mistral Timestral 預期漲跌幅 (%)")
+    timestral_p10: Optional[float] = Field(None, description="Mistral Timestral 10% 悲觀分位數")
+    timestral_p90: Optional[float] = Field(None, description="Mistral Timestral 90% 樂觀分位數")
+    dual_model_consensus: Optional[bool] = Field(None, description="TimesFM 與 Timestral 雙時序大模型是否同時看漲共振")
+    lstm_potential: Optional[float] = Field(None, description="[Deprecated] 舊版 LSTM 預期漲跌幅 (請改用 timestral_potential 或 potential)")
 
 
 class PredictionResponse(BaseModel):
