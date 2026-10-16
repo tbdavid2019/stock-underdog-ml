@@ -664,6 +664,78 @@
 
     <!-- ================= 3. TIME-SERIES PREDICTIONS & CHARTS ================= -->
 
+    <!-- Price vs AI Prediction Target Price Trend Line Chart -->
+    <div v-if="!historyLoading && historyRecords.length > 0"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-5 rounded-2xl border space-y-4">
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">insights</span>
+                    <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與 AI 預測目標價趨勢折線圖</span>
+                </h3>
+                <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    比對每日真實收盤/現價走勢與 LSTM、TimesFM、多維共振等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
+                </p>
+            </div>
+
+            <!-- Interactive Legend Toggles -->
+            <div class="flex flex-wrap items-center gap-2 text-xs num-font">
+                <!-- 真實股價 -->
+                <button type="button" @click="togglePriceChartSeries('price')"
+                        title="點擊切換顯示真實股價"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.price ? (isDark ? 'bg-sky-500/15 border-sky-500/50 text-sky-400' : 'bg-sky-50 border-sky-300 text-sky-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#38BDF8] inline-block shadow-sm"></span>
+                    <span>真實股價</span>
+                </button>
+
+                <!-- LSTM 目標價 -->
+                <button type="button" @click="togglePriceChartSeries('lstm')"
+                        title="點擊切換顯示 LSTM 預測目標價"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.lstm ? (isDark ? 'bg-amber-500/15 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B] inline-block shadow-sm"></span>
+                    <span>LSTM 目標價</span>
+                </button>
+
+                <!-- TimesFM 目標價 -->
+                <button type="button" @click="togglePriceChartSeries('timesfm')"
+                        title="點擊切換顯示 TimesFM 預測目標價"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.timesfm ? (isDark ? 'bg-purple-500/15 border-purple-500/50 text-purple-300' : 'bg-purple-50 border-purple-300 text-purple-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#A855F7] inline-block shadow-sm transform rotate-45"></span>
+                    <span>TimesFM 目標價</span>
+                </button>
+
+                <!-- 多維共振目標價 -->
+                <button type="button" @click="togglePriceChartSeries('resonance')"
+                        title="點擊切換顯示多維共振目標價"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.resonance ? (isDark ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 bg-[#10B981] inline-block shadow-sm transform rotate-45"></span>
+                    <span>多維共振</span>
+                </button>
+
+                <!-- MA60 季線 -->
+                <button type="button" @click="togglePriceChartSeries('ma60')"
+                        title="點擊切換顯示 MA60 季線"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-0.5 bg-slate-400 inline-block"></span>
+                    <span>MA60 季線</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Chart -->
+        <div class="w-full h-64 sm:h-80 relative pt-2">
+            <canvas id="pricePredictChartCanvas"></canvas>
+        </div>
+
+    </div>
+
     <!-- Prediction History Table -->
     <div v-if="!historyLoading && historyRecords.length > 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"

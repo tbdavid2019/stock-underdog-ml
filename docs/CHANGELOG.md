@@ -4,6 +4,27 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-16 (v2.4.29)
+
+### Added & Enhanced (Stock Price vs AI Target Price Trajectory Chart)
+- **📈 個股時序預測加入「真實股價 / AI 預測目標價」走勢折線圖（Price vs AI Prediction Trajectory Line Chart）**：
+  - **使用者需求實現**：呼應法人累計買賣超曲線圖之高評價視覺工藝，於個股歷史時間序列（`tab_history.html`）頂部新增「股價與 AI 預測目標價趨勢折線圖」，比對真實股價與多模型預測軌跡。
+  - **五大多維度時序走勢整合**：
+    - 🔵 **真實股價 (現價)**：天空藍 `#38BDF8`，實線（2.8px）搭配半透明動態漸層底色填滿（Light/Dark 專屬透明度）。
+    - 🟡 **LSTM 預測目標價**：琥珀金 `#F59E0B`，虛線 [5, 4] 搭配圓形端點，直觀呈現長短期記憶時序模型預期目標。
+    - 🟣 **TimesFM 預測目標價**：紫羅蘭 `#A855F7`，細虛線 [3, 3] 搭配旋轉菱形端點，呈現 Google 基礎時序大模型預估。
+    - 🟢 **多維共振目標價**：翡翠綠 `#10B981`，實線（2.4px）搭配三角端點，標記多策略共振觸發之核心目標。
+    - ⚪ **MA60 季線**：石板灰 `#94A3B8` / `#64748B`，點線 [2, 4]，預設折疊隱藏，提供中長線生命線技術參照。
+  - **互動式圖例過濾與狀態切換（Interactive Legend Badges）**：
+    - 提供響應式晶片按鈕，點擊可即時切換單一或多個模型曲線的顯示與隱藏（`togglePriceChartSeries`），無須重新繪製全圖。
+    - 停用狀態呈現柔和半透明刪除線樣式，直覺清晰。
+  - **高精度數值 Tooltip 空間差計算**：
+    - 自訂 JetBrains Mono 懸浮提示框，自動比對該交易日各模型目標價與真實股價之溢折價幅度（例如：`LSTM 目標價: $3,363.02 (+9.01% vs 現價)`）。
+    - 支援 `spanGaps: true` 與非交易日空值平滑容錯，避免線條跳空掉至 0。
+  - **前後端與快取效能提升**：
+    - `api/static/js/chart-manager.js`：實作 `renderPricePredictChart` 與 `setDatasetVisibility`，並於 `updateTheme` 中動態響應深淺色主題配色。
+    - `api/static/js/app.js`：歷史查詢預設回溯筆數由 40 筆擴充至 90 筆（涵蓋約 1.5 個月完整交易走勢），並於頁籤切換時自動維持圖表生命週期。
+
 ## 2026-10-16 (v2.4.28)
 
 ### Fixed & Enhanced (Branding, Corporate Equity Network & Institutional Flow Overhaul)

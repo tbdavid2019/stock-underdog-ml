@@ -73,6 +73,13 @@ export const app = createApp({
             searchTicker: '2330.TW',
             historyRecords: [],
             historyLoading: false,
+            priceChartVisibility: {
+                price: true,
+                lstm: true,
+                timesfm: true,
+                resonance: true,
+                ma60: false
+            },
             tickerInstHistory: [],
             tickerInstLoading: false,
             hasSearched: false,
@@ -363,7 +370,7 @@ export const app = createApp({
                 this.loadHistoryCompanyData(resolution.ticker, requestId);
 
                 const [historyData, instData] = await Promise.all([
-                    ApiClient.getPredictionHistory(resolution.ticker, 40).catch(() => []),
+                    ApiClient.getPredictionHistory(resolution.ticker, 90).catch(() => []),
                     ApiClient.getInstitutionalHistory(resolution.ticker, 60).catch(() => [])
                 ]);
 
@@ -371,11 +378,14 @@ export const app = createApp({
                 this.historyRecords = historyData;
                 this.tickerInstHistory = instData;
 
-                if (this.tickerInstHistory.length > 0) {
-                    this.$nextTick(() => {
+                this.$nextTick(() => {
+                    if (this.historyRecords.length > 0) {
+                        this.renderPricePredictChart();
+                    }
+                    if (this.tickerInstHistory.length > 0) {
                         this.renderInstChart();
-                    });
-                }
+                    }
+                });
             } catch (e) {
                 if (requestId !== this.historyRequestId) return;
                 this.historyError = e.message || '查詢服務暫時無法使用，請稍後再試。';
@@ -467,6 +477,16 @@ export const app = createApp({
             } else if (tab === 'network' && (!this.historyCompanyData || !this.historyCompanyData.company_network)) {
                 this.ensureCompanyNetworkLoaded(ticker);
             }
+        },
+        togglePriceChartSeries(seriesKey) {
+            if (this.priceChartVisibility[seriesKey] === undefined) return;
+            this.priceChartVisibility[seriesKey] = !this.priceChartVisibility[seriesKey];
+            chartManager.setDatasetVisibility('pricePredictChart', seriesKey, this.priceChartVisibility[seriesKey]);
+        },
+        renderPricePredictChart() {
+            this.$nextTick(() => {
+                chartManager.renderPricePredictChart('pricePredictChartCanvas', this.historyRecords, this.isDark, this.priceChartVisibility);
+            });
         },
         renderInstChart() {
             this.$nextTick(() => {
@@ -794,6 +814,11 @@ export const app = createApp({
             } else if (tab === 'history') {
                 if (this.searchTicker && !this.historyRecords.length) {
                     this.loadHistory();
+                } else {
+                    this.$nextTick(() => {
+                        if (this.historyRecords.length > 0) this.renderPricePredictChart();
+                        if (this.tickerInstHistory.length > 0) this.renderInstChart();
+                    });
                 }
             } else if (tab === 'podcast') {
                 this.loadPodcastEpisodes();

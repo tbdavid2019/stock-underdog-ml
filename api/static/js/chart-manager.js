@@ -177,6 +177,230 @@ export class ChartManager {
     }
 
     /**
+     * Toggle or set dataset visibility for a specific series key
+     * @param {string} chartKey
+     * @param {string} seriesKey
+     * @param {boolean} isVisible
+     */
+    setDatasetVisibility(chartKey, seriesKey, isVisible) {
+        const chart = this.instances[chartKey];
+        if (!chart || !chart.data || !chart.data.datasets) return;
+        const ds = chart.data.datasets.find(d => d.key === seriesKey);
+        if (ds) {
+            ds.hidden = !isVisible;
+            chart.update();
+        }
+    }
+
+    /**
+     * Render Stock Price vs AI Target Price (LSTM, TimesFM, Resonance, MA60) Trajectory Chart
+     * @param {HTMLCanvasElement|string} canvas - Canvas element or ID
+     * @param {Array} historyRecords - Array of raw prediction history records
+     * @param {boolean} isDark - Dark mode active flag
+     * @param {Object} visibility - Map of seriesKey -> boolean
+     */
+    renderPricePredictChart(canvas, historyRecords, isDark, visibility = {}) {
+        const el = typeof canvas === 'string' ? document.getElementById(canvas) : canvas;
+        if (!el || !historyRecords || !historyRecords.length || typeof Chart === 'undefined') return null;
+
+        const chartKey = 'pricePredictChart';
+        this.destroy(chartKey);
+
+        // Sort chronologically (earliest to latest)
+        const sorted = [...historyRecords].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+
+        // Group by Date (YYYY-MM-DD)
+        const dateMap = new Map();
+        for (const r of sorted) {
+            if (!r.timestamp) continue;
+            const dateKey = r.timestamp.slice(0, 10);
+            if (!dateMap.has(dateKey)) {
+                dateMap.set(dateKey, {
+                    date: dateKey,
+                    price: null,
+                    ma60: null,
+                    lstm: null,
+                    timesfm: null,
+                    resonance: null
+                });
+            }
+            const item = dateMap.get(dateKey);
+            const curPrice = Number(r.current_price);
+            if (!isNaN(curPrice) && curPrice > 0) item.price = curPrice;
+            const ma60 = Number(r.ma60);
+            if (!isNaN(ma60) && ma60 > 0) item.ma60 = ma60;
+            const predPrice = Number(r.predicted_price);
+            if (!isNaN(predPrice) && predPrice > 0) {
+                const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
+                if (strat.includes('lstm')) item.lstm = predPrice;
+                else if (strat.includes('timesfm')) item.timesfm = predPrice;
+                else if (strat.includes('共振')) item.resonance = predPrice;
+            }
+        }
+
+        const labels = Array.from(dateMap.keys());
+        if (!labels.length) return null;
+
+        const theme = this.getThemeTokens(isDark);
+
+        const dataPrice = labels.map(d => dateMap.get(d).price);
+        const dataLstm = labels.map(d => dateMap.get(d).lstm);
+        const dataTimesfm = labels.map(d => dateMap.get(d).timesfm);
+        const dataResonance = labels.map(d => dateMap.get(d).resonance);
+        const dataMa60 = labels.map(d => dateMap.get(d).ma60);
+
+        const chart = new Chart(el, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        key: 'price',
+                        label: '真實股價',
+                        data: dataPrice,
+                        borderColor: '#38BDF8',
+                        backgroundColor: isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.05)',
+                        borderWidth: 2.8,
+                        tension: 0.25,
+                        pointRadius: labels.length > 40 ? 1.5 : 3.5,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#38BDF8',
+                        fill: true,
+                        spanGaps: true,
+                        hidden: visibility.price === false
+                    },
+                    {
+                        key: 'lstm',
+                        label: 'LSTM 目標價',
+                        data: dataLstm,
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 4],
+                        borderWidth: 2.2,
+                        tension: 0.25,
+                        pointRadius: labels.length > 40 ? 2 : 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#F59E0B',
+                        pointStyle: 'circle',
+                        spanGaps: true,
+                        hidden: visibility.lstm === false
+                    },
+                    {
+                        key: 'timesfm',
+                        label: 'TimesFM 目標價',
+                        data: dataTimesfm,
+                        borderColor: '#A855F7',
+                        backgroundColor: 'transparent',
+                        borderDash: [3, 3],
+                        borderWidth: 2.2,
+                        tension: 0.25,
+                        pointRadius: labels.length > 40 ? 2.5 : 4.5,
+                        pointHoverRadius: 6.5,
+                        pointBackgroundColor: '#A855F7',
+                        pointStyle: 'rectRot',
+                        spanGaps: true,
+                        hidden: visibility.timesfm === false
+                    },
+                    {
+                        key: 'resonance',
+                        label: '多維共振目標價',
+                        data: dataResonance,
+                        borderColor: '#10B981',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2.4,
+                        tension: 0.25,
+                        pointRadius: labels.length > 40 ? 3 : 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#10B981',
+                        pointStyle: 'triangle',
+                        spanGaps: true,
+                        hidden: visibility.resonance === false
+                    },
+                    {
+                        key: 'ma60',
+                        label: 'MA60 季線',
+                        data: dataMa60,
+                        borderColor: isDark ? '#94A3B8' : '#64748B',
+                        backgroundColor: 'transparent',
+                        borderDash: [2, 4],
+                        borderWidth: 1.6,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointBackgroundColor: isDark ? '#94A3B8' : '#64748B',
+                        spanGaps: true,
+                        hidden: visibility.ma60 !== true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: theme.tooltipBg,
+                        titleColor: theme.tooltipTitle,
+                        bodyColor: theme.tooltipBody,
+                        borderColor: theme.tooltipBorder,
+                        borderWidth: 1,
+                        padding: 10,
+                        bodyFont: { family: 'JetBrains Mono' },
+                        titleFont: { family: 'JetBrains Mono', weight: 'bold' },
+                        callbacks: {
+                            title(items) {
+                                if (!items || !items.length) return '';
+                                return `交易日期: ${items[0].label}`;
+                            },
+                            label(ctx) {
+                                const val = ctx.parsed.y;
+                                if (val === null || val === undefined || isNaN(val)) return null;
+                                const formatted = '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+                                const label = ctx.dataset.label;
+                                const dateIdx = ctx.dataIndex;
+                                const priceDs = ctx.chart.data.datasets.find(d => d.key === 'price');
+                                const actual = priceDs ? priceDs.data[dateIdx] : null;
+
+                                if (actual && actual > 0 && ctx.dataset.key !== 'price' && ctx.dataset.key !== 'ma60') {
+                                    const diff = ((val - actual) / actual) * 100;
+                                    const sign = diff > 0 ? '+' : '';
+                                    return ` ${label}: ${formatted} (${sign}${diff.toFixed(2)}% vs 現價)`;
+                                }
+                                return ` ${label}: ${formatted}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: theme.gridColor },
+                        ticks: {
+                            color: theme.textColor,
+                            font: { family: 'JetBrains Mono', size: 10 },
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        grid: { color: theme.gridColor },
+                        ticks: {
+                            color: theme.textColor,
+                            font: { family: 'JetBrains Mono', size: 10 },
+                            callback: (v) => '$' + v.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+
+        this.instances[chartKey] = chart;
+        return chart;
+    }
+
+    /**
      * Render Broker Branches Multi-Line Accumulation Trend Chart
      * @param {HTMLCanvasElement|string} canvas - Canvas element or ID
      * @param {Array} dates - Array of date strings
@@ -313,6 +537,20 @@ export class ChartManager {
             if (chart.options && chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
                 chart.options.plugins.legend.labels.color = theme.textColor;
             }
+
+            // Theme-dependent dataset styling for pricePredictChart
+            if (chart.data && chart.data.datasets) {
+                const priceDs = chart.data.datasets.find(d => d.key === 'price');
+                if (priceDs) {
+                    priceDs.backgroundColor = isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.05)';
+                }
+                const ma60Ds = chart.data.datasets.find(d => d.key === 'ma60');
+                if (ma60Ds) {
+                    ma60Ds.borderColor = isDark ? '#94A3B8' : '#64748B';
+                    ma60Ds.pointBackgroundColor = isDark ? '#94A3B8' : '#64748B';
+                }
+            }
+
             chart.update();
         }
     }
