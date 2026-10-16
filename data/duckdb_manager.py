@@ -1439,14 +1439,26 @@ class DuckDBManager:
             logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 日 K 失敗: {e}")
             return pd.DataFrame()
 
-    def save_institutional_flows_batch(self, records: List[Dict[str, Any]]) -> int:
+    def save_institutional_flows_batch(self, records: Any) -> int:
         """
         批次寫入三大法人每日進出與持股數據，並自動去重 (Upsert on date + ticker)
+        支援傳入 List[Dict[str, Any]] 或 pandas.DataFrame
         """
-        if not self.enabled or not records:
+        if not self.enabled or records is None:
             return 0
 
-        df = pd.DataFrame(records)
+        if isinstance(records, pd.DataFrame):
+            df = records.copy()
+        elif isinstance(records, list):
+            if not records:
+                return 0
+            df = pd.DataFrame(records)
+        else:
+            return 0
+
+        if df.empty:
+            return 0
+
         expected_cols = [
             "date", "ticker", "raw_code", "name",
             "foreign_net", "trust_net", "dealer_net", "total_net",

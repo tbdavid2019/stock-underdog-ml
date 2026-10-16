@@ -268,9 +268,9 @@
                                       :class="isDark ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'">
                                     資本額: {{ historyCompanyData.company_network.capital_formatted }}
                                 </span>
-                                <span v-if="historyCompanyData.company_network.representative" class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold"
+                                <span v-if="historyCompanyData.company_network.representative || historyCompanyData.chairman" class="px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold"
                                       :class="isDark ? 'bg-slate-800 text-slate-200 border border-slate-700' : 'bg-slate-200 text-slate-800 border border-slate-300'">
-                                    代表董座: {{ historyCompanyData.company_network.representative }}
+                                    代表董座: {{ (historyCompanyData.company_network.representative && !historyCompanyData.company_network.representative.includes('_')) ? historyCompanyData.company_network.representative : (historyCompanyData.chairman || historyCompanyData.company_network.representative) }}
                                 </span>
                             </div>
                             <a :href="historyCompanyData.company_network.web_url" target="_blank" rel="noopener"

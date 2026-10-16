@@ -44,10 +44,12 @@ class HistoricalImporter:
     def import_institutional_flows(
         cls, 
         db_mgr: Optional[DuckDBManager] = None, 
-        max_rows: Optional[int] = None
+        max_rows: Optional[int] = None,
+        incremental: bool = False
     ) -> int:
         """
         匯入上市與上櫃三大法人歷史買賣超數據 (twse_flows.csv & tpex_flows.csv)
+        支援 incremental=True 增量同步（僅下載/更新大於等於現有最大交易日之資料）
         """
         mgr = db_mgr or DuckDBManager()
         if not mgr.enabled:
@@ -57,12 +59,29 @@ class HistoricalImporter:
         total_imported = 0
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        expected_cols = [
+            "date", "ticker", "raw_code", "name",
+            "foreign_net", "trust_net", "dealer_net", "total_net",
+            "foreign_ratio", "total_shares", "foreign_shares",
+            "market", "created_at"
+        ]
+
         for source_name, url, market in [
             ("TWSE 法人買賣超", cls.TWSE_FLOWS_URL, "TWSE"),
             ("TPEX 法人買賣超", cls.TPEX_FLOWS_URL, "TPEX"),
         ]:
             try:
-                logger.info(f"📥 正在下載並解析 {source_name}...")
+                max_date = None
+                if incremental and mgr.enabled:
+                    try:
+                        with mgr._get_connection() as con:
+                            row = con.execute("SELECT MAX(date) FROM tw_institutional_daily WHERE market = ?", [market]).fetchone()
+                            if row and row[0]:
+                                max_date = str(row[0])
+                    except Exception as e:
+                        logger.debug(f"查詢 {market} 現有最大日期失敗: {e}")
+
+                logger.info(f"📥 正在下載並解析 {source_name} (增量基準: {max_date or '全量'})...")
                 resp = requests.get(url, headers=cls.HEADERS, timeout=60)
                 if resp.status_code != 200:
                     logger.warning(f"⚠️ 下載 {source_name} 失敗 (HTTP {resp.status_code})")
@@ -71,6 +90,12 @@ class HistoricalImporter:
                 df = pd.read_csv(io.StringIO(resp.text), nrows=max_rows)
                 if df.empty:
                     continue
+
+                if max_date:
+                    df = df[df["date"] >= max_date]
+                    if df.empty:
+                        logger.info(f"✅ {source_name} 已是最新數據 ({max_date})，無需更新")
+                        continue
 
                 # 欄位 mapping
                 # 原 CSV 欄位: date,code,name,foreign_net,trust_net,dealer_net,market
@@ -84,17 +109,14 @@ class HistoricalImporter:
                 df["market"] = market
                 df["created_at"] = now_str
 
-                # 分批寫入 DuckDB
-                batch_size = 50000
-                for i in range(0, len(df), batch_size):
-                    chunk = df.iloc[i : i + batch_size].to_dict(orient="records")
-                    count = mgr.save_institutional_flows_batch(chunk)
-                    total_imported += count
+                # 高速向量化直接批次寫入 DuckDB
+                count = mgr.save_institutional_flows_batch(df[expected_cols])
+                total_imported += count
 
-                logger.info(f"✅ {source_name} 匯入完成: 共 {len(df)} 筆")
+                logger.info(f"✅ {source_name} 匯入完成: 共寫入/更新 {count} 筆")
 
             except Exception as e:
-                logger.error(f"❌ 匯入 {source_name} 時發生異常: {e}")
+                logger.error(f"❌ 匯入 {source_name} 時發生異常: {e}", exc_info=True)
 
         return total_imported
 

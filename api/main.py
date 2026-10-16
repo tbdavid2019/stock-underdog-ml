@@ -13,9 +13,9 @@ from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
 
 app = FastAPI(
-    title="888 Stock Quant Platform API",
+    title="888 StockQuant Platform API",
     description="""
-    🚀 **888 Stock Quant 多維量化交易決策系統 REST API**
+    🚀 **888 StockQuant 多維量化交易決策系統 REST API**
     
     支援基於 DuckDB 高效能時序資料庫之即時量化訊號查詢：
     * 🗡️ **玄鐵重劍策略**：MA60/120 均線趨勢回調技術買點

@@ -154,6 +154,15 @@ export const ApiClient = {
     },
 
     /**
+     * Trigger background synchronization of institutional flows
+     */
+    async syncInstitutionalFlows(forceFull = false) {
+        const res = await fetch(`/api/v1/market/institutional/sync?force_full=${forceFull}`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
      * Broker branch accumulation trend time series
      */
     async getBrokerTrend(ticker, days = 20, topN = 8) {
@@ -186,7 +195,8 @@ export const ApiClient = {
     async getCompanyNetwork(ticker, signal) {
         const res = await fetch(`/api/v1/market/company-network?ticker=${encodeURIComponent(ticker)}`, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
+        const json = await res.json();
+        return json.success ? json.data : (json.data || json);
     },
 
     /**

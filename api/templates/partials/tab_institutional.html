@@ -45,6 +45,13 @@
                         <span class="material-symbols-outlined text-[14px] leading-none">calendar_today</span>
                         <span>最新出表: {{ marketStats.latest_institutional_date || '資料不足' }}</span>
                     </span>
+                    <button @click="syncInstitutionalNow()" :disabled="instSyncing"
+                            class="px-3 py-1.5 rounded-xl border font-bold flex items-center space-x-1.5 transition-all shadow-sm"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'"
+                            title="強制即時增量同步最新三大法人籌碼">
+                        <span class="material-symbols-outlined text-[15px]" :class="{'animate-spin': instSyncing}">sync</span>
+                        <span>{{ instSyncing ? '同步中...' : '同步籌碼' }}</span>
+                    </button>
                 </div>
             </div>
 

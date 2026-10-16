@@ -64,8 +64,17 @@ def main():
     records = df.to_dict(orient="records")
     inserted_count = db_mgr.save_daily_bars_batch(records)
 
+    # 3. 增量同步三大法人歷史籌碼 (tw_institutional_daily)
+    try:
+        from data.historical_importer import HistoricalImporter
+        logger.info("📊 開始增量同步台股三大法人每日籌碼 (TWSE & TPEX)...")
+        flows_count = HistoricalImporter.import_institutional_flows(db_mgr=db_mgr, incremental=True)
+        logger.info(f"✅ 三大法人籌碼同步完成！寫入/更新 {flows_count} 筆籌碼數據")
+    except Exception as e:
+        logger.warning(f"⚠️ 三大法人籌碼同步發生異常 (非致命): {e}", exc_info=True)
+
     elapsed = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(f"✅ 全市場同步完成！共處理 {len(df)} 檔標的，成功寫入/更新 {inserted_count} 筆記錄 (耗時: {elapsed:.2f} 秒)")
+    logger.info(f"✅ 全市場同步完成！共處理 {len(df)} 檔標的，成功寫入/更新 {inserted_count} 筆日 K 記錄 (耗時: {elapsed:.2f} 秒)")
 
 
 if __name__ == "__main__":

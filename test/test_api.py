@@ -146,7 +146,7 @@ class TestFastAPIService(unittest.TestCase):
     def test_root_homepage(self):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("888 Stock Quant", resp.text)
+        self.assertIn("888 StockQuant", resp.text)
 
     def test_homepage_has_complete_social_and_search_metadata(self):
         html = self.client.get("/").text

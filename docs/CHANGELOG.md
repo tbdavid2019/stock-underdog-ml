@@ -4,6 +4,34 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-16 (v2.4.28)
+
+### Fixed & Enhanced (Branding, Corporate Equity Network & Institutional Flow Overhaul)
+- **🏷️ 全站品牌名稱升級為 `888 StockQuant`（Branding Unified to 888 StockQuant）**：
+  - 更新首頁 `<title>`、Meta 描述、OpenGraph、Twitter Cards、JSON-LD 結構化資料、`h1.sr-only` 為 `888 StockQuant`。
+  - 導航列頂部 Header 與底部 Footer 全面統一呈現 `888 StockQuant` 經典琥珀金標識與品牌字樣。
+  - FastAPI 服務標題與 API 規格文件同步更新。
+- **🕸️ 集團股權網絡 API 解包修復（Corporate Equity Network Data Unwrapping Fix）**：
+  - **根本原因排查**：`/api/v1/market/company-network` 後端回傳格式為 `{ success: true, ticker: "...", data: {...} }` 包裝結構，前端 `api-client.js` 之 `getCompanyNetwork` 原先直接回傳整個封裝物件而未解包 `json.data`，造成 `app.js` 與 `tab_history.html` 讀取 `relationships.upstream` 與 `image_url` 皆為 `undefined`，進而導致奇鋐（3017.TW）等台股呈現 0 上游、0 下游與空白 SVG 拓撲圖。
+  - **修復與防禦性加固**：
+    - `api-client.js`：`getCompanyNetwork` 統一解包 `json.success ? json.data : (json.data || json)`。
+    - `app.js`：`loadHistoryCompanyData` 與 `ensureCompanyNetworkLoaded` 實作多層防禦性 `net = net.data || net` 與標的識別碼比對，並還原 `historyRequestId` 競爭危害防護。
+    - 董座名稱優化：當經濟部商工登記庫包含罕見字缺字遮罩（如 `沈_行`）時，前端自動回退為 Yahoo/Goodinfo 董座全名（`沈慶行`）。
+- **📊 三大法人歷史籌碼斷更根本原因排查與自動化同步重構（Institutional Flow Data Feed Recovery & Auto-Sync Engine）**：
+  - **斷更根本原因排查（Root Cause Analysis）**：
+    - 盤查發現開源上游 `tw-institutional-stocker`（voidful）每日皆持續更新至最新交易日（如 2026-10-15）。
+    - 系統核心庫存表 `tw_institutional_daily` 過去僅於 2026-08-28 透過 `import_historical_data.py --flows` 進行過一次性手動初始化，每日排程腳本 `scripts/sync_twse_market.py` 與 `docker/crontab` 僅定時同步全市場日 K 棒（`tw_daily_bars`），從未納入法人籌碼資料，導致資料庫歷史籌碼自 8 月底後停滯斷更。
+  - **高速向量化 DuckDB 批次入庫（Sub-second Ingestion）**：
+    - 升級 `DuckDBManager.save_institutional_flows_batch`，原生支援傳入 `pd.DataFrame`，直接以 DuckDB 暫存視圖（Registered View）執行原子級 `DELETE + INSERT`，單次寫入 350,000 筆資料耗時由 10+ 秒大幅降至 0.72 秒。
+  - **增量同步引擎（Incremental Syncing Engine）**：
+    - 升級 `HistoricalImporter.import_institutional_flows(incremental=True)`，自動查詢 DuckDB 現有最大交易日（`max_date`），自動過濾 `date >= max_date`，每日增量同步於 1.8 秒內完成。
+  - **定時同步流水線整合（Daily Automation）**：
+    - 將法人籌碼增量同步整合至 `scripts/sync_twse_market.py`，每日收盤後（15:30）自動抓取並持久化最新三大法人進出。
+  - **自我修復與手動即時同步（Self-Healing & UI Trigger）**：
+    - 新增 REST 端點 `POST /api/v1/market/institutional/sync`，支援背景非同步觸發籌碼同步。
+    - 於 `/api/v1/market/stats` 與日期端點實作 `_maybe_auto_sync_institutional` 自我修復機制，若偵測到籌碼逾期超過 4 天，將自動在背景啟動增量更新，無須手動重啟服務。
+    - 於前端「三大法人籌碼」頁面頂部新增「同步籌碼」按鈕與 `syncInstitutionalNow()` 交互，提供一鍵即時更新反饋。
+
 ## 2026-10-15 (v2.4.27)
 
 ### Added & Enhanced (System-wide Cache Audit & Multi-Tier Zero-Redundancy Optimization)

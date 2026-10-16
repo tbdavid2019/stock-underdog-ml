@@ -1,11 +1,15 @@
 from datetime import date
+import datetime
 import time
+import logging
 from typing import Optional, List, Dict, Any, Tuple
-from fastapi import APIRouter, Query, HTTPException, Depends
+from fastapi import APIRouter, Query, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from data.duckdb_manager import DuckDBManager
 
 import threading
+
+logger = logging.getLogger("stock_app.market_routes")
 
 router = APIRouter(prefix="/market", tags=["Market Data & Institutional Flows"])
 
@@ -17,6 +21,42 @@ _STATS_CACHE_TTL = 60.0  # 60 seconds
 
 _BROKER_CACHE: Dict[str, Tuple[float, Any]] = {}
 _BROKER_CACHE_TTL = 180.0  # 3 minutes
+
+_LAST_INST_SYNC_CHECK: float = 0.0
+_INST_SYNC_LOCK = threading.Lock()
+
+
+def _maybe_auto_sync_institutional(db: DuckDBManager, background_tasks: Optional[BackgroundTasks] = None):
+    """
+    若檢測到三大法人歷史數據過舊（超過 4 天）或為空，自動在背景觸發增量同步更新 (Self-Healing)
+    """
+    global _LAST_INST_SYNC_CHECK
+    now = time.time()
+    if now - _LAST_INST_SYNC_CHECK < 3600:
+        return
+    _LAST_INST_SYNC_CHECK = now
+
+    def _bg_sync():
+        if not _INST_SYNC_LOCK.acquire(blocking=False):
+            logger.info("⏳ 法人籌碼同步作業已在進行中，略過重複啟動")
+            return
+        try:
+            from data.historical_importer import HistoricalImporter
+            logger.info("🔄 [Auto-Sync] 偵測到法人籌碼數據過舊或缺失，啟動背景增量同步...")
+            cnt = HistoricalImporter.import_institutional_flows(db_mgr=db, incremental=True)
+            logger.info(f"✅ [Auto-Sync] 法人籌碼增量同步完成，更新 {cnt} 筆記錄")
+            with _CACHE_LOCK:
+                _STATS_CACHE.pop("stats", None)
+        except Exception as ex:
+            logger.warning(f"⚠️ [Auto-Sync] 自動同步法人籌碼失敗: {ex}")
+        finally:
+            _INST_SYNC_LOCK.release()
+
+    if background_tasks is not None:
+        background_tasks.add_task(_bg_sync)
+    else:
+        threading.Thread(target=_bg_sync, daemon=True).start()
+
 
 
 def _get_from_cache(cache_dict: Dict[str, Tuple[float, Any]], key: str, ttl: float) -> Optional[Any]:
@@ -99,6 +139,16 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             
             latest_bar_date = con.execute("SELECT MAX(date) FROM tw_daily_bars").fetchone()[0]
             latest_inst_date = con.execute("SELECT MAX(date) FROM tw_institutional_daily").fetchone()[0]
+
+            if latest_inst_date:
+                try:
+                    last_dt = datetime.datetime.strptime(str(latest_inst_date), "%Y-%m-%d").date()
+                    if (date.today() - last_dt).days >= 4:
+                        _maybe_auto_sync_institutional(db)
+                except Exception:
+                    pass
+            else:
+                _maybe_auto_sync_institutional(db)
 
             res = MarketStatsResponse(
                 total_bars=bars_cnt,
@@ -238,6 +288,36 @@ def get_ticker_institutional_history(
     if df.empty:
         return []
     return df.to_dict(orient="records")
+
+
+@router.post("/institutional/sync", summary="觸發三大法人籌碼歷史數據同步更新")
+def trigger_institutional_sync(
+    background_tasks: BackgroundTasks,
+    force_full: bool = Query(False, description="是否執行全量同步 (預設為 False 增量同步)"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    觸發上市櫃三大法人歷史買賣超時序 (TWSE & TPEX) 增量更新至 DuckDB。
+    非同步背景執行，不阻塞 HTTP 請求。
+    """
+    def _do_sync():
+        if not _INST_SYNC_LOCK.acquire(blocking=False):
+            logger.info("⏳ 法人籌碼同步作業已在進行中，略過重複啟動")
+            return
+        try:
+            from data.historical_importer import HistoricalImporter
+            logger.info("🔄 [API Sync] 手動觸發三大法人歷史籌碼同步作業...")
+            cnt = HistoricalImporter.import_institutional_flows(db_mgr=db, incremental=not force_full)
+            logger.info(f"✅ [API Sync] 三大法人籌碼同步完成，處理 {cnt} 筆記錄")
+            with _CACHE_LOCK:
+                _STATS_CACHE.pop("stats", None)
+        except Exception as e:
+            logger.error(f"❌ [API Sync] 三大法人籌碼同步失敗: {e}", exc_info=True)
+        finally:
+            _INST_SYNC_LOCK.release()
+
+    background_tasks.add_task(_do_sync)
+    return {"success": True, "message": "已在背景啟動三大法人籌碼同步作業"}
 
 
 @router.get("/broker/summary/{ticker}", summary="取得個股券商分點主力買賣超摘要")

@@ -2095,9 +2095,9 @@
                                           :class="isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
                                         資本額: {{ expandedDrawerData.company_network.capital_formatted }}
                                     </span>
-                                    <span v-if="expandedDrawerData.company_network.representative" class="px-2 py-0.5 rounded text-xs font-semibold"
+                                    <span v-if="expandedDrawerData.company_network.representative || expandedDrawerData.chairman" class="px-2 py-0.5 rounded text-xs font-semibold"
                                           :class="isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'">
-                                        代表董座: {{ expandedDrawerData.company_network.representative }}
+                                        代表董座: {{ (expandedDrawerData.company_network.representative && !expandedDrawerData.company_network.representative.includes('_')) ? expandedDrawerData.company_network.representative : (expandedDrawerData.chairman || expandedDrawerData.company_network.representative) }}
                                     </span>
                                 </div>
                                 <a :href="expandedDrawerData.company_network.web_url" target="_blank"

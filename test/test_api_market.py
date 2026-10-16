@@ -99,5 +99,12 @@ class TestMarketAPI(unittest.TestCase):
         self.assertFalse(data["data"].get("has_data", True))
 
 
+    def test_trigger_institutional_sync(self):
+        resp = self.client.post("/api/v1/market/institutional/sync")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+
+
 if __name__ == "__main__":
     unittest.main()

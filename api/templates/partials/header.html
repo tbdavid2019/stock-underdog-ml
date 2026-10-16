@@ -3,17 +3,21 @@
         :class="isDark ? 'bg-[#0D0E11]/95 backdrop-blur-md border-[#262626]' : 'bg-white/95 backdrop-blur-md border-[#E5E7EB] shadow-sm'">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
 
-        <!-- 1. LEFT COLUMN: Compact Orange Quant Badge Logo (Figma 5:36 / 20261013) -->
-        <div class="flex items-center cursor-pointer select-none shrink-0 group"
+        <!-- 1. LEFT COLUMN: Compact Orange Quant Badge Logo + Brand Name (888 StockQuant) -->
+        <div class="flex items-center cursor-pointer select-none shrink-0 group space-x-2.5"
              @click="setTab('dashboard')"
              title="返回操盤看板首頁"
              role="button"
-             aria-label="888 Stock Quant 首頁">
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-[#FFA726] via-[#FF8800] to-[#F57C00] text-black shadow-md shadow-orange-500/25 flex flex-col items-center justify-center p-1 transition-all duration-200 group-hover:scale-105 group-hover:shadow-orange-500/40 group-active:scale-95 border border-amber-200/40 select-none">
-                <span class="font-black text-[13px] sm:text-[14px] tracking-tight leading-none text-slate-950 font-mono">888</span>
-                <span class="font-black text-[9px] sm:text-[10px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
-                <span class="font-black text-[9px] sm:text-[10px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
+             aria-label="888 StockQuant 首頁">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-b from-[#FFA726] via-[#FF8800] to-[#F57C00] text-black shadow-md shadow-orange-500/25 flex flex-col items-center justify-center p-1 transition-all duration-200 group-hover:scale-105 group-hover:shadow-orange-500/40 group-active:scale-95 border border-amber-200/40 select-none">
+                <span class="font-black text-[12px] sm:text-[13px] tracking-tight leading-none text-slate-950 font-mono">888</span>
+                <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
+                <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
             </div>
+            <span class="font-black text-base sm:text-lg tracking-tight font-sans transition-colors group-hover:text-amber-500 hidden sm:inline-flex items-center"
+                  :class="isDark ? 'text-white' : 'text-slate-900'">
+                888&nbsp;<span class="text-amber-500">StockQuant</span>
+            </span>
         </div>
 
         <!-- 2. CENTER COLUMN: Core Navigation Tabs (Centered Balance with Material Icons) -->

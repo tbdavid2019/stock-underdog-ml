@@ -59,6 +59,7 @@ export const app = createApp({
             instMarket: 'ALL',
             availableDates: [],
             instSelectedDate: '',
+            instSyncing: false,
 
             // Broker Radar Data
             brokerSearchTicker: '2330',
@@ -278,6 +279,28 @@ export const app = createApp({
                 this.instLoading = false;
             }
         },
+        async syncInstitutionalNow() {
+            if (this.instSyncing) return;
+            this.instSyncing = true;
+            try {
+                await ApiClient.syncInstitutionalFlows();
+                this.showToast('已在背景啟動三大法人歷史籌碼增量同步，正在更新至最新交易日！', 'success');
+                setTimeout(async () => {
+                    await Promise.all([
+                        this.loadMarketStats(),
+                        this.loadAvailableDates()
+                    ]);
+                    if (this.availableDates.length > 0) {
+                        this.instSelectedDate = this.availableDates[0];
+                    }
+                    await this.loadInstitutionalFlows();
+                    this.instSyncing = false;
+                }, 3500);
+            } catch (e) {
+                this.showToast('法人籌碼同步啟動失敗: ' + (e.message || e), 'error');
+                this.instSyncing = false;
+            }
+        },
         async loadData() {
             this.loading = true;
             this.loadError = '';
@@ -398,10 +421,12 @@ export const app = createApp({
                 if (requestId !== this.historyRequestId) return;
 
                 const prof = (profRes.status === 'fulfilled' && profRes.value) ? profRes.value : (this.companyProfileCache[ticker] || {});
-                const net = (netRes.status === 'fulfilled') ? netRes.value : (prof.company_network || null);
+                let net = (netRes.status === 'fulfilled') ? netRes.value : (prof.company_network || null);
+                if (net && net.data) net = net.data;
                 const earnVal = (earnRes.status === 'fulfilled' && earnRes.value) ? earnRes.value : null;
                 const earnList = earnVal ? (earnVal.data || earnVal.items || (Array.isArray(earnVal) ? earnVal : [])) : [];
-                const tender = (tenderRes.status === 'fulfilled') ? tenderRes.value : (prof.company_tender || null);
+                let tender = (tenderRes.status === 'fulfilled') ? tenderRes.value : (prof.company_tender || null);
+                if (tender && tender.data) tender = tender.data;
 
                 this.historyEarningsList = Array.isArray(earnList) ? earnList : [];
                 this.drawerEarningsMap[ticker] = this.historyEarningsList;
@@ -542,8 +567,9 @@ export const app = createApp({
         async ensureCompanyNetworkLoaded(ticker) {
             if (!ticker) return;
             try {
-                const net = await ApiClient.getCompanyNetwork(ticker);
-                if (net && net.name) {
+                let net = await ApiClient.getCompanyNetwork(ticker);
+                if (net && net.data) net = net.data;
+                if (net && (net.name || net.relationships)) {
                     if (this.companyProfileCache[ticker]) {
                         this.companyProfileCache[ticker].company_network = net;
                         if (!this.companyProfileCache[ticker].links) this.companyProfileCache[ticker].links = {};
@@ -561,7 +587,7 @@ export const app = createApp({
                         if (net.web_url) this.expandedDrawerData.links.network_graph = net.web_url;
                         if (net.image_url) this.expandedDrawerData.links.network_image = net.image_url;
                     }
-                    if (this.historyCompanyData && this.historyCompanyData.ticker === ticker) {
+                    if (this.historyCompanyData && (this.historyCompanyData.ticker === ticker || this.resolvedTicker === ticker || this.searchTicker === ticker)) {
                         this.historyCompanyData.company_network = net;
                         if (!this.historyCompanyData.links) this.historyCompanyData.links = {};
                         if (net.web_url) this.historyCompanyData.links.network_graph = net.web_url;
@@ -577,7 +603,8 @@ export const app = createApp({
             if (this.expandedDrawerData && this.expandedDrawerData.company_tender) return;
             this.companyTenderLoading = true;
             try {
-                const tender = await ApiClient.getCompanyTender(ticker);
+                let tender = await ApiClient.getCompanyTender(ticker);
+                if (tender && tender.data) tender = tender.data;
                 if (tender) {
                     if (this.companyProfileCache[ticker]) {
                         this.companyProfileCache[ticker].company_tender = tender;
@@ -590,7 +617,7 @@ export const app = createApp({
                         if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
                         this.expandedDrawerData.company_tender = tender;
                     }
-                    if (this.historyCompanyData && this.historyCompanyData.ticker === ticker) {
+                    if (this.historyCompanyData && (this.historyCompanyData.ticker === ticker || this.resolvedTicker === ticker || this.searchTicker === ticker)) {
                         this.historyCompanyData.company_tender = tender;
                     }
                 }
