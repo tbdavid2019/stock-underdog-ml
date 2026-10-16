@@ -181,15 +181,18 @@ export class ChartManager {
      * @param {string} chartKey
      * @param {string} seriesKey
      * @param {boolean} isVisible
+     * @returns {boolean} Whether dataset was found and updated
      */
     setDatasetVisibility(chartKey, seriesKey, isVisible) {
         const chart = this.instances[chartKey];
-        if (!chart || !chart.data || !chart.data.datasets) return;
+        if (!chart || !chart.data || !chart.data.datasets) return false;
         const ds = chart.data.datasets.find(d => d.key === seriesKey);
         if (ds) {
             ds.hidden = !isVisible;
             chart.update();
+            return true;
         }
+        return false;
     }
 
     /**
@@ -207,13 +210,14 @@ export class ChartManager {
         this.destroy(chartKey);
 
         // Sort chronologically (earliest to latest)
-        const sorted = [...historyRecords].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+        const sorted = [...historyRecords].sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
 
         // Group by Date (YYYY-MM-DD)
         const dateMap = new Map();
         for (const r of sorted) {
-            if (!r.timestamp) continue;
-            const dateKey = r.timestamp.slice(0, 10);
+            const rawTs = String(r.timestamp || '').trim();
+            if (rawTs.length < 10) continue;
+            const dateKey = rawTs.slice(0, 10);
             if (!dateMap.has(dateKey)) {
                 dateMap.set(dateKey, {
                     date: dateKey,
@@ -232,9 +236,14 @@ export class ChartManager {
             const predPrice = Number(r.predicted_price);
             if (!isNaN(predPrice) && predPrice > 0) {
                 const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
-                if (strat.includes('lstm')) item.lstm = predPrice;
-                else if (strat.includes('timesfm')) item.timesfm = predPrice;
-                else if (strat.includes('共振')) item.resonance = predPrice;
+                // Check resonance first to prevent Resonance (LSTM+MA) from being misclassified as pure LSTM
+                if (strat.includes('共振') || strat.includes('resonance')) {
+                    item.resonance = predPrice;
+                } else if (strat.includes('lstm')) {
+                    item.lstm = predPrice;
+                } else if (strat.includes('timesfm')) {
+                    item.timesfm = predPrice;
+                }
             }
         }
 
@@ -518,28 +527,23 @@ export class ChartManager {
         const charts = Object.values(this.instances).filter(Boolean);
 
         for (const chart of charts) {
-            if (chart.options && chart.options.scales) {
-                if (chart.options.scales.x) {
-                    chart.options.scales.x.grid.color = theme.gridColor;
-                    chart.options.scales.x.ticks.color = theme.textColor;
-                }
-                if (chart.options.scales.y) {
-                    chart.options.scales.y.grid.color = theme.gridColor;
-                    chart.options.scales.y.ticks.color = theme.textColor;
-                }
-            }
-            if (chart.options && chart.options.plugins && chart.options.plugins.tooltip) {
+            if (chart.options?.scales?.x?.grid) chart.options.scales.x.grid.color = theme.gridColor;
+            if (chart.options?.scales?.x?.ticks) chart.options.scales.x.ticks.color = theme.textColor;
+            if (chart.options?.scales?.y?.grid) chart.options.scales.y.grid.color = theme.gridColor;
+            if (chart.options?.scales?.y?.ticks) chart.options.scales.y.ticks.color = theme.textColor;
+
+            if (chart.options?.plugins?.tooltip) {
                 chart.options.plugins.tooltip.backgroundColor = theme.tooltipBg;
                 chart.options.plugins.tooltip.titleColor = theme.tooltipTitle;
                 chart.options.plugins.tooltip.bodyColor = theme.tooltipBody;
                 chart.options.plugins.tooltip.borderColor = theme.tooltipBorder;
             }
-            if (chart.options && chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+            if (chart.options?.plugins?.legend?.labels) {
                 chart.options.plugins.legend.labels.color = theme.textColor;
             }
 
             // Theme-dependent dataset styling for pricePredictChart
-            if (chart.data && chart.data.datasets) {
+            if (chart.data?.datasets) {
                 const priceDs = chart.data.datasets.find(d => d.key === 'price');
                 if (priceDs) {
                     priceDs.backgroundColor = isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.05)';
@@ -549,9 +553,18 @@ export class ChartManager {
                     ma60Ds.borderColor = isDark ? '#94A3B8' : '#64748B';
                     ma60Ds.pointBackgroundColor = isDark ? '#94A3B8' : '#64748B';
                 }
+                // Institutional chart total net fill update
+                const instTotalDs = chart.data.datasets.find(d => d.label === '三大法人合計');
+                if (instTotalDs) {
+                    instTotalDs.backgroundColor = isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)';
+                }
             }
 
-            chart.update();
+            try {
+                chart.update();
+            } catch (err) {
+                console.debug('Chart theme update deferred:', err);
+            }
         }
     }
 }

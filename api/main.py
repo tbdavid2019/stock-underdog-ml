@@ -70,7 +70,16 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 # 掛載靜態檔案路由提供 /static/js/ 等靜態模組
 try:
     from fastapi.staticfiles import StaticFiles
-    app.mount("/static", StaticFiles(directory=STATIC_ASSET_DIR), name="static")
+
+    class NoCacheStaticFiles(StaticFiles):
+        def file_response(self, *args, **kwargs):
+            resp = super().file_response(*args, **kwargs)
+            resp.headers["Cache-Control"] = "no-cache, must-revalidate, max-age=0"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+            return resp
+
+    app.mount("/static", NoCacheStaticFiles(directory=STATIC_ASSET_DIR), name="static")
 except Exception as e:
     import logging
     logging.getLogger("stock_app.api").warning(f"⚠️ StaticFiles 掛載略過: {e}")
@@ -89,31 +98,6 @@ def get_asset_fingerprint() -> str:
         return f"{APP_VERSION}.{mtime}"
     except Exception:
         return APP_VERSION
-
-
-@app.api_route("/static/{file_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-def serve_static_fallback(file_path: str):
-    """Fallback static asset server to ensure ESM scripts are always served with revalidation headers."""
-    full_path = os.path.join(STATIC_ASSET_DIR, file_path)
-    if os.path.exists(full_path) and os.path.isfile(full_path):
-        media_type = None
-        if file_path.endswith(".js"):
-            media_type = "application/javascript; charset=utf-8"
-        elif file_path.endswith(".css"):
-            media_type = "text/css; charset=utf-8"
-        elif file_path.endswith(".svg"):
-            media_type = "image/svg+xml"
-        elif file_path.endswith(".png"):
-            media_type = "image/png"
-        return FileResponse(
-            full_path,
-            media_type=media_type,
-            headers={
-                "Cache-Control": "no-cache, must-revalidate",
-                "Pragma": "no-cache"
-            }
-        )
-    return PlainTextResponse("Static asset not found", status_code=404)
 
 
 @app.api_route("/favicon.svg", methods=["GET", "HEAD"], include_in_schema=False)

@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js';
-import { ChartManager } from '/static/js/chart-manager.js';
+import { ApiClient } from '/static/js/api-client.js?v=2.4.29';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.29';
 
 const { createApp } = Vue;
 
@@ -348,6 +348,8 @@ export const app = createApp({
             this.historyError = '';
             this.historyRecords = [];
             this.tickerInstHistory = [];
+            chartManager.destroy('pricePredictChart');
+            chartManager.destroy('instChart');
             this.resolvedTicker = '';
             this.resolvedName = '';
             this.historyCompanyData = null;
@@ -481,16 +483,26 @@ export const app = createApp({
         togglePriceChartSeries(seriesKey) {
             if (this.priceChartVisibility[seriesKey] === undefined) return;
             this.priceChartVisibility[seriesKey] = !this.priceChartVisibility[seriesKey];
-            chartManager.setDatasetVisibility('pricePredictChart', seriesKey, this.priceChartVisibility[seriesKey]);
+            const updated = typeof chartManager.setDatasetVisibility === 'function' &&
+                chartManager.setDatasetVisibility('pricePredictChart', seriesKey, this.priceChartVisibility[seriesKey]);
+            if (!updated && typeof chartManager.renderPricePredictChart === 'function') {
+                this.renderPricePredictChart();
+            }
         },
         renderPricePredictChart() {
             this.$nextTick(() => {
-                chartManager.renderPricePredictChart('pricePredictChartCanvas', this.historyRecords, this.isDark, this.priceChartVisibility);
+                if (typeof chartManager.renderPricePredictChart === 'function') {
+                    chartManager.renderPricePredictChart('pricePredictChartCanvas', this.historyRecords, this.isDark, this.priceChartVisibility);
+                } else {
+                    console.warn("chartManager.renderPricePredictChart is not available on active instance");
+                }
             });
         },
         renderInstChart() {
             this.$nextTick(() => {
-                chartManager.renderInstChart('instChartCanvas', this.tickerInstHistory, this.isDark);
+                if (typeof chartManager.renderInstChart === 'function') {
+                    chartManager.renderInstChart('instChartCanvas', this.tickerInstHistory, this.isDark);
+                }
             });
         },
         async loadBrokerTrend() {

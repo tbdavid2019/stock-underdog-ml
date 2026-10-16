@@ -21,9 +21,11 @@
   - **高精度數值 Tooltip 空間差計算**：
     - 自訂 JetBrains Mono 懸浮提示框，自動比對該交易日各模型目標價與真實股價之溢折價幅度（例如：`LSTM 目標價: $3,363.02 (+9.01% vs 現價)`）。
     - 支援 `spanGaps: true` 與非交易日空值平滑容錯，避免線條跳空掉至 0。
-  - **前後端與快取效能提升**：
-    - `api/static/js/chart-manager.js`：實作 `renderPricePredictChart` 與 `setDatasetVisibility`，並於 `updateTheme` 中動態響應深淺色主題配色。
-    - `api/static/js/app.js`：歷史查詢預設回溯筆數由 40 筆擴充至 90 筆（涵蓋約 1.5 個月完整交易走勢），並於頁籤切換時自動維持圖表生命週期。
+  - **🛡️ 雙重 Code Review (OpenCode & Codex) 深度巡檢與快取破壞防禦（Cache Busting & Runtime Hardening）**：
+    - **瀏覽器與 Cloudflare 靜態腳本快取擊穿**：`api/main.py` 實作 `NoCacheStaticFiles(StaticFiles)`，在回傳中自動注入 `Cache-Control: no-cache, must-revalidate, max-age=0`、`Pragma: no-cache` 與 `Expires: 0`；並於 `app.js` 模組引用路徑加上 `?v=2.4.29` 版本後綴，徹底根除瀏覽器本地記憶體快取舊版 `chart-manager.js` 導致的 `TypeError: renderPricePredictChart is not a function` 一片白崩潰問題。
+    - **策略優先級判定修正**：`chart-manager.js` 中調升「多維共振」判定權重至 generic `lstm` 之前，避免複合策略（如 `Resonance (LSTM+MA)`）被誤歸類為單一模型。
+    - **Canvas 生命週期與防禦**：`loadHistory()` 初始化即刻強制銷毀先前標的之舊圖表實例（`chartManager.destroy`），防止空資料搜尋時遺留 Detached Canvas 記憶體洩漏；並以可選鏈（`chart.options?.scales?.x?.grid`）與 `try/catch` 加固主題動態切換更新。
+    - **版本規格同步**：更新 `core/version.py` 為 `2.4.29`，模板自動注入動態指紋 `APP_VERSION.mtime`。
 
 ## 2026-10-16 (v2.4.28)
 
