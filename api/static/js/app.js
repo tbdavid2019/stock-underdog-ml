@@ -289,11 +289,15 @@ export const app = createApp({
                 });
                 this.records = data.data || [];
                 this.prefetchVisibleProfiles(this.records.map(r => r.ticker));
-                const firstRecord = this.records[0] || {};
-                this.batchDate = data.batch_date || firstRecord.analysis_date || '';
-                const timestamp = data.latest_batch_timestamp || firstRecord.data_as_of || firstRecord.timestamp || '';
-                this.batchTimestamp = timestamp ? timestamp.replace('T', ' ').substring(0, 19) : '';
-                this.batchStale = Boolean(data.is_stale || firstRecord.is_stale);
+                // 計算候選標的之最新批次時間戳記 (優先使用 API 回傳，備援計算所有記錄之 MAX 時間戳，避免被單一歷史記錄誤導)
+                const maxRecordTs = this.records.reduce((max, r) => {
+                    const ts = r.data_as_of || r.timestamp || '';
+                    return ts > max ? ts : max;
+                }, '');
+                const effectiveTs = data.latest_batch_timestamp || maxRecordTs || '';
+                this.batchTimestamp = effectiveTs ? effectiveTs.replace('T', ' ').substring(0, 19) : '';
+                this.batchDate = data.batch_date || (effectiveTs ? effectiveTs.substring(0, 10) : '');
+                this.batchStale = Boolean(data.is_stale || this.records.some(r => r.is_stale));
             } catch (e) {
                 this.records = [];
                 this.batchDate = '';

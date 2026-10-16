@@ -32,6 +32,25 @@ def _set_in_cache(key: str, value: PredictionResponse, max_size: int = _MAX_CACH
         _PRED_CACHE[key] = (now, value)
 
 
+def _build_prediction_response(records: List[Dict[str, Any]]) -> PredictionResponse:
+    latest_ts = None
+    if records:
+        timestamps = [
+            str(r.get("timestamp") or r.get("data_as_of") or "")
+            for r in records
+            if r.get("timestamp") or r.get("data_as_of")
+        ]
+        if timestamps:
+            latest_ts = max(timestamps)
+    batch_date = latest_ts[:10] if latest_ts else None
+    return PredictionResponse(
+        count=len(records),
+        batch_date=batch_date,
+        latest_batch_timestamp=latest_ts,
+        data=records
+    )
+
+
 def get_duckdb():
     return DuckDBManager()
 
@@ -87,7 +106,7 @@ def get_resonance_candidates(
         return cached
 
     records = db.get_resonance_candidates(index_name=index_name, limit=limit)
-    response_obj = PredictionResponse(count=len(records), data=records)
+    response_obj = _build_prediction_response(records)
     _set_in_cache(cache_key, response_obj)
     return response_obj
 
@@ -108,7 +127,7 @@ def get_xuantie_candidates(
         return cached
 
     records = db.get_xuantie_candidates(index_name=index_name, pullback_type=pullback_type, limit=limit)
-    response_obj = PredictionResponse(count=len(records), data=records)
+    response_obj = _build_prediction_response(records)
     _set_in_cache(cache_key, response_obj)
     return response_obj
 
@@ -123,7 +142,7 @@ def get_top_bullish(
     依據 LSTM 深度學習模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得短線看漲排行。
     """
     records = db.get_top_bullish(index_name=index_name, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    return _build_prediction_response(records)
 
 
 @router.get("/lstm/top-bearish", response_model=PredictionResponse, summary="查詢 LSTM 預測跌幅 TOP N 避險/做空股")
@@ -136,7 +155,7 @@ def get_top_bearish(
     依據 LSTM 深度學習模型輸出之潛在跌幅由大到小排序，用於避險或潛在放空觀察。
     """
     records = db.get_top_bearish(index_name=index_name, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    return _build_prediction_response(records)
 
 
 @router.get("/timesfm/top-bullish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測漲幅 TOP N 潛力股")
@@ -149,7 +168,7 @@ def get_timesfm_top_bullish(
     依據 Google TimesFM 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
     """
     records = db.get_timesfm_top_bullish(index_name=index_name, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    return _build_prediction_response(records)
 
 
 @router.get("/timesfm/top-bearish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測跌幅 TOP N 避險股")
@@ -162,7 +181,7 @@ def get_timesfm_top_bearish(
     依據 Google TimesFM 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
     records = db.get_timesfm_top_bearish(index_name=index_name, limit=limit)
-    return PredictionResponse(count=len(records), data=records)
+    return _build_prediction_response(records)
 
 
 @router.get("/history/{ticker}", response_model=PredictionResponse, summary="查詢單一標的歷史預測軌跡")

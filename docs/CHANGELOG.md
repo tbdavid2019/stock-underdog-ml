@@ -41,6 +41,8 @@
      - **短暫網路降級隔離（Transient Fallback Ephemeral Cache）**：當上游決策模型臨時連線異常降級為本地規則時，記憶體賦予 60s 臨時效期且不寫入 DuckDB 24h 長期快取，保障上游恢復後立即自動回歸 AI 決策。
      - **數值有限性檢查（Float Sanitization）**：入庫前校驗 `math.isfinite()`，防止 `NaN` / `Infinity` 破壞 DuckDB 欄位型別約束。
      - **輕量環境友善（Lazy ML Fallback）**：`models/lstm.py` 優化 `MinMaxScaler` 動態延遲加載，在未安裝重量級 ML 套件的容器或微服務環境中保障全域匯入不崩潰。
+     - **跨市場批次時間戳消歧義（Batch Timestamp Disambiguation）**：修正預測端點與前端 `app.js`，預測路由（`resonance`、`xuantie`、排行榜等）自動聚合有效最新運算時間戳並回傳 `batch_date` 與 `latest_batch_timestamp`；前端避免取 `firstRecord`（如排序第一為昨晚美股）而掩蓋今晨最新完成之台股批次。
+     - **CI 測試環境相容（CI Test Environment Fix）**：在 `test_api_decision.py` 補全 `import os`，修復 GitHub Actions 執行環境下 MCP 授權單元測試之 `NameError`。
 
 ## 2026-10-15 (v2.4.26)
 

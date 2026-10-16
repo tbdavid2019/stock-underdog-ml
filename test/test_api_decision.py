@@ -2,6 +2,7 @@
 test/test_api_decision.py - Test FastAPI Decision API routes
 """
 
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
