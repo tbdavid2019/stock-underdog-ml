@@ -48,4 +48,4 @@
 - [x] 7.2 Execute full local test suite ensuring all 260+ tests pass with zero regressions (273 tests ran, 272 passed, 1 skipped).
 - [x] 7.3 Run final verification reviews with subagents (`codex-reviewer` & `opencode-reviewer`) and address runtime edge cases (applied day-1 quantile sorting and trajectory padding guard).
 - [x] 7.4 Update `docs/CHANGELOG.md` and `README.md` documenting the transition from LSTM to Mistral Timestral-209M and Dual Foundation Model Resonance in compliance with `AGENTS.md`.
-- [ ] 7.5 Deploy the updated codebase and Docker container to production host `10.9.0.99`, verifying live endpoints, web dashboard, and prediction pipeline.
+- [x] 7.5 Deploy the updated codebase and Docker container to production host `10.9.0.99`, verifying live endpoints, web dashboard, and prediction pipeline. (Deployed v2.4.30, verified healthy on both 10.9.0.99:8088 and https://stockdata.david888.com).
