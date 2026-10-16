@@ -19,7 +19,16 @@ class TestMarketAPI(unittest.TestCase):
         data = resp.json()
         self.assertIn("total_bars", data)
         self.assertIn("total_institutional_records", data)
+        self.assertIn("total_broker_records", data)
         self.assertIn("total_predictions", data)
+        self.assertIn("latest_broker_date", data)
+
+    def test_trigger_broker_sync(self):
+        resp = self.client.post("/api/v1/market/broker/sync")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertIn("message", data)
 
     def test_get_market_universe_includes_freshness_metadata(self):
         resp = self.client.get("/api/v1/market/universe?source_id=TW")

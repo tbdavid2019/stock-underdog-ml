@@ -62,6 +62,33 @@ class TestHistoricalImporter(unittest.TestCase):
             self.assertEqual(len(bars), 2)
             self.assertEqual(bars.iloc[-1]["Close"], 1000.0)
 
+    @patch("requests.get")
+    def test_import_broker_trades_mock(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = (
+            "trade_date,stock_code,broker_name,broker_id,buy_vol,sell_vol,net_vol,pct,rank,side\n"
+            "2026-10-15,2330,臺灣摩根士丹利,1470,2500,500,2000,12.5,1,buy\n"
+            "2026-10-15,2330,美商高盛,1480,100,1500,-1400,-8.7,1,sell\n"
+        )
+        mock_get.return_value = mock_resp
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            test_db = os.path.join(tmp_dir, "test_broker.duckdb")
+            mgr = DuckDBManager(db_path=test_db)
+            mgr.enabled = True
+            mgr._init_schema()
+
+            imported = HistoricalImporter.import_broker_trades(db_mgr=mgr, incremental=False)
+            self.assertEqual(imported, 2)
+
+            # 驗證查詢
+            df_trades = mgr.get_broker_trades_for_ticker("2330.TW")
+            self.assertEqual(len(df_trades), 2)
+            summary = mgr.get_broker_top_summary("2330.TW", limit_days=5)
+            self.assertEqual(len(summary["top_buyers"]), 1)
+            self.assertEqual(summary["top_buyers"][0]["broker_name"], "臺灣摩根士丹利")
+
 
 if __name__ == "__main__":
     unittest.main()

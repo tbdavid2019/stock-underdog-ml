@@ -31,6 +31,32 @@
     - 新增 REST 端點 `POST /api/v1/market/institutional/sync`，支援背景非同步觸發籌碼同步。
     - 於 `/api/v1/market/stats` 與日期端點實作 `_maybe_auto_sync_institutional` 自我修復機制，若偵測到籌碼逾期超過 4 天，將自動在背景啟動增量更新，無須手動重啟服務。
     - 於前端「三大法人籌碼」頁面頂部新增「同步籌碼」按鈕與 `syncInstitutionalNow()` 交互，提供一鍵即時更新反饋。
+- **⏰ 定時同步流水線全盤排查與自動化閉環升級（Scheduled Sync Pipeline Audit & Post-Market Settlement Automation）**：
+  - **全系統定時排程與資料庫管線全面排查（Exhaustive Pipeline Audit）**：
+    1. **台股收盤至隔日早盤的巨大盲區（The Post-Market Staleness Blindspot）**：
+       - 排查發現系統原先僅於週一至週五早上 08:00（盤前）執行單一同步作業。台股於 13:30 收盤、15:00~15:30 證交所公布收盤行情與三大法人買賣超、16:00 公布券商分點，導致每日 14:00~隔日 08:00 長達 18.5 小時，系統內行情全部滯後一日；**週五盤後更是長達 66.5 小時（整個週末）**平台上用戶均看不到週五的收盤價與籌碼。
+    2. **券商分點主力資料（`tw_broker_trades`）定時排程遺漏**：
+       - 開源上游 `broker_history.csv` 每日收盤後皆更新（如 10/15 已有 35,970 筆最新明細），但排程腳本 `scripts/sync_twse_market.py` 過去只呼叫法人籌碼，**從未排程更新券商分點**，導致線上庫停留在 2026-08-28。
+    3. **法說會時程（`earnings_calls`）缺乏主動預熱**：
+       - 過去僅由使用者進入頁面後按需發動抓取，若 BigGo 網路抖動會出現短暫延遲。
+    4. **日誌缺乏生命週期管理**：
+       - 日誌檔案以追加模式無限增長，缺乏定時輪轉機制。
+  - **解法與架構升級實施（Implementation & Fixes）**：
+    1. **新增盤後結算管線（Post-Market Settlement Pipeline）**：
+       - `run_daily.sh` 支援 `close` / `settle` / `post-market` 參數，於盤後 16:00 執行時僅專注於收盤日 K、三大法人、券商主力與法說會資料庫結算，略過需耗時 15 分鐘的模型推論，15 秒內極速完成入庫。
+       - `docker/crontab` 增設 `0 16 * * 1-5`（週一至週五 16:00 CST）盤後結算排程，確保每日下午 16:00 準時完成全市場當日收盤數據結算，週末即可檢視最新盤勢。
+    2. **券商分點主力管線全面打通與向量化加速**：
+       - 升級 `DuckDBManager.save_broker_trades_batch` 原生支援 `pd.DataFrame`，配合暫存視圖秒級 upsert。
+       - 升級 `HistoricalImporter.import_broker_trades(incremental=True)`，自動以 `max_date` 執行增量同步。
+       - 為 `tw_broker_trades` 建立 `(ticker, date)` 與 `(raw_code, date)` 索引，消除明細與走勢查詢之全表掃描。
+       - 於 `sync_twse_market.py` 串接券商分點增量同步。
+       - 於 `api/routes/market.py` 新增 `POST /api/v1/market/broker/sync` 端點與過期自動自癒（Self-Healing）機制。
+       - 在 `/api/v1/market/stats` 增補 `latest_broker_date` 監控指標。
+    3. **法說會時程前置水合預熱**：
+       - 於 `sync_twse_market.py` 末尾整合 `EarningsCallFetcher.fetch_all_and_sync()`，將 300+ 筆跨市場法說會時程與催化劑提早寫入 DuckDB，實現前端 0 毫秒秒開體驗。
+    4. **日誌維護與 Podcast 巡檢完善**：
+       - `docker/crontab` 增設每週日 04:00 自動清理 30 天以前過期日誌排程，防止容器磁碟膨脹。
+       - 增設每 3 小時 Podcast 財經雷達自動巡檢水合。
 
 ## 2026-10-15 (v2.4.27)
 

@@ -178,6 +178,8 @@ class DuckDBManager:
                     side VARCHAR,
                     created_at VARCHAR
                 );
+                CREATE INDEX IF NOT EXISTS idx_tw_broker_trades_ticker_date ON tw_broker_trades (ticker, date);
+                CREATE INDEX IF NOT EXISTS idx_tw_broker_trades_raw_code_date ON tw_broker_trades (raw_code, date);
                 """)
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS earnings_calls (
@@ -1516,12 +1518,20 @@ class DuckDBManager:
             logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 法人時序失敗: {e}")
             return pd.DataFrame()
 
-    def save_broker_trades_batch(self, records: List[Dict[str, Any]]) -> int:
+    def save_broker_trades_batch(self, records: Union[List[Dict[str, Any]], pd.DataFrame]) -> int:
         """批次寫入券商分點進出資料 (tw_broker_trades)"""
-        if not self.enabled or not records:
+        if not self.enabled:
+            return 0
+        if isinstance(records, list) and not records:
+            return 0
+        if isinstance(records, pd.DataFrame) and records.empty:
             return 0
 
-        df = pd.DataFrame(records)
+        if isinstance(records, pd.DataFrame):
+            df = records.copy()
+        else:
+            df = pd.DataFrame(records)
+
         expected_cols = [
             "date", "ticker", "raw_code", "broker_name", "broker_id",
             "buy_vol", "sell_vol", "net_vol", "pct", "rank", "side", "created_at"

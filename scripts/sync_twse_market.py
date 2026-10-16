@@ -73,6 +73,25 @@ def main():
     except Exception as e:
         logger.warning(f"⚠️ 三大法人籌碼同步發生異常 (非致命): {e}", exc_info=True)
 
+    # 4. 同步券商分點主力歷史進出 (tw_broker_trades)
+    try:
+        from data.historical_importer import HistoricalImporter
+        logger.info("🏦 開始同步台股券商分點主力歷史進出 (broker_history.csv)...")
+        broker_count = HistoricalImporter.import_broker_trades(db_mgr=db_mgr, incremental=True)
+        logger.info(f"✅ 券商分點主力同步完成！寫入/更新 {broker_count} 筆分點數據")
+    except Exception as e:
+        logger.warning(f"⚠️ 券商分點主力同步發生異常 (非致命): {e}", exc_info=True)
+
+    # 5. 預先同步跨市場法說會時程與催化劑 (earnings_calls)
+    try:
+        from data.earnings_fetcher import EarningsCallFetcher
+        logger.info("🏛️ 開始預先同步跨市場法說會時程與催化劑...")
+        fetcher = EarningsCallFetcher(db_manager=db_mgr)
+        earnings_count = fetcher.fetch_all_and_sync()
+        logger.info(f"✅ 法說會時程同步完成！寫入/更新 {earnings_count} 筆法說會資料")
+    except Exception as e:
+        logger.warning(f"⚠️ 法說會時程同步發生異常 (非致命): {e}", exc_info=True)
+
     elapsed = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"✅ 全市場同步完成！共處理 {len(df)} 檔標的，成功寫入/更新 {inserted_count} 筆日 K 記錄 (耗時: {elapsed:.2f} 秒)")
 

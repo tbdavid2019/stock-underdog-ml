@@ -51,6 +51,10 @@ fi
 # 解析目標市場參數 (預設 auto: 白天台股、晚上美股)
 RAW_ARG="${1:-auto}"
 case "$RAW_ARG" in
+    close|settle|post-market)
+        TARGET_MARKET="close"
+        MARKET_DESC="🇹🇼 台股盤後結算管線 (16:00 結算收盤日 K、三大法人、券商主力與法說會)"
+        ;;
     tw|--tw|--market=tw)
         TARGET_MARKET="tw"
         MARKET_DESC="🇹🇼 台股開盤前指南 (盤前 08:00)"
@@ -135,6 +139,17 @@ else
     else
         $PYTHON_EXEC scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"
     fi
+fi
+
+# 若為盤後結算模式，完成資料庫結算後即刻順利退出
+if [ "$TARGET_MARKET" = "close" ]; then
+    log ""
+    log "🏁 [盤後結算] 今日台股全市場收盤日 K、三大法人、券商主力與法說會已全數結算入庫！"
+    log "=========================================="
+    log "✅ 盤後結算完成"
+    log "結束時間: $(date)"
+    log "=========================================="
+    exit 0
 fi
 
 # Step 1: 執行回測（驗證昨日預測）

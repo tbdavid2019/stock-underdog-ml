@@ -205,7 +205,8 @@ class HistoricalImporter:
     def import_broker_trades(
         cls,
         db_mgr: Optional[DuckDBManager] = None,
-        max_rows: Optional[int] = None
+        max_rows: Optional[int] = None,
+        incremental: bool = False
     ) -> int:
         """
         匯入券商分點主力歷史進出數據 (broker_history.csv)
@@ -241,12 +242,23 @@ class HistoricalImporter:
             df["side"] = df["side"].astype(str).str.strip()
             df["created_at"] = now_str
 
-            records = df[[
+            clean_df = df[[
                 "date", "ticker", "raw_code", "broker_name", "broker_id",
                 "buy_vol", "sell_vol", "net_vol", "pct", "rank", "side", "created_at"
-            ]].dropna(subset=["date", "raw_code"]).to_dict(orient="records")
+            ]].dropna(subset=["date", "raw_code"])
 
-            inserted = mgr.save_broker_trades_batch(records)
+            if incremental:
+                try:
+                    with mgr._get_connection() as con:
+                        max_date = con.execute("SELECT MAX(date) FROM tw_broker_trades").fetchone()[0]
+                        if max_date:
+                            cutoff = (datetime.date.fromisoformat(str(max_date)) - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+                            clean_df = clean_df[clean_df["date"] >= cutoff]
+                            logger.info(f"⚡ [增量模式] 僅更新 {cutoff} 之後的券商分點記錄 (共 {len(clean_df)} 筆)")
+                except Exception as ex:
+                    logger.warning(f"⚠️ 檢查增量分點日期失敗，回退全量模式: {ex}")
+
+            inserted = mgr.save_broker_trades_batch(clean_df)
             logger.info(f"✅ 成功匯入券商分點主力資料: {inserted} 筆")
             return inserted
 

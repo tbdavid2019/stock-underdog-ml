@@ -24,6 +24,8 @@ _BROKER_CACHE_TTL = 180.0  # 3 minutes
 
 _LAST_INST_SYNC_CHECK: float = 0.0
 _INST_SYNC_LOCK = threading.Lock()
+_LAST_BROKER_SYNC_CHECK: float = 0.0
+_BROKER_SYNC_LOCK = threading.Lock()
 
 
 def _maybe_auto_sync_institutional(db: DuckDBManager, background_tasks: Optional[BackgroundTasks] = None):
@@ -56,6 +58,40 @@ def _maybe_auto_sync_institutional(db: DuckDBManager, background_tasks: Optional
         background_tasks.add_task(_bg_sync)
     else:
         threading.Thread(target=_bg_sync, daemon=True).start()
+
+
+def _maybe_auto_sync_broker(db: DuckDBManager, background_tasks: Optional[BackgroundTasks] = None):
+    """
+    若檢測到券商分點歷史數據過舊（超過 4 天）或為空，自動在背景觸發增量同步更新 (Self-Healing)
+    """
+    global _LAST_BROKER_SYNC_CHECK
+    now = time.time()
+    if now - _LAST_BROKER_SYNC_CHECK < 3600:
+        return
+    _LAST_BROKER_SYNC_CHECK = now
+
+    def _bg_sync():
+        if not _BROKER_SYNC_LOCK.acquire(blocking=False):
+            logger.info("⏳ 券商分點同步作業已在進行中，略過重複啟動")
+            return
+        try:
+            from data.historical_importer import HistoricalImporter
+            logger.info("🔄 [Auto-Sync] 偵測到券商分點數據過舊或缺失，啟動背景增量同步...")
+            cnt = HistoricalImporter.import_broker_trades(db_mgr=db, incremental=True)
+            logger.info(f"✅ [Auto-Sync] 券商分點增量同步完成，更新 {cnt} 筆記錄")
+            with _CACHE_LOCK:
+                _STATS_CACHE.pop("stats", None)
+                _BROKER_CACHE.clear()
+        except Exception as ex:
+            logger.warning(f"⚠️ [Auto-Sync] 自動同步券商分點失敗: {ex}")
+        finally:
+            _BROKER_SYNC_LOCK.release()
+
+    if background_tasks is not None:
+        background_tasks.add_task(_bg_sync)
+    else:
+        threading.Thread(target=_bg_sync, daemon=True).start()
+
 
 
 
@@ -102,6 +138,7 @@ class MarketStatsResponse(BaseModel):
     total_predictions: int
     latest_market_date: Optional[str] = None
     latest_institutional_date: Optional[str] = None
+    latest_broker_date: Optional[str] = None
 
 
 class MarketUniverseResponse(BaseModel):
@@ -129,11 +166,14 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             bars_cnt = con.execute("SELECT COUNT(*) FROM tw_daily_bars").fetchone()[0]
             inst_cnt = con.execute("SELECT COUNT(*) FROM tw_institutional_daily").fetchone()[0]
             
-            # 檢查 tw_broker_trades 是否存在
+            # 檢查 tw_broker_trades 是否存在與最新日期
             broker_cnt = 0
+            latest_broker_date = None
             has_broker = con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'tw_broker_trades'").fetchone()[0]
             if has_broker:
                 broker_cnt = con.execute("SELECT COUNT(*) FROM tw_broker_trades").fetchone()[0]
+                raw_b_date = con.execute("SELECT MAX(date) FROM tw_broker_trades").fetchone()[0]
+                latest_broker_date = str(raw_b_date) if raw_b_date else None
                 
             pred_cnt = con.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
             
@@ -150,13 +190,24 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
             else:
                 _maybe_auto_sync_institutional(db)
 
+            if latest_broker_date:
+                try:
+                    last_b_dt = datetime.datetime.strptime(str(latest_broker_date), "%Y-%m-%d").date()
+                    if (date.today() - last_b_dt).days >= 4:
+                        _maybe_auto_sync_broker(db)
+                except Exception:
+                    pass
+            else:
+                _maybe_auto_sync_broker(db)
+
             res = MarketStatsResponse(
                 total_bars=bars_cnt,
                 total_institutional_records=inst_cnt,
                 total_broker_records=broker_cnt,
                 total_predictions=pred_cnt,
                 latest_market_date=str(latest_bar_date) if latest_bar_date else None,
-                latest_institutional_date=str(latest_inst_date) if latest_inst_date else None
+                latest_institutional_date=str(latest_inst_date) if latest_inst_date else None,
+                latest_broker_date=latest_broker_date
             )
             _set_in_cache(_STATS_CACHE, "stats", res)
             return res
@@ -318,6 +369,37 @@ def trigger_institutional_sync(
 
     background_tasks.add_task(_do_sync)
     return {"success": True, "message": "已在背景啟動三大法人籌碼同步作業"}
+
+
+@router.post("/broker/sync", summary="觸發券商分點主力歷史數據同步更新")
+def trigger_broker_sync(
+    background_tasks: BackgroundTasks,
+    force_full: bool = Query(False, description="是否執行全量同步 (預設為 False 增量同步)"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    觸發券商分點主力歷史進出時序 (broker_history.csv) 增量更新至 DuckDB。
+    非同步背景執行，不阻塞 HTTP 請求。
+    """
+    def _do_sync():
+        if not _BROKER_SYNC_LOCK.acquire(blocking=False):
+            logger.info("⏳ 券商分點同步作業已在進行中，略過重複啟動")
+            return
+        try:
+            from data.historical_importer import HistoricalImporter
+            logger.info("🔄 [API Sync] 手動觸發券商分點主力數據同步作業...")
+            cnt = HistoricalImporter.import_broker_trades(db_mgr=db, incremental=not force_full)
+            logger.info(f"✅ [API Sync] 券商分點主力同步完成，處理 {cnt} 筆記錄")
+            with _CACHE_LOCK:
+                _STATS_CACHE.pop("stats", None)
+                _BROKER_CACHE.clear()
+        except Exception as e:
+            logger.error(f"❌ [API Sync] 券商分點主力同步失敗: {e}", exc_info=True)
+        finally:
+            _BROKER_SYNC_LOCK.release()
+
+    background_tasks.add_task(_do_sync)
+    return {"success": True, "message": "已在背景啟動券商分點主力同步作業"}
 
 
 @router.get("/broker/summary/{ticker}", summary="取得個股券商分點主力買賣超摘要")
