@@ -676,7 +676,7 @@
                     <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與 AI 預測目標價趨勢折線圖</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    比對每日真實收盤/現價走勢與 LSTM、TimesFM、多維共振等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
+                    比對每日真實收盤/現價走勢與 Timestral、TimesFM、雙時序共振等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
                 </p>
             </div>
 
@@ -734,15 +734,6 @@
                         :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-0.5 bg-slate-400 inline-block"></span>
                     <span>MA60 季線</span>
-                </button>
-
-                <!-- LSTM 目標價 (舊版) -->
-                <button type="button" @click="togglePriceChartSeries('lstm')"
-                        title="點擊切換顯示歷史 LSTM 預測目標價 (舊版)"
-                        class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                        :class="priceChartVisibility.lstm ? (isDark ? 'bg-amber-500/15 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-800') : (isDark ? 'opacity-30 border-transparent bg-transparent text-slate-600 line-through' : 'opacity-30 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2 h-2 rounded-full bg-[#F59E0B] inline-block"></span>
-                    <span>LSTM (舊版)</span>
                 </button>
             </div>
         </div>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>888 StockQuant | 專業級多維量化決策平台</title>
-    <meta name="description" content="888 StockQuant 提供台美股技術面、TimesFM 時序大模型、LSTM 次日預測、三大法人與券商分點籌碼多維量化決策分析。">
+    <meta name="description" content="888 StockQuant 提供台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
     <meta name="theme-color" content="#F59E0B">
     <meta name="application-name" content="888 StockQuant">
     <link rel="canonical" href="https://stockdata.david888.com/">
@@ -18,7 +18,7 @@
     <meta property="og:site_name" content="888 StockQuant">
     <meta property="og:locale" content="zh_TW">
     <meta property="og:title" content="888 StockQuant | 專業級多維量化決策平台">
-    <meta property="og:description" content="台美股技術面、TimesFM 時序大模型、LSTM 次日預測、三大法人與券商分點籌碼多維量化決策分析。">
+    <meta property="og:description" content="台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
     <meta property="og:url" content="https://stockdata.david888.com/">
     <meta property="og:image" content="https://stockdata.david888.com/og-image.png">
     <meta property="og:image:alt" content="888 StockQuant 多維量化決策平台">
@@ -29,7 +29,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@david888">
     <meta name="twitter:title" content="888 StockQuant | 專業級多維量化決策平台">
-    <meta name="twitter:description" content="台美股技術面、TimesFM 時序大模型、LSTM 次日預測、三大法人與券商分點籌碼多維量化決策分析。">
+    <meta name="twitter:description" content="台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
     <meta name="twitter:image" content="https://stockdata.david888.com/og-image.png">
 
     <script type="application/ld+json">
@@ -38,7 +38,7 @@
       "@type": "WebApplication",
       "name": "888 StockQuant",
       "url": "https://stockdata.david888.com/",
-      "description": "台美股技術面、TimesFM 時序大模型、LSTM 次日預測、三大法人與券商分點籌碼多維量化決策分析。",
+      "description": "台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。",
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web"
     }
@@ -246,21 +246,6 @@
 <body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200">
     <h1 class="sr-only">888 StockQuant 專業量化決策平台</h1>
     <h2 class="sr-only">今日量化訊號與跨市場情報</h2>
-
-    <!-- Initial Mount Preloader (Prevents any FOUC / Uncompiled Template Flashes) -->
-    <div id="preloader" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#EEEEEE] dark:bg-[#030302] transition-opacity duration-300">
-        <div class="flex flex-col items-center space-y-4">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-b from-[#FFA726] via-[#FF8800] to-[#F57C00] shadow-xl shadow-orange-500/25 flex flex-col items-center justify-center p-1 border border-amber-200/40 select-none animate-pulse">
-                <span class="font-black text-[14px] tracking-tight leading-none text-slate-950 font-mono">888</span>
-                <span class="font-black text-xs tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
-                <span class="font-black text-xs tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
-            </div>
-            <div class="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                <span>載入量化決策平台中...</span>
-            </div>
-        </div>
-    </div>
 
     <div id="app" v-cloak class="flex-1 flex flex-col">
 

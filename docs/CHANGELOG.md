@@ -4,6 +4,19 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-16 (v2.4.31)
+
+### Changed & Enhanced (UI Explanations, Tooltips & Complete Documentation Parity)
+- **🎨 前端介面全面隱藏退休之舊版 LSTM 並強化專有名詞懸浮說明（UI Tooltips & Explainer Callout）**：
+  - **策略過濾條說明卡片（Active Strategy Explainer Banner）**：於看板策略選單下方新增動態說明橫幅，依使用者選取之策略即時展示量化邏輯與涵義（如「雙時序共振焦點」、「Timestral 看漲 TOP」、「玄鐵均線波段」等）。
+  - **策略按鈕與表格欄位完整 Tooltip**：各策略按鈕加入 `:title` 提示；高密度金融表格全欄位（標的、策略模型、現價、目標價、潛力、PE/PB、5日籌碼、策略共振標籤）加入精確中文懸浮說明。
+  - **多維量化共振標籤微互動與說明**：為「四重共振」、「三重共振」、「雙模型共振」、「雙重共振」、「土洋合買」、「投信連買」、「玄鐵買點」、「Timestral看漲」、「TimesFM看漲」、「高盈虧比」等標籤加入明確定義之 Tooltip 與 `cursor-help` 提示。
+  - **徹底移除前端圖表圖例之舊版 LSTM 控制項**：自個股走勢圖表圖例中移除已停用之 LSTM 按鈕，圖表專注呈現真實股價、Timestral 目標價、P10~P90 蒙地卡羅風控區化、TimesFM 目標價、雙時序共振與 MA60 季線。
+- **📚 LLM 上下文與 Agent 規範文件全量同步（`llms.txt`, `llms-full.txt`, `SKILL.md`）**：
+  - **`llms.txt` & `llms-full.txt`**：全量更新策略矩陣、端點清單、數學模型定義與建議 4 步操盤工作流，以 Mistral Timestral-209M 取代 LSTM，明確記錄雙基礎模型合成目標價公式 $P_{res} = 0.5 \times P_{\text{TimesFM}} + 0.5 \times P_{\text{Timestral}}$。
+  - **`skills/stock-quant/SKILL.md`**：全面更新因子定義、4 步 Agent 操盤分析工作流、MCP 工具對照表（註冊 `get_timestral_top_predictions` 並標記 `get_lstm_top_predictions` 為 Deprecated）與 REST API 路由。
+  - **WebMCP 與 HTML 元資料同步**：更新 `/.well-known/mcp.json`、`/.well-known/ai-plugin.json`、`/.webmcp/bridge.js` 及 `index.html` 之 OpenGraph 與 Twitter Card 描述。
+
 ## 2026-10-16 (v2.4.30)
 
 ### Added & Overhauled (Mistral Timestral-209M Integration & Dual Foundation Model Resonance)

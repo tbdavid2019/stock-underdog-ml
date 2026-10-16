@@ -548,6 +548,7 @@
             <button v-for="strat in strategyOptions" :key="strat.id"
                     @click="setStrategy(strat.id)"
                     :aria-pressed="selectedStrategy === strat.id"
+                    :title="strat.description"
                     :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
                     class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 border">
                 <span class="material-symbols-outlined text-[17px] sm:text-[18px]">{{ strat.icon }}</span>
@@ -597,6 +598,17 @@
 
     </div>
 
+    <!-- Active Strategy Explainer Banner (明確說明各項策略意涵與量化邏輯) -->
+    <div v-if="currentStrategyMeta"
+         class="p-3.5 sm:p-4 rounded-2xl border flex items-start sm:items-center space-x-3 transition-all"
+         :class="isDark ? 'bg-[#16181D] border-amber-500/30 text-slate-200' : 'bg-amber-50/80 border-amber-200 text-amber-950'">
+        <span class="material-symbols-outlined text-[22px] text-amber-500 shrink-0 mt-0.5 sm:mt-0">{{ currentStrategyMeta.icon }}</span>
+        <div class="text-xs sm:text-sm leading-relaxed">
+            <span class="font-black text-amber-500 mr-1.5">{{ currentStrategyMeta.label }}：</span>
+            <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ currentStrategyMeta.description }}</span>
+        </div>
+    </div>
+
     <!-- Batch Header & Count Indicator -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm px-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
         <div class="flex items-center space-x-3">
@@ -608,9 +620,8 @@
     </div>
 
     <!-- 3. Loading & Error States -->
-    <div v-if="loading" class="p-12 text-center space-y-3" aria-label="日報載入中" aria-busy="true">
-        <span class="material-symbols-outlined text-[36px] animate-spin text-amber-500">progress_activity</span>
-        <p class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在透過 DuckDB 引擎快速運算多維量化指標...</p>
+    <div v-if="loading && records.length === 0" class="p-8 text-center space-y-2" aria-label="日報載入中" aria-busy="true">
+        <p class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">載入量化數據中...</p>
     </div>
 
     <div v-else-if="loadError"
@@ -716,9 +727,11 @@
                 <div class="flex items-center justify-between gap-2 pt-1">
                     <div class="flex flex-wrap gap-1">
                         <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
-                              class="px-2 py-0.5 text-[11px] rounded-md font-semibold"
-                              :class="tag.class">
-                            {{ tag.label }}
+                              :title="tag.tooltip || tag.label"
+                              class="px-2 py-0.5 text-[11px] rounded-md font-semibold border inline-flex items-center space-x-1 cursor-help"
+                              :class="getTagClass(tag)">
+                            <span v-if="tag.icon" class="material-symbols-outlined text-[12px] leading-none shrink-0">{{ tag.icon }}</span>
+                            <span>{{ tag.label }}</span>
                         </span>
                     </div>
                     <div class="flex items-center space-x-1.5 shrink-0">
@@ -944,17 +957,17 @@
                     <!-- Deep Obsidian Table Header -->
                     <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                         <tr>
-                            <th class="py-2.5 px-2 font-bold num-font text-center w-8 whitespace-nowrap">#</th>
-                            <th class="py-2.5 px-2 font-bold whitespace-nowrap">標的 / 名稱</th>
-                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">市場</th>
-                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">策略模型</th>
-                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">現價</th>
-                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">目標價 / 均線</th>
-                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">潛力</th>
-                            <th class="py-2.5 px-2 font-bold text-center num-font whitespace-nowrap">PE / PB</th>
-                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap">5日籌碼 (張)</th>
-                            <th class="py-2.5 px-2 font-bold whitespace-nowrap">策略共振標籤</th>
-                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap">操作</th>
+                            <th class="py-2.5 px-2 font-bold num-font text-center w-8 whitespace-nowrap" title="排序名次">#</th>
+                            <th class="py-2.5 px-2 font-bold whitespace-nowrap" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="標的所屬市場指數（台灣50、台灣中型100、S&P 500、太空概念）">市場</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="產生該推薦之量化策略或時序神經網路模型（如雙時序大模型共振、Timestral、TimesFM、玄鐵均線）">策略模型</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="資料庫最新收盤價或最新撮合即時成交價">現價</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="時序基礎模型預測目標價 (P50) 或玄鐵均線支撐價格 (MA60/MA120)">目標價 / 均線</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="相較現價之預期潛在報酬空間百分比（目標價 vs 現價）">潛力</th>
+                            <th class="py-2.5 px-2 font-bold text-center num-font whitespace-nowrap" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="近 5 個交易日投信法人與外資法人累積買賣超張數（主力籌碼動向）">5日籌碼 (張)</th>
+                            <th class="py-2.5 px-2 font-bold whitespace-nowrap" title="多維量化條件交集狀態（四重共振、雙模型共振、玄鐵買點、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略共振標籤</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="點擊展開技術指標與深度分析抽屜">操作</th>
                         </tr>
                     </thead>
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
@@ -1017,8 +1030,9 @@
                             <td class="py-2.5 px-2 whitespace-nowrap">
                                 <div class="flex items-center gap-1 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
                                     <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
+                                          :title="tag.tooltip || tag.label"
                                           :class="getTagClass(tag)"
-                                          class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm">
+                                          class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm cursor-help">
                                         <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
                                         <span>{{ tag.label }}</span>
                                     </span>
@@ -1125,8 +1139,9 @@
                                         <!-- Full Resonance Tags in Drawer -->
                                         <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
                                             <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                                                  :title="tag.tooltip || tag.label"
                                                   :class="getTagClass(tag)"
-                                                  class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
+                                                  class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap cursor-help">
                                                 <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
                                                 <span>{{ tag.label }}</span>
                                             </span>
@@ -1794,8 +1809,9 @@
                 <!-- Tags Pills -->
                 <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
                     <span v-for="tag in parseTags(item.tags)" :key="tag.label"
+                          :title="tag.tooltip || tag.label"
                           :class="getTagClass(tag)"
-                          class="px-2.5 py-1 text-xs sm:text-sm font-semibold rounded-lg border font-sans tracking-wide inline-flex items-center space-x-1 shadow-sm whitespace-nowrap">
+                          class="px-2.5 py-1 text-xs sm:text-sm font-semibold rounded-lg border font-sans tracking-wide inline-flex items-center space-x-1 shadow-sm whitespace-nowrap cursor-help">
                         <span v-if="tag.icon" class="material-symbols-outlined text-[14px] leading-none shrink-0">{{ tag.icon }}</span>
                         <span>{{ tag.label }}</span>
                     </span>

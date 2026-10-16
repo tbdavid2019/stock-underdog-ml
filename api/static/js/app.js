@@ -29,14 +29,42 @@ export const app = createApp({
             expandedDrawerLoading: false,
 
             strategyOptions: [
-                { id: 'resonance', label: '雙時序共振焦點', icon: 'military_tech' },
-                { id: 'xuantie', label: '玄鐵均線波段', icon: 'show_chart' },
-                { id: 'timesfm_bullish', label: 'TimesFM 預測 TOP', icon: 'auto_awesome' },
-                { id: 'timestral_bullish', label: 'Timestral 看漲 TOP', icon: 'smart_toy' },
-                { id: 'timestral_bearish', label: 'Timestral 避險', icon: 'warning' },
-                { id: 'timesfm_bearish', label: 'TimesFM 避險', icon: 'shield' },
-                { id: 'bullish', label: 'LSTM 看漲 (舊版)', icon: 'trending_up' },
-                { id: 'latest', label: '最新全量批次', icon: 'dataset' }
+                {
+                    id: 'resonance',
+                    label: '雙時序共振焦點',
+                    icon: 'military_tech',
+                    description: '【綜合極選】結合 Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，並要求同時站穩玄鐵均線支撐與三大法人主力合買，為全系統最高勝率之多維共振標的。'
+                },
+                {
+                    id: 'timestral_bullish',
+                    label: 'Timestral 看漲 TOP',
+                    icon: 'smart_toy',
+                    description: '【Mistral AI 基礎模型】採用最新開源之 Timestral-209M 解碼器架構時序大模型，Zero-Shot 輸出 5 日目標價、P10~P90 蒙地卡羅風控信賴區間與非對稱盈虧比。'
+                },
+                {
+                    id: 'timesfm_bullish',
+                    label: 'TimesFM 預測 TOP',
+                    icon: 'auto_awesome',
+                    description: '【Google 時序大模型】採用 Google Research 預訓練之 TimesFM 200M 基礎模型，純推論模式預測未來 5 日目標價位，計算 P50 中位預期與 P10 防守位之真實風報比。'
+                },
+                {
+                    id: 'xuantie',
+                    label: '玄鐵均線波段',
+                    icon: 'show_chart',
+                    description: '【純技術面買點】「順大勢（MA60/120多頭排列）、逆小勢（回踩均線支撐）」，精確捕捉股價回測 MA60 季線或 MA120 半年線支撐之波段起漲買點。'
+                },
+                {
+                    id: 'timestral_bearish',
+                    label: '時序模型避險',
+                    icon: 'shield',
+                    description: '【破底與避險防守】時序大模型預測跌幅最重、下行破底風險高或盈虧比惡化之標的，提示短線防守、減倉或避險觀察。'
+                },
+                {
+                    id: 'latest',
+                    label: '最新全量批次',
+                    icon: 'dataset',
+                    description: '【全市場快照】當前指數/市場最新一批次全量分析總表，收錄所有個股之現價、預測目標價、PE/PB 估值、均線支撐與法人籌碼狀態。'
+                }
             ],
 
             macro: {},
@@ -80,8 +108,7 @@ export const app = createApp({
                 timestralBands: true,
                 timesfm: true,
                 resonance: true,
-                ma60: false,
-                lstm: false
+                ma60: false
             },
             tickerInstHistory: [],
             tickerInstLoading: false,
@@ -187,6 +214,11 @@ export const app = createApp({
 
             pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
         };
+    },
+    computed: {
+        currentStrategyMeta() {
+            return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
+        }
     },
     methods: {
         toggleTheme() {
@@ -1299,52 +1331,75 @@ export const app = createApp({
                 let icon = null;
                 let badgeType = 'default';
 
+                let tooltip = cleanLabel;
                 if (cleanLabel.includes('四重共振')) {
                     icon = 'workspace_premium';
                     badgeType = 'resonance_quad';
+                    tooltip = '【👑四重共振】同時符合「玄鐵季線回踩 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 三大法人籌碼鎖碼」四大頂級條件，為系統最高勝率極選。';
                 } else if (cleanLabel.includes('三重共振')) {
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
-                } else if (cleanLabel.includes('雙時序共振') || cleanLabel.includes('雙模型共振') || cleanLabel.includes('雙ML共振')) {
+                    tooltip = '【🏆三重共振】同時符合技術面均線支撐、時序大模型看漲與三大法人籌碼鎖碼三項條件。';
+                } else if (cleanLabel.includes('雙時序共振') || cleanLabel.includes('雙大模型共振') || cleanLabel.includes('雙模型共振') || cleanLabel.includes('雙ML共振')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                } else if (cleanLabel.includes('雙重共振')) {
+                    tooltip = '【🔮雙模型共振】Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，同步預測看漲。';
+                } else if (cleanLabel.includes('雙重共振') || cleanLabel.includes('雙重符合')) {
                     icon = 'stars';
                     badgeType = 'resonance_double';
+                    tooltip = '【⭐雙重共振】同時符合兩大核心量化維度（如時序大模型 ∩ 技術支撐 或 時序大模型 ∩ 籌碼鎖碼）。';
                 } else if (cleanLabel.includes('多維共振')) {
                     icon = 'hub';
                     badgeType = 'resonance_multi';
-                } else if (cleanLabel.includes('合買') || cleanLabel.includes('連買') || cleanLabel.includes('買超') || cleanLabel.includes('鎖碼')) {
+                    tooltip = '【多維共振】多量化策略共同篩選出的交集標的。';
+                } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
+                    tooltip = '【土洋合買】臺灣外資法人與境內投信法人同步站在買方加持。';
+                } else if (cleanLabel.includes('連買')) {
+                    icon = 'handshake';
+                    badgeType = 'institutional';
+                    tooltip = '【投信連買】投信法人連續買超 3 天以上，主力籌碼鎖碼強度高。';
+                } else if (cleanLabel.includes('買超') || cleanLabel.includes('鎖碼')) {
+                    icon = 'handshake';
+                    badgeType = 'institutional';
+                    tooltip = '【法人買超】三大法人資金近期呈現顯著淨流入。';
                 } else if (cleanLabel.includes('玄鐵') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
                     icon = 'show_chart';
                     badgeType = 'technical';
+                    tooltip = '【🗡️玄鐵買點】「順大勢、逆小勢」，股價處於多頭波段並精確回踩 MA60 季線或 MA120 半年線支撐位。';
                 } else if (cleanLabel.includes('Timestral')) {
                     icon = 'smart_toy';
                     badgeType = 'ai_timestral';
+                    tooltip = '【🔮Timestral看漲】Mistral AI 209M 時序大模型預測未來 5 日具有正向報酬潛力與良好盈虧比。';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
-                } else if (cleanLabel.includes('LSTM')) {
-                    icon = 'insights';
-                    badgeType = 'ai_lstm';
+                    tooltip = '【🔮TimesFM看漲】Google Research 200M 時序基礎模型 Zero-Shot 預測未來 5 日目標價位顯著看漲。';
                 } else if (cleanLabel.includes('高盈虧比')) {
                     icon = 'balance';
                     badgeType = 'risk_reward';
+                    tooltip = '【高盈虧比】時序大模型 P50 中位獲利空間大於 P10 悲觀防守空間（Risk/Reward > 1.2x）。';
                 } else if (cleanLabel.includes('低PE') || cleanLabel.includes('低PB')) {
                     icon = 'equalizer';
                     badgeType = 'fundamental';
-                } else if (cleanLabel.includes('防守')) {
+                    tooltip = '【基本面估值】本益比 (PE) 或股價淨值比 (PB) 處於歷史相對合理/低估區間。';
+                } else if (cleanLabel.includes('防守') || cleanLabel.includes('避險')) {
                     icon = 'shield';
                     badgeType = 'defense';
+                    tooltip = '【🔻防守/避險】預測破底風險高或盈虧比過低，不宜追高，建議保持防守觀望。';
+                } else if (cleanLabel.includes('主流板塊')) {
+                    icon = 'hub';
+                    badgeType = 'technical';
+                    tooltip = '【主流板塊】屬於近期全市場資金輪動動量排名前三之強勢產業。';
                 }
 
                 return {
                     raw: rawTag,
                     label: cleanLabel,
                     icon: icon,
-                    type: badgeType
+                    type: badgeType,
+                    tooltip: tooltip
                 };
             });
         },
@@ -1434,7 +1489,7 @@ export const app = createApp({
 
                 await modelCtx.registerTool({
                     name: 'get_triple_resonance_stocks',
-                    description: '篩選三重共振強勢股（技術面均線 ∩ LSTM看漲 ∩ 法人籌碼鎖碼 ∩ 估值合理）。',
+                    description: '篩選雙時序共振強勢股（技術面均線 ∩ 雙大模型看漲 ∩ 法人籌碼鎖碼 ∩ 估值合理）。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -1459,8 +1514,8 @@ export const app = createApp({
                 });
 
                 await modelCtx.registerTool({
-                    name: 'get_lstm_top_predictions',
-                    description: '取得 LSTM 深度學習下一交易日預測漲跌幅排行榜（看漲或看跌）。',
+                    name: 'get_timestral_top_predictions',
+                    description: '取得 Mistral Timestral-209M 時序大模型 5 日預測漲跌幅排行與蒙地卡羅區間。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -1470,7 +1525,7 @@ export const app = createApp({
                         },
                         required: ['direction']
                     },
-                    execute: async ({ direction, index_name, limit }) => JSON.stringify(await ApiClient.getPredictions({ strategy: direction === 'bearish' ? 'bearish' : 'bullish', indexName: index_name, limit: limit || 20 }))
+                    execute: async ({ direction, index_name, limit }) => JSON.stringify(await ApiClient.getPredictions({ strategy: direction === 'bearish' ? 'timestral_bearish' : 'timestral_bullish', indexName: index_name, limit: limit || 20 }))
                 });
 
                 await modelCtx.registerTool({
@@ -1601,16 +1656,6 @@ export const app = createApp({
         }
     },
     mounted() {
-        // Fade out and remove preloader once Vue has fully mounted and compiled
-        const preloader = document.getElementById('preloader');
-        if (preloader) {
-            preloader.style.opacity = '0';
-            preloader.style.pointerEvents = 'none';
-            setTimeout(() => {
-                if (preloader.parentNode) preloader.parentNode.removeChild(preloader);
-            }, 300);
-        }
-
         this.applyTheme();
         this.parseUrlParams();
         this.loadMacro();

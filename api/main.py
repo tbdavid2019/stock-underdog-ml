@@ -19,8 +19,8 @@ app = FastAPI(
     
     支援基於 DuckDB 高效能時序資料庫之即時量化訊號查詢：
     * 🗡️ **玄鐵重劍策略**：MA60/120 均線趨勢回調技術買點
-    * 🤖 **LSTM 深度學習**：下一交易日價格預測與漲跌幅排行榜
-    * ⭐ **多維共振篩選**：技術 ∩ 籌碼 ∩ ML ∩ 估值 之 `🏆三重共振` / `土洋合買`
+    * 🔮 **時序大模型矩陣**：Mistral Timestral-209M 與 Google TimesFM 雙時序基礎模型預測與波形共振
+    * ⭐ **多維共振篩選**：技術 ∩ 籌碼 ∩ 雙大模型 ∩ 估值 之 `👑四重共振` / `🏆三重共振` / `土洋合買`
     * 🌐 **美股宏觀門檻**：S&P 500 / VIX / 費城半導體 即時曝險評估
     * 🦆 **DuckDB 引擎**：支援 560,000+ 歷史時序與籌碼數據零拷貝秒級查詢
     * 🏛️ **法說會催化劑**：台美雙軌法人說明會 (TWSE/TPEx + 美股巨頭) 時程與簡報追蹤
@@ -199,7 +199,7 @@ def mcp_root_endpoint():
             "get_market_macro_regime",
             "get_triple_resonance_stocks",
             "get_xuantie_pullback_stocks",
-            "get_lstm_top_predictions",
+            "get_timestral_top_predictions",
             "get_timesfm_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
@@ -236,7 +236,7 @@ def get_webmcp_manifest():
     """
     return JSONResponse(content={
         "name": "stock-quant-engine",
-        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場、Clef System One 決策大模型)",
+        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙時序共振、Polymarket 真金白銀預測市場、Clef System One 決策大模型)",
         "version": APP_VERSION,
         "transport": "sse",
         "endpoints": {
@@ -247,7 +247,7 @@ def get_webmcp_manifest():
             "get_market_macro_regime",
             "get_triple_resonance_stocks",
             "get_xuantie_pullback_stocks",
-            "get_lstm_top_predictions",
+            "get_timestral_top_predictions",
             "get_timesfm_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
@@ -277,7 +277,7 @@ def get_llms_txt():
     """
     content = """# 888 Stock Quant Platform
 
-> 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、LSTM 深度學習時序預測、Google Research TimesFM 時序大模型、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
+> 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、Mistral Timestral-209M 時序大模型、Google Research TimesFM 時序大模型、雙時序模型波形共振、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
 
 > ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents and automated systems should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` at the start of each session/task to leverage newly released AI models, FastMCP tools, and multi-market data endpoints.
 
@@ -286,18 +286,19 @@ def get_llms_txt():
 ## Core Strategy Matrix & Resonance Framework
 
 - [Multi-Model Resonance Guidelines](/api/v1/predictions/resonance): 多策略交集共振機制
-  - 👑 **四重共振 (Quadruple Resonance)**: 同時滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ LSTM 看漲 ∩ TimesFM 看漲」之極高信心標的。
-  - 🏆 **三重共振 (Triple Resonance)**: 滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 估值合理 (PE<25, PB<3.5)」。
-  - 🔮 **雙ML共振 (Dual-ML Resonance)**: 微觀個股量價 LSTM 與宏觀預訓練 TimesFM 同步給出看漲訊號，雙重驗證勝率最高。
-  - ⚖️ **高盈虧比 (High Risk/Reward)**: TimesFM horizon 預測真實盈虧比 (P50_h - P0) / (P0 - P10_h) >= 1.5，具備非對稱獲利空間。
+  - 👑 **四重共振 (Quadruple Resonance)**: 同時滿足「玄鐵季線回踩 ∩ 法人籌碼鎖碼 ∩ TimesFM 看漲 ∩ Timestral 看漲」四大頂級條件，為系統最高勝率極選。
+  - 🏆 **三重共振 (Triple Resonance)**: 滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ (TimesFM ∪ Timestral) 看漲 ∩ 估值合理 (PE<25, PB<3.5)」。
+  - 🔮 **雙模型共振 (Dual-Foundation Model Resonance)**: Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，目標價 $P_{res} = 0.5 \\times P_{TimesFM} + 0.5 \\times P_{Timestral}$ 同步看漲。
+  - 🗡️ **玄鐵均線波段 (Xuantie Moving Average)**: 「順大勢（MA60/120多頭）、逆小勢（回踩均線支撐）」，精準捕捉波段回踩起漲點。
+  - ⚖️ **高盈虧比 (High Risk/Reward)**: 時序模型 Horizon 預測真實盈虧比 $(P_{50,h} - P_0) / (P_0 - P_{10,h}) \\ge 1.5$，具備非對稱獲利防守空間。
 
 ## Quantitative Strategy Endpoints
 
-- [Triple & Quad Resonance Recommendations](/api/v1/predictions/resonance): 取得多策略共振焦點推薦名單 (`index_name`, `limit`)
+- [Resonance Focus Picks](/api/v1/predictions/resonance): 取得雙時序大模型與多策略共振推薦名單 (`index_name`, `limit`)
+- [Timestral Bullish Top Picks](/api/v1/predictions/timestral/top-bullish): 查詢 Mistral Timestral-209M 時序大模型 5 日預測漲幅與盈虧比排行
+- [Timestral Bearish Defense Picks](/api/v1/predictions/timestral/top-bearish): 查詢 Mistral Timestral-209M 時序大模型 5 日預測跌幅避險/破底防禦排行
 - [TimesFM Bullish Top Picks](/api/v1/predictions/timesfm/top-bullish): 查詢 Google TimesFM 時序大模型 5 日預測漲幅與盈虧比排行
-- [TimesFM Bearish Top Picks](/api/v1/predictions/timesfm/top-bearish): 查詢 Google TimesFM 時序大模型 5 日預測跌幅避險/破底防禦排行
-- [LSTM Bullish Top Picks](/api/v1/predictions/lstm/top-bullish): 查詢 LSTM 深度學習次日預測漲幅排行
-- [LSTM Bearish Top Picks](/api/v1/predictions/lstm/top-bearish): 查詢 LSTM 深度學習次日預測跌幅排行
+- [TimesFM Bearish Defense Picks](/api/v1/predictions/timesfm/top-bearish): 查詢 Google TimesFM 時序大模型 5 日預測跌幅避險/破底防禦排行
 - [Xuantie Heavy Sword Pullback](/api/v1/predictions/xuantie): 查詢玄鐵重劍策略 MA60 季線 / MA120 半年線趨勢回調技術買點
 - [Latest Batch Snapshot](/api/v1/predictions/latest): 取得全市場最新日報批次數據（含現價、目標價、均線、估值、標籤）
 - [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡、均線排列與法人籌碼歷程
@@ -332,9 +333,9 @@ def get_llms_txt():
 
 本平台提供 20 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
-- `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙ML共振焦點股。
+- `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙模型共振焦點股。
+- `get_timestral_top_predictions`: 查詢 Mistral Timestral-209M 時序大模型 5 日漲跌幅排行與蒙地卡羅區間。
 - `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日漲跌幅排行與盈虧比。
-- `get_lstm_top_predictions`: 查詢 LSTM 深度學習次日漲跌幅排行。
 - `get_xuantie_pullback_stocks`: 查詢玄鐵重劍 MA60/120 趨勢回調買點標的。
 - `get_stock_history`: 查詢特定股票歷史時序量化預測軌跡與法人籌碼。
 - `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
@@ -398,10 +399,12 @@ def get_llms_full_txt():
 2. **波段策略 - 玄鐵重劍 (Xuantie Technical Pullback)**:
    - 順大勢：MA60 > MA120 或斜率向上。
    - 逆小勢：價格回調至季線/半年線支撐帶（價格在 MA60/120 之 ±3% 內，且未跌破超過 -1%）。
-3. **短線預測 - LSTM 深度學習 (LSTM Next-Day Forecast)**:
-   - 輸入過去 60 日 OHLCV 與技術指標，2 層雙向 LSTM 輸出次日收盤價預測與漲跌幅潛力。
+3. **時序基礎大模型 - Mistral Timestral-209M (Timestral 5-Day Forecast & Monte Carlo Bands)**:
+   - 採用 Mistral AI 209M 參數架構開源時序基礎大模型。
+   - 輸入過去 96+ 交易日高精度 OHLCV 價格序列，自回歸產生未來 5 日目標價路徑。
+   - 結合蒙地卡羅抽樣輸出 P10 (下行防守位)、P50 (中位預期) 與 P90 (樂觀目標位)。
 4. **時序基礎大模型 - Google TimesFM (TimesFM 5-Day Forecast & Quantiles)**:
-   - 採用 Google Research 預訓練 Decoder 架構時序基礎大模型 (TimesFM 2.5 500M)。
+   - 採用 Google Research 預訓練 Decoder 架構時序基礎大模型 (TimesFM 2.0 200M / 2.5 500M)。
    - 輸出 1~5 日預測目標價軌跡，並以設定 horizon 的最後一天計算 P10 (下行防守位)、P50 (中位預期) 與 P90 (上行參考位)。
    - 真實盈虧比 (Risk/Reward Ratio): $RR = \\frac{P_{50,h} - P_0}{P_0 - P_{10,h}}$。當 $RR \\ge 1.5$ 且 horizon P50 $> P_0$ 時判定為高勝率看漲標的；次日潛力僅供診斷。
 5. **籌碼策略 - 三大法人鎖碼 (TWSE Institutional Accumulation)**:
@@ -409,10 +412,11 @@ def get_llms_full_txt():
 6. **產業板塊資金輪動 (Sector Rotation)**:
    - 追蹤 7 大核心板塊 10D (40%) + 15D (30%) + 20D (30%) 動量加權資金流，鎖定市場前 3 大主流板塊。
 7. **多維交集共振架構 (Multi-Model Resonance Hierarchy)**:
-   - 👑 **四重共振**: 玄鐵技術買點 ∩ 法人鎖碼 ∩ LSTM 看漲 ∩ TimesFM 看漲 (勝率頂級)。
-   - 🏆 **三重共振**: 玄鐵技術買點 ∩ 法人鎖碼 ∩ (LSTM ∪ TimesFM) 看漲 ∩ 估值合理 (PE<25 / PB<3.5)。
-   - 🔮 **雙ML共振**: LSTM ∩ TimesFM 同步看漲（微觀記憶 ∩ 宏觀預訓練波形共振）。
-   - ⚖️ **高盈虧比**: TimesFM 盈虧比 $RR \\ge 2.0$。
+   - 👑 **四重共振**: 玄鐵技術買點 ∩ 法人鎖碼 ∩ TimesFM 看漲 ∩ Timestral 看漲 (系統最高勝率極選)。
+   - 🏆 **三重共振**: 玄鐵技術買點 ∩ 法人鎖碼 ∩ (TimesFM ∪ Timestral) 看漲 ∩ 估值合理 (PE<25 / PB<3.5)。
+   - 🔮 **雙模型共振**: TimesFM ∩ Timestral 同步看漲，波形共識目標價 $P_{res} = 0.5 \\times P_{TimesFM} + 0.5 \\times P_{Timestral}$。
+   - 🗡️ **玄鐵均線波段**: 「順大勢、逆小勢」，MA60/120 多頭排列下精準回踩支撐之波段買點。
+   - ⚖️ **高盈虧比**: 時序大模型盈虧比 $RR \\ge 1.5$。
 
 ## 2. Mathematical Formulations
 
@@ -444,11 +448,11 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 ## 4. REST API Endpoints Specification
 
 ### 4.1 Quantitative Strategies
-- `GET /api/v1/predictions/resonance?index_name=台灣50&limit=30`: 查詢三重/四重共振推薦清單。
-- `GET /api/v1/predictions/timesfm/top-bullish?index_name=...&limit=20`: TimesFM 5日看漲榜與盈虧比。
-- `GET /api/v1/predictions/timesfm/top-bearish?index_name=...&limit=20`: TimesFM 5日看跌避險榜。
-- `GET /api/v1/predictions/lstm/top-bullish?index_name=...&limit=20`: LSTM 次日看漲榜。
-- `GET /api/v1/predictions/lstm/top-bearish?index_name=...&limit=20`: LSTM 次日看跌榜。
+- `GET /api/v1/predictions/resonance?index_name=台灣50&limit=30`: 查詢雙時序大模型共振與多策略焦點推薦清單。
+- `GET /api/v1/predictions/timestral/top-bullish?index_name=...&limit=20`: Mistral Timestral 5日看漲榜與蒙地卡羅區間。
+- `GET /api/v1/predictions/timestral/top-bearish?index_name=...&limit=20`: Mistral Timestral 5日看跌避險榜。
+- `GET /api/v1/predictions/timesfm/top-bullish?index_name=...&limit=20`: Google TimesFM 5日看漲榜與盈虧比。
+- `GET /api/v1/predictions/timesfm/top-bearish?index_name=...&limit=20`: Google TimesFM 5日看跌避險榜。
 - `GET /api/v1/predictions/xuantie?index_name=...&limit=20`: 玄鐵重劍 MA60/120 波段買點。
 - `GET /api/v1/predictions/latest?index_name=...&limit=50`: 最新日報完整批次快照。
 - `GET /api/v1/predictions/history/{ticker}?limit=30`: 單一標的歷史預測軌跡與籌碼時序。
@@ -479,15 +483,15 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (22 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timesfm_top_predictions`, `get_lstm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`.
+- Tools (22 Native Tools): `get_market_macro_regime`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
-2. **首選共振焦點**: 呼叫 `get_triple_resonance_stocks()`，優先挑選含 `👑四重共振`、`🔮雙ML共振`、`高盈虧比` 標的。
+2. **首選共振焦點**: 呼叫 `get_triple_resonance_stocks()`，優先挑選含 `👑四重共振`、`🔮雙模型共振`、`高盈虧比` 標的。
 3. **分流補充選股**:
-   - 波段投資人: `get_xuantie_pullback_stocks()` (MA60/120 回踩買點)。
-   - 大模型動量投資人: `get_timesfm_top_predictions()` (5日盈虧比優勢)。
-   - 短線爆發投資人: `get_lstm_top_predictions()` (次日動量)。
+   - 雙時序基礎模型: `get_timestral_top_predictions()` (Timestral 看漲) 與 `get_timesfm_top_predictions()` (TimesFM 盈虧比優勢)。
+   - 波段回調買點: `get_xuantie_pullback_stocks()` (MA60/120 回踩買點)。
+   - 避險防守觀察: `get_timestral_top_predictions(direction='bearish')`。
 4. **個股確認與防守**: 呼叫 `get_stock_history()` 與 `get_company_profile()` 檢視近期走勢、法人籌碼支撐與公司基本面。
 
 Specification Conformance: https://llmstxt.org/
@@ -515,7 +519,7 @@ def get_webmcp_bridge():
         },
         {
             name: 'get_triple_resonance_stocks',
-            description: '篩選三重共振強勢股（技術面 ∩ LSTM ∩ 籌碼 ∩ 估值）',
+            description: '篩選三重共振強勢股（技術面 ∩ 雙大模型 ∩ 籌碼 ∩ 估值）',
             inputSchema: { type: 'object', properties: { index_name: { type: 'string' }, limit: { type: 'integer' } } },
             execute: async (args) => {
                 let url = '/api/v1/predictions/resonance?limit=' + (args?.limit || 20);
@@ -534,12 +538,14 @@ def get_webmcp_bridge():
             }
         },
         {
-            name: 'get_lstm_top_predictions',
-            description: '取得 LSTM 深度學習下一交易日預測漲跌幅排行',
-            inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['bullish', 'bearish'] }, limit: { type: 'integer' } }, required: ['direction'] },
+            name: 'get_timestral_top_predictions',
+            description: '取得 Mistral Timestral-209M 時序大模型 5 日預測漲跌幅排行與蒙地卡羅區間',
+            inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['bullish', 'bearish'] }, limit: { type: 'integer' }, index_name: { type: 'string' } }, required: ['direction'] },
             execute: async (args) => {
                 const ep = args?.direction === 'bearish' ? 'top-bearish' : 'top-bullish';
-                return JSON.stringify(await (await fetch('/api/v1/predictions/lstm/' + ep + '?limit=' + (args?.limit || 20))).json());
+                let url = '/api/v1/predictions/timestral/' + ep + '?limit=' + (args?.limit || 20);
+                if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
+                return JSON.stringify(await (await fetch(url)).json());
             }
         },
         {
@@ -781,7 +787,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、LSTM預測、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙ML共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 16 大原生 MCP 量化工具與 WebMCP 協議。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 16 大原生 MCP 量化工具與 WebMCP 協議。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"
