@@ -17,6 +17,7 @@ import requests
 import pandas as pd
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core.config import config
@@ -108,6 +109,8 @@ class ClefDecisionClient:
     """3-Tier Fallback Client for Clef-Flash System One Decision API with DuckDB L2 Caching"""
 
     _MEM_CACHE: Dict[str, Tuple[float, ClefDecisionVerdict]] = {}
+    _MEM_CACHE_LOCK = threading.Lock()
+    _MEM_CACHE_MAX_SIZE: int = 1000
     CACHE_TTL_SECONDS: float = 86400.0  # 24 hours
 
     def __init__(
@@ -470,11 +473,12 @@ class ClefDecisionClient:
 
         if is_cacheable and not force_refresh:
             # 1. Check L1 Memory Cache (instance, then class)
-            cached_item = self._mem_cache.get(cache_key) or self._MEM_CACHE.get(cache_key)
-            if cached_item:
-                cached_ts, cached_verdict = cached_item
-                if now - cached_ts < self.CACHE_TTL_SECONDS:
-                    return cached_verdict
+            with self._MEM_CACHE_LOCK:
+                cached_item = self._mem_cache.get(cache_key) or self._MEM_CACHE.get(cache_key)
+                if cached_item:
+                    cached_ts, cached_verdict = cached_item
+                    if now - cached_ts < self.CACHE_TTL_SECONDS:
+                        return cached_verdict
 
             # 2. Check L2 DuckDB Cache (only when self.db is configured)
             if self.db and hasattr(self.db, "get_decision_verdict"):
@@ -491,15 +495,26 @@ class ClefDecisionClient:
                         source_slot=f"{db_cached.get('source_slot', 'clef')}_cache",
                         success=True
                     )
-                    self._mem_cache[cache_key] = (now, verdict)
-                    self._MEM_CACHE[cache_key] = (now, verdict)
+                    with self._MEM_CACHE_LOCK:
+                        self._mem_cache[cache_key] = (now, verdict)
+                        self._MEM_CACHE[cache_key] = (now, verdict)
                     return verdict
 
         def _persist_and_return(verdict_obj: ClefDecisionVerdict) -> ClefDecisionVerdict:
             if is_cacheable:
-                self._mem_cache[cache_key] = (now, verdict_obj)
-                self._MEM_CACHE[cache_key] = (now, verdict_obj)
-                if self.db and hasattr(self.db, "save_decision_verdict"):
+                # Do not write transient network failure fallbacks into 24-hour DuckDB storage
+                is_transient_failure = (verdict_obj.source_slot == "local_rules" and self.enabled)
+                ttl_effective = 60.0 if is_transient_failure else self.CACHE_TTL_SECONDS
+
+                with self._MEM_CACHE_LOCK:
+                    if len(self._MEM_CACHE) >= self._MEM_CACHE_MAX_SIZE:
+                        for k in list(self._MEM_CACHE.keys())[:200]:
+                            self._MEM_CACHE.pop(k, None)
+                    cached_entry = (now - self.CACHE_TTL_SECONDS + ttl_effective, verdict_obj)
+                    self._mem_cache[cache_key] = cached_entry
+                    self._MEM_CACHE[cache_key] = cached_entry
+
+                if not is_transient_failure and self.db and hasattr(self.db, "save_decision_verdict"):
                     self.db.save_decision_verdict(ticker, verdict_obj.to_dict())
             return verdict_obj
 

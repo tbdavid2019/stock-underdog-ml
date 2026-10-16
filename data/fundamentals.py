@@ -1,6 +1,7 @@
 import logging
 import time
-from typing import Dict, Any, Optional, List
+import threading
+from typing import Dict, Any, Optional, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 try:
     import yfinance as yf
@@ -15,6 +16,9 @@ except ImportError:
 from data.cache import CacheManager
 
 logger = logging.getLogger("stock_app.fundamentals")
+
+_MEM_CACHE_LOCK = threading.Lock()
+_MEM_CACHE_MAX_SIZE = 1000
 
 
 def sanitize_metric(val: Any) -> Optional[float]:
@@ -36,6 +40,15 @@ class FundamentalProvider:
     _MEM_CACHE: Dict[str, Tuple[float, Dict[str, Optional[float]]]] = {}
 
     @classmethod
+    def _store_mem_cache(cls, ticker: str, val: Dict[str, Optional[float]], ts: Optional[float] = None) -> None:
+        now = ts or time.time()
+        with _MEM_CACHE_LOCK:
+            if len(cls._MEM_CACHE) >= _MEM_CACHE_MAX_SIZE:
+                for k in list(cls._MEM_CACHE.keys())[:200]:
+                    cls._MEM_CACHE.pop(k, None)
+            cls._MEM_CACHE[ticker] = (now, val)
+
+    @classmethod
     def get_fundamentals(
         cls, 
         ticker: str, 
@@ -53,10 +66,11 @@ class FundamentalProvider:
 
         # 1. L1 Memory Cache
         if use_cache and not force_refresh:
-            if ticker in cls._MEM_CACHE:
-                ts, mem_data = cls._MEM_CACHE[ticker]
-                if now - ts < max_age_hours * 3600:
-                    return mem_data
+            with _MEM_CACHE_LOCK:
+                if ticker in cls._MEM_CACHE:
+                    ts, mem_data = cls._MEM_CACHE[ticker]
+                    if now - ts < max_age_hours * 3600:
+                        return mem_data
 
         # 2. L2 DuckDB Cache
         if use_cache and not force_refresh:
@@ -71,7 +85,7 @@ class FundamentalProvider:
                             "pb": sanitize_metric(db_data.get("pb")),
                             "ev_ebitda": sanitize_metric(db_data.get("ev_ebitda"))
                         }
-                        cls._MEM_CACHE[ticker] = (now, res)
+                        cls._store_mem_cache(ticker, res, now)
                         return res
             except Exception as dbe:
                 logger.debug(f"DuckDB 基本面讀取跳過 ({ticker}): {dbe}")
@@ -86,7 +100,7 @@ class FundamentalProvider:
                     "pb": sanitize_metric(cached.get("pb")),
                     "ev_ebitda": sanitize_metric(cached.get("ev_ebitda"))
                 }
-                cls._MEM_CACHE[ticker] = (now, res)
+                cls._store_mem_cache(ticker, res, now)
                 # Sync back to DuckDB L2
                 try:
                     if DuckDBManager is not None:
@@ -120,7 +134,7 @@ class FundamentalProvider:
 
             # Save to L1 memory, L2 DuckDB, and L3 disk
             if use_cache:
-                cls._MEM_CACHE[ticker] = (now, result)
+                cls._store_mem_cache(ticker, result, now)
                 try:
                     if DuckDBManager is not None:
                         DuckDBManager().save_company_fundamentals(ticker, result)
@@ -138,46 +152,58 @@ class FundamentalProvider:
         cls, 
         tickers: List[str], 
         max_workers: int = 4, 
-        use_cache: bool = True
+        use_cache: bool = True,
+        max_age_hours: int = 24
     ) -> Dict[str, Dict[str, Optional[float]]]:
         """
         Concurrently fetch fundamental metrics for multiple stock tickers.
         """
         results: Dict[str, Dict[str, Optional[float]]] = {}
+        now = time.time()
         
         # 1. Check cache first in main thread to avoid thread overhead
         pending_tickers = []
         for ticker in tickers:
             if use_cache:
                 # L1 Memory Cache
-                if ticker in cls._MEM_CACHE:
-                    results[ticker] = cls._MEM_CACHE[ticker][1]
+                hit = False
+                with _MEM_CACHE_LOCK:
+                    if ticker in cls._MEM_CACHE:
+                        ts, mem_data = cls._MEM_CACHE[ticker]
+                        if now - ts < max_age_hours * 3600:
+                            results[ticker] = mem_data
+                            hit = True
+                if hit:
                     continue
+
                 # L2 DuckDB Cache
                 try:
                     if DuckDBManager is not None:
-                        db_data = DuckDBManager().get_company_fundamentals(ticker)
+                        db_data = DuckDBManager().get_company_fundamentals(ticker, max_age_hours=max_age_hours)
                         if db_data is not None:
-                            results[ticker] = {
+                            val = {
                                 "pe": sanitize_metric(db_data.get("pe")),
                                 "forward_pe": sanitize_metric(db_data.get("forward_pe")),
                                 "pb": sanitize_metric(db_data.get("pb")),
                                 "ev_ebitda": sanitize_metric(db_data.get("ev_ebitda"))
                             }
-                            cls._MEM_CACHE[ticker] = (time.time(), results[ticker])
+                            results[ticker] = val
+                            cls._store_mem_cache(ticker, val, now)
                             continue
                 except Exception:
                     pass
+
                 # L3 Disk Cache
-                cached = CacheManager.get_fundamentals(ticker)
+                cached = CacheManager.get_fundamentals(ticker, max_age_hours=max_age_hours)
                 if cached is not None:
-                    results[ticker] = {
+                    val = {
                         "pe": sanitize_metric(cached.get("pe")),
                         "forward_pe": sanitize_metric(cached.get("forward_pe")),
                         "pb": sanitize_metric(cached.get("pb")),
                         "ev_ebitda": sanitize_metric(cached.get("ev_ebitda"))
                     }
-                    cls._MEM_CACHE[ticker] = (time.time(), results[ticker])
+                    results[ticker] = val
+                    cls._store_mem_cache(ticker, val, now)
                     continue
             pending_tickers.append(ticker)
 
@@ -188,7 +214,7 @@ class FundamentalProvider:
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(cls.get_fundamentals, ticker, use_cache): ticker 
+                executor.submit(cls.get_fundamentals, ticker, use_cache, max_age_hours): ticker 
                 for ticker in pending_tickers
             }
             for future in as_completed(futures):

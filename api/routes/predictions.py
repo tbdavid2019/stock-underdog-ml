@@ -1,3 +1,4 @@
+import threading
 import time
 from typing import Optional, List, Dict, Tuple, Any
 from fastapi import APIRouter, Query, HTTPException, Depends
@@ -8,6 +9,27 @@ router = APIRouter(prefix="/predictions", tags=["Predictions & Quant Signals"])
 
 _PRED_CACHE: Dict[str, Tuple[float, PredictionResponse]] = {}
 _PRED_CACHE_TTL = 30.0  # 30 seconds
+_CACHE_LOCK = threading.Lock()
+_MAX_CACHE_ENTRIES = 500
+
+
+def _get_from_cache(key: str, ttl: float = _PRED_CACHE_TTL) -> Optional[PredictionResponse]:
+    now = time.time()
+    with _CACHE_LOCK:
+        if key in _PRED_CACHE:
+            ts, val = _PRED_CACHE[key]
+            if now - ts < ttl:
+                return val
+    return None
+
+
+def _set_in_cache(key: str, value: PredictionResponse, max_size: int = _MAX_CACHE_ENTRIES) -> None:
+    now = time.time()
+    with _CACHE_LOCK:
+        if len(_PRED_CACHE) >= max_size:
+            for k in list(_PRED_CACHE.keys())[:100]:
+                _PRED_CACHE.pop(k, None)
+        _PRED_CACHE[key] = (now, value)
 
 
 def get_duckdb():
@@ -26,12 +48,10 @@ def get_latest_predictions(
     """
     查詢最新量化批次運算結果。預設 (batch_only=True) 僅回傳最新成功執行批次之標的，並附帶 batch_date, data_as_of, age_hours 與 is_stale 狀態。
     """
-    now = time.time()
     cache_key = f"latest_{index_name}_{model_name}_{batch_only}_{limit}_{offset}"
-    if cache_key in _PRED_CACHE:
-        ts, cached_obj = _PRED_CACHE[cache_key]
-        if now - ts < _PRED_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
 
     res = db.get_latest_predictions(
         index_name=index_name, 
@@ -48,7 +68,7 @@ def get_latest_predictions(
         is_stale=res.get("is_stale", False),
         data=records
     )
-    _PRED_CACHE[cache_key] = (now, response_obj)
+    _set_in_cache(cache_key, response_obj)
     return response_obj
 
 
@@ -61,16 +81,14 @@ def get_resonance_candidates(
     """
     篩選同時符合「技術面均線買點 ∩ LSTM 看漲 ∩ 投信/法人鎖碼」的多策略共振股票。
     """
-    now = time.time()
     cache_key = f"resonance_{index_name}_{limit}"
-    if cache_key in _PRED_CACHE:
-        ts, cached_obj = _PRED_CACHE[cache_key]
-        if now - ts < _PRED_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
 
     records = db.get_resonance_candidates(index_name=index_name, limit=limit)
     response_obj = PredictionResponse(count=len(records), data=records)
-    _PRED_CACHE[cache_key] = (now, response_obj)
+    _set_in_cache(cache_key, response_obj)
     return response_obj
 
 
@@ -84,16 +102,14 @@ def get_xuantie_candidates(
     """
     篩選處於中長期多頭趨勢且當前股價剛好回踩 MA60 季線或 MA120 半年線之支撐買點標的。
     """
-    now = time.time()
     cache_key = f"xuantie_{index_name}_{pullback_type}_{limit}"
-    if cache_key in _PRED_CACHE:
-        ts, cached_obj = _PRED_CACHE[cache_key]
-        if now - ts < _PRED_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
 
     records = db.get_xuantie_candidates(index_name=index_name, pullback_type=pullback_type, limit=limit)
     response_obj = PredictionResponse(count=len(records), data=records)
-    _PRED_CACHE[cache_key] = (now, response_obj)
+    _set_in_cache(cache_key, response_obj)
     return response_obj
 
 

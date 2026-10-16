@@ -5,13 +5,37 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
 from data.duckdb_manager import DuckDBManager
 
+import threading
+
 router = APIRouter(prefix="/market", tags=["Market Data & Institutional Flows"])
+
+_CACHE_LOCK = threading.Lock()
+_MAX_CACHE_ENTRIES = 500
 
 _STATS_CACHE: Dict[str, Tuple[float, Any]] = {}
 _STATS_CACHE_TTL = 60.0  # 60 seconds
 
 _BROKER_CACHE: Dict[str, Tuple[float, Any]] = {}
 _BROKER_CACHE_TTL = 180.0  # 3 minutes
+
+
+def _get_from_cache(cache_dict: Dict[str, Tuple[float, Any]], key: str, ttl: float) -> Optional[Any]:
+    now = time.time()
+    with _CACHE_LOCK:
+        if key in cache_dict:
+            ts, val = cache_dict[key]
+            if now - ts < ttl:
+                return val
+    return None
+
+
+def _set_in_cache(cache_dict: Dict[str, Tuple[float, Any]], key: str, value: Any, max_size: int = _MAX_CACHE_ENTRIES) -> None:
+    now = time.time()
+    with _CACHE_LOCK:
+        if len(cache_dict) >= max_size:
+            for k in list(cache_dict.keys())[:100]:
+                cache_dict.pop(k, None)
+        cache_dict[key] = (now, value)
 
 
 def get_duckdb():
@@ -56,11 +80,9 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
     """
     查詢 DuckDB 中台股全市場日 K 棒、三大法人歷史進出表、券商分點主力與預測記錄之數據量。
     """
-    now = time.time()
-    if "stats" in _STATS_CACHE:
-        ts, cached_obj = _STATS_CACHE["stats"]
-        if now - ts < _STATS_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(_STATS_CACHE, "stats", _STATS_CACHE_TTL)
+    if cached is not None:
+        return cached
 
     try:
         with db._get_connection() as con:
@@ -86,7 +108,7 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
                 latest_market_date=str(latest_bar_date) if latest_bar_date else None,
                 latest_institutional_date=str(latest_inst_date) if latest_inst_date else None
             )
-            _STATS_CACHE["stats"] = (now, res)
+            _set_in_cache(_STATS_CACHE, "stats", res)
             return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查詢市場統計失敗: {e}")
@@ -227,15 +249,13 @@ def get_ticker_broker_summary(
     """
     查詢特定標的在過去 N 個交易日內，買超前 15 名與賣超前 15 名之券商分點合計統計。
     """
-    now = time.time()
     cache_key = f"summary_{ticker}_{days}"
-    if cache_key in _BROKER_CACHE:
-        ts, cached_obj = _BROKER_CACHE[cache_key]
-        if now - ts < _BROKER_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(_BROKER_CACHE, cache_key, _BROKER_CACHE_TTL)
+    if cached is not None:
+        return cached
 
     res = db.get_broker_top_summary(ticker=ticker, limit_days=days)
-    _BROKER_CACHE[cache_key] = (now, res)
+    _set_in_cache(_BROKER_CACHE, cache_key, res)
     return res
 
 
@@ -265,12 +285,10 @@ def get_ticker_broker_trend(
     計算特定標的各關鍵券商分點在歷史區間內的每日「累計買賣超 (張)」時間序列，用於繪製分點走勢圖。
     """
     clean_code = ticker.split(".")[0]
-    now = time.time()
     cache_key = f"trend_{ticker}_{days}_{top_n}"
-    if cache_key in _BROKER_CACHE:
-        ts, cached_obj = _BROKER_CACHE[cache_key]
-        if now - ts < _BROKER_CACHE_TTL:
-            return cached_obj
+    cached = _get_from_cache(_BROKER_CACHE, cache_key, _BROKER_CACHE_TTL)
+    if cached is not None:
+        return cached
 
     try:
         with db._get_connection() as con:
@@ -285,7 +303,7 @@ def get_ticker_broker_trend(
             
             if dates_df.empty:
                 empty_res = {"ticker": ticker, "dates": [], "series": []}
-                _BROKER_CACHE[cache_key] = (now, empty_res)
+                _set_in_cache(_BROKER_CACHE, cache_key, empty_res)
                 return empty_res
 
             dates = sorted(dates_df["date"].tolist())
@@ -303,7 +321,7 @@ def get_ticker_broker_trend(
 
             if top_brokers_df.empty:
                 empty_res = {"ticker": ticker, "dates": dates, "series": []}
-                _BROKER_CACHE[cache_key] = (now, empty_res)
+                _set_in_cache(_BROKER_CACHE, cache_key, empty_res)
                 return empty_res
 
             top_broker_names = top_brokers_df["broker_name"].tolist()
@@ -348,7 +366,7 @@ def get_ticker_broker_trend(
                 "dates": dates,
                 "series": series_result
             }
-            _BROKER_CACHE[cache_key] = (now, res)
+            _set_in_cache(_BROKER_CACHE, cache_key, res)
             return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"計算券商趨勢失敗: {e}")

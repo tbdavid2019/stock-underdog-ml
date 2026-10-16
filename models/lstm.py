@@ -4,11 +4,15 @@ Uses lazy loading of TensorFlow/Keras to prevent C-library conflicts with curl_c
 """
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 from typing import Tuple, Any
 
+try:
+    from sklearn.preprocessing import MinMaxScaler
+except ImportError:
+    MinMaxScaler = Any
 
-def prepare_data(data: pd.DataFrame, time_step: int = 90, train_ratio: float = 0.8) -> Tuple[np.ndarray, np.ndarray, MinMaxScaler]:
+
+def prepare_data(data: pd.DataFrame, time_step: int = 90, train_ratio: float = 0.8) -> Tuple[np.ndarray, np.ndarray, Any]:
     """
     Prepare stock data for LSTM training WITHOUT data leakage
     
@@ -23,6 +27,11 @@ def prepare_data(data: pd.DataFrame, time_step: int = 90, train_ratio: float = 0
             y: Target values (samples, 1) - NEXT DAY's close price
             scaler: Fitted MinMaxScaler (fitted ONLY on training data)
     """
+    try:
+        from sklearn.preprocessing import MinMaxScaler
+    except ImportError:
+        raise ImportError("scikit-learn is required for LSTM data preparation. Install via pip install scikit-learn.")
+
     train_size = int(len(data) * train_ratio)
     train_data = data[:train_size]
     

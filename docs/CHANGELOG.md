@@ -33,6 +33,14 @@
      - `/api/v1/market/broker/summary` 與 `/api/v1/market/broker/trend`：啟用 180 秒記憶體快取。
      - `/api/v1/predictions/latest`、`/api/v1/predictions/resonance`、`/api/v1/predictions/xuantie`：啟用 30 秒記憶體快取。
      - 多人同時瀏覽排行榜或大盤看板時直接由記憶體秒級響應，DuckDB 併發讀取負載降低 95% 以上。
+  7. **OpenCode & Codex Code Review 雙審查落實與執行緒安全強化（Concurrency & Thread Safety Hardening）**：
+     - **DuckDB 跨執行緒寫入互斥鎖（`_WRITE_LOCK`）**：在 `DuckDBManager` 加入類別層級 `threading.Lock()` 序列化 `decision_verdicts`、`company_fundamentals`、`company_profiles` 等所有入庫寫入操作，杜絕高併發請求下 DuckDB 交易版本衝突（`TransactionContext Error: Catalog write-write conflict`）。
+     - **全域記憶體快取容量上限（Bounded FIFO Eviction）**：為 `ClefDecisionClient._MEM_CACHE`、`FundamentalProvider._MEM_CACHE`、`_RESOLVER_CACHE`、`_STATS_CACHE`、`_BROKER_CACHE` 與 `_PRED_CACHE` 全面套用 500~2,000 筆容量上限與自動修剪，防止長時間服務記憶體無界膨脹（OOM）。
+     - **Python < 3.14 型別註解相容性（Type Annotation Safety）**：修復 `Tuple` 引用遺漏，確保在 Python 3.10~3.13 運行環境不觸發 `NameError`。
+     - **基本面批次查詢過期失效修復（Batch TTL Bug Fix）**：修復 `get_fundamentals_batch` 早期未校驗快取時間戳之缺陷，確保過期資料一律重新刷新。
+     - **短暫網路降級隔離（Transient Fallback Ephemeral Cache）**：當上游決策模型臨時連線異常降級為本地規則時，記憶體賦予 60s 臨時效期且不寫入 DuckDB 24h 長期快取，保障上游恢復後立即自動回歸 AI 決策。
+     - **數值有限性檢查（Float Sanitization）**：入庫前校驗 `math.isfinite()`，防止 `NaN` / `Infinity` 破壞 DuckDB 欄位型別約束。
+     - **輕量環境友善（Lazy ML Fallback）**：`models/lstm.py` 優化 `MinMaxScaler` 動態延遲加載，在未安裝重量級 ML 套件的容器或微服務環境中保障全域匯入不崩潰。
 
 ## 2026-10-15 (v2.4.26)
 

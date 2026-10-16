@@ -11,7 +11,8 @@ import math
 import logging
 import datetime
 import json
-from typing import Dict, List, Optional, Any
+import threading
+from typing import Dict, List, Optional, Any, Tuple
 import pandas as pd
 import duckdb
 
@@ -30,6 +31,9 @@ except Exception:
 
 class DuckDBManager:
     """DuckDB 本地量化時序資料庫管理器"""
+
+    _WRITE_LOCK = threading.Lock()
+    _RESOLVER_LOCK = threading.Lock()
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or config.db.DUCKDB_PATH
@@ -1165,16 +1169,18 @@ class DuckDBManager:
 
         cache_key = query.casefold()
         now = time.time()
-        if cache_key in self._RESOLVER_CACHE:
-            cached_time, cached_result = self._RESOLVER_CACHE[cache_key]
-            if now - cached_time < self._RESOLVER_CACHE_TTL:
-                return cached_result
+        with self._RESOLVER_LOCK:
+            if cache_key in self._RESOLVER_CACHE:
+                cached_time, cached_result = self._RESOLVER_CACHE[cache_key]
+                if now - cached_time < self._RESOLVER_CACHE_TTL:
+                    return cached_result
 
         def _cache_and_return(result: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-            if len(self._RESOLVER_CACHE) >= self._RESOLVER_CACHE_MAX_SIZE:
-                for k in list(self._RESOLVER_CACHE.keys())[:400]:
-                    self._RESOLVER_CACHE.pop(k, None)
-            self._RESOLVER_CACHE[cache_key] = (now, result)
+            with self._RESOLVER_LOCK:
+                if len(self._RESOLVER_CACHE) >= self._RESOLVER_CACHE_MAX_SIZE:
+                    for k in list(self._RESOLVER_CACHE.keys())[:400]:
+                        self._RESOLVER_CACHE.pop(k, None)
+                self._RESOLVER_CACHE[cache_key] = (now, result)
             return result
 
         alias_ticker = resolve_alias(query)
@@ -1968,22 +1974,24 @@ class DuckDBManager:
             source = str(data.get("source") or "2md")
 
             canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
+            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
 
-            with self._get_connection() as con:
-                # 寫入主代碼
-                con.execute("""
-                INSERT OR REPLACE INTO company_profiles 
-                (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
-
-                # 若傳入為 2371.TW，亦同步寫入 2371 供純代碼快速檢索；反之亦然
-                if raw_code and raw_code != ticker:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    # 寫入主代碼
                     con.execute("""
                     INSERT OR REPLACE INTO company_profiles 
                     (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, [raw_code, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
+                    """, [ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
+
+                    # 若傳入為 2371.TW，亦同步寫入 2371 供純代碼快速檢索；反之亦然
+                    if raw_code and raw_code != ticker:
+                        con.execute("""
+                        INSERT OR REPLACE INTO company_profiles 
+                        (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        """, [raw_code, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入公司基本資料至 DuckDB 失敗 ({ticker}): {e}")
@@ -2003,9 +2011,9 @@ class DuckDBManager:
             with self._get_connection() as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM company_profiles 
-                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR raw_code = ? OR name = ? OR registered_name = ? OR unified_id = ?
+                WHERE ticker IN (?, ?, ?, ?, ?) OR raw_code = ? OR name = ? OR registered_name = ? OR unified_id = ?
                 ORDER BY updated_at DESC LIMIT 1;
-                """, [t_clean, t_upper, raw_code, canon_tw, raw_code, t_clean, t_clean, t_clean]).fetchone()
+                """, [t_clean, t_upper, raw_code, canon_tw, canon_two, raw_code, t_clean, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row
@@ -2042,18 +2050,19 @@ class DuckDBManager:
             clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
-            with self._get_connection() as con:
-                con.execute("""
-                INSERT OR REPLACE INTO company_networks 
-                (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [clean_code, name, unified_id, capital, representative, address, data_json, web_url, now_str])
-                if canonical_ticker and canonical_ticker != clean_code:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_networks 
                     (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, [canonical_ticker, name, unified_id, capital, representative, address, data_json, web_url, now_str])
+                    """, [clean_code, name, unified_id, capital, representative, address, data_json, web_url, now_str])
+                    if canonical_ticker and canonical_ticker != clean_code:
+                        con.execute("""
+                        INSERT OR REPLACE INTO company_networks 
+                        (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        """, [canonical_ticker, name, unified_id, capital, representative, address, data_json, web_url, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入企業網絡至 DuckDB 失敗 ({ticker}): {e}")
@@ -2073,9 +2082,9 @@ class DuckDBManager:
             with self._get_connection() as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM company_networks 
-                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR name = ? OR unified_id = ?
+                WHERE ticker IN (?, ?, ?, ?, ?) OR name = ? OR unified_id = ?
                 ORDER BY updated_at DESC LIMIT 1;
-                """, [t_clean, t_upper, raw_code, canon_tw, t_clean, t_clean]).fetchone()
+                """, [t_clean, t_upper, raw_code, canon_tw, canon_two, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row
@@ -2112,18 +2121,19 @@ class DuckDBManager:
             clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
-            with self._get_connection() as con:
-                con.execute("""
-                INSERT OR REPLACE INTO company_tenders 
-                (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [clean_code, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
-                if canonical_ticker and canonical_ticker != clean_code:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_tenders 
                     (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, [canonical_ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
+                    """, [clean_code, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
+                    if canonical_ticker and canonical_ticker != clean_code:
+                        con.execute("""
+                        INSERT OR REPLACE INTO company_tenders 
+                        (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        """, [canonical_ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入企業標案情報至 DuckDB 失敗 ({ticker}): {e}")
@@ -2143,9 +2153,9 @@ class DuckDBManager:
             with self._get_connection() as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM company_tenders 
-                WHERE ticker = ? OR ticker = ? OR ticker = ? OR ticker = ? OR name = ? OR tax_id = ?
+                WHERE ticker IN (?, ?, ?, ?, ?) OR name = ? OR tax_id = ?
                 ORDER BY updated_at DESC LIMIT 1;
-                """, [t_clean, t_upper, raw_code, canon_tw, t_clean, t_clean]).fetchone()
+                """, [t_clean, t_upper, raw_code, canon_tw, canon_two, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row
@@ -2583,26 +2593,38 @@ class DuckDBManager:
             created_at = now_dt.strftime("%Y-%m-%d %H:%M:%S")
             expires_at = (now_dt + datetime.timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
 
+            def _s_float(v, default=None):
+                if v is None:
+                    return default
+                try:
+                    fv = float(v)
+                    return fv if math.isfinite(fv) else default
+                except (ValueError, TypeError):
+                    return default
+
             action = str(verdict.get("action_decision") or "neutral")
-            confidence = float(verdict.get("action_confidence") or 0.0)
+            confidence = _s_float(verdict.get("action_confidence"), 0.0)
             probs = verdict.get("action_probabilities") or {}
+            if isinstance(probs, dict):
+                probs = {k: _s_float(v, 0.0) for k, v in probs.items()}
             probs_str = json.dumps(probs, ensure_ascii=False) if isinstance(probs, dict) else str(probs)
-            conviction = float(verdict.get("conviction_score") or 2.5)
-            favorable = float(verdict.get("is_favorable_entry") or 0.5)
+            conviction = _s_float(verdict.get("conviction_score"), 2.5)
+            favorable = _s_float(verdict.get("is_favorable_entry"), 0.5)
             tag = str(verdict.get("tag") or "")
             source_slot = str(verdict.get("source_slot") or "clef")
             raw_verdict_str = json.dumps(verdict, ensure_ascii=False)
 
-            with self._get_connection() as con:
-                con.execute("""
-                INSERT OR REPLACE INTO decision_verdicts
-                (ticker, as_of_date, action_decision, action_confidence, action_probabilities,
-                 conviction_score, is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                """, [
-                    t_clean, date_str, action, confidence, probs_str,
-                    conviction, favorable, tag, source_slot, raw_verdict_str, created_at, expires_at
-                ])
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    con.execute("""
+                    INSERT OR REPLACE INTO decision_verdicts
+                    (ticker, as_of_date, action_decision, action_confidence, action_probabilities,
+                     conviction_score, is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, [
+                        t_clean, date_str, action, confidence, probs_str,
+                        conviction, favorable, tag, source_slot, raw_verdict_str, created_at, expires_at
+                    ])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入 AI 決策推論至 DuckDB 失敗 ({ticker}): {e}")
@@ -2614,11 +2636,12 @@ class DuckDBManager:
         as_of_date: Optional[str] = None,
         check_expiry: bool = True
     ) -> Optional[Dict[str, Any]]:
-        """從 DuckDB 讀取特定標的與交易日之 AI 決策推論快取，支援過期時間檢查"""
+        """從 DuckDB 讀取特定標的與交易日之 AI 決策推論快取，支援過期時間檢查與對稱代碼檢索"""
         if not self.enabled or not ticker:
             return None
         try:
             t_clean = str(ticker).strip().upper()
+            raw_code = re.sub(r"\.(TW|TWO)$", "", t_clean)
             date_str = as_of_date or datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d")
 
             with self._get_connection() as con:
@@ -2626,9 +2649,9 @@ class DuckDBManager:
                 SELECT action_decision, action_confidence, action_probabilities, conviction_score,
                        is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at
                 FROM decision_verdicts
-                WHERE (ticker = ? OR ticker LIKE ?) AND as_of_date = ?
+                WHERE (ticker IN (?, ?) OR ticker LIKE ?) AND as_of_date = ?
                 ORDER BY created_at DESC LIMIT 1;
-                """, [t_clean, f"{t_clean}.%", date_str]).fetchone()
+                """, [t_clean, raw_code, f"{raw_code}.%", date_str]).fetchone()
 
                 if not row:
                     return None
@@ -2688,12 +2711,13 @@ class DuckDBManager:
             ev_ebitda = _s_float(data.get("ev_ebitda"))
             data_json = json.dumps(data, ensure_ascii=False)
 
-            with self._get_connection() as con:
-                con.execute("""
-                INSERT OR REPLACE INTO company_fundamentals
-                (ticker, pe, forward_pe, pb, ev_ebitda, data_json, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?);
-                """, [t_clean, pe, forward_pe, pb, ev_ebitda, data_json, now_str])
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    con.execute("""
+                    INSERT OR REPLACE INTO company_fundamentals
+                    (ticker, pe, forward_pe, pb, ev_ebitda, data_json, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?);
+                    """, [t_clean, pe, forward_pe, pb, ev_ebitda, data_json, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入個股基本面至 DuckDB 失敗 ({ticker}): {e}")
@@ -2704,18 +2728,19 @@ class DuckDBManager:
         ticker: str,
         max_age_hours: int = 24
     ) -> Optional[Dict[str, Optional[float]]]:
-        """從 DuckDB 讀取個股基本面估值指標，支援 TTL 效期檢查"""
+        """從 DuckDB 讀取個股基本面估值指標，支援 TTL 效期檢查與對稱代碼檢索"""
         if not self.enabled or not ticker:
             return None
         try:
             t_clean = str(ticker).strip().upper()
+            raw_code = re.sub(r"\.(TW|TWO)$", "", t_clean)
             with self._get_connection() as con:
                 row = con.execute("""
                 SELECT pe, forward_pe, pb, ev_ebitda, updated_at
                 FROM company_fundamentals
-                WHERE ticker = ? OR ticker LIKE ?
+                WHERE ticker IN (?, ?) OR ticker LIKE ?
                 ORDER BY updated_at DESC LIMIT 1;
-                """, [t_clean, f"{t_clean}.%"]).fetchone()
+                """, [t_clean, raw_code, f"{raw_code}.%"]).fetchone()
 
                 if not row:
                     return None
@@ -2742,14 +2767,43 @@ class DuckDBManager:
             return None
 
     def save_company_fundamentals_batch(self, records: Dict[str, Dict[str, Any]]) -> int:
-        """批次儲存多個股票之基本面指標"""
+        """批次儲存多個股票之基本面指標，共用單一連線交易以提升效能"""
         if not self.enabled or not records:
             return 0
         saved = 0
-        for t, d in records.items():
-            if self.save_company_fundamentals(t, d):
-                saved += 1
-        return saved
+        now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+
+        def _s_float(v):
+            if v is None:
+                return None
+            try:
+                fv = float(v)
+                return fv if math.isfinite(fv) else None
+            except (ValueError, TypeError):
+                return None
+
+        try:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    for t, data in records.items():
+                        if not t or not data:
+                            continue
+                        t_clean = str(t).strip().upper()
+                        pe = _s_float(data.get("pe"))
+                        forward_pe = _s_float(data.get("forward_pe"))
+                        pb = _s_float(data.get("pb"))
+                        ev_ebitda = _s_float(data.get("ev_ebitda"))
+                        data_json = json.dumps(data, ensure_ascii=False)
+                        con.execute("""
+                        INSERT OR REPLACE INTO company_fundamentals
+                        (ticker, pe, forward_pe, pb, ev_ebitda, data_json, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?);
+                        """, [t_clean, pe, forward_pe, pb, ev_ebitda, data_json, now_str])
+                        saved += 1
+            return saved
+        except Exception as e:
+            logger.warning(f"⚠️ 批次寫入基本面至 DuckDB 失敗: {e}")
+            return saved
 
 
 
