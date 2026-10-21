@@ -753,29 +753,30 @@
                 <!-- Mobile Drawer Expansion -->
                 <div v-if="expandedDrawerTicker === item.ticker" class="mt-3 pt-3 border-t text-xs space-y-3"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="flex items-center space-x-2 pb-1">
+                    <div class="flex flex-wrap items-center gap-1.5 border-b pb-2.5"
+                         :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                         <button @click.stop="drawerActiveSubTab = 'profile'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
                                 :class="drawerActiveSubTab === 'profile' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
                             <span class="material-symbols-outlined text-[14px] leading-none">business</span>
                             <span>基本面</span>
                         </button>
                         <button @click.stop="drawerActiveSubTab = 'earnings'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
                                 :class="drawerActiveSubTab === 'earnings' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
                             <span class="material-symbols-outlined text-[14px] leading-none">event_note</span>
                             <span>法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})</span>
                         </button>
                         <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                                 @click.stop="drawerActiveSubTab = 'network'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
                                 :class="drawerActiveSubTab === 'network' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
                             <span class="material-symbols-outlined text-[14px] leading-none">account_tree</span>
                             <span>集團網絡</span>
                         </button>
                         <button v-if="isTwStock(item.ticker)"
                                 @click.stop="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs transition-colors flex items-center space-x-1"
+                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
                                 :class="drawerActiveSubTab === 'tender' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
                             <span class="material-symbols-outlined text-[14px] leading-none">account_balance</span>
                             <span>政府標案</span>
@@ -1068,16 +1069,16 @@
                             :class="isDark ? 'bg-[#16181D]/80 border-b border-[#262626]' : 'bg-amber-50/40 border-b border-[#E5E7EB]'">
                             <td colspan="11" class="p-4 sm:p-6 space-y-4">
                                 <!-- Drawer Subtab Navigation -->
-                                <div class="flex items-center space-x-2 border-b pb-2"
+                                <div class="flex flex-wrap items-center gap-2 border-b pb-3"
                                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                                     <button @click="drawerActiveSubTab = 'profile'"
-                                            class="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5"
+                                            class="px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">business</span>
                                         <span>基本面與新聞</span>
                                     </button>
                                     <button @click="drawerActiveSubTab = 'earnings'"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">event_note</span>
                                         <span>法說會與簡報</span>
@@ -1088,7 +1089,7 @@
                                     </button>
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                                             @click="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
                                         <span>集團股權網絡</span>
@@ -1099,7 +1100,7 @@
                                     </button>
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                                             @click="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
                                             :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">account_balance</span>
                                         <span>政府標案</span>
@@ -1879,16 +1880,16 @@
             <div v-if="expandedDrawerTicker === item.ticker" class="mt-3 pt-3 border-t text-xs space-y-3.5"
                  :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                 <!-- Drawer Sub-tabs -->
-                <div class="flex items-center space-x-2 pb-2 border-b"
+                <div class="flex flex-wrap items-center gap-1.5 border-b pb-2.5"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <button @click.stop="drawerActiveSubTab = 'profile'"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">business</span>
                         <span>基本面與新聞</span>
                     </button>
                     <button @click.stop="drawerActiveSubTab = 'earnings'"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
                         <span>法說會</span>
@@ -1899,7 +1900,7 @@
                     </button>
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                             @click.stop="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
                         <span>集團股權網絡</span>
@@ -1910,7 +1911,7 @@
                     </button>
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                             @click.stop="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1.5"
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
                         <span>政府標案</span>
@@ -2458,7 +2459,7 @@
     <template v-if="showEarningsModal">
         <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm transition-opacity"
              @keydown.esc="closeEarningsCalendar()" tabindex="-1">
-        <div class="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
+        <div class="relative w-full max-w-5xl max-h-[85dvh] sm:max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-900'">
 
             <!-- Modal Header -->
@@ -2573,7 +2574,7 @@
             </div>
 
             <!-- Calendar Content: BigGo 2-Column Responsive Feed -->
-            <div class="p-4 sm:p-6 overflow-y-auto max-h-[65vh] space-y-5">
+            <div class="p-4 sm:p-6 overflow-y-auto max-h-[60dvh] sm:max-h-[65vh] space-y-5">
                 <div v-if="calendarLoading" class="py-16 text-center text-amber-400 animate-pulse text-sm">
                     載入法說會日曆資料中...
                 </div>

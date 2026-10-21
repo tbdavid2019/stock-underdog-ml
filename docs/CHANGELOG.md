@@ -4,6 +4,26 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-22 (v2.4.34)
+
+### Fixed & Enhanced (Mobile RWD, Native Bottom App Bar, Touch Occlusion & Responsive Typography)
+- **📱 行動端導覽重構為原生固定底部分頁導覽列（Fixed Bottom App Bar & Slim Header）**：
+  - **`api/templates/partials/header.html`**：頂部導覽列於行動裝置縮減高度至 `h-14`，於 `>=375px` 行動端新增直覺之 `888 StockQuant` 緊湊品牌名稱（`<375px` 極窄螢幕自動收合防擠壓），並將 4 個主要分頁（操盤看板、法人籌碼、個股歷史、Podcast）抽離頂部，重構為固定於螢幕底部的原生 App 導覽列（`fixed bottom-0`），支援 iOS `env(safe-area-inset-bottom)` 安全邊界，按鈕觸控區域達到符合無障礙規範之 48px。
+  - **`api/templates/partials/footer.html`**：頁腳底部邊距於行動端擴充為 `pb-24 md:pb-6`，浮動 Toast 通知位置調整為 `bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6`，確保在含 iPhone Home Bar 安全邊界下仍絕不被底部導覽列遮擋。
+  - **`api/templates/index.html`**：`<meta name="viewport">` 升級包含 `viewport-fit=cover`；`<body>` 加入 `overflow-x-hidden` 杜絕行動裝置左右滑動破版。
+- **🛡️ 懸浮個股名片遮擋與觸控防禦（Hover Card Touch Occlusion Defense）**：
+  - **`api/static/js/app.js` (`showCompanyHover`)**：新增 `(hover: hover) and (pointer: fine)` 媒體查詢守門員，於手機與平板等觸控裝置徹底禁用非預期的懸浮窗彈出；卡片寬度改採 `Math.min(window.innerWidth - 24, 384)` 自適應；切換分頁（`setTab`）、展開抽屜（`toggleRowDrawer`）或滑動頁面（`scroll` 事件監聽）時即刻隱藏懸浮窗。
+  - **`api/templates/partials/footer.html`**：懸浮名片容器標記 `hidden md:block` 與 `w-[min(24rem,calc(100vw-24px))]`，並於右上角加入顯式關閉按鈕；清理 `text-[11px]` 為 `text-xs`，完全符合 CJK >= 12px 排版標準。
+- **📊 寬表格行動端卡片化與凍結首欄（Mobile Card Views & Sticky Columns）**：
+  - **`api/templates/partials/tab_history.html`**：為「每日預測 vs 隔日真實收盤對決表」新增專屬行動端卡片視圖（`block md:hidden divide-y`），於單張卡片整合預測日收盤、隔日真實收盤開獎狀態、TimesFM 與 Timestral 預測/命中/誤差對照；三大法人累計買賣超表格首欄「交易日期」加入 `sticky left-0 z-10` 橫向滑動固定。
+  - **`api/templates/partials/tab_institutional.html`**：為「三大法人排行榜」新增行動端精簡卡片清單（`block md:hidden divide-y`），直觀呈現排名、代號名稱、三大法人合計張數、外資/投信/自營商分項以及外資持股比率，支援點擊直接跳轉個股歷史。
+- **📐 抽屜子標籤與圖表 X 軸行動端排版優化**：
+  - **`api/templates/partials/tab_dashboard.html`**：修正行動版卡片視圖、桌面表格展開行與網格視圖的抽屜子分頁標籤（基本面、法說會、集團網絡、政府標案），改用 `flex-wrap gap-1.5` 與 `whitespace-nowrap`，徹底解決狹小寬度按鈕溢出被切問題；法說會日曆彈窗改採 `max-h-[85dvh]` 避免被手機瀏覽器網址列遮蔽。
+  - **`api/templates/partials/tab_history.html` & `api/static/js/chart-manager.js`**：AI 模型 PK 成績單三格欄位標籤改採響應式精簡中文；Chart.js 走勢圖高度於手機設定為 `h-[300px]`（桌面 `sm:h-[400px]`），X 軸標籤在手機螢幕改為上限 5 點並自動將 `YYYY-MM-DD` 格式化為精簡之 `MM/DD`（隔日預估為 `T+1`）。
+- **🔍 iOS Safari 輸入框縮放與排版嚴格測試（Input 16px Anti-Zoom & Unit Tests）**：
+  - **`api/templates/index.html`**：CSS 加入 `@media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }`，防止 iOS Safari 點擊聚焦時自動放大畫面造成使用者困擾。
+  - **`test/test_typography_rwd.py`**：擴充單元測試覆蓋 `viewport-fit=cover`、輸入框 16px 防縮放規則、固定底欄導覽、行動端對決卡片與法人卡片，以及懸浮名片指標媒體查詢。
+
 ## 2026-10-21 (v2.4.33)
 
 ### Fixed & Enhanced (T+1 Horizon Alignment, Chart Time-Shift, Model PK Scorecard & Unified Naming)

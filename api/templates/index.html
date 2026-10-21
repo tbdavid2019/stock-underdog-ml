@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>888 StockQuant | 專業級多維量化決策平台</title>
     <meta name="description" content="888 StockQuant 提供台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
     <meta name="theme-color" content="#F59E0B">
@@ -233,6 +233,13 @@
             text-size-adjust: 100%;
         }
 
+        /* Prevent iOS Safari automatic zoom on inputs/selects by enforcing 16px minimum on mobile */
+        @media (max-width: 640px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -243,7 +250,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200">
+<body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200 overflow-x-hidden">
     <h1 class="sr-only">888 StockQuant 專業量化決策平台</h1>
     <h2 class="sr-only">今日量化訊號與跨市場情報</h2>
 

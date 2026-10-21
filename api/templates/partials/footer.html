@@ -1,5 +1,5 @@
 <!-- ================= FOOTER & FLOATING OVERLAYS (FIGMA FACELIFT V.1) ================= -->
-<footer class="border-t py-6 text-xs transition-colors duration-200 mt-12"
+<footer class="border-t pt-6 pb-24 md:pb-6 text-xs transition-colors duration-200 mt-12"
         :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-[#9CA3AF]' : 'bg-white border-[#E5E7EB] text-slate-500'">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
 
@@ -57,7 +57,7 @@
 
 <!-- ================= FLOATING COMPANY PROFILE HOVER CARD (2MD POWERED) ================= -->
 <template v-if="hoverVisible">
-<div class="fixed z-50 pointer-events-auto transition-all duration-150 shadow-2xl rounded-2xl border p-4 max-w-sm w-96 backdrop-blur-xl"
+<div class="fixed z-50 hidden md:block pointer-events-auto transition-all duration-150 shadow-2xl rounded-2xl border p-4 w-[min(24rem,calc(100vw-24px))] backdrop-blur-xl"
      :style="{ top: hoverPos.top + 'px', left: hoverPos.left + 'px' }"
      @mouseenter="clearHoverTimeout()"
      @mouseleave="hideCompanyHover(true)"
@@ -99,10 +99,18 @@
                     </span>
                 </div>
             </div>
-            <span class="text-xs px-2 py-0.5 rounded border text-emerald-400 border-emerald-500/30 bg-emerald-500/10 whitespace-nowrap shrink-0 font-mono flex items-center">
-                <span class="material-symbols-outlined text-[13px] leading-none mr-0.5">bolt</span>
-                <span>2md</span>
-            </span>
+            <div class="flex items-center space-x-1.5 shrink-0">
+                <span class="text-xs px-2 py-0.5 rounded border text-emerald-400 border-emerald-500/30 bg-emerald-500/10 whitespace-nowrap shrink-0 font-mono flex items-center">
+                    <span class="material-symbols-outlined text-[13px] leading-none mr-0.5">bolt</span>
+                    <span>2md</span>
+                </span>
+                <button @click="hideCompanyHover(true)"
+                        class="p-1 rounded-lg transition-colors"
+                        :class="isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'"
+                        title="關閉卡片" aria-label="關閉卡片">
+                    <span class="material-symbols-outlined text-[16px] leading-none">close</span>
+                </button>
+            </div>
         </div>
 
         <!-- Business Overview -->
@@ -147,16 +155,16 @@
             </div>
             <div class="flex flex-wrap gap-1 items-center">
                 <span v-for="up in (hoverData.company_network.relationships?.upstream || []).slice(0, 1)" :key="up.name"
-                      class="px-2 py-0.5 rounded text-[11px] font-medium border"
+                      class="px-2 py-0.5 rounded text-xs font-medium border"
                       :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
                     母: {{ up.name }}
                 </span>
                 <span v-for="down in (hoverData.company_network.relationships?.downstream || []).slice(0, 3)" :key="down.name"
-                      class="px-2 py-0.5 rounded text-[11px] font-medium border"
+                      class="px-2 py-0.5 rounded text-xs font-medium border"
                       :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') : 'text-slate-400 border-slate-700'">
                     {{ down.name }}<strong v-if="down.code">({{ down.code }})</strong>
                 </span>
-                <span v-if="(hoverData.company_network.relationships?.downstream || []).length > 3" class="text-[11px] text-slate-400">
+                <span v-if="(hoverData.company_network.relationships?.downstream || []).length > 3" class="text-xs text-slate-400">
                     +{{ hoverData.company_network.relationships.downstream.length - 3 }} 關係企業
                 </span>
             </div>
@@ -201,7 +209,7 @@
 
 <!-- Toast Notification Pop-up -->
 <template v-if="toastMessage">
-    <div class="fixed bottom-6 right-6 px-4 py-2.5 text-black font-bold text-xs rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter bg-amber-500 border border-amber-400">
+    <div class="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 sm:right-6 max-w-[calc(100vw-2rem)] px-4 py-2.5 text-black font-bold text-xs rounded-xl shadow-xl flex items-center space-x-2 transition-all z-50 toast-enter bg-amber-500 border border-amber-400">
         <span class="material-symbols-outlined text-[16px] leading-none">check_circle</span>
         <span>{{ toastMessage }}</span>
     </div>

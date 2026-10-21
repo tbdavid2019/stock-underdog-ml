@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.33';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.34';
 
 const { createApp } = Vue;
 
@@ -794,6 +794,7 @@ export const app = createApp({
             });
         },
         async toggleRowDrawer(ticker, targetTab = null) {
+            this.hideCompanyHover(true);
             if (this.expandedDrawerTicker === ticker) {
                 if (targetTab && this.drawerActiveSubTab !== targetTab) {
                     this.drawerActiveSubTab = targetTab;
@@ -1070,6 +1071,7 @@ export const app = createApp({
             window.scrollTo({ top: 0, behavior: 'smooth' });
         },
         setTab(tab) {
+            this.hideCompanyHover(true);
             if (this.activeTab !== tab) {
                 chartManager.destroyAll();
             }
@@ -1167,6 +1169,18 @@ export const app = createApp({
                 return (count / 1000).toFixed(0) + 'K';
             }
             return count.toString();
+        },
+        formatLots(val) {
+            if (val === null || val === undefined) return '—';
+            const n = Number(val);
+            if (isNaN(n)) return String(val);
+            return (n > 0 ? '+' : '') + n.toLocaleString();
+        },
+        formatPrice(val, ticker = null) {
+            if (val === null || val === undefined || val === '') return '—';
+            const num = Number(val);
+            if (isNaN(num)) return String(val);
+            return '$' + num.toFixed(2);
         },
         selectChannelAndFilter(channelId) {
             this.podcastSelectedChannel = channelId;
@@ -1406,26 +1420,29 @@ export const app = createApp({
         // --- Company Profile Hover Popover (2md Powered) ---
         showCompanyHover(event, ticker) {
             if (!ticker) return;
+            if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                return;
+            }
             if (this.hoverTimeout) {
                 clearTimeout(this.hoverTimeout);
                 this.hoverTimeout = null;
             }
 
             const rect = event.currentTarget.getBoundingClientRect();
-            const popoverWidth = 384;
+            const popoverWidth = Math.min(window.innerWidth - 24, 384);
             const popoverHeight = 280;
 
             let left = rect.left;
-            if (left + popoverWidth > window.innerWidth - 20) {
-                left = window.innerWidth - popoverWidth - 20;
+            if (left + popoverWidth > window.innerWidth - 12) {
+                left = window.innerWidth - popoverWidth - 12;
             }
-            if (left < 10) left = 10;
+            if (left < 12) left = 12;
 
             let top = rect.bottom + 8;
-            if (top + popoverHeight > window.innerHeight - 20) {
+            if (top + popoverHeight > window.innerHeight - 12) {
                 top = rect.top - popoverHeight - 8;
             }
-            if (top < 10) top = 10;
+            if (top < 12) top = 12;
 
             this.hoverPos = { top: Math.round(top), left: Math.round(left) };
             this.hoverVisible = true;
@@ -1920,6 +1937,12 @@ export const app = createApp({
             this.syncStateFromUrl();
         });
 
+        window.addEventListener('scroll', () => {
+            if (this.hoverVisible) {
+                this.hideCompanyHover(true);
+            }
+        }, { passive: true });
+
         this.registerChromeWebMCP();
     }
 });
@@ -1987,6 +2010,24 @@ const globalFormatFollowers = (count) => {
 };
 app.config.globalProperties.formatFollowers = globalFormatFollowers;
 window.formatFollowers = globalFormatFollowers;
+
+const globalFormatLots = (val) => {
+    if (val === null || val === undefined) return '—';
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    return (n > 0 ? '+' : '') + n.toLocaleString();
+};
+app.config.globalProperties.formatLots = globalFormatLots;
+window.formatLots = globalFormatLots;
+
+const globalFormatPrice = (val, ticker = null) => {
+    if (val === null || val === undefined || val === '') return '—';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return '$' + num.toFixed(2);
+};
+app.config.globalProperties.formatPrice = globalFormatPrice;
+window.formatPrice = globalFormatPrice;
 
 // Auto-mount on load
 app.mount('#app');

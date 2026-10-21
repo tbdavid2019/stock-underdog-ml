@@ -68,6 +68,59 @@ class TestTypographyAndRWD(unittest.TestCase):
             "CSS should include text-size-adjust to prevent mobile browser unwanted text inflation"
         )
 
+    def test_viewport_fit_cover_and_overflow_prevention(self):
+        """
+        Verify viewport-fit=cover and horizontal overflow protection on <body>.
+        """
+        self.assertIn('viewport-fit=cover', self.html, "meta viewport should include viewport-fit=cover for notch/home-indicator safety")
+        self.assertIn('overflow-x-hidden', self.html, "body should include overflow-x-hidden to prevent horizontal shake/scroll")
+
+    def test_mobile_input_anti_zoom_rule(self):
+        """
+        Verify 16px minimum font-size rule for mobile inputs/selects to prevent iOS Safari auto-zoom.
+        """
+        self.assertIn('@media (max-width: 640px)', self.html)
+        self.assertIn('font-size: 16px !important;', self.html)
+
+    def test_fixed_bottom_nav_bar(self):
+        """
+        Verify that header.html contains the fixed bottom navigation bar with safe-area padding for mobile.
+        """
+        header_path = Path("api/templates/partials/header.html")
+        self.assertTrue(header_path.exists(), "api/templates/partials/header.html not found")
+        header_html = header_path.read_text(encoding="utf-8")
+        self.assertIn("fixed bottom-0", header_html)
+        self.assertIn("md:hidden", header_html)
+        self.assertIn("safe-area-inset-bottom", header_html)
+
+    def test_mobile_card_views_for_tables(self):
+        """
+        Verify mobile card view alternatives for wide tables in tab_history.html and tab_institutional.html.
+        """
+        history_path = Path("api/templates/partials/tab_history.html")
+        self.assertTrue(history_path.exists(), "tab_history.html not found")
+        history_html = history_path.read_text(encoding="utf-8")
+        self.assertIn("dailyHistoryRows", history_html)
+        self.assertIn("block md:hidden", history_html)
+        self.assertIn("hidden md:block overflow-x-auto", history_html)
+
+        inst_path = Path("api/templates/partials/tab_institutional.html")
+        self.assertTrue(inst_path.exists(), "tab_institutional.html not found")
+        inst_html = inst_path.read_text(encoding="utf-8")
+        self.assertIn("institutionalFlows", inst_html)
+        self.assertIn("block md:hidden", inst_html)
+        self.assertIn("hidden md:block overflow-x-auto", inst_html)
+
+    def test_company_hover_touch_guard(self):
+        """
+        Verify that showCompanyHover in app.js checks for fine hover pointer to avoid touch occlusion.
+        """
+        app_js_path = Path("api/static/js/app.js")
+        self.assertTrue(app_js_path.exists(), "api/static/js/app.js not found")
+        app_js = app_js_path.read_text(encoding="utf-8")
+        self.assertIn("(hover: hover) and (pointer: fine)", app_js)
+        self.assertIn("Math.min(window.innerWidth - 24, 384)", app_js)
+
 
 if __name__ == "__main__":
     unittest.main()

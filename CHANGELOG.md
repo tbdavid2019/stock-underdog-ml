@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-10-22 (v2.4.34)
+
+### Fixed & Enhanced (Mobile RWD, Native Bottom App Bar, Touch Occlusion & Responsive Typography)
+- **📱 行動端導覽重構為原生固定底部分頁導覽列（Fixed Bottom App Bar & Slim Header）**：頂部導覽列於行動端縮減至 `h-14`，並將 4 大主分頁抽離為固定於螢幕底部之原生導覽列（`fixed bottom-0` + `env(safe-area-inset-bottom)`，觸控區 `min-h-[48px]`），大幅釋放手機垂直可視空間；頁尾與 Toast 通知同步預留安全邊界高度。
+- **🛡️ 懸浮個股名片遮擋與觸控防禦 (`app.js`, `footer.html`)**：`showCompanyHover` 加入 `(hover: hover) and (pointer: fine)` 媒體查詢守門員，於手機與平板等純觸控裝置停用懸浮浮窗，徹底根除手機點擊觸發 `mouseenter` 後懸浮卡卡死遮擋全螢幕之問題；桌面端同步加上捲動自動收合與右上角關閉按鈕。
+- **📊 寬表格行動端卡片化與凍結首欄 (`tab_history.html`, `tab_institutional.html`)**：為「每日預測 vs 隔日真實收盤對決表」與「三大法人排行榜」新增手機專屬卡片視圖（`block md:hidden`），免除水平捲動迷路；法人累計表與桌面表格首欄加入 `sticky left-0 z-10` 固定首欄。
+- **📐 抽屜子標籤、模型成績單與 Chart.js 行動端自適應 (`tab_dashboard.html`, `chart-manager.js`, `index.html`)**：抽屜子標籤改用 `flex-wrap gap-1.5` 防止第 4 顆「政府標案」按鈕超出邊界；Chart.js 手機端 X 軸刻度自動精簡為 `MM/DD` 與 `T+1`（上限 5 點）；新增 `@media (max-width: 640px)` 輸入框 `16px` 防 iOS Safari 自動放大規則，法說會彈窗改用動態視窗單位 `max-h-[85dvh]`。
+
 ## 2026-10-21 (v2.4.33)
 
 ### Fixed & Enhanced (T+1 Horizon Alignment, Chart Time-Shift, Model PK Scorecard & Unified Naming)

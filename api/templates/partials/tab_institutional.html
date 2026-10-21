@@ -143,12 +143,12 @@
                 </h3>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left text-xs sm:text-sm border-collapse">
                 <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                     <tr>
                         <th class="p-3 font-bold num-font text-center w-12">#</th>
-                        <th class="p-3 font-bold">股票代號 / 名稱</th>
+                        <th class="p-3 font-bold sticky left-0 z-10" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">股票代號 / 名稱</th>
                         <th class="p-3 font-bold text-right num-font">外資淨買賣 (張)</th>
                         <th class="p-3 font-bold text-right num-font">投信淨買賣 (張)</th>
                         <th class="p-3 font-bold text-right num-font">自營商 (張)</th>
@@ -162,7 +162,7 @@
                     <tr v-for="(item, idx) in institutionalFlows" :key="item.ticker"
                         class="transition-colors hover:bg-amber-500/5">
                         <td class="p-3 font-black num-font text-center opacity-60">{{ idx + 1 }}</td>
-                        <td class="p-3">
+                        <td class="p-3 sticky left-0 z-10" :class="isDark ? 'bg-[#0D0E11]' : 'bg-white'">
                             <div class="flex items-center space-x-2">
                                 <button @click="searchTickerHistory(item.ticker)"
                                         class="font-black num-font hover:underline transition-colors text-amber-500">
@@ -209,6 +209,86 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
+
+            <!-- Mobile Institutional Card List (block md:hidden divide-y) -->
+            <div class="block md:hidden divide-y"
+                 :class="isDark ? 'divide-[#262626]' : 'divide-[#E5E7EB]'">
+                <div v-for="(item, idx) in institutionalFlows" :key="item.ticker"
+                     @click="searchTickerHistory(item.ticker)"
+                     class="p-3.5 space-y-2.5 transition-colors cursor-pointer"
+                     :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'">
+                    <!-- Header: Rank + Ticker + Name + Market + Total Net Lots -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-black num-font"
+                                  :class="idx < 3 ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
+                                {{ idx + 1 }}
+                            </span>
+                            <span class="font-black num-font text-amber-500 text-sm">
+                                {{ item.ticker }}
+                            </span>
+                            <span class="font-bold text-xs" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                {{ item.name }}
+                            </span>
+                            <span class="px-1.5 py-0.5 rounded text-xs font-mono border"
+                                  :class="item.market === 'TWSE' ? (isDark ? 'text-sky-400 border-sky-500/30 bg-sky-500/10' : 'text-blue-700 border-blue-200 bg-blue-50') : (isDark ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' : 'text-purple-700 border-purple-200 bg-purple-50')">
+                                {{ item.market || 'TWSE' }}
+                            </span>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="px-2 py-0.5 rounded-md border text-xs num-font font-black"
+                                  :class="item.total_net > 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-200') : (item.total_net < 0 ? (isDark ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-200') : '')">
+                                合計 {{ formatLots(item.total_net) }} 張
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 3-Column Net Lots Grid: Foreign, Trust, Dealer -->
+                    <div class="grid grid-cols-3 gap-1.5 text-xs">
+                        <!-- Foreign Box -->
+                        <div class="p-2 rounded-lg border text-center space-y-0.5"
+                             :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs text-slate-400 font-bold">外資淨買賣</div>
+                            <div class="font-black num-font text-xs sm:text-sm"
+                                 :class="item.foreign_net > 0 ? 'text-emerald-400' : (item.foreign_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                                {{ formatLots(item.foreign_net) }}
+                            </div>
+                        </div>
+
+                        <!-- Trust Box -->
+                        <div class="p-2 rounded-lg border text-center space-y-0.5"
+                             :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs text-slate-400 font-bold">投信淨買賣</div>
+                            <div class="font-black num-font text-xs sm:text-sm"
+                                 :class="item.trust_net > 0 ? 'text-emerald-400' : (item.trust_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                                {{ formatLots(item.trust_net) }}
+                            </div>
+                        </div>
+
+                        <!-- Dealer Box -->
+                        <div class="p-2 rounded-lg border text-center space-y-0.5"
+                             :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                            <div class="text-xs text-slate-400 font-bold">自營商</div>
+                            <div class="font-black num-font text-xs sm:text-sm"
+                                 :class="item.dealer_net > 0 ? 'text-emerald-400' : (item.dealer_net < 0 ? 'text-rose-500' : 'opacity-40')">
+                                {{ formatLots(item.dealer_net) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer: Foreign Holding Ratio & Analysis Link -->
+                    <div class="flex items-center justify-between text-xs pt-1 border-t"
+                         :class="isDark ? 'border-[#262626]/80 text-slate-400' : 'border-[#E5E7EB]/80 text-slate-500'">
+                        <div class="num-font font-medium">
+                            外資持股比率: <span class="font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ item.foreign_ratio ? Number(item.foreign_ratio).toFixed(2) + '%' : '—' }}</span>
+                        </div>
+                        <div class="text-amber-500 font-bold flex items-center space-x-0.5">
+                            <span>個股歷史軌跡</span>
+                            <span class="material-symbols-outlined text-[14px] leading-none">chevron_right</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

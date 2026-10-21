@@ -14,7 +14,7 @@
 ## 📸 系統介面全景展示 (Live Platform Showcase)
 
 > 🌐 **線上即時體驗**：[https://stockdata.david888.com](https://stockdata.david888.com)  
-> 專業彭博終端風格 · 深淺雙主題適配 · 桌面旗艦寬螢幕與手機端 RWD 雙層架構零死角體驗
+> 專業彭博終端風格 · 深淺雙主題適配 · 桌面旗艦寬螢幕與手機端原生底部導覽列（Fixed Bottom App Bar）+ 全分頁行動卡片 RWD 零遮擋體驗
 
 ### 🖥️ 操盤看板 (Bloomberg Terminal 桌面旗艦版)
 高密度量化佈局、全球宏觀大盤風控、四大共振極選矩陣與個股深度分析抽屜：

@@ -1,7 +1,7 @@
 <!-- ================= TOP NAVIGATION BAR (BALANCED 3-COLUMN EQUILIBRIUM) ================= -->
 <header class="sticky top-0 z-50 border-b transition-colors duration-200"
         :class="isDark ? 'bg-[#0D0E11]/95 backdrop-blur-md border-[#262626]' : 'bg-white/95 backdrop-blur-md border-[#E5E7EB] shadow-sm'">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
 
         <!-- 1. LEFT COLUMN: Compact Orange Quant Badge Logo + Brand Name (888 StockQuant) -->
         <div class="flex items-center cursor-pointer select-none shrink-0 group space-x-2.5"
@@ -14,7 +14,7 @@
                 <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Stock</span>
                 <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-slate-950">Quant</span>
             </div>
-            <span class="font-black text-base sm:text-lg tracking-tight font-sans transition-colors group-hover:text-amber-500 hidden sm:inline-flex items-center"
+            <span class="font-black text-sm sm:text-lg tracking-tight font-sans transition-colors group-hover:text-amber-500 hidden min-[375px]:inline-flex items-center"
                   :class="isDark ? 'text-white' : 'text-slate-900'">
                 888&nbsp;<span class="text-amber-500">StockQuant</span>
             </span>
@@ -95,36 +95,41 @@
         </div>
 
     </div>
-
-    <!-- Mobile Navigation Sub-bar (for screens < md, 100% full-width responsive grid, zero horizontal overflow) -->
-    <div class="md:hidden border-t px-2.5 py-1.5 flex items-center justify-center"
-         :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#E5E7EB] bg-[#F9FAFB]'">
-        <nav class="grid grid-cols-4 gap-1 w-full p-1 rounded-2xl border transition-colors shadow-sm"
-             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-            <button @click="setTab('dashboard')"
-                    :class="activeTab === 'dashboard' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center">
-                <span class="material-symbols-outlined text-[18px] leading-none">monitoring</span>
-                <span class="truncate">操盤看板</span>
-            </button>
-            <button @click="setTab('institutional')"
-                    :class="activeTab === 'institutional' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center">
-                <span class="material-symbols-outlined text-[18px] leading-none">account_balance</span>
-                <span class="truncate">法人籌碼</span>
-            </button>
-            <button @click="setTab('history')"
-                    :class="activeTab === 'history' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center">
-                <span class="material-symbols-outlined text-[18px] leading-none">history</span>
-                <span class="truncate">個股歷史</span>
-            </button>
-            <button @click="setTab('podcast')"
-                    :class="activeTab === 'podcast' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF]' : 'text-slate-600')"
-                    class="py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center">
-                <span class="material-symbols-outlined text-[18px] leading-none">podcasts</span>
-                <span class="truncate">Podcast</span>
-            </button>
-        </nav>
-    </div>
 </header>
+
+<!-- ================= FIXED BOTTOM NAVIGATION BAR (MOBILE NATIVE APP BAR) ================= -->
+<nav class="fixed bottom-0 inset-x-0 z-40 md:hidden border-t backdrop-blur-lg transition-colors select-none"
+     :class="isDark ? 'border-[#262626] bg-[#0D0E11]/90 shadow-2xl shadow-black' : 'border-[#E5E7EB] bg-white/90 shadow-lg'"
+     style="padding-bottom: env(safe-area-inset-bottom, 0px);"
+     aria-label="行動版底部分頁導覽">
+    <div class="grid grid-cols-4 gap-1 px-2 py-1.5">
+        <button @click="setTab('dashboard')"
+                :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
+                :class="activeTab === 'dashboard' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+            <span class="material-symbols-outlined text-[20px] leading-none">monitoring</span>
+            <span class="truncate">操盤看板</span>
+        </button>
+        <button @click="setTab('institutional')"
+                :aria-current="activeTab === 'institutional' ? 'page' : undefined"
+                :class="activeTab === 'institutional' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+            <span class="material-symbols-outlined text-[20px] leading-none">account_balance</span>
+            <span class="truncate">法人籌碼</span>
+        </button>
+        <button @click="setTab('history')"
+                :aria-current="activeTab === 'history' ? 'page' : undefined"
+                :class="activeTab === 'history' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+            <span class="material-symbols-outlined text-[20px] leading-none">history</span>
+            <span class="truncate">個股歷史</span>
+        </button>
+        <button @click="setTab('podcast')"
+                :aria-current="activeTab === 'podcast' ? 'page' : undefined"
+                :class="activeTab === 'podcast' ? (isDark ? 'bg-amber-500 text-black font-black shadow-sm' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+            <span class="material-symbols-outlined text-[20px] leading-none">podcasts</span>
+            <span class="truncate">Podcast</span>
+        </button>
+    </div>
+</nav>

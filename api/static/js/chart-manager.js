@@ -157,7 +157,17 @@ export class ChartManager {
                         ticks: {
                             color: theme.textColor,
                             font: { family: 'JetBrains Mono', size: 10 },
-                            maxTicksLimit: 8
+                            maxTicksLimit: (typeof window !== 'undefined' && window.innerWidth < 640) ? 5 : 8,
+                            callback: function(val, index) {
+                                const raw = this.getLabelForValue ? this.getLabelForValue(val) : String(val);
+                                if (typeof window !== 'undefined' && window.innerWidth < 640 && typeof raw === 'string') {
+                                    const match = raw.match(/\d{4}-(\d{2}-\d{2})/);
+                                    if (match) {
+                                        return match[1].replace('-', '/');
+                                    }
+                                }
+                                return raw;
+                            }
                         }
                     },
                     y: {
@@ -553,7 +563,20 @@ export class ChartManager {
                         ticks: {
                             color: theme.textColor,
                             font: { family: 'JetBrains Mono', size: 10 },
-                            maxTicksLimit: 10
+                            maxTicksLimit: (typeof window !== 'undefined' && window.innerWidth < 640) ? 5 : 10,
+                            callback: function(val, index) {
+                                const raw = this.getLabelForValue ? this.getLabelForValue(val) : String(val);
+                                if (typeof window !== 'undefined' && window.innerWidth < 640 && typeof raw === 'string') {
+                                    if (raw.includes('隔日預估') || raw.includes('T+1')) {
+                                        return 'T+1';
+                                    }
+                                    const match = raw.match(/\d{4}-(\d{2}-\d{2})/);
+                                    if (match) {
+                                        return match[1].replace('-', '/');
+                                    }
+                                }
+                                return raw;
+                            }
                         }
                     },
                     y: {
@@ -662,7 +685,17 @@ export class ChartManager {
                         ticks: {
                             color: theme.textColor,
                             font: { family: 'JetBrains Mono', size: 10 },
-                            maxTicksLimit: 8
+                            maxTicksLimit: (typeof window !== 'undefined' && window.innerWidth < 640) ? 5 : 8,
+                            callback: function(val, index) {
+                                const raw = this.getLabelForValue ? this.getLabelForValue(val) : String(val);
+                                if (typeof window !== 'undefined' && window.innerWidth < 640 && typeof raw === 'string') {
+                                    const match = raw.match(/\d{4}-(\d{2}-\d{2})/);
+                                    if (match) {
+                                        return match[1].replace('-', '/');
+                                    }
+                                }
+                                return raw;
+                            }
                         }
                     },
                     y: {
