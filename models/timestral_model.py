@@ -194,33 +194,34 @@ class TimestralWrapper:
                     # Defensive Monotonic Clamping: prevent quantile crossing (P10 <= P50 <= P90)
                     p10_horizon, p50_horizon, p90_horizon = sorted([p10_horizon, p50_horizon, p90_horizon])
 
-                    # Calculate potential percentages
+                    # Extract day 1 (T+1) quantiles
+                    p10_day1 = float(p10_series[0]) if len(p10_series) > 0 else p10_horizon
+                    p50_day1 = float(p50_series[0]) if len(p50_series) > 0 else p50_horizon
+                    p90_day1 = float(p90_series[0]) if len(p90_series) > 0 else p90_horizon
+                    p10_day1, p50_day1, p90_day1 = sorted([p10_day1, p50_day1, p90_day1])
+
+                    # Calculate potential percentages: potential is day 1 (T+1)
                     day1_potential = ((day1_pred - curr_price) / curr_price) * 100.0
                     horizon_potential = ((dayN_pred - curr_price) / curr_price) * 100.0
 
-                    downside_risk = ((p10_horizon - curr_price) / curr_price) * 100.0
-                    upside_potential = ((p90_horizon - curr_price) / curr_price) * 100.0
+                    downside_risk = ((p10_day1 - curr_price) / curr_price) * 100.0
+                    upside_potential = ((p90_day1 - curr_price) / curr_price) * 100.0
 
-                    # Defensive Bounded Risk/Reward Ratio:
+                    # Defensive Bounded Risk/Reward Ratio using T+1 quantiles:
                     # Protect against division by zero and negative denominator inversion when P10 >= curr_price
-                    risk_span = max(curr_price - p10_horizon, curr_price * 0.005, 1e-4)
-                    reward_span = max(p90_horizon - curr_price, 0.0)
+                    risk_span = max(curr_price - p10_day1, curr_price * 0.005, 1e-4)
+                    reward_span = max(p90_day1 - curr_price, 0.0)
                     risk_reward_ratio = round(min(reward_span / risk_span, 50.0), 2)
 
                     trajectory = [float(p) for p in p50_series[:forecast_horizon]]
                     while len(trajectory) < forecast_horizon:
                         trajectory.append(trajectory[-1] if trajectory else curr_price)
 
-                    p10_day1 = float(p10_series[0]) if len(p10_series) > 0 else p10_horizon
-                    p50_day1 = float(p50_series[0]) if len(p50_series) > 0 else p50_horizon
-                    p90_day1 = float(p90_series[0]) if len(p90_series) > 0 else p90_horizon
-                    p10_day1, p50_day1, p90_day1 = sorted([p10_day1, p50_day1, p90_day1])
-
                     results[ticker] = {
                         "current_price": curr_price,
                         "predicted_price": day1_pred,
                         "horizon_predicted_price": dayN_pred,
-                        "potential": float(horizon_potential),
+                        "potential": float(day1_potential),
                         "horizon_potential": float(horizon_potential),
                         "day1_potential": float(day1_potential),
                         "trajectory": trajectory,

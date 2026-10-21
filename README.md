@@ -80,20 +80,21 @@ graph TD
 * 當費半跌破季線時，自動觸發科技股部位上限保護。
 * **Polymarket 預測市場**為輔助情緒訊號：`fed_real_money_odds` 與市場 `probability` 使用 0~100 百分比；上游失敗時 API 會標記 `success=false`，若有上一筆有效快取則同時標記 `stale=true`，不把過期資料假裝成即時資料。
 
-### 2. 🗡️ 玄鐵重劍策略 (XuanTie Trend Pullback)
+### 2. 🗡️ 季線支撐策略 (Trend Pullback)
 * 核心思維：「**順大勢（MA60/120 多頭排列）、逆小勢（回踩均線支撐）**」。
 * 精確捕捉股價回測 MA60 季線 (`MA60 Pullback`) 或 MA120 半年線之波段技術買點。
 
 ### 3. 🔮 Mistral Timestral-209M 時序大模型 (Time Series Foundation Model)
 * 整合 Mistral AI 開源之 **Timestral-209M** (`mistralai/Timestral-209M`) 輕量級時序基礎模型，全面淘汰單層 LSTM 模型。
-* 採用純推論 Zero-Shot 模式，輸入 128 根歷史 K 線，預測未來 5 日目標價位。
-* 輸出嚴格單調的分位數區間 **P10 (下行防守位)**、**P50 (中位目標價)** 與 **P90 (上行獲利位)**，並計算有界非對稱盈虧比（Risk-Reward Ratio）。
+* 採用純推論 Zero-Shot 模式，輸入 128 根歷史 K 線，預測隔日 (T+1) 與未來 5 日目標價位。
+* **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
+* 輸出嚴格單調的分位數區間 **P10 (下行防守位)**、**P50 (中位目標價)** 與 **P90 (上行獲利位)**，並以 T+1 分位數計算有界非對稱盈虧比（Risk-Reward Ratio）。
 
 ### 4. 🔮 Google Research TimesFM 時序大模型 (Time Series Foundation Model)
 * 採用 Google 預訓練之 **TimesFM 200M** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
-* 輸出 1~5 日預測目標價軌跡，並同步計算 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**。
-* 以設定 horizon 的 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
-* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM × Mistral Timestral 雙時序大模型波形共識），並晉升為 **「👑 四重共振極選」**。
+* **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
+* 同步計算隔日 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**，以 T+1 之 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
+* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM × Mistral Timestral 雙時序大模型波形共識），並晉升為 **「綜合優選」**。
 
 ### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
 * 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
@@ -103,15 +104,20 @@ graph TD
 * 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
 * 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
 
-### 7. ⭐ 👑 四重共振 / 🏆 雙模型共振極選評估 (Dual Foundation Model Resonance)
-* 跨維度篩選同時符合 **「玄鐵技術買點 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
-* 自動貼上 `👑四重共振`、`🏆雙模型共振`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
+### 7. ⭐ 綜合優選 / 雙AI看漲評估 (Dual Foundation Model Consensus)
+* 跨維度篩選同時符合 **「季線支撐買點 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
+* 自動貼上 `綜合優選`、`雙AI看漲`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
 * 目標價以 TimesFM 與 Timestral P50 進行等權防禦性合成（$0.5 \times P_{TimesFM} + 0.5 \times P_{Timestral}$），單一模型缺漏時自動優雅退化降級。
+* **個股歷史查詢 (Ticker Explorer)**：
+  - **T+1 目標兌現日平移折線圖**：第 $i$ 天之隔日預測平移至 $i+1$ 與次日真實收盤對照，杜絕「影子線」錯覺，右側設有 `'隔日預估 (T+1)'` 錨點。
+  - **雙模型準確率 PK 成績單**：統計歷史已開獎日之「隔日方向勝率」、「平均價格絕對誤差 (MAPE)」與「對決勝出次數」。
+  - **每日一列對決表**：按日整合收盤價、隔日真實收盤、雙模型預測誤差與當日勝出模型，未開獎標記 `⏳ 待下個交易日開獎`。
 
-### 8. 🧠 3 級 Fallback AI 研報引擎 (AI Narrative Generator)
+### 8. 🧠 3 級 Fallback AI 研報引擎與多渠道日報推播 (AI Narrative & Multi-Channel Daily Digest)
 * 支援 **Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 純程式規則模板** 4 級容錯。
 * 採用標準 OpenAI 相容協定，支援 Google Gemini 2.5 Flash、DeepSeek-V3、OpenAI GPT-4o-mini 或自建 Gateway。
 * 無 API Key 時自動平滑降級為確定性規則模板，確保推播與日報 100% 不中斷。
+* **多渠道日報推播 (Telegram / Discord / Email)**：全面對齊隔日 (T+1) 目標價流程（`現價 → 目標價`）、P10/P90 風控區間與盈虧比，並將波段操作全面正名為「季線支撐」，提供兼具宏觀風控、AI 操盤總評與綜合優選的專業金融排版。
 
 ### 9. 🦆 本地 DuckDB 列式時序庫與多層級快取架構 (Multi-Tier Caching & Persistence)
 * 本地採用高性能嵌入式列式資料庫 **DuckDB**（`data/storage/stock_quant.duckdb`），已納入 44,000+ 筆歷史時序記錄（壓縮後僅 4.1 MB）。

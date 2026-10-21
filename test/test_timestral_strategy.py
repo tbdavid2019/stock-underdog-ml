@@ -68,6 +68,67 @@ class TestTimestralStrategy(unittest.TestCase):
         self.assertIn("Timestral強", res.tags)
         self.assertIn("高風報比", res.tags)
         self.assertEqual(res.signals["risk_reward_ratio"], 4.0)
+        self.assertEqual(res.metrics["p10"], 980.0)
+        self.assertEqual(res.metrics["p50"], 1020.0)
+        self.assertEqual(res.metrics["p90"], 1080.0)
+
+    @patch("strategies.timestral.get_timestral_model")
+    def test_hit_uses_day1_potential(self, mock_get_model):
+        mock_model = MagicMock()
+        mock_model.forecast_batch.return_value = {
+            "TEST_MISS": {
+                "current_price": 100.0,
+                "predicted_price": 100.5,
+                "horizon_predicted_price": 105.0,
+                "potential": 0.5,
+                "horizon_potential": 5.0,
+                "risk_reward_ratio": 2.0,
+                "quantiles": {"p10": 99.0, "p50": 100.5, "p90": 103.0},
+            },
+            "TEST_HIT": {
+                "current_price": 100.0,
+                "predicted_price": 102.5,
+                "horizon_predicted_price": 106.0,
+                "potential": 2.5,
+                "horizon_potential": 6.0,
+                "risk_reward_ratio": 2.5,
+                "quantiles": {"p10": 99.0, "p50": 102.5, "p90": 105.0},
+            }
+        }
+        mock_get_model.return_value = mock_model
+
+        ctx_miss = StockContext(ticker="TEST_MISS", df=pd.DataFrame({"Close": [100.0] * 65}))
+        res_miss = self.strategy.evaluate(ctx_miss)
+        # 0.5% < min_potential_hit (1.0%), so it should NOT be hit even though horizon is 5.0%
+        self.assertFalse(res_miss.is_hit)
+
+        ctx_hit = StockContext(ticker="TEST_HIT", df=pd.DataFrame({"Close": [100.0] * 65}))
+        res_hit = self.strategy.evaluate(ctx_hit)
+        self.assertTrue(res_hit.is_hit)
+        self.assertEqual(res_hit.potential, 2.5)
+
+    def test_wrapper_uses_day1_for_potential_and_risk_reward(self):
+        wrapper = TimestralWrapper()
+        wrapper._is_initialized = True
+
+        mock_forecast = MagicMock()
+        mock_forecast.quantile.side_effect = lambda q: [99.0, 98.0, 97.0, 96.0, 95.0] if abs(q - 0.1) < 1e-3 else ([105.0, 106.0, 107.0, 108.0, 115.0] if abs(q - 0.9) < 1e-3 else [102.0, 104.0, 106.0, 108.0, 110.0])
+        mock_forecast.median = [102.0, 104.0, 106.0, 108.0, 110.0]
+
+        mock_model = MagicMock()
+        mock_model.forecast.return_value = mock_forecast
+        wrapper.model = mock_model
+
+        prices = np.array([90.0 + i * 0.15 for i in range(70)])
+        prices[-1] = 100.0  # curr_price = 100.0
+        res = wrapper.forecast_batch({"BULL": prices}, horizon=5)["BULL"]
+
+        self.assertEqual(res["predicted_price"], 102.0)
+        self.assertEqual(res["potential"], 2.0)
+        self.assertEqual(res["day1_potential"], 2.0)
+        self.assertEqual(res["horizon_potential"], 10.0)
+        # T+1 quantiles: p10=99.0, p90=105.0 -> risk_span=1.0, reward_span=5.0 -> rr=5.0
+        self.assertEqual(res["risk_reward_ratio"], 5.0)
 
     def test_wrapper_flat_zero_volatility_skipped(self):
         wrapper = TimestralWrapper()

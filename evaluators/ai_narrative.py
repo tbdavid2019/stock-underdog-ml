@@ -215,21 +215,21 @@ class AINarrativeEngine:
             for t_res in timesfm_raw[:2]:
                 rr_v = t_res.get("risk_reward_ratio")
                 rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
-                top_tfm.append(f"{t_res.get('ticker')}: 漲幅 {t_res.get('potential', 0.0):+.2f}%{rr_info}")
+                top_tfm.append(f"{t_res.get('ticker')}: 隔日漲幅 {t_res.get('potential', 0.0):+.2f}%{rr_info}")
             if top_tfm:
-                top_parts.append("TimesFM看漲: " + "; ".join(top_tfm))
+                top_parts.append("TimesFM隔日看漲: " + "; ".join(top_tfm))
 
         if timestral_raw and isinstance(timestral_raw, list):
             top_tml = []
             for m_res in timestral_raw[:2]:
                 rr_v = m_res.get("risk_reward_ratio")
                 rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
-                top_tml.append(f"{m_res.get('ticker')}: 漲幅 {m_res.get('potential', 0.0):+.2f}%{rr_info}")
+                top_tml.append(f"{m_res.get('ticker')}: 隔日漲幅 {m_res.get('potential', 0.0):+.2f}%{rr_info}")
             if top_tml:
-                top_parts.append("Timestral看漲: " + "; ".join(top_tml))
+                top_parts.append("Timestral隔日看漲: " + "; ".join(top_tml))
 
         if top_parts:
-            fm_top_str = "\n- 時序大模型看漲焦點: " + " | ".join(top_parts)
+            fm_top_str = "\n- 時序大模型隔日看漲焦點: " + " | ".join(top_parts)
 
         prompt = f"""
 目標市場: {market_type} - {index_name}
@@ -237,14 +237,14 @@ class AINarrativeEngine:
 {macro_info}
 
 【量化數據概況】
-- 技術買點 (玄鐵重劍符合): {xuantie_hits} 支
+- 技術買點 (季線支撐符合): {xuantie_hits} 支
 - Google TimesFM (200M) 預測完成: {timesfm_predictions} 支
 - Mistral Timestral (209M) 預測完成: {timestral_predictions} 支{fm_top_str}
-- ⭐ 雙時序大模型共振/重點交集推薦標的:
+- ⭐ 綜合優選 / 雙AI看漲 重點推薦標的:
 {chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙模型共振股票，建議維持防禦觀望'}
 
 請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
-【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「🏆雙模型共振」或「高盈虧比」個股，請特別提示其雙時序大模型共識與風險收益比優勢。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「綜合優選」、「雙AI看漲」或「高盈虧比」個股，請特別提示其雙時序大模型隔日看漲共識與風險收益比優勢。
 """
         return prompt.strip()
 

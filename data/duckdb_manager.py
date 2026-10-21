@@ -729,7 +729,7 @@ class DuckDBManager:
 
     @staticmethod
     def _clean_df_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """將 DataFrame 轉為乾淨的字典清單，將 NaN / NaT / inf 轉為 None"""
+        """將 DataFrame 轉為乾淨的字典清單，將 NaN / NaT / inf 轉為 None，並對齊隔日 (T+1) 目標價與漲跌幅"""
         if df.empty:
             return []
         import math
@@ -745,6 +745,22 @@ class DuckDBManager:
                     clean_row[k] = None
                 else:
                     clean_row[k] = v
+
+            # 若包含現價與隔日預測目標價，嚴格校正 potential 對齊「隔日 (T+1) 目標價 vs 現價」
+            curr_p = clean_row.get("current_price")
+            if isinstance(curr_p, (int, float)) and curr_p > 0:
+                pred_p = clean_row.get("predicted_price")
+                if isinstance(pred_p, (int, float)) and pred_p > 0:
+                    clean_row["potential"] = round(((pred_p - curr_p) / curr_p) * 100.0, 2)
+
+                tm_p = clean_row.get("timestral_predicted_price")
+                if isinstance(tm_p, (int, float)) and tm_p > 0:
+                    clean_row["timestral_potential"] = round(((tm_p - curr_p) / curr_p) * 100.0, 2)
+
+                tf_p = clean_row.get("timesfm_predicted_price")
+                if isinstance(tf_p, (int, float)) and tf_p > 0:
+                    clean_row["timesfm_potential"] = round(((tf_p - curr_p) / curr_p) * 100.0, 2)
+
             records.append(clean_row)
         return records
 

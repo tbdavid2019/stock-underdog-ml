@@ -121,15 +121,16 @@ class TimesFMStrategy(BaseStrategy):
                 )
                 continue
 
-            # `potential` is the configured horizon potential. The wrapper
-            # also exposes day-one potential for diagnostics only.
+            # `potential` is the day-1 (T+1) potential. The wrapper also
+            # exposes 5-day horizon_potential for diagnostics.
             potential = float(f["potential"])
             horizon_potential = float(f.get("horizon_potential", potential))
             risk_reward = float(f.get("risk_reward_ratio", 1.0))
             predicted_price = float(f["predicted_price"])
+            quantiles = f.get("quantiles", {})
 
-            # Hit criteria: positive horizon potential AND viable horizon P50/P10 risk/reward
-            is_hit = horizon_potential >= self.min_potential_hit and risk_reward >= self.min_risk_reward_hit
+            # Hit criteria: positive day 1 (T+1) potential AND viable T+1 P50/P10 risk/reward
+            is_hit = potential >= self.min_potential_hit and risk_reward >= self.min_risk_reward_hit
 
             # Multi-factor score (0 ~ 100) combining potential and risk/reward
             base_score = 50.0 + (potential * 8.0)
@@ -156,7 +157,7 @@ class TimesFMStrategy(BaseStrategy):
                 "risk_reward_ratio": risk_reward,
                 "downside_risk": f.get("downside_risk"),
                 "upside_potential": f.get("upside_potential"),
-                "quantiles": f.get("quantiles", {}),
+                "quantiles": quantiles,
                 "trajectory": f.get("trajectory", []),
                 "horizon": self.horizon
             }
@@ -169,6 +170,9 @@ class TimesFMStrategy(BaseStrategy):
                 "risk_reward_ratio": risk_reward,
                 "downside_risk": f.get("downside_risk"),
                 "upside_potential": f.get("upside_potential"),
+                "p10": quantiles.get("p10", quantiles.get("p10_horizon")),
+                "p50": quantiles.get("p50", quantiles.get("p50_horizon")),
+                "p90": quantiles.get("p90", quantiles.get("p90_horizon")),
             }
 
             results.append(

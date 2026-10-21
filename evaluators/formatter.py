@@ -206,18 +206,27 @@ def format_telegram_message(
         msg += f"符合共振條件: <b>{len(candidates)}</b> 支\n\n"
 
         tier_display_map = {
+            "綜合優選": "【綜合優選】",
+            "雙AI看漲": "【雙AI看漲】",
             "👑四重共振": "【四重共振】",
             "🏆三重共振": "【三重共振】",
+            "🔮雙大模型共振": "【雙AI看漲】",
+            "👑雙時序共振": "【雙AI看漲】",
             "🔮雙ML共振": "【雙ML共振】",
             "🌟多維共振": "【多維共振】",
             "⭐雙重共振": "【雙重共振】",
             "四重共振": "【四重共振】",
             "三重共振": "【三重共振】",
+            "雙大模型共振": "【雙AI看漲】",
             "雙ML共振": "【雙ML共振】",
             "多維共振": "【多維共振】",
             "雙重共振": "【雙重共振】"
         }
-        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振", "四重共振", "三重共振", "雙ML共振", "多維共振", "雙重共振"]
+        tier_order = [
+            "綜合優選", "雙AI看漲",
+            "👑四重共振", "🏆三重共振", "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
+            "四重共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
+        ]
         grouped: Dict[str, List[dict]] = {}
         for c in candidates:
             tier = c.get("resonance_tier")
@@ -257,8 +266,8 @@ def format_telegram_message(
     else:
         msg += "<i>(本期無符合多維正向共振條件之標的，建議防守觀望)</i>\n\n"
 
-    # 波段操作 (玄鐵重劍)
-    msg += "<b>【波段操作 (玄鐵重劍)】</b>\n"
+    # 波段操作 (季線支撐)
+    msg += "<b>【波段操作 (季線支撐)】</b>\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         msg += f"符合買點: <b>{len(xuantie_df)}</b> 支 (顯示前5名)\n"
         for idx, row in xuantie_df.head(5).iterrows():
@@ -286,7 +295,7 @@ def format_telegram_message(
             rr_str = f" | 盈虧比: <b>{rr:.1f}x</b>" if rr and pd.notna(rr) else ""
             p10 = result.get('p10')
             p90 = result.get('p90')
-            band_str = f" | 區間 <code>{p10:.1f}~{p90:.1f}</code>" if p10 is not None and p90 is not None else ""
+            band_str = f" | 區間 <code>{p10:.1f}~{p90:.1f}</code>" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
             msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b> (<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>{band_str}{rr_str})\n"
         msg += "\n"
     elif lstm_results:
@@ -305,11 +314,23 @@ def format_telegram_message(
         for idx, result in enumerate(timesfm_results[:5], 1):
             ticker_label = html.escape(format_ticker_label(result['ticker'], lookup))
             pot = result['potential']
+            curr_p = result.get('current_price')
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
             rr = result.get('risk_reward_ratio')
-            rr_str = f" | 盈虧比: <b>{rr:.1f}x</b>" if rr and pd.notna(rr) else ""
-            h_price = result.get('horizon_predicted_price')
-            h_str = f"5日目標 <code>{h_price:,.1f}</code>" if h_price and pd.notna(h_price) else ""
-            info_str = f" ({h_str}{rr_str})" if (h_str or rr_str) else ""
+            rr_str = f"盈虧比: <b>{rr:.1f}x</b>" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f"區間 <code>{p10:.1f}~{p90:.1f}</code>" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+
+            if curr_p is not None and pred_p is not None:
+                p_str = f"<code>{curr_p:,.1f}</code> → <code>{pred_p:,.1f}</code>"
+            elif pred_p is not None:
+                p_str = f"隔日目標 <code>{pred_p:,.1f}</code>"
+            else:
+                p_str = ""
+
+            info_parts = [p for p in [p_str, band_str, rr_str] if p]
+            info_str = f" ({' | '.join(info_parts)})" if info_parts else ""
             msg += f"{idx}. <b>{ticker_label}</b> <b>{pot:+.1f}%</b>{info_str}\n"
         msg += "\n"
 
@@ -550,18 +571,27 @@ def format_discord_message(
     if candidates:
         msg += f"符合共振條件: **{len(candidates)}** 支\n\n"
         tier_display_map = {
+            "綜合優選": "【綜合優選】",
+            "雙AI看漲": "【雙AI看漲】",
             "👑四重共振": "【四重共振】",
             "🏆三重共振": "【三重共振】",
+            "🔮雙大模型共振": "【雙AI看漲】",
+            "👑雙時序共振": "【雙AI看漲】",
             "🔮雙ML共振": "【雙ML共振】",
             "🌟多維共振": "【多維共振】",
             "⭐雙重共振": "【雙重共振】",
             "四重共振": "【四重共振】",
             "三重共振": "【三重共振】",
+            "雙大模型共振": "【雙AI看漲】",
             "雙ML共振": "【雙ML共振】",
             "多維共振": "【多維共振】",
             "雙重共振": "【雙重共振】"
         }
-        tier_order = ["👑四重共振", "🏆三重共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振", "四重共振", "三重共振", "雙ML共振", "多維共振", "雙重共振"]
+        tier_order = [
+            "綜合優選", "雙AI看漲",
+            "👑四重共振", "🏆三重共振", "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
+            "四重共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
+        ]
         grouped: Dict[str, List[dict]] = {}
         for c in candidates:
             tier = c.get("resonance_tier") or "多維共振"
@@ -585,8 +615,8 @@ def format_discord_message(
     else:
         msg += "*(本期無符合多維正向共振條件之標的，建議防守觀望)*\n\n"
 
-    # 波段操作
-    msg += "**【波段操作 (玄鐵重劍)】**\n"
+    # 波段操作 (季線支撐)
+    msg += "**【波段操作 (季線支撐)】**\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         msg += f"符合買點: **{len(xuantie_df)}** 支 (顯示前5名)\n"
         for idx, row in xuantie_df.head(5).iterrows():
@@ -614,7 +644,7 @@ def format_discord_message(
             rr_str = f" | 盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
             p10 = result.get('p10')
             p90 = result.get('p90')
-            band_str = f" | 區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None else ""
+            band_str = f" | 區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
             msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`{band_str}{rr_str})\n"
         msg += "\n"
     elif lstm_results:
@@ -633,11 +663,23 @@ def format_discord_message(
         for idx, result in enumerate(timesfm_results[:5], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             pot = result['potential']
+            curr_p = result.get('current_price')
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
             rr = result.get('risk_reward_ratio')
-            rr_str = f" | 盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
-            h_price = result.get('horizon_predicted_price')
-            h_str = f"5日目標 `{h_price:,.1f}`" if h_price and pd.notna(h_price) else ""
-            info_str = f" ({h_str}{rr_str})" if (h_str or rr_str) else ""
+            rr_str = f"盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f"區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+
+            if curr_p is not None and pred_p is not None:
+                p_str = f"`{curr_p:,.1f}` → `{pred_p:,.1f}`"
+            elif pred_p is not None:
+                p_str = f"隔日目標 `{pred_p:,.1f}`"
+            else:
+                p_str = ""
+
+            info_parts = [p for p in [p_str, band_str, rr_str] if p]
+            info_str = f" ({' | '.join(info_parts)})" if info_parts else ""
             msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
         msg += "\n"
 
@@ -731,7 +773,7 @@ def format_email_message(
         msg += "(本期無符合多維正向共振條件之標的)\n\n"
 
     # 🗡️ 波段操作
-    msg += f"🗡️  波段操作 (玄鐵重劍) - 符合條件: {len(xuantie_df)} 支 (顯示前10名)\n\n"
+    msg += f"🗡️  波段操作 (季線支撐) - 符合條件: {len(xuantie_df)} 支 (顯示前10名)\n\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         for idx, row in xuantie_df.head(10).iterrows():
             ticker_label = format_ticker_label(row['ticker'], lookup)
@@ -745,14 +787,14 @@ def format_email_message(
     # 🔮 Timestral-209M
     if timestral_results:
         msg += f"🔮 時序大模型 (Timestral-209M) - 預測完成: {len(timestral_results)} 支\n\n"
-        msg += "📈 Timestral 看漲 TOP 10 (含 5 日目標價、P10/P90 分位數與盈虧比)\n"
+        msg += "📈 Timestral 看漲 TOP 10 (含 隔日目標價、P10/P90 分位數與盈虧比)\n"
         for idx, result in enumerate(timestral_results[:10], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             rr = result.get('risk_reward_ratio')
             rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
             p10 = result.get('p10')
             p90 = result.get('p90')
-            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None else ""
+            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
             curr_p = result['current_price']
             pred_p = result.get('predicted_price', curr_p)
             msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str})\n"
@@ -770,14 +812,20 @@ def format_email_message(
     # 🔮 TimesFM
     if timesfm_results:
         msg += f"🔮 時序大模型 (TimesFM) - 預測完成: {len(timesfm_results)} 支\n\n"
-        msg += "📈 TimesFM 看漲 TOP 10 (含 5 日目標價與盈虧比)\n"
+        msg += "📈 TimesFM 看漲 TOP 10 (含 隔日目標價與盈虧比)\n"
         for idx, result in enumerate(timesfm_results[:10], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
             rr = result.get('risk_reward_ratio')
             rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
-            h_price = result.get('horizon_predicted_price')
-            h_str = f" | 5日目標: {h_price:,.2f}" if h_price and pd.notna(h_price) else ""
-            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}%{h_str}{rr_str}\n"
+            curr_p = result.get('current_price')
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
+            if curr_p is not None and pred_p is not None:
+                p_str = f" ({curr_p:,.1f} → {pred_p:,.1f})"
+            elif pred_p is not None:
+                p_str = f" | 隔日目標: {pred_p:,.2f}"
+            else:
+                p_str = ""
+            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}%{p_str}{rr_str}\n"
         msg += "\n"
 
     return msg
@@ -849,8 +897,8 @@ def print_evaluation_report(report: EvaluationReport, log=None):
             logger.info(f"   {line}")
         logger.info("")
 
-    # ====== 多策略交集 / 多維共振 ======
-    logger.info("⭐ 【優先推薦】雙時序大模型共振 (TimesFM × Timestral ∩ 玄鐵 ∩ 法人鎖碼)")
+    # ====== 多策略交集 / 綜合優選 ======
+    logger.info("⭐ 【優先推薦】綜合優選 (TimesFM × Timestral ∩ 季線支撐 ∩ 法人鎖碼)")
     logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
 
     if not overlap_df.empty:
@@ -889,8 +937,8 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     logger.info("")
 
-    # ====== 軌道 1: 玄鐵重劍 ======
-    logger.info("🗡️  【波段操作】玄鐵重劍策略 (持有 2-4 週) - 技術面買點")
+    # ====== 軌道 1: 季線支撐 ======
+    logger.info("🗡️  【波段操作】季線支撐策略 (持有 2-4 週) - 技術面買點")
     logger.info(f"   符合條件: {len(xuantie_df)} 支\n")
 
     if not xuantie_df.empty:
@@ -912,9 +960,9 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     # ====== 軌道 2: Timestral-209M / LSTM ======
     if timestral_results:
-        logger.info("🔮 【時序大模型】Mistral Timestral-209M (持有 1-5 天) - 預測漲幅排行與風控分位數")
+        logger.info("🔮 【時序大模型】Mistral Timestral-209M (隔日 T+1) - 預測漲幅排行與風控分位數")
         logger.info(f"   預測完成: {len(timestral_results)} 支\n")
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'預測價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
         logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")
         for i, result in enumerate(timestral_results[:10], 1):
             p10 = result.get('p10')
@@ -950,21 +998,21 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     logger.info("")
 
     # ====== 軌道 3: TimesFM 預測 ======
-    logger.info("🔮 【時序大模型】TimesFM 預測 (持有 1-5 天) - 預測漲幅排行與盈虧比")
+    logger.info("🔮 【時序大模型】TimesFM 預測 (隔日 T+1) - 預測漲幅排行與盈虧比")
     logger.info(f"   預測完成: {len(timesfm_results)} 支\n")
 
     if timesfm_results:
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'5日目標':>8} {'盈虧比':>8} {'PE':>6} {'PB':>6}")
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'盈虧比':>8} {'PE':>6} {'PB':>6}")
         logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*8} {'-'*6} {'-'*6}")
         for i, result in enumerate(timesfm_results[:10], 1):
-            h_price = result.get('horizon_predicted_price') or result.get('predicted_price') or result.get('current_price', 0.0)
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price') or result.get('current_price', 0.0)
             rr_val = result.get('risk_reward_ratio')
             rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "     N/A"
             logger.info(
                 f"   {i:<4} {result['ticker']:<10} "
                 f"{result['potential']:>+9.2f}% "
-                f"{result['current_price']:>8.2f} {'→':^3} "
-                f"{h_price:>8.2f} "
+                f"{result.get('current_price', 0.0):>8.2f} {'→':^3} "
+                f"{pred_p:>8.2f} "
                 f"{rr_str:>8} "
                 f"{format_value(result.get('pe')):>6} "
                 f"{format_value(result.get('pb')):>6}"

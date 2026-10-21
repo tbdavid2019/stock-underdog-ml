@@ -634,6 +634,28 @@ class TestDuckDBManager(unittest.TestCase):
         for r in oct16_records:
             self.assertEqual(r["index_name"], "台灣50")
 
+    def test_get_ticker_history_recalculates_t1_potential(self):
+        # 測試舊紀錄若 potential 為 T+5 (9.74%)，但 predicted_price 為 136.44，current_price 為 132.74
+        # get_ticker_history 自動校正 potential 為 ((136.44 - 132.74) / 132.74) * 100 = 2.79%
+        record = {
+            "index_name": "台灣50",
+            "model_name": "TimesFM",
+            "strategy_type": "TimesFM預測",
+            "ticker": "9999.TW",
+            "current_price": 132.74,
+            "predicted_price": 136.44,
+            "potential": 9.74,  # 舊版 T+5 偏離值
+            "timesfm_predicted_price": 136.44,
+            "timesfm_potential": 9.74,
+            "timestamp": "2026-10-20T14:00:00.000000+08:00"
+        }
+        self.mgr.save_predictions_batch([record])
+        history = self.mgr.get_ticker_history("9999.TW", limit=5)
+        self.assertEqual(len(history), 1)
+        r = history[0]
+        self.assertEqual(r["potential"], 2.79)
+        self.assertEqual(r["timesfm_potential"], 2.79)
+
 
 if __name__ == "__main__":
     unittest.main()

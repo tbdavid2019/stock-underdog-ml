@@ -4,6 +4,31 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-21 (v2.4.33)
+
+### Fixed & Enhanced (T+1 Horizon Alignment, Chart Time-Shift, Model PK Scorecard & Unified Naming)
+- **🎯 預測天期嚴格統一對齊「隔天 (T+1)」與目標價漲跌幅一致性**：
+  - **`models/timesfm_model.py`**：將批次推論之 `potential` 全面改為 `day1_potential`（即 `((day1_pred - curr_price) / curr_price) * 100.0`），使 `predicted_price` 與 `potential` 嚴格一致對應隔日 T+1；風險報酬比（`downside_risk`, `upside_potential`, `risk_reward_ratio`）同步以隔日 T+1 分位數（`p10_day1`, `p50_day1`, `p90_day1`）計算，並保留 `horizon_potential` 與 `horizon_predicted_price` 供前瞻診斷。
+  - **`models/timestral_model.py`**：`predicted_price` 與 `potential` 嚴格對齊隔日 T+1，`downside_risk`, `upside_potential`, `risk_reward_ratio` 同步優先以 T+1 分位數計算。
+  - **`strategies/timesfm.py` & `strategies/timestral.py`**：`is_hit` 條件更新為以 T+1 之 `potential >= min_potential_hit and risk_reward >= self.min_risk_reward_hit` 判斷；`timestral` 儲存指標 `p10`, `p50`, `p90` 改取 T+1 分位數。
+  - **`data/duckdb_manager.py` (`get_ticker_history`)**：回傳歷史數據時自動對舊版記錄校正 `potential = round(((predicted_price - current_price) / current_price) * 100.0, 2)`（同步校正 `timesfm_potential` 與 `timestral_potential`），徹底解決歷史資料庫現價與目標價漲跌幅矛盾問題。
+- **📈 圖表時間軸平移對齊與影子線徹底根除 (`api/static/js/chart-manager.js`)**：
+  - **T+1 目標兌現日對齊（Time-Shift T+1）**：修正過去將第 $i$ 天收盤產生的隔日目標價畫在當天的錯位問題。在 X 軸右側新增未來錨點標籤 `'隔日預估 (T+1)'`，歷史真實股價畫在 $0 \dots n-1$（最後一格為 `null`），AI 預測價位則平移填入 $1 \dots n$（對齊隔日開獎之真實收盤價）。
+  - **Tooltip 完整對比資訊**：游標移至歷史交易日清楚標示 `真實股價: $X (當日收盤)` 與 `AI 隔日目標價 (前日預測): $Y (預期 ±A% ｜ 實際誤差 ±B%)`；移至最右側錨點則顯示 `AI 隔日目標價 (最新預測): $Y (預期 ±A% vs 最新現價)`。
+  - **圖例簡化**：雙時序共振線更名為「雙模型平均」，且預設不勾選顯示（`resonance: false`），保持折線圖清爽聚焦。
+- **🏆 個股歷史雙模型準確率 PK 成績單與每日一列對決表 (`api/static/js/app.js` & `api/templates/partials/tab_history.html`)**：
+  - **歷史筆數擴充**：`loadHistory()` 預設查詢筆數由 90 提高至 240 筆，涵蓋近一年完整交易軌跡。
+  - **雙模型 PK 成績單卡片 (`modelScorecard`)**：並列呈現 Google TimesFM (200M) 與 Mistral Timestral (209M) 於該股歷史開獎日之「隔日方向勝率 %」、「平均價格絕對誤差 (MAPE) %」與「對決勝出次數」，自動產生勝負評判與勝出模型標籤。
+  - **每日一列對決表 (`dailyHistoryRows`)**：將同日多次執行或不同模型資料聚合成一日一列，清晰對照：`預測日期` | `當日收盤` | `隔日真實收盤 (實際漲跌)` | `TimesFM 隔日目標價 (誤差)` | `Timestral 隔日目標價 (誤差)` | `當日勝出模型` | `均線 / 估值 / 籌碼`，若未開獎則明確提示 `⏳ 待下個交易日開獎`。
+- **🏛️ 策略命名全面回歸專業金融語言 (`app.js`, `tab_dashboard.html`, `tab_history.html`)**：
+  - 策略選單直白命名：`resonance` ➔ `'綜合優選 (雙AI看漲)'`、`timestral_bullish` ➔ `'Timestral 看漲排行'`、`timesfm_bullish` ➔ `'TimesFM 看漲排行'`、`xuantie` ➔ `'季線支撐買點'`、`timestral_bearish` ➔ `'AI 看跌避險排行'`、`latest` ➔ `'全市場最新總表'`。
+  - 標籤與模型欄位簡化：將「玄鐵重劍/玄鐵買點」自動轉換顯示為「季線支撐」；繁複之「四重共振/三重共振/多維共振」統一顯示為「綜合優選」，「雙大模型共振/雙ML共振/雙時序共振」統一顯示為「雙AI看漲」。
+  - 嚴格遵守 `impeccable` 工藝規範：全介面最小字級為 `text-xs`，徹底杜絕 `text-[10px]` / `text-[11px]`。
+- **📢 多渠道日報（Telegram / Discord / Email）與 AI 解讀全面對齊 T+1 目標價與季線支撐正名 (`evaluators/formatter.py`, `evaluators/ai_narrative.py`)**：
+  - 日報推播與終端報告之「波段操作 (玄鐵重劍)」全面正名為「波段操作 (季線支撐)」，多維共振優先推薦正名為「綜合優選」。
+  - TimesFM 與 Timestral 於 Telegram、Discord、Email 優先呈現隔日 T+1 目標價流程（`現價 → 目標價`）與 P10/P90 蒙地卡羅風控區間，徹底消除過去 5 日目標價與隔日潛力漲幅不匹配之矛盾。
+  - AI 操盤總評上下文提示詞與規則備援模板對齊季線支撐與雙時序模型隔日預測。
+
 ## 2026-10-16 (v2.4.32)
 
 ### Fixed & Optimized (Constituent Deduplication & Daily History Uniqueness)

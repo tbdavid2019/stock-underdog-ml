@@ -283,19 +283,42 @@ export class ChartManager {
             }
         }
 
-        const labels = Array.from(dateMap.keys());
-        if (!labels.length) return null;
+        const dates = Array.from(dateMap.keys());
+        if (!dates.length) return null;
+        const n = dates.length;
+
+        // Future anchor point label for T+1 prediction target day
+        const labels = [...dates, '隔日預估 (T+1)'];
 
         const theme = this.getThemeTokens(isDark);
 
-        const dataPrice = labels.map(d => dateMap.get(d).price);
-        const dataTimestral = labels.map(d => dateMap.get(d).timestral);
-        const dataTimestralP10 = labels.map(d => dateMap.get(d).timestralP10);
-        const dataTimestralP90 = labels.map(d => dateMap.get(d).timestralP90);
-        const dataTimesfm = labels.map(d => dateMap.get(d).timesfm);
-        const dataResonance = labels.map(d => dateMap.get(d).resonance);
-        const dataMa60 = labels.map(d => dateMap.get(d).ma60);
-        const dataLstm = labels.map(d => dateMap.get(d).lstm);
+        // Actual price and MA60: valid on 0 ... n-1, null at n (T+1 anchor)
+        const dataPrice = [...dates.map(d => dateMap.get(d).price), null];
+        const dataMa60 = [...dates.map(d => dateMap.get(d).ma60), null];
+
+        // AI predictions shifted by +1 (Target realization alignment):
+        // Index 0: null (no prediction from day -1)
+        // Index i + 1 (1 ... n): prediction made on day i (dates[i]) targeting day i + 1
+        const dataTimestral = [null];
+        const dataTimestralP10 = [null];
+        const dataTimestralP90 = [null];
+        const dataTimesfm = [null];
+        const dataResonance = [null];
+        const dataLstm = [null];
+
+        for (let i = 0; i < n; i++) {
+            const item = dateMap.get(dates[i]);
+            dataTimestral.push(item.timestral);
+            dataTimestralP10.push(item.timestralP10);
+            dataTimestralP90.push(item.timestralP90);
+            dataTimesfm.push(item.timesfm);
+            let resVal = item.resonance;
+            if (!resVal && item.timesfm && item.timestral) {
+                resVal = Number(((item.timesfm + item.timestral) / 2).toFixed(2));
+            }
+            dataResonance.push(resVal);
+            dataLstm.push(item.lstm);
+        }
 
         const chart = new Chart(el, {
             type: 'line',
@@ -381,7 +404,7 @@ export class ChartManager {
                     },
                     {
                         key: 'resonance',
-                        label: '雙時序共振目標價',
+                        label: '雙模型平均目標價',
                         data: dataResonance,
                         borderColor: '#10B981',
                         backgroundColor: 'transparent',
@@ -392,7 +415,7 @@ export class ChartManager {
                         pointBackgroundColor: '#10B981',
                         pointStyle: 'triangle',
                         spanGaps: true,
-                        hidden: visibility.resonance === false
+                        hidden: visibility.resonance !== true
                     },
                     {
                         key: 'ma60',
@@ -448,26 +471,77 @@ export class ChartManager {
                         callbacks: {
                             title(items) {
                                 if (!items || !items.length) return '';
-                                return `交易日期: ${items[0].label}`;
+                                const label = items[0].label;
+                                if (label === '隔日預估 (T+1)') {
+                                    return '預測目標: 隔日預估 (T+1)';
+                                }
+                                return `交易日期: ${label}`;
                             },
                             label(ctx) {
                                 const val = ctx.parsed.y;
                                 if (val === null || val === undefined || isNaN(val)) return null;
                                 const formatted = '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
                                 const label = ctx.dataset.label;
-                                const dateIdx = ctx.dataIndex;
-                                const priceDs = ctx.chart.data.datasets.find(d => d.key === 'price');
-                                const actual = priceDs ? priceDs.data[dateIdx] : null;
+                                const idx = ctx.dataIndex;
 
-                                if (ctx.dataset.key === 'timestralBandsUpper' || ctx.dataset.key === 'timestralBandsLower') {
+                                if (ctx.dataset.key === 'price') {
+                                    return ` ${label}: ${formatted} (當日收盤)`;
+                                }
+
+                                if (ctx.dataset.key === 'ma60') {
                                     return ` ${label}: ${formatted}`;
                                 }
 
-                                if (actual && actual > 0 && ctx.dataset.key !== 'price' && ctx.dataset.key !== 'ma60') {
-                                    const diff = ((val - actual) / actual) * 100;
-                                    const sign = diff > 0 ? '+' : '';
-                                    return ` ${label}: ${formatted} (${sign}${diff.toFixed(2)}% vs 現價)`;
+                                if (ctx.dataset.key === 'timestralBandsUpper' || ctx.dataset.key === 'timestralBandsLower') {
+                                    if (idx > 0 && idx <= n) {
+                                        const srcDate = dates[idx - 1];
+                                        const shortDate = srcDate && srcDate.length >= 10 ? srcDate.slice(5).replace('-', '/') : srcDate;
+                                        return ` ${label} (${shortDate}預測): ${formatted}`;
+                                    }
+                                    return ` ${label}: ${formatted}`;
                                 }
+
+                                // Prediction datasets: TimesFM, Timestral, Resonance, LSTM
+                                if (idx > 0 && idx <= n) {
+                                    const srcDate = dates[idx - 1];
+                                    const shortDate = srcDate && srcDate.length >= 10 ? srcDate.slice(5).replace('-', '/') : srcDate;
+                                    const srcItem = srcDate ? dateMap.get(srcDate) : null;
+                                    const basePrice = srcItem ? srcItem.price : null;
+                                    const actualPrice = (idx < n) ? dateMap.get(dates[idx])?.price : null;
+
+                                    if (idx === n) {
+                                        if (basePrice && basePrice > 0) {
+                                            const expDiff = ((val - basePrice) / basePrice) * 100;
+                                            const expSign = expDiff >= 0 ? '+' : '';
+                                            return ` ${label} (${shortDate}預測): ${formatted} (預期 ${expSign}${expDiff.toFixed(2)}% vs ${shortDate}現價)`;
+                                        }
+                                        return ` ${label} (${shortDate}預測): ${formatted}`;
+                                    }
+
+                                    let expStr = '';
+                                    if (basePrice && basePrice > 0) {
+                                        const expDiff = ((val - basePrice) / basePrice) * 100;
+                                        const expSign = expDiff >= 0 ? '+' : '';
+                                        expStr = `預期 ${expSign}${expDiff.toFixed(2)}%`;
+                                    }
+
+                                    let errStr = '';
+                                    if (actualPrice && actualPrice > 0) {
+                                        const errDiff = ((val - actualPrice) / actualPrice) * 100;
+                                        const errSign = errDiff >= 0 ? '+' : '';
+                                        errStr = `實際誤差 ${errSign}${errDiff.toFixed(2)}%`;
+                                    }
+
+                                    if (expStr && errStr) {
+                                        return ` ${label} (${shortDate}預測): ${formatted} (${expStr} ｜ ${errStr})`;
+                                    } else if (expStr) {
+                                        return ` ${label} (${shortDate}預測): ${formatted} (${expStr})`;
+                                    } else if (errStr) {
+                                        return ` ${label} (${shortDate}預測): ${formatted} (${errStr})`;
+                                    }
+                                    return ` ${label} (${shortDate}預測): ${formatted}`;
+                                }
+
                                 return ` ${label}: ${formatted}`;
                             }
                         }

@@ -676,7 +676,7 @@
                     <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與 AI 預測目標價趨勢折線圖</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    比對每日真實收盤/現價走勢與 Timestral、TimesFM、雙時序共振等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
+                    比對每日真實收盤/現價走勢與 Timestral、TimesFM、雙模型平均等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
                 </p>
             </div>
 
@@ -718,13 +718,13 @@
                     <span>TimesFM 目標價</span>
                 </button>
 
-                <!-- 雙時序共振目標價 -->
+                <!-- 雙模型平均目標價 -->
                 <button type="button" @click="togglePriceChartSeries('resonance')"
-                        title="點擊切換顯示雙時序共振目標價 (TimesFM × Timestral)"
+                        title="點擊切換顯示雙模型平均目標價 (TimesFM & Timestral 均值)"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.resonance ? (isDark ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 bg-[#10B981] inline-block shadow-sm transform rotate-45"></span>
-                    <span>雙時序共振</span>
+                    <span>雙模型平均</span>
                 </button>
 
                 <!-- MA60 季線 -->
@@ -745,50 +745,246 @@
 
     </div>
 
-    <!-- Prediction History Table -->
-    <div v-if="!historyLoading && historyRecords.length > 0"
+    <!-- ================= 4. AI MODEL ACCURACY SCORECARD (PK 成績單) ================= -->
+    <div v-if="!historyLoading && modelScorecard"
+         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+         class="p-5 rounded-2xl border space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div>
+                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">military_tech</span>
+                    <span>AI 模型隔日 (T+1) 預測準確率 PK 成績單</span>
+                </h3>
+                <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    統計該股歷史所有已開獎交易日中，雙大模型針對「隔日收盤」之方向命中率、平均價格絕對誤差 (MAPE) 與對決勝出統計
+                </p>
+            </div>
+            <!-- Overall Winner Badge -->
+            <div class="px-3.5 py-1.5 rounded-xl border text-xs sm:text-sm font-bold shadow-sm"
+                 :class="isDark ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'">
+                {{ modelScorecard.overallWinner }}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Card 1: Google TimesFM -->
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+                 :class="[
+                     isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
+                     modelScorecard.timesfm.isLeader ? (isDark ? 'ring-1 ring-purple-500/50' : 'ring-2 ring-purple-400') : ''
+                 ]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-sm bg-[#A855F7] inline-block shadow-sm transform rotate-45"></span>
+                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Google TimesFM (200M)</span>
+                    </div>
+                    <span v-if="modelScorecard.timesfm.isLeader"
+                          class="px-2 py-0.5 rounded-md text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                        🏆 該股領先
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">隔日方向勝率</div>
+                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            {{ modelScorecard.timesfm.hitRate !== '-' ? modelScorecard.timesfm.hitRate + '%' : '—' }}
+                        </div>
+                    </div>
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">平均價格誤差 (MAPE)</div>
+                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            {{ modelScorecard.timesfm.mape !== '-' ? modelScorecard.timesfm.mape + '%' : '—' }}
+                        </div>
+                    </div>
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">對決勝出 / 驗證天數</div>
+                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            {{ modelScorecard.timesfm.wins }} 勝 / {{ modelScorecard.timesfm.count }} 天
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Mistral Timestral -->
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+                 :class="[
+                     isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
+                     modelScorecard.timestral.isLeader ? (isDark ? 'ring-1 ring-cyan-500/50' : 'ring-2 ring-cyan-400') : ''
+                 ]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-sm bg-[#06B6D4] inline-block shadow-sm"></span>
+                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Mistral Timestral (209M)</span>
+                    </div>
+                    <span v-if="modelScorecard.timestral.isLeader"
+                          class="px-2 py-0.5 rounded-md text-xs font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                        🏆 該股領先
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">隔日方向勝率</div>
+                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            {{ modelScorecard.timestral.hitRate !== '-' ? modelScorecard.timestral.hitRate + '%' : '—' }}
+                        </div>
+                    </div>
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">平均價格誤差 (MAPE)</div>
+                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            {{ modelScorecard.timestral.mape !== '-' ? modelScorecard.timestral.mape + '%' : '—' }}
+                        </div>
+                    </div>
+                    <div class="p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">對決勝出 / 驗證天數</div>
+                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            {{ modelScorecard.timestral.wins }} 勝 / {{ modelScorecard.timestral.count }} 天
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= 5. DAILY PREDICTION VS NEXT-DAY ACTUAL CLOSE TABLE (一日一列) ================= -->
+    <div v-if="!historyLoading && dailyHistoryRows.length > 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-5 rounded-2xl border space-y-3">
 
-        <div class="flex items-center justify-between">
-            <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
-                <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 歷史量化紀錄 (共 {{ historyRecords.length }} 筆)
-            </h3>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h3 class="text-base font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 每日預測 vs 隔日真實收盤對決表 (共 {{ dailyHistoryRows.length }} 個交易日)
+                </h3>
+                <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    嚴格依每日收盤時預測之「隔日目標價 (T+1)」與次日真實收盤對比驗證，每日一列清晰開獎
+                </p>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
         <table class="w-full text-left text-xs sm:text-sm border-collapse">
             <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                 <tr>
-                    <th class="p-3 font-bold num-font">時間戳記</th>
-                    <th class="p-3 font-bold">策略模型</th>
-                    <th class="p-3 font-bold num-font">現價</th>
-                    <th class="p-3 font-bold num-font">預測目標價</th>
-                    <th class="p-3 font-bold num-font">預期潛力</th>
-                    <th class="p-3 font-bold">技術均線</th>
-                    <th class="p-3 font-bold num-font">PE / PB</th>
-                    <th class="p-3 font-bold">三大法人籌碼</th>
+                    <th class="p-3 font-bold num-font whitespace-nowrap">預測日期</th>
+                    <th class="p-3 font-bold num-font whitespace-nowrap">當日收盤</th>
+                    <th class="p-3 font-bold num-font whitespace-nowrap">隔日真實收盤 (實際漲跌)</th>
+                    <th class="p-3 font-bold whitespace-nowrap">TimesFM 隔日目標價 (誤差)</th>
+                    <th class="p-3 font-bold whitespace-nowrap">Timestral 隔日目標價 (誤差)</th>
+                    <th class="p-3 font-bold text-center whitespace-nowrap">當日勝出模型</th>
+                    <th class="p-3 font-bold whitespace-nowrap">均線 / 估值 / 籌碼</th>
                 </tr>
             </thead>
             <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
-                <tr v-for="row in historyRecords" :key="row.timestamp + row.strategy_type"
+                <tr v-for="row in dailyHistoryRows" :key="row.date"
                     :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'" class="transition-all">
-                    <td class="p-3 num-font text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                        {{ row.timestamp ? row.timestamp.replace('T', ' ').substring(0, 19) : '-' }}
+                    <!-- 預測日期 -->
+                    <td class="p-3 num-font font-bold text-xs sm:text-sm whitespace-nowrap" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                        {{ row.date }}
                     </td>
-                    <td class="p-3 font-bold">{{ row.strategy_type || row.model_name }}</td>
-                    <td class="p-3 font-black num-font">${{ Number(row.current_price).toFixed(2) }}</td>
-                    <td class="p-3 font-black num-font text-amber-500">{{ row.predicted_price ? '$' + Number(row.predicted_price).toFixed(2) : '-' }}</td>
-                    <td class="p-3 font-black num-font" :class="row.potential > 0 ? 'text-emerald-400 font-bold' : 'text-rose-500 font-bold'">
-                        {{ row.potential !== null ? (row.potential > 0 ? '+' : '') + Number(row.potential).toFixed(2) + '%' : '-' }}
+
+                    <!-- 當日收盤 -->
+                    <td class="p-3 font-black num-font whitespace-nowrap">
+                        {{ row.closePrice ? '$' + Number(row.closePrice).toFixed(2) : '-' }}
                     </td>
-                    <td class="p-3 text-amber-500 font-bold">{{ row.pullback_type || (row.ma60 ? 'MA60: $' + Number(row.ma60).toFixed(1) : '-') }}</td>
-                    <td class="p-3 num-font">{{ row.pe ? Number(row.pe).toFixed(1) : '-' }} / {{ row.pb ? Number(row.pb).toFixed(1) : '-' }}</td>
-                    <td class="p-3 text-xs num-font">
-                        <span v-if="row.trust_net_5d !== null || row.foreign_net_5d !== null" class="font-bold">
-                            投:{{ row.trust_net_5d || 0 }} / 外:{{ row.foreign_net_5d || 0 }}
+
+                    <!-- 隔日真實收盤 (實際漲跌) -->
+                    <td class="p-3 font-bold num-font whitespace-nowrap">
+                        <div v-if="row.nextActualPrice !== null">
+                            <span class="font-black">${{ Number(row.nextActualPrice).toFixed(2) }}</span>
+                            <span v-if="row.actualReturnPct !== null"
+                                  class="ml-1 text-xs font-black"
+                                  :class="row.actualReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-500'">
+                                ({{ row.actualReturnPct >= 0 ? '+' : '' }}{{ row.actualReturnPct.toFixed(2) }}%)
+                            </span>
+                        </div>
+                        <div v-else class="text-xs font-bold text-amber-500 flex items-center space-x-1">
+                            <span>⏳ 待下個交易日開獎</span>
+                        </div>
+                    </td>
+
+                    <!-- TimesFM 隔日目標價 (誤差) -->
+                    <td class="p-3 whitespace-nowrap">
+                        <div v-if="row.timesfmPred !== null">
+                            <div class="font-black num-font text-purple-400">
+                                ${{ Number(row.timesfmPred).toFixed(2) }}
+                                <span v-if="row.timesfmPot !== null" class="text-xs font-bold">
+                                    ({{ row.timesfmPot >= 0 ? '+' : '' }}{{ row.timesfmPot.toFixed(2) }}%)
+                                </span>
+                            </div>
+                            <div v-if="row.timesfmErrorPct !== null" class="text-xs mt-0.5 flex items-center space-x-1">
+                                <span :class="row.timesfmHit ? 'text-emerald-400' : 'text-rose-400'" class="font-bold">
+                                    {{ row.timesfmHit ? '✓ 方向命中' : '✗ 方向偏離' }}
+                                </span>
+                                <span :class="isDark ? 'text-slate-400' : 'text-slate-500'">· 誤差 {{ row.timesfmErrorPct.toFixed(2) }}%</span>
+                            </div>
+                        </div>
+                        <span v-else :class="isDark ? 'text-slate-600' : 'text-slate-400'">-</span>
+                    </td>
+
+                    <!-- Timestral 隔日目標價 (誤差) -->
+                    <td class="p-3 whitespace-nowrap">
+                        <div v-if="row.timestralPred !== null">
+                            <div class="font-black num-font text-cyan-400">
+                                ${{ Number(row.timestralPred).toFixed(2) }}
+                                <span v-if="row.timestralPot !== null" class="text-xs font-bold">
+                                    ({{ row.timestralPot >= 0 ? '+' : '' }}{{ row.timestralPot.toFixed(2) }}%)
+                                </span>
+                            </div>
+                            <div v-if="row.timestralErrorPct !== null" class="text-xs mt-0.5 flex items-center space-x-1">
+                                <span :class="row.timestralHit ? 'text-emerald-400' : 'text-rose-400'" class="font-bold">
+                                    {{ row.timestralHit ? '✓ 方向命中' : '✗ 方向偏離' }}
+                                </span>
+                                <span :class="isDark ? 'text-slate-400' : 'text-slate-500'">· 誤差 {{ row.timestralErrorPct.toFixed(2) }}%</span>
+                            </div>
+                        </div>
+                        <span v-else :class="isDark ? 'text-slate-600' : 'text-slate-400'">-</span>
+                    </td>
+
+                    <!-- 當日勝出模型 -->
+                    <td class="p-3 text-center whitespace-nowrap">
+                        <span v-if="row.winner === 'TimesFM 勝'"
+                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            TimesFM 勝
+                        </span>
+                        <span v-else-if="row.winner === 'Timestral 勝'"
+                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                            Timestral 勝
+                        </span>
+                        <span v-else-if="row.winner === 'TimesFM'"
+                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/25">
+                            TimesFM (單模型)
+                        </span>
+                        <span v-else-if="row.winner === 'Timestral'"
+                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+                            Timestral (單模型)
+                        </span>
+                        <span v-else-if="row.winner === '平手'"
+                              class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-500/20 text-slate-300 border border-slate-500/30">
+                            平手
+                        </span>
+                        <span v-else-if="row.nextActualPrice === null"
+                              class="text-xs text-amber-500/80 font-medium">
+                            開獎中
                         </span>
                         <span v-else :class="isDark ? 'text-slate-600' : 'text-slate-400'">-</span>
+                    </td>
+
+                    <!-- 均線 / 估值 / 籌碼 -->
+                    <td class="p-3 text-xs whitespace-nowrap">
+                        <div class="font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            {{ row.pullback_type || (row.ma60 ? 'MA60: $' + Number(row.ma60).toFixed(1) : '-') }}
+                        </div>
+                        <div class="num-font" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            PE: {{ row.pe ? Number(row.pe).toFixed(1) : '-' }} · PB: {{ row.pb ? Number(row.pb).toFixed(1) : '-' }}
+                            <span v-if="row.trust_net_5d !== null || row.foreign_net_5d !== null" class="ml-1">
+                                (投:{{ row.trust_net_5d || 0 }} / 外:{{ row.foreign_net_5d || 0 }})
+                            </span>
+                        </div>
                     </td>
                 </tr>
             </tbody>

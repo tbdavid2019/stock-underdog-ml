@@ -673,7 +673,7 @@
                                     {{ item.index_name || '綜合' }}
                                 </span>
                                 <span class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                                    {{ stripEmojis(item.strategy_type || item.model_name) }}
+                                    {{ formatStrategyName(item.strategy_type || item.model_name) }}
                                 </span>
                             </div>
                         </div>
@@ -960,13 +960,13 @@
                             <th class="py-2.5 px-2 font-bold num-font text-center w-8 whitespace-nowrap" title="排序名次">#</th>
                             <th class="py-2.5 px-2 font-bold whitespace-nowrap" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
                             <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="標的所屬市場指數（台灣50、台灣中型100、S&P 500、太空概念）">市場</th>
-                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="產生該推薦之量化策略或時序神經網路模型（如雙時序大模型共振、Timestral、TimesFM、玄鐵均線）">策略模型</th>
+                            <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="產生該推薦之量化策略或時序神經網路模型（如綜合優選、Timestral、TimesFM、季線支撐）">策略模型</th>
                             <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="資料庫最新收盤價或最新撮合即時成交價">現價</th>
-                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="時序基礎模型預測目標價 (P50) 或玄鐵均線支撐價格 (MA60/MA120)">目標價 / 均線</th>
+                            <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="時序基礎模型預測目標價 (P50) 或季線支撐價格 (MA60/MA120)">目標價 / 均線</th>
                             <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="相較現價之預期潛在報酬空間百分比（目標價 vs 現價）">潛力</th>
                             <th class="py-2.5 px-2 font-bold text-center num-font whitespace-nowrap" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
                             <th class="py-2.5 px-2 font-bold text-right num-font whitespace-nowrap" title="近 5 個交易日投信法人與外資法人累積買賣超張數（主力籌碼動向）">5日籌碼 (張)</th>
-                            <th class="py-2.5 px-2 font-bold whitespace-nowrap" title="多維量化條件交集狀態（四重共振、雙模型共振、玄鐵買點、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略共振標籤</th>
+                            <th class="py-2.5 px-2 font-bold whitespace-nowrap" title="多維量化條件交集狀態（綜合優選、雙AI看漲、季線支撐、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略標籤</th>
                             <th class="py-2.5 px-2 font-bold text-center whitespace-nowrap" title="點擊展開技術指標與深度分析抽屜">操作</th>
                         </tr>
                     </thead>
@@ -996,7 +996,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-2 text-center font-bold text-xs whitespace-nowrap">
-                                <span>{{ stripEmojis(item.strategy_type || item.model_name) }}</span>
+                                <span>{{ formatStrategyName(item.strategy_type || item.model_name) }}</span>
                             </td>
                             <td class="py-2.5 px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
                                 ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
@@ -1738,7 +1738,7 @@
                             </span>
                         </div>
                         <div class="text-xs sm:text-sm font-medium mt-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                            策略: <strong :class="isDark ? 'text-slate-200' : 'text-slate-900'">{{ item.strategy_type || item.model_name }}</strong>
+                            策略: <strong :class="isDark ? 'text-slate-200' : 'text-slate-900'">{{ formatStrategyName(item.strategy_type || item.model_name) }}</strong>
                         </div>
                     </div>
 

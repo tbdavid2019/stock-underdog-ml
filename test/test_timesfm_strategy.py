@@ -106,27 +106,41 @@ class TestTimesFMStrategy(unittest.TestCase):
         self.assertIn("TimesFM強", res_map["2330.TW"].tags)
 
     @patch("strategies.timesfm.get_timesfm_model")
-    def test_hit_uses_horizon_potential(self, mock_get_model):
+    def test_hit_uses_day1_potential(self, mock_get_model):
         mock_model = MagicMock()
         mock_model.forecast_batch.return_value = {
-            "TEST": {
+            "TEST_MISS": {
                 "current_price": 100.0,
                 "predicted_price": 100.5,
-                "horizon_predicted_price": 103.0,
+                "horizon_predicted_price": 105.0,
                 "potential": 0.5,
-                "horizon_potential": 3.0,
+                "horizon_potential": 5.0,
                 "risk_reward_ratio": 2.0,
-                "quantiles": {"p10": 99.0, "p50": 103.0, "p90": 110.0},
+                "quantiles": {"p10": 99.0, "p50": 100.5, "p90": 103.0},
+            },
+            "TEST_HIT": {
+                "current_price": 100.0,
+                "predicted_price": 102.5,
+                "horizon_predicted_price": 106.0,
+                "potential": 2.5,
+                "horizon_potential": 6.0,
+                "risk_reward_ratio": 2.5,
+                "quantiles": {"p10": 99.0, "p50": 102.5, "p90": 105.0},
             }
         }
         mock_get_model.return_value = mock_model
 
-        ctx = StockContext(ticker="TEST", df=pd.DataFrame({"Close": [100.0] * 60}))
-        result = self.strategy.evaluate(ctx)
+        ctx_miss = StockContext(ticker="TEST_MISS", df=pd.DataFrame({"Close": [100.0] * 60}))
+        res_miss = self.strategy.evaluate(ctx_miss)
+        # 0.5% < min_potential_hit (1.0%), so it should NOT be hit even though horizon is 5.0%
+        self.assertFalse(res_miss.is_hit)
 
-        self.assertTrue(result.is_hit)
+        ctx_hit = StockContext(ticker="TEST_HIT", df=pd.DataFrame({"Close": [100.0] * 60}))
+        res_hit = self.strategy.evaluate(ctx_hit)
+        self.assertTrue(res_hit.is_hit)
+        self.assertEqual(res_hit.potential, 2.5)
 
-    def test_wrapper_uses_horizon_p50_for_risk_reward(self):
+    def test_wrapper_uses_day1_for_potential_and_risk_reward(self):
         wrapper = TimesFMWrapper()
         wrapper._is_initialized = True
         wrapper.model = MagicMock()
@@ -145,9 +159,13 @@ class TestTimesFMStrategy(unittest.TestCase):
 
         result = wrapper.forecast_batch({"TEST": np.array([100.0] * 60)}, horizon=5)["TEST"]
 
-        self.assertEqual(result["potential"], 10.0)
+        # T+1 day1_pred is 101.0, curr is 100.0 -> potential = 1.0
+        self.assertEqual(result["predicted_price"], 101.0)
+        self.assertEqual(result["potential"], 1.0)
         self.assertEqual(result["day1_potential"], 1.0)
-        self.assertEqual(result["risk_reward_ratio"], 4.0)
+        self.assertEqual(result["horizon_potential"], 10.0)
+        # T+1: p50_day1 = 101.0, p10_day1 = 99.0, curr = 100.0 -> reward 1.0, risk 1.0 -> rr 1.0
+        self.assertEqual(result["risk_reward_ratio"], 1.0)
 
 
 if __name__ == "__main__":

@@ -150,6 +150,11 @@ class TestFormatter(unittest.TestCase):
         cand_section = msg[msg.find("優先推薦"):msg.find("波段操作")]
         self.assertNotIn("<pre>", cand_section, "優先推薦不應使用 <pre> 包裹以免手機版中英破版")
 
+        # 驗證波段操作已正名為季線支撐
+        self.assertIn("<b>【波段操作 (季線支撐)】</b>", msg)
+        self.assertIn("時序大模型 (TimesFM 預測 TOP 5)", msg)
+        self.assertIn("隔日目標 <code>1,046.2</code>", msg)
+
     def test_discord_message_formatting(self):
         """驗證 Discord 訊息採用 Markdown 語法"""
         msg = format_discord_message(
@@ -164,6 +169,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("**多維量化投資日報**", msg)
         self.assertIn("**【四重共振】**", msg)
         self.assertIn("**【三重共振】**", msg)
+        self.assertIn("**【波段操作 (季線支撐)】**", msg)
         self.assertIn("• **2330.TW 台積電** `1,005.00`", msg)
         self.assertIn("> 今日盤勢處於全面多頭", msg)
 
@@ -180,6 +186,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("多維量化策略投資日報", msg)
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("[👑四重共振]", msg)
+        self.assertIn("波段操作 (季線支撐)", msg)
 
     def test_format_dual_strategy_message_dict(self):
         """驗證整合輸出字典包含 telegram, discord, email 三種通道"""
@@ -325,6 +332,39 @@ class TestFormatter(unittest.TestCase):
         # Email checks
         self.assertIn("Timestral-209M", res["email"])
         self.assertIn("Timestral: +4.8%", res["email"])
+
+    def test_formatter_timesfm_t_plus_1_target_flow(self):
+        """驗證 TimesFM 隔日 T+1 目標價流程與盈虧比排版"""
+        tfm_results = [
+            {
+                "ticker": "2330.TW",
+                "potential": 2.5,
+                "current_price": 1000.0,
+                "predicted_price": 1025.0,
+                "risk_reward_ratio": 3.0,
+                "p10": 990.0,
+                "p90": 1035.0
+            }
+        ]
+        results = {
+            "overlap_candidates": [],
+            "xuantie_results": pd.DataFrame(),
+            "timesfm_results": tfm_results,
+            "macro_state": self.macro
+        }
+        res = format_dual_strategy_message("台灣50", results, "2026-10-21 17:00:00", name_map=self.name_map)
+        # Telegram: should display 1,000.0 → 1,025.0 with interval and RR
+        self.assertIn("<code>1,000.0</code> → <code>1,025.0</code>", res["telegram"])
+        self.assertIn("區間 <code>990.0~1035.0</code>", res["telegram"])
+        self.assertIn("盈虧比: <b>3.0x</b>", res["telegram"])
+
+        # Discord
+        self.assertIn("`1,000.0` → `1,025.0`", res["discord"])
+        self.assertIn("區間 `990.0~1035.0`", res["discord"])
+
+        # Email
+        self.assertIn("(1,000.0 → 1,025.0)", res["email"])
+        self.assertIn("盈虧比: 3.00x", res["email"])
 
 
 if __name__ == "__main__":

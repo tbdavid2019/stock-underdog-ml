@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.30';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.33';
 
 const { createApp } = Vue;
 
@@ -31,39 +31,39 @@ export const app = createApp({
             strategyOptions: [
                 {
                     id: 'resonance',
-                    label: '雙時序共振焦點',
+                    label: '綜合優選 (雙AI看漲)',
                     icon: 'military_tech',
-                    description: '【綜合極選】結合 Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，並要求同時站穩玄鐵均線支撐與三大法人主力合買，為全系統最高勝率之多維共振標的。'
+                    description: '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。'
                 },
                 {
                     id: 'timestral_bullish',
-                    label: 'Timestral 看漲 TOP',
+                    label: 'Timestral 看漲排行',
                     icon: 'smart_toy',
-                    description: '【Mistral AI 基礎模型】採用最新開源之 Timestral-209M 解碼器架構時序大模型，Zero-Shot 輸出 5 日目標價、P10~P90 蒙地卡羅風控信賴區間與非對稱盈虧比。'
+                    description: '【Mistral AI 預測】依 Timestral 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
                 },
                 {
                     id: 'timesfm_bullish',
-                    label: 'TimesFM 預測 TOP',
+                    label: 'TimesFM 看漲排行',
                     icon: 'auto_awesome',
-                    description: '【Google 時序大模型】採用 Google Research 預訓練之 TimesFM 200M 基礎模型，純推論模式預測未來 5 日目標價位，計算 P50 中位預期與 P10 防守位之真實風報比。'
+                    description: '【Google AI 預測】依 TimesFM 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
                 },
                 {
                     id: 'xuantie',
-                    label: '玄鐵均線波段',
+                    label: '季線支撐買點',
                     icon: 'show_chart',
-                    description: '【純技術面買點】「順大勢（MA60/120多頭排列）、逆小勢（回踩均線支撐）」，精確捕捉股價回測 MA60 季線或 MA120 半年線支撐之波段起漲買點。'
+                    description: '【技術面支撐】處於季線 (MA60) 多頭趨勢，且股價剛好回測季線或半年線 (MA120) 支撐區間 (±5%) 之波段買點。'
                 },
                 {
                     id: 'timestral_bearish',
-                    label: '時序模型避險',
+                    label: 'AI 看跌避險排行',
                     icon: 'shield',
-                    description: '【破底與避險防守】時序大模型預測跌幅最重、下行破底風險高或盈虧比惡化之標的，提示短線防守、減倉或避險觀察。'
+                    description: '【短線避險】AI 模型預測隔日跌幅較大或下行風險偏高之標的，供減碼或防守參考。'
                 },
                 {
                     id: 'latest',
-                    label: '最新全量批次',
+                    label: '全市場最新總表',
                     icon: 'dataset',
-                    description: '【全市場快照】當前指數/市場最新一批次全量分析總表，收錄所有個股之現價、預測目標價、PE/PB 估值、均線支撐與法人籌碼狀態。'
+                    description: '【全市場快照】最新批次所有追蹤標的之現價、隔日目標價、估值與籌碼總覽。'
                 }
             ],
 
@@ -107,7 +107,7 @@ export const app = createApp({
                 timestral: true,
                 timestralBands: true,
                 timesfm: true,
-                resonance: true,
+                resonance: false,
                 ma60: false
             },
             tickerInstHistory: [],
@@ -218,6 +218,229 @@ export const app = createApp({
     computed: {
         currentStrategyMeta() {
             return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
+        },
+        dailyHistoryRows() {
+            if (!this.historyRecords || !this.historyRecords.length) return [];
+
+            // 1. Group records by Date (YYYY-MM-DD)
+            const dateMap = new Map();
+            for (const r of this.historyRecords) {
+                const rawTs = String(r.timestamp || '').trim();
+                if (rawTs.length < 10) continue;
+                const dateKey = rawTs.slice(0, 10);
+                if (!dateMap.has(dateKey)) {
+                    dateMap.set(dateKey, {
+                        date: dateKey,
+                        closePrice: null,
+                        timesfmPred: null,
+                        timestralPred: null,
+                        ma60: null,
+                        pe: null,
+                        pb: null,
+                        pullback_type: null,
+                        trust_net_5d: null,
+                        foreign_net_5d: null
+                    });
+                }
+                const item = dateMap.get(dateKey);
+                const curP = Number(r.current_price);
+                if (!isNaN(curP) && curP > 0) item.closePrice = curP;
+
+                const ma60 = Number(r.ma60);
+                if (!isNaN(ma60) && ma60 > 0) item.ma60 = ma60;
+                if (r.pe !== null && r.pe !== undefined && !isNaN(Number(r.pe))) item.pe = Number(r.pe);
+                if (r.pb !== null && r.pb !== undefined && !isNaN(Number(r.pb))) item.pb = Number(r.pb);
+                if (r.pullback_type) item.pullback_type = r.pullback_type;
+                if (r.trust_net_5d !== null && r.trust_net_5d !== undefined && Number.isFinite(Number(r.trust_net_5d))) item.trust_net_5d = Number(r.trust_net_5d);
+                if (r.foreign_net_5d !== null && r.foreign_net_5d !== undefined && Number.isFinite(Number(r.foreign_net_5d))) item.foreign_net_5d = Number(r.foreign_net_5d);
+
+                if (r.timesfm_predicted_price) {
+                    const tfp = Number(r.timesfm_predicted_price);
+                    if (!isNaN(tfp) && tfp > 0) item.timesfmPred = tfp;
+                }
+                if (r.timestral_predicted_price) {
+                    const tmp = Number(r.timestral_predicted_price);
+                    if (!isNaN(tmp) && tmp > 0) item.timestralPred = tmp;
+                }
+
+                const predP = Number(r.predicted_price);
+                if (!isNaN(predP) && predP > 0) {
+                    const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
+                    if (strat.includes('timesfm')) {
+                        item.timesfmPred = predP;
+                    } else if (strat.includes('timestral')) {
+                        item.timestralPred = predP;
+                    }
+                }
+            }
+
+            // 2. Sort dates chronologically ascending (earliest to latest) to pair T+1 actual price
+            const sortedDates = Array.from(dateMap.keys()).sort();
+            const n = sortedDates.length;
+            const rows = [];
+
+            for (let i = 0; i < n; i++) {
+                const date = sortedDates[i];
+                const item = dateMap.get(date);
+                const closePrice = item.closePrice;
+                const nextDate = (i < n - 1) ? sortedDates[i + 1] : null;
+                const nextActualPrice = (nextDate && dateMap.get(nextDate)) ? dateMap.get(nextDate).closePrice : null;
+
+                const actualReturnPct = (nextActualPrice !== null && nextActualPrice > 0 && closePrice !== null && closePrice > 0)
+                    ? ((nextActualPrice - closePrice) / closePrice) * 100
+                    : null;
+
+                // TimesFM metrics
+                let timesfmPot = null;
+                let timesfmHit = null;
+                let timesfmErrorPct = null;
+                if (item.timesfmPred !== null && closePrice !== null && closePrice > 0) {
+                    timesfmPot = ((item.timesfmPred - closePrice) / closePrice) * 100;
+                }
+                if (nextActualPrice !== null && item.timesfmPred !== null && nextActualPrice > 0) {
+                    timesfmErrorPct = Math.abs(item.timesfmPred - nextActualPrice) / nextActualPrice * 100;
+                    if (actualReturnPct !== null && timesfmPot !== null) {
+                        timesfmHit = (timesfmPot >= 0 && actualReturnPct >= 0) || (timesfmPot < 0 && actualReturnPct < 0);
+                    }
+                }
+
+                // Timestral metrics
+                let timestralPot = null;
+                let timestralHit = null;
+                let timestralErrorPct = null;
+                if (item.timestralPred !== null && closePrice !== null && closePrice > 0) {
+                    timestralPot = ((item.timestralPred - closePrice) / closePrice) * 100;
+                }
+                if (nextActualPrice !== null && item.timestralPred !== null && nextActualPrice > 0) {
+                    timestralErrorPct = Math.abs(item.timestralPred - nextActualPrice) / nextActualPrice * 100;
+                    if (actualReturnPct !== null && timestralPot !== null) {
+                        timestralHit = (timestralPot >= 0 && actualReturnPct >= 0) || (timestralPot < 0 && actualReturnPct < 0);
+                    }
+                }
+
+                // Daily winner
+                let winner = null;
+                if (nextActualPrice !== null) {
+                    if (timesfmErrorPct !== null && timestralErrorPct !== null) {
+                        if (Math.abs(timesfmErrorPct - timestralErrorPct) < 0.05) {
+                            winner = '平手';
+                        } else if (timesfmErrorPct < timestralErrorPct) {
+                            winner = 'TimesFM 勝';
+                        } else {
+                            winner = 'Timestral 勝';
+                        }
+                    } else if (timesfmErrorPct !== null) {
+                        winner = 'TimesFM';
+                    } else if (timestralErrorPct !== null) {
+                        winner = 'Timestral';
+                    }
+                }
+
+                rows.push({
+                    date,
+                    closePrice,
+                    nextDate,
+                    nextActualPrice,
+                    actualReturnPct,
+                    timesfmPred: item.timesfmPred,
+                    timesfmPot,
+                    timesfmHit,
+                    timesfmErrorPct,
+                    timestralPred: item.timestralPred,
+                    timestralPot,
+                    timestralHit,
+                    timestralErrorPct,
+                    winner,
+                    ma60: item.ma60,
+                    pullback_type: item.pullback_type,
+                    pe: item.pe,
+                    pb: item.pb,
+                    trust_net_5d: item.trust_net_5d,
+                    foreign_net_5d: item.foreign_net_5d
+                });
+            }
+
+            // Return sorted descending (newest first for table display)
+            return rows.reverse();
+        },
+        modelScorecard() {
+            const rows = this.dailyHistoryRows;
+            if (!rows || !rows.length) return null;
+
+            let tfCount = 0, tfHitCount = 0, tfErrorSum = 0, tfWins = 0;
+            let tmCount = 0, tmHitCount = 0, tmErrorSum = 0, tmWins = 0;
+
+            for (const r of rows) {
+                if (r.nextActualPrice === null) continue;
+
+                if (r.timesfmErrorPct !== null) {
+                    tfCount++;
+                    tfErrorSum += r.timesfmErrorPct;
+                    if (r.timesfmHit) tfHitCount++;
+                    if (r.winner === 'TimesFM 勝') tfWins++;
+                }
+
+                if (r.timestralErrorPct !== null) {
+                    tmCount++;
+                    tmErrorSum += r.timestralErrorPct;
+                    if (r.timestralHit) tmHitCount++;
+                    if (r.winner === 'Timestral 勝') tmWins++;
+                }
+            }
+
+            if (tfCount === 0 && tmCount === 0) return null;
+
+            const tfHitRate = tfCount > 0 ? (tfHitCount / tfCount) * 100 : null;
+            const tfMape = tfCount > 0 ? (tfErrorSum / tfCount) : null;
+
+            const tmHitRate = tmCount > 0 ? (tmHitCount / tmCount) * 100 : null;
+            const tmMape = tmCount > 0 ? (tmErrorSum / tmCount) : null;
+
+            let overallWinner = '雙模型表現均衡';
+            let winningModel = null;
+            if (tfMape !== null && tmMape !== null) {
+                if (Math.abs(tfMape - tmMape) < 0.1) {
+                    if (tfHitRate > tmHitRate + 5) {
+                        overallWinner = `🏆 該股歷史表現：TimesFM 較準（方向勝率 ${tfHitRate.toFixed(1)}% vs ${tmHitRate.toFixed(1)}%）`;
+                        winningModel = 'TimesFM';
+                    } else if (tmHitRate > tfHitRate + 5) {
+                        overallWinner = `🏆 該股歷史表現：Timestral 較準（方向勝率 ${tmHitRate.toFixed(1)}% vs ${tfHitRate.toFixed(1)}%）`;
+                        winningModel = 'Timestral';
+                    } else {
+                        overallWinner = `⚖️ 該股歷史表現：雙模型實力相當（平均誤差 ${tfMape.toFixed(2)}% vs ${tmMape.toFixed(2)}%）`;
+                    }
+                } else if (tfMape < tmMape) {
+                    overallWinner = `🏆 該股歷史表現：TimesFM 較準（平均誤差 ${tfMape.toFixed(2)}% vs ${tmMape.toFixed(2)}%）`;
+                    winningModel = 'TimesFM';
+                } else {
+                    overallWinner = `🏆 該股歷史表現：Timestral 較準（平均誤差 ${tmMape.toFixed(2)}% vs ${tfMape.toFixed(2)}%）`;
+                    winningModel = 'Timestral';
+                }
+            } else if (tfMape !== null) {
+                overallWinner = `🏆 該股主要由 TimesFM 追蹤（平均誤差 ${tfMape.toFixed(2)}%）`;
+                winningModel = 'TimesFM';
+            } else if (tmMape !== null) {
+                overallWinner = `🏆 該股主要由 Timestral 追蹤（平均誤差 ${tmMape.toFixed(2)}%）`;
+                winningModel = 'Timestral';
+            }
+
+            return {
+                timesfm: {
+                    count: tfCount,
+                    hitRate: tfHitRate !== null ? tfHitRate.toFixed(1) : '-',
+                    mape: tfMape !== null ? tfMape.toFixed(2) : '-',
+                    wins: tfWins,
+                    isLeader: winningModel === 'TimesFM'
+                },
+                timestral: {
+                    count: tmCount,
+                    hitRate: tmHitRate !== null ? tmHitRate.toFixed(1) : '-',
+                    mape: tmMape !== null ? tmMape.toFixed(2) : '-',
+                    wins: tmWins,
+                    isLeader: winningModel === 'Timestral'
+                },
+                overallWinner
+            };
         }
     },
     methods: {
@@ -409,7 +632,7 @@ export const app = createApp({
                 this.loadHistoryCompanyData(resolution.ticker, requestId);
 
                 const [historyData, instData] = await Promise.all([
-                    ApiClient.getPredictionHistory(resolution.ticker, 90).catch(() => []),
+                    ApiClient.getPredictionHistory(resolution.ticker, 240).catch(() => []),
                     ApiClient.getInstitutionalHistory(resolution.ticker, 60).catch(() => [])
                 ]);
 
@@ -1323,35 +1546,46 @@ export const app = createApp({
             // Traditional Chinese: strip all redundant English in parentheses
             return s.replace(/\s*\([A-Za-z\s_-]+\)/g, '').trim();
         },
+        formatStrategyName(str) {
+            if (!str) return '-';
+            let s = this.stripEmojis(str);
+            if (s.includes('玄鐵重劍') || s.includes('玄鐵買點') || s.includes('玄鐵')) {
+                return '季線支撐';
+            }
+            if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
+                return '綜合優選';
+            }
+            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振')) {
+                return '雙AI看漲';
+            }
+            return s;
+        },
         parseTags(tags) {
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
             return list.map(rawTag => {
-                const cleanLabel = this.stripEmojis(rawTag);
+                let cleanLabel = this.stripEmojis(rawTag);
+                if (cleanLabel.includes('玄鐵重劍') || cleanLabel.includes('玄鐵買點') || cleanLabel.includes('玄鐵')) {
+                    cleanLabel = cleanLabel.replace(/玄鐵重劍|玄鐵買點|玄鐵/g, '季線支撐');
+                }
+                if (/四重共振|三重共振|多維共振|雙重共振/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振/g, '綜合優選');
+                }
+                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振/g, '雙AI看漲');
+                }
                 let icon = null;
                 let badgeType = 'default';
 
                 let tooltip = cleanLabel;
-                if (cleanLabel.includes('四重共振')) {
-                    icon = 'workspace_premium';
-                    badgeType = 'resonance_quad';
-                    tooltip = '【👑四重共振】同時符合「玄鐵季線回踩 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 三大法人籌碼鎖碼」四大頂級條件，為系統最高勝率極選。';
-                } else if (cleanLabel.includes('三重共振')) {
+                if (cleanLabel.includes('綜合優選')) {
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
-                    tooltip = '【🏆三重共振】同時符合技術面均線支撐、時序大模型看漲與三大法人籌碼鎖碼三項條件。';
-                } else if (cleanLabel.includes('雙時序共振') || cleanLabel.includes('雙大模型共振') || cleanLabel.includes('雙模型共振') || cleanLabel.includes('雙ML共振')) {
+                    tooltip = '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。';
+                } else if (cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                    tooltip = '【🔮雙模型共振】Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，同步預測看漲。';
-                } else if (cleanLabel.includes('雙重共振') || cleanLabel.includes('雙重符合')) {
-                    icon = 'stars';
-                    badgeType = 'resonance_double';
-                    tooltip = '【⭐雙重共振】同時符合兩大核心量化維度（如時序大模型 ∩ 技術支撐 或 時序大模型 ∩ 籌碼鎖碼）。';
-                } else if (cleanLabel.includes('多維共振')) {
-                    icon = 'hub';
-                    badgeType = 'resonance_multi';
-                    tooltip = '【多維共振】多量化策略共同篩選出的交集標的。';
+                    tooltip = '【雙AI看漲】Google TimesFM 與 Mistral Timestral 雙時序大模型同步預測隔日看漲。';
                 } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
@@ -1364,22 +1598,22 @@ export const app = createApp({
                     icon = 'handshake';
                     badgeType = 'institutional';
                     tooltip = '【法人買超】三大法人資金近期呈現顯著淨流入。';
-                } else if (cleanLabel.includes('玄鐵') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
+                } else if (cleanLabel.includes('季線支撐') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
                     icon = 'show_chart';
                     badgeType = 'technical';
-                    tooltip = '【🗡️玄鐵買點】「順大勢、逆小勢」，股價處於多頭波段並精確回踩 MA60 季線或 MA120 半年線支撐位。';
+                    tooltip = '【季線支撐】「順大勢、逆小勢」，股價處於多頭波段並回測 MA60 季線或 MA120 半年線支撐位。';
                 } else if (cleanLabel.includes('Timestral')) {
                     icon = 'smart_toy';
                     badgeType = 'ai_timestral';
-                    tooltip = '【🔮Timestral看漲】Mistral AI 209M 時序大模型預測未來 5 日具有正向報酬潛力與良好盈虧比。';
+                    tooltip = '【Timestral看漲】Mistral AI 209M 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
-                    tooltip = '【🔮TimesFM看漲】Google Research 200M 時序基礎模型 Zero-Shot 預測未來 5 日目標價位顯著看漲。';
-                } else if (cleanLabel.includes('高盈虧比')) {
+                    tooltip = '【TimesFM看漲】Google Research 200M 時序基礎模型 Zero-Shot 預測隔日 (T+1) 目標價位顯著看漲。';
+                } else if (cleanLabel.includes('高盈虧比') || cleanLabel.includes('高風報比')) {
                     icon = 'balance';
                     badgeType = 'risk_reward';
-                    tooltip = '【高盈虧比】時序大模型 P50 中位獲利空間大於 P10 悲觀防守空間（Risk/Reward > 1.2x）。';
+                    tooltip = '【高盈虧比】時序大模型 P50 中位獲利空間大於 P10 悲觀防守空間。';
                 } else if (cleanLabel.includes('低PE') || cleanLabel.includes('低PB')) {
                     icon = 'equalizer';
                     badgeType = 'fundamental';
@@ -1387,7 +1621,7 @@ export const app = createApp({
                 } else if (cleanLabel.includes('防守') || cleanLabel.includes('避險')) {
                     icon = 'shield';
                     badgeType = 'defense';
-                    tooltip = '【🔻防守/避險】預測破底風險高或盈虧比過低，不宜追高，建議保持防守觀望。';
+                    tooltip = '【防守/避險】預測破底風險高或盈虧比過低，不宜追高，建議保持防守觀望。';
                 } else if (cleanLabel.includes('主流板塊')) {
                     icon = 'hub';
                     badgeType = 'technical';
@@ -1720,6 +1954,23 @@ const globalCleanRegimeName = (str) => {
 };
 app.config.globalProperties.cleanRegimeName = globalCleanRegimeName;
 window.cleanRegimeName = globalCleanRegimeName;
+
+const globalFormatStrategyName = (str) => {
+    if (!str) return '-';
+    let s = globalStripEmojis(str);
+    if (s.includes('玄鐵重劍') || s.includes('玄鐵買點') || s.includes('玄鐵')) {
+        return '季線支撐';
+    }
+    if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
+        return '綜合優選';
+    }
+    if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振')) {
+        return '雙AI看漲';
+    }
+    return s;
+};
+app.config.globalProperties.formatStrategyName = globalFormatStrategyName;
+window.formatStrategyName = globalFormatStrategyName;
 
 const globalFormatFollowers = (count) => {
     if (count === null || count === undefined) return '資料不足';
