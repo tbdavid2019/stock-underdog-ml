@@ -101,7 +101,8 @@ def _format_telegram_candidate_card(
 
     badge = ""
     if clef_tag:
-        badge = f"[{html.escape(clef_tag)}]"
+        clean_clef_tag = str(clef_tag).replace("(本地規則)", "").strip()
+        badge = f"[{html.escape(clean_clef_tag)}]"
     elif tier:
         badge = f"[{html.escape(tier)}]"
 

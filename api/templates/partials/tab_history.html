@@ -755,27 +755,22 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">bolt</span>
-                    <span>⚡ AI 綜合決策裁判（Clef-Flash System One）</span>
+                    <span>⚡ AI 綜合操作建議</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    綜合雙時序模型預測、季線支撐、三大法人籌碼與基本面估值，進行 &lt;200ms 非自回歸機率推論
+                    綜合雙模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率
                 </p>
             </div>
-            <!-- Node Slot Badge & Refresh Button -->
+            <!-- Refresh Button -->
             <div class="flex items-center space-x-2">
-                <span v-if="historyDecisionVerdict && historyDecisionVerdict.source_slot"
-                      class="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold"
-                      :class="isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'">
-                    {{ historyDecisionVerdict.source_slot }}
-                </span>
                 <button type="button"
                         @click="loadHistoryDecision(resolvedTicker || searchTicker, historyRequestId, true)"
                         :disabled="historyDecisionLoading"
-                        title="強制重新推論"
+                        title="強制重新評估"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm disabled:opacity-50"
                         :class="isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'">
                     <span class="material-symbols-outlined text-[15px] leading-none" :class="{ 'animate-spin': historyDecisionLoading }">refresh</span>
-                    <span>{{ historyDecisionLoading ? '推論中...' : '重新推論' }}</span>
+                    <span>{{ historyDecisionLoading ? '評估中...' : '重新評估' }}</span>
                 </button>
             </div>
         </div>
@@ -783,7 +778,7 @@
         <!-- Loading Skeleton -->
         <div v-if="historyDecisionLoading && !historyDecisionVerdict" class="py-6 flex flex-col items-center justify-center space-y-2">
             <span class="material-symbols-outlined text-3xl text-amber-500 animate-spin">progress_activity</span>
-            <p class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">正在向 Clef-Flash 決策節點進行即時機率推論...</p>
+            <p class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">正在綜合技術面、籌碼面與模型預測計算操作建議...</p>
         </div>
 
         <!-- Decision Content -->
@@ -798,7 +793,7 @@
                          historyDecisionVerdict.action_decision === 'avoid' ? (isDark ? 'bg-rose-950/40 border-rose-800/60 text-rose-300' : 'bg-rose-50/80 border-rose-300 text-rose-900') :
                          (isDark ? 'bg-amber-950/40 border-amber-800/60 text-amber-300' : 'bg-amber-50/80 border-amber-300 text-[#2B251A]')
                      ]">
-                    <div class="text-xs font-bold opacity-80 mb-1">建議操作 (Action)</div>
+                    <div class="text-xs font-bold opacity-80 mb-1">建議操作</div>
                     <div class="text-xl sm:text-2xl font-black flex items-center space-x-1.5">
                         <span v-if="historyDecisionVerdict.action_decision === 'strong_buy'">🚀 積極買進</span>
                         <span v-else-if="historyDecisionVerdict.action_decision === 'buy'">📈 逢低佈局</span>
@@ -813,7 +808,7 @@
                 <!-- 2. 出手信心分 -->
                 <div class="p-4 rounded-xl border flex flex-col justify-between"
                      :class="isDark ? 'bg-[#15171C] border-[#262626] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'">
-                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">出手信心評分 (Conviction)</div>
+                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">出手信心評分</div>
                     <div class="text-xl sm:text-2xl font-black mt-1">
                         <span class="text-amber-500">{{ Number(historyDecisionVerdict.conviction_score || 0).toFixed(2) }}</span>
                         <span class="text-xs font-normal opacity-60"> / 5.00</span>
@@ -826,7 +821,7 @@
                 <!-- 3. 好買點勝率 -->
                 <div class="p-4 rounded-xl border flex flex-col justify-between"
                      :class="isDark ? 'bg-[#15171C] border-[#262626] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'">
-                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">好買點機率 (Favorable Entry)</div>
+                    <div class="text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">好買點機率</div>
                     <div class="text-xl sm:text-2xl font-black mt-1"
                          :class="(historyDecisionVerdict.is_favorable_entry || 0) >= 0.6 ? 'text-emerald-500' : ((historyDecisionVerdict.is_favorable_entry || 0) >= 0.4 ? 'text-amber-500' : 'text-rose-500')">
                         {{ Math.round((historyDecisionVerdict.is_favorable_entry || 0) * 100) }}%
@@ -841,8 +836,7 @@
             <div class="p-3.5 rounded-xl border space-y-2.5"
                  :class="isDark ? 'bg-[#15171C] border-[#262626]' : 'bg-slate-50/60 border-slate-200'">
                 <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
-                    <span>四維動作機率分佈 (Action Probabilities)</span>
-                    <span class="text-[11px] font-normal opacity-60">非自回歸 Softmax 推論輸出</span>
+                    <span>各項操作建議機率分佈</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <!-- strong_buy -->

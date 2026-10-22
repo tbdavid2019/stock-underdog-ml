@@ -106,7 +106,7 @@ class LLMConfig:
 class ClefConfig:
     """5-Tier Resilient Clef/JEV/OpenAI/LocalRules System One Decision API settings"""
     ENABLE_CLEF_DECISION: bool = os.getenv("ENABLE_CLEF_DECISION", "true").lower() in ("true", "1", "yes")
-    TIMEOUT: int = int(os.getenv("CLEF_TIMEOUT_SECONDS", "4"))
+    TIMEOUT: int = int(os.getenv("CLEF_TIMEOUT_SECONDS", "45"))
     MAX_CANDIDATES: int = int(os.getenv("CLEF_MAX_CANDIDATES", "15"))
 
     PRIMARY_NAME: str = os.getenv("CLEF_PRIMARY_NAME", "Clef-Create360")

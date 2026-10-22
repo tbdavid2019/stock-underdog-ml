@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-22 (v2.4.38)
+
+### Enhanced & Optimized (UI Clean Nomenclature & Singleflight Per-Key Locking Defense)
+- **🎨 前端介面徹底移除內部模型代號與工程術語 (`tab_history.html`, `tab_podcast.html`, `tab_agent_hub.html`)**：
+  - **`tab_history.html`**：
+    - 徹底刪除右上角 `source_slot` 節點徽章（如 `Clef-Create360`），使用者無需關注內部推論拓撲。
+    - 標題正名為「**⚡ AI 綜合操作建議**」，副標題簡化為「綜合雙模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率」。
+    - 載入狀態提示更新為「正在綜合技術面、籌碼面與模型預測計算操作建議...」。
+    - 按鈕文案統一為「重新評估」與「評估中...」。
+    - 三大核心指標名稱純淨中文化：「建議操作」、「出手信心評分」、「好買點機率」，移除括弧英文註釋；下方機率條標題更名為「各項操作建議機率分佈」，並移除內部「非自回歸 Softmax 推論輸出」工程術語。
+  - **`tab_podcast.html`**：移除提示字中的內部來源資訊，保留「AI 市場催化重要性評級: X 分」。
+  - **`tab_agent_hub.html`**：精簡工具標籤為「17 大原生量化 MCP 函數」。
+- **🛡️ 決策鏈超時調校至 45 秒與防驚群效應（Singleflight Per-Key Lock）(`core/config.py`, `data/clef_client.py`)**：
+  - **超時放寬 (`ClefConfig`, `ClefSlot`)**：將預設超時由 `4s` 提升至 `45s`（`CLEF_TIMEOUT_SECONDS=45`），應對上游模型冷啟動與深度長推論。
+  - **防驚群機制 (`_INFLIGHT_LOCKS`)**：在 `ClefDecisionClient` 導入 Singleflight Per-Key Lock 與 Double-Checked Locking 機制，同一時間對相同標的（如 `2330.TW`）的併發請求僅會發出 1 次遠端調用，其餘請求等待鎖釋放後直接命中 L1 快取，杜絕驚群效應。
+  - **併發流控**：批次評估 `evaluate_candidates_batch` 的預設 `max_workers` 調降為 2，避免並發瞬間壓垮遠端節點。
+- **🧪 單元測試覆蓋 (`test/test_clef_client.py`)**：新增 45 秒預設超時檢查與 5 執行緒併發 Singleflight 僅調用一次驗證測試。
+
 ## 2026-10-22 (v2.4.37)
 
 ### Added & Enhanced (Clef-Flash System One Decision Engine Integration & Telegram Minimalist Stock Picks)

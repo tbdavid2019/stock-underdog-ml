@@ -263,7 +263,7 @@
                 <div class="flex flex-wrap items-center gap-1.5 shrink-0 justify-end">
                     <!-- AI Importance Badge (Clef / JEV System One / Local Rules) -->
                     <span v-if="ep.importance_score"
-                          :title="'AI 市場催化重要性評級: ' + ep.importance_score + ' 分 (來源: ' + (ep.decision_slot || 'local_rules') + ')'"
+                          :title="'AI 市場催化重要性評級: ' + ep.importance_score + ' 分'"
                           class="px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 border"
                           :class="ep.importance_level === 'heavyweight' 
                               ? (isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20' : 'bg-amber-100 text-amber-900 border-amber-300 font-black') 

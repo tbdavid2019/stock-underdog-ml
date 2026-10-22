@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.37';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.37';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.38';
 
 const { createApp } = Vue;
 
@@ -1656,7 +1656,7 @@ export const app = createApp({
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
             return list.map(rawTag => {
-                let cleanLabel = this.stripEmojis(rawTag);
+                let cleanLabel = this.stripEmojis(rawTag).replace(/\(本地規則\)/g, '').trim();
                 if (cleanLabel.includes('玄鐵重劍') || cleanLabel.includes('玄鐵買點') || cleanLabel.includes('玄鐵')) {
                     cleanLabel = cleanLabel.replace(/玄鐵重劍|玄鐵買點|玄鐵/g, '季線支撐');
                 }

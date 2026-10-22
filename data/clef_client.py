@@ -29,7 +29,7 @@ logger = logging.getLogger("stock_app.data.clef_client")
 class ClefSlot:
     name: str
     url: str
-    timeout: int = 6
+    timeout: int = 45
     api_key: Optional[str] = None
 
 
@@ -113,6 +113,7 @@ class ClefDecisionClient:
     _MEM_CACHE_LOCK = threading.Lock()
     _MEM_CACHE_MAX_SIZE: int = 1000
     CACHE_TTL_SECONDS: float = 86400.0  # 24 hours
+    _INFLIGHT_LOCKS: Dict[str, threading.Lock] = {}
 
     def __init__(
         self,
@@ -529,6 +530,7 @@ class ClefDecisionClient:
 
         def _persist_and_return(verdict_obj: ClefDecisionVerdict) -> ClefDecisionVerdict:
             if is_cacheable:
+                cur_now = time.time()
                 # Do not write transient network failure fallbacks into 24-hour DuckDB storage
                 is_transient_failure = (verdict_obj.source_slot == "local_rules" and self.enabled)
                 ttl_effective = 60.0 if is_transient_failure else self.CACHE_TTL_SECONDS
@@ -537,7 +539,7 @@ class ClefDecisionClient:
                     if len(self._MEM_CACHE) >= self._MEM_CACHE_MAX_SIZE:
                         for k in list(self._MEM_CACHE.keys())[:200]:
                             self._MEM_CACHE.pop(k, None)
-                    cached_entry = (now - self.CACHE_TTL_SECONDS + ttl_effective, verdict_obj)
+                    cached_entry = (cur_now - self.CACHE_TTL_SECONDS + ttl_effective, verdict_obj)
                     self._mem_cache[cache_key] = cached_entry
                     self._MEM_CACHE[cache_key] = cached_entry
 
@@ -545,65 +547,92 @@ class ClefDecisionClient:
                     self.db.save_decision_verdict(ticker, verdict_obj.to_dict())
             return verdict_obj
 
-        if not self.enabled:
-            return _persist_and_return(self._evaluate_local_rules(state, error_msg="Clef decision disabled"))
+        # Singleflight per-key lock to prevent thundering herd
+        key_lock = None
+        if is_cacheable:
+            with self._MEM_CACHE_LOCK:
+                if len(self._INFLIGHT_LOCKS) >= self._MEM_CACHE_MAX_SIZE:
+                    for k in list(self._INFLIGHT_LOCKS.keys())[:200]:
+                        self._INFLIGHT_LOCKS.pop(k, None)
+                if cache_key not in self._INFLIGHT_LOCKS:
+                    self._INFLIGHT_LOCKS[cache_key] = threading.Lock()
+                key_lock = self._INFLIGHT_LOCKS[cache_key]
 
-        questions = custom_questions or DEFAULT_STOCK_QUESTIONS
-
-        success, answers, slot_name, error_msg = self._call_systemone(state, questions)
-        if not success or not answers:
-            return _persist_and_return(self._evaluate_local_rules(state, error_msg=error_msg or "All Clef endpoints failed"))
-
+        if key_lock:
+            key_lock.acquire()
         try:
-            # Parse action_decision safely
-            action_data = answers.get("action_decision") or {}
-            action_choice = str(action_data.get("choice") or "hold_watch")
-            action_conf = _safe_float(action_data.get("confidence"), 0.0)
-            raw_probs = action_data.get("probabilities") or {}
-            action_probs = {k: _safe_float(v, 0.0) for k, v in raw_probs.items()}
+            # Double-Checked Locking after acquiring singleflight lock
+            if is_cacheable and not force_refresh:
+                now_check = time.time()
+                with self._MEM_CACHE_LOCK:
+                    cached_item = self._mem_cache.get(cache_key) or self._MEM_CACHE.get(cache_key)
+                    if cached_item:
+                        cached_ts, cached_verdict = cached_item
+                        if now_check - cached_ts < self.CACHE_TTL_SECONDS:
+                            return cached_verdict
 
-            # Parse conviction_score safely
-            conviction_data = answers.get("conviction_score") or {}
-            conviction_score = _safe_float(conviction_data.get("score"), 2.5)
+            if not self.enabled:
+                return _persist_and_return(self._evaluate_local_rules(state, error_msg="Clef decision disabled"))
 
-            # Parse is_favorable_entry safely
-            noul_data = answers.get("is_favorable_entry") or {}
-            noul_val = _safe_float(noul_data.get("noul"), 0.5)
+            questions = custom_questions or DEFAULT_STOCK_QUESTIONS
 
-            # Generate readable decision tag
-            prob_pct = int(action_probs.get(action_choice, action_conf) * 100)
-            if action_choice == "strong_buy":
-                tag = f"🤖AI強買({prob_pct}%)"
-            elif action_choice == "buy":
-                tag = f"🤖AI看好({prob_pct}%)"
-            elif action_choice == "hold_watch":
-                tag = "🤖AI建議觀察"
-            elif action_choice == "avoid":
-                tag = f"⚠️AI建議避開({prob_pct}%)"
-            else:
-                tag = "🤖AI中立"
+            success, answers, slot_name, error_msg = self._call_systemone(state, questions)
+            if not success or not answers:
+                return _persist_and_return(self._evaluate_local_rules(state, error_msg=error_msg or "All Clef endpoints failed"))
 
-            verdict = ClefDecisionVerdict(
-                ticker=ticker,
-                action_decision=action_choice,
-                action_confidence=action_conf,
-                action_probabilities=action_probs,
-                conviction_score=conviction_score,
-                is_favorable_entry=noul_val,
-                tag=tag,
-                source_slot=slot_name,
-                success=True
-            )
-            return _persist_and_return(verdict)
-        except Exception as parse_err:
-            logger.warning(f"Error parsing answers from {slot_name}: {parse_err}, degrading to local rules...")
-            return _persist_and_return(self._evaluate_local_rules(state, error_msg=f"Answer parsing error: {parse_err}"))
+            try:
+                # Parse action_decision safely
+                action_data = answers.get("action_decision") or {}
+                action_choice = str(action_data.get("choice") or "hold_watch")
+                action_conf = _safe_float(action_data.get("confidence"), 0.0)
+                raw_probs = action_data.get("probabilities") or {}
+                action_probs = {k: _safe_float(v, 0.0) for k, v in raw_probs.items()}
+
+                # Parse conviction_score safely
+                conviction_data = answers.get("conviction_score") or {}
+                conviction_score = _safe_float(conviction_data.get("score"), 2.5)
+
+                # Parse is_favorable_entry safely
+                noul_data = answers.get("is_favorable_entry") or {}
+                noul_val = _safe_float(noul_data.get("noul"), 0.5)
+
+                # Generate readable decision tag
+                prob_pct = int(action_probs.get(action_choice, action_conf) * 100)
+                if action_choice == "strong_buy":
+                    tag = f"🤖AI強買({prob_pct}%)"
+                elif action_choice == "buy":
+                    tag = f"🤖AI看好({prob_pct}%)"
+                elif action_choice == "hold_watch":
+                    tag = "🤖AI建議觀察"
+                elif action_choice == "avoid":
+                    tag = f"⚠️AI建議避開({prob_pct}%)"
+                else:
+                    tag = "🤖AI中立"
+
+                verdict = ClefDecisionVerdict(
+                    ticker=ticker,
+                    action_decision=action_choice,
+                    action_confidence=action_conf,
+                    action_probabilities=action_probs,
+                    conviction_score=conviction_score,
+                    is_favorable_entry=noul_val,
+                    tag=tag,
+                    source_slot=slot_name,
+                    success=True
+                )
+                return _persist_and_return(verdict)
+            except Exception as parse_err:
+                logger.warning(f"Error parsing answers from {slot_name}: {parse_err}, degrading to local rules...")
+                return _persist_and_return(self._evaluate_local_rules(state, error_msg=f"Answer parsing error: {parse_err}"))
+        finally:
+            if key_lock:
+                key_lock.release()
 
     def evaluate_candidates_batch(
         self,
         candidates: List[Dict[str, Any]],
         macro_regime: Optional[str] = None,
-        max_workers: int = 5,
+        max_workers: int = 2,
         force_refresh: bool = False
     ) -> Dict[str, ClefDecisionVerdict]:
         """

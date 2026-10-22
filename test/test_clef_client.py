@@ -477,6 +477,46 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(verdict.action_decision, "strong_buy")
         self.assertIn("本地規則", verdict.tag)
 
+    def test_default_timeout_is_45_seconds(self):
+        """驗證三級 Fallback 節點預設超時設定為 45 秒以應對模型冷啟動與長推論"""
+        client = ClefDecisionClient()
+        self.assertTrue(len(client.slots) > 0)
+        for slot in client.slots:
+            self.assertEqual(slot.timeout, 45)
+
+    def test_singleflight_concurrent_requests_execute_once(self):
+        """驗證當多個執行緒併發查詢同一標的 (如 2330.TW) 時，Singleflight 鎖保證僅發出 1 次請求"""
+        import concurrent.futures
+        client = ClefDecisionClient(enable_cache=True)
+        with ClefDecisionClient._MEM_CACHE_LOCK:
+            ClefDecisionClient._MEM_CACHE.clear()
+
+        call_counter = {"count": 0}
+
+        def mock_call(state, questions):
+            import time
+            time.sleep(0.05)  # 模擬遠端推論延遲
+            call_counter["count"] += 1
+            return True, {
+                "action_decision": {"choice": "buy", "confidence": 0.8},
+                "conviction_score": {"score": 4.0},
+                "is_favorable_entry": {"noul": 0.75}
+            }, "Clef-Create360", None
+
+        cand = {"ticker": "2330.TW", "current_price": 1000.0}
+
+        with patch.object(client, "_call_systemone", side_effect=mock_call):
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(client.evaluate_stock, cand) for _ in range(5)]
+                results = [f.result() for f in futures]
+
+        # 驗證遠端呼叫僅發生 1 次，其餘 4 個請求等待後直接命中快取
+        self.assertEqual(call_counter["count"], 1)
+        self.assertEqual(len(results), 5)
+        for verdict in results:
+            self.assertTrue(verdict.success)
+            self.assertEqual(verdict.action_decision, "buy")
+
 
 if __name__ == "__main__":
     unittest.main()
