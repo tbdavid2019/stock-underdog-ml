@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.35';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.36';
 
 const { createApp } = Vue;
 
@@ -367,8 +367,9 @@ export const app = createApp({
             const rows = this.dailyHistoryRows;
             if (!rows || !rows.length) return null;
 
-            let tfCount = 0, tfHitCount = 0, tfErrorSum = 0, tfWins = 0;
-            let tmCount = 0, tmHitCount = 0, tmErrorSum = 0, tmWins = 0;
+            let tfCount = 0, tfHitCount = 0, tfErrorSum = 0;
+            let tmCount = 0, tmHitCount = 0, tmErrorSum = 0;
+            let headToHeadCount = 0, tfWins = 0, tmWins = 0, ties = 0;
 
             for (const r of rows) {
                 if (r.nextActualPrice === null) continue;
@@ -376,15 +377,20 @@ export const app = createApp({
                 if (r.timesfmErrorPct !== null) {
                     tfCount++;
                     tfErrorSum += r.timesfmErrorPct;
-                    if (r.timesfmHit) tfHitCount++;
-                    if (r.winner === 'TimesFM 勝') tfWins++;
+                    if (r.timesfmHit === true) tfHitCount++;
                 }
 
                 if (r.timestralErrorPct !== null) {
                     tmCount++;
                     tmErrorSum += r.timestralErrorPct;
-                    if (r.timestralHit) tmHitCount++;
-                    if (r.winner === 'Timestral 勝') tmWins++;
+                    if (r.timestralHit === true) tmHitCount++;
+                }
+
+                if (r.timesfmErrorPct !== null && r.timestralErrorPct !== null) {
+                    headToHeadCount++;
+                    if (r.winner === 'TimesFM 勝') tfWins++;
+                    else if (r.winner === 'Timestral 勝') tmWins++;
+                    else if (r.winner === '平手') ties++;
                 }
             }
 
@@ -396,48 +402,89 @@ export const app = createApp({
             const tmHitRate = tmCount > 0 ? (tmHitCount / tmCount) * 100 : null;
             const tmMape = tmCount > 0 ? (tmErrorSum / tmCount) : null;
 
+            // Rule 1: A model is ONLY eligible for isLeader (🏆 該股領先 / 表現較佳) if hitRate >= 50.0 AND count >= 2
+            const tfEligible = tfCount >= 2 && tfHitRate !== null && tfHitRate >= 50.0;
+            const tmEligible = tmCount >= 2 && tmHitRate !== null && tmHitRate >= 50.0;
+
             let overallWinner = '雙模型表現均衡';
             let winningModel = null;
-            if (tfMape !== null && tmMape !== null) {
-                if (Math.abs(tfMape - tmMape) < 0.1) {
-                    if (tfHitRate > tmHitRate + 5) {
-                        overallWinner = `🏆 該股歷史表現：TimesFM 較準（方向勝率 ${tfHitRate.toFixed(1)}% vs ${tmHitRate.toFixed(1)}%）`;
-                        winningModel = 'TimesFM';
-                    } else if (tmHitRate > tfHitRate + 5) {
-                        overallWinner = `🏆 該股歷史表現：Timestral 較準（方向勝率 ${tmHitRate.toFixed(1)}% vs ${tfHitRate.toFixed(1)}%）`;
-                        winningModel = 'Timestral';
-                    } else {
-                        overallWinner = `⚖️ 該股歷史表現：雙模型實力相當（平均誤差 ${tfMape.toFixed(2)}% vs ${tmMape.toFixed(2)}%）`;
-                    }
-                } else if (tfMape < tmMape) {
-                    overallWinner = `🏆 該股歷史表現：TimesFM 較準（平均誤差 ${tfMape.toFixed(2)}% vs ${tmMape.toFixed(2)}%）`;
-                    winningModel = 'TimesFM';
+
+            if (!tfEligible && !tmEligible) {
+                winningModel = null;
+                const tfLow = tfCount >= 2 && tfHitRate !== null && tfHitRate < 50.0;
+                const tmLow = tmCount >= 2 && tmHitRate !== null && tmHitRate < 50.0;
+                if (tfLow && tmLow) {
+                    overallWinner = '⚠️ 兩模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主';
+                } else if (tfLow || tmLow) {
+                    overallWinner = '⚠️ 該股目前模型方向勝率低於 50%，建議以均線支撐與籌碼為主';
                 } else {
-                    overallWinner = `🏆 該股歷史表現：Timestral 較準（平均誤差 ${tmMape.toFixed(2)}% vs ${tfMape.toFixed(2)}%）`;
-                    winningModel = 'Timestral';
+                    overallWinner = '⏳ 驗證樣本累積中（需至少 2 日開獎紀錄且方向勝率 ≥ 50%）';
                 }
-            } else if (tfMape !== null) {
-                overallWinner = `🏆 該股主要由 TimesFM 追蹤（平均誤差 ${tfMape.toFixed(2)}%）`;
+            } else if (tfEligible && !tmEligible) {
                 winningModel = 'TimesFM';
-            } else if (tmMape !== null) {
-                overallWinner = `🏆 該股主要由 Timestral 追蹤（平均誤差 ${tmMape.toFixed(2)}%）`;
+                if (tmCount >= 2 && tmHitRate !== null) {
+                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% vs ${tmHitRate.toFixed(1)}%，平均誤差 ±${tfMape.toFixed(2)}%）`;
+                } else {
+                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
+                }
+            } else if (!tfEligible && tmEligible) {
                 winningModel = 'Timestral';
+                if (tfCount >= 2 && tfHitRate !== null) {
+                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% vs ${tfHitRate.toFixed(1)}%，平均誤差 ±${tmMape.toFixed(2)}%）`;
+                } else {
+                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
+                }
+            } else {
+                // Both tfEligible && tmEligible
+                if (tfHitRate >= tmHitRate + 5.0) {
+                    winningModel = 'TimesFM';
+                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
+                } else if (tmHitRate >= tfHitRate + 5.0) {
+                    winningModel = 'Timestral';
+                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
+                } else {
+                    // Close hit rates (< 5% difference): compare head-to-head wins, then MAPE
+                    if (tfWins > tmWins) {
+                        winningModel = 'TimesFM';
+                        overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
+                    } else if (tmWins > tfWins) {
+                        winningModel = 'Timestral';
+                        overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
+                    } else if (tfMape !== null && tmMape !== null) {
+                        if (tfMape < tmMape) {
+                            winningModel = 'TimesFM';
+                            overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
+                        } else if (tmMape < tfMape) {
+                            winningModel = 'Timestral';
+                            overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
+                        } else {
+                            winningModel = null;
+                            overallWinner = `⚖️ 該股歷史表現：雙模型實力相當（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
+                        }
+                    }
+                }
             }
 
             return {
+                headToHeadCount,
+                ties,
                 timesfm: {
                     count: tfCount,
+                    hitCount: tfHitCount,
                     hitRate: tfHitRate !== null ? tfHitRate.toFixed(1) : '-',
                     mape: tfMape !== null ? tfMape.toFixed(2) : '-',
                     wins: tfWins,
-                    isLeader: winningModel === 'TimesFM'
+                    isLeader: winningModel === 'TimesFM',
+                    lowHitWarning: tfCount >= 2 && tfHitRate !== null && tfHitRate < 50
                 },
                 timestral: {
                     count: tmCount,
+                    hitCount: tmHitCount,
                     hitRate: tmHitRate !== null ? tmHitRate.toFixed(1) : '-',
                     mape: tmMape !== null ? tmMape.toFixed(2) : '-',
                     wins: tmWins,
-                    isLeader: winningModel === 'Timestral'
+                    isLeader: winningModel === 'Timestral',
+                    lowHitWarning: tmCount >= 2 && tmHitRate !== null && tmHitRate < 50
                 },
                 overallWinner
             };

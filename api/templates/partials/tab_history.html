@@ -782,33 +782,53 @@
                     </div>
                     <span v-if="modelScorecard.timesfm.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                        🏆 該股領先
+                        🏆 該股表現較佳
+                    </span>
+                    <span v-else-if="modelScorecard.timesfm.lowHitWarning"
+                          class="px-2 py-0.5 rounded-md text-xs font-semibold"
+                          :class="isDark ? 'bg-amber-500/10 text-amber-300/90 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'">
+                        方向勝率 &lt; 50%
                     </span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 text-center">
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">方向勝率</span><span class="hidden sm:inline">預測方向勝率</span>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                                {{ modelScorecard.timesfm.hitRate !== '-' ? modelScorecard.timesfm.hitRate + '%' : '—' }}
+                            </div>
                         </div>
-                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
-                            {{ modelScorecard.timesfm.hitRate !== '-' ? modelScorecard.timesfm.hitRate + '%' : '—' }}
-                        </div>
-                    </div>
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">平均價格誤差 (MAPE)</span>
-                        </div>
-                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
-                            {{ modelScorecard.timesfm.mape !== '-' ? modelScorecard.timesfm.mape + '%' : '—' }}
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            {{ modelScorecard.timesfm.count }} 天中猜對 {{ modelScorecard.timesfm.hitCount }} 天
                         </div>
                     </div>
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">勝出/天數</span><span class="hidden sm:inline">對決勝出 / 驗證天數</span>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                                {{ modelScorecard.timesfm.mape !== '-' ? '±' + modelScorecard.timesfm.mape + '%' : '—' }}
+                            </div>
                         </div>
-                        <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
-                            {{ modelScorecard.timesfm.wins }} 勝 / {{ modelScorecard.timesfm.count }} 天
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            越接近 0% 越準
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">雙模型同場對決</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timesfm.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
                         </div>
                     </div>
                 </div>
@@ -827,33 +847,53 @@
                     </div>
                     <span v-if="modelScorecard.timestral.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                        🏆 該股領先
+                        🏆 該股表現較佳
+                    </span>
+                    <span v-else-if="modelScorecard.timestral.lowHitWarning"
+                          class="px-2 py-0.5 rounded-md text-xs font-semibold"
+                          :class="isDark ? 'bg-amber-500/10 text-amber-300/90 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'">
+                        方向勝率 &lt; 50%
                     </span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 text-center">
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">方向勝率</span><span class="hidden sm:inline">預測方向勝率</span>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                                {{ modelScorecard.timestral.hitRate !== '-' ? modelScorecard.timestral.hitRate + '%' : '—' }}
+                            </div>
                         </div>
-                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
-                            {{ modelScorecard.timestral.hitRate !== '-' ? modelScorecard.timestral.hitRate + '%' : '—' }}
-                        </div>
-                    </div>
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">平均價格誤差 (MAPE)</span>
-                        </div>
-                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
-                            {{ modelScorecard.timestral.mape !== '-' ? modelScorecard.timestral.mape + '%' : '—' }}
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            {{ modelScorecard.timestral.count }} 天中猜對 {{ modelScorecard.timestral.hitCount }} 天
                         </div>
                     </div>
-                    <div class="p-2 sm:p-2.5 rounded-lg border" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            <span class="sm:hidden">勝出/天數</span><span class="hidden sm:inline">對決勝出 / 驗證天數</span>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                                {{ modelScorecard.timestral.mape !== '-' ? '±' + modelScorecard.timestral.mape + '%' : '—' }}
+                            </div>
                         </div>
-                        <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
-                            {{ modelScorecard.timestral.wins }} 勝 / {{ modelScorecard.timestral.count }} 天
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            越接近 0% 越準
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">雙模型同場對決</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timestral.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
                         </div>
                     </div>
                 </div>

@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-10-22 (v2.4.36)
+
+### Fixed & Enhanced (AI Model Accuracy Scorecard Refactoring & 50% Hit Rate Floor Defense)
+- **🏆 歷史預測準確率 PK 成績單重構與 50% 方向勝率門檻防禦 (`app.js`, `tab_history.html`)**：
+  - 嚴格實施「50% 方向勝率門檻防禦機制 (Minimum 50% Directional Hit Rate Floor)」：模型必須在驗證天數 $\ge 2$ 且方向勝率 $\ge 50.0\%$ 下方具備獲頒「🏆 該股表現較佳」資格；若雙模型於該個股之方向勝率皆低於 50%，絕不授與領先標記，成績單頂部明確提示「⚠️ 兩模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主」，並於對應卡片標頭呈現「方向勝率 < 50%」微警示膠囊，杜絕過去僅依 MAPE 微幅差異而頒發勝出給猜對率極低模型的反直覺行為。
+  - 獨立計算並分離同場對決指標 (Head-to-Head PK)，統計 `headToHeadCount`、TimesFM 勝出 (`tfWins`)、Timestral 勝出 (`tmWins`) 與平手 (`ties`)。
+  - 清晰透明的三大核心指標展示卡：
+    - **指標一：漲跌方向勝率**：大字百分比，副標題「`N 天中猜對 M 天`」。
+    - **指標二：目標價平均誤差 (MAPE)**：大字「`±X.XX%`」，副標題「`越接近 0% 越準`」。
+    - **指標三：雙模型同場 PK**：大字「`X 勝`」，副標題「`共 N 天同場比準度`」。
+- **🧪 單元測試覆蓋與版本升級 (`test_typography_rwd.py`, `version.py`, `app.js`)**：
+  - 版本正式升至 `v2.4.36`。
+  - 單元測試新增 `test_model_scorecard_structure_and_labels` 與 `test_model_scorecard_js_logic_floor_and_h2h`，包含 Node.js 執行器驗證低於 50% 勝率門檻防禦、勝率領先判定、同場對決勝場/平手統計與字樣渲染斷言。
+
 ## 2026-10-22 (v2.4.35)
 
 ### Fixed & Enhanced (2md.aiurl.tw Color Palette & Strict WCAG AA/AAA Readability Upgrade)
