@@ -37,6 +37,7 @@ from evaluators.ai_narrative import AINarrativeEngine
 from evaluators.formatter import print_evaluation_report
 from database import SupabaseManager
 from data.duckdb_manager import DuckDBManager
+from data.clef_client import ClefDecisionClient
 from notifier_dual import send_dual_strategy_results
 
 logger = logging.getLogger("stock_app.pipeline")
@@ -64,6 +65,7 @@ class PipelineOrchestrator:
         self.ai_narrative_engine = AINarrativeEngine()
         self.db_manager = db_manager or SupabaseManager()
         self.duckdb_manager = duckdb_manager or DuckDBManager()
+        self.clef_client = ClefDecisionClient(db=self.duckdb_manager)
 
     def run_index_analysis(
         self, 
@@ -149,6 +151,23 @@ class PipelineOrchestrator:
             fundamentals_map, 
             macro_state=macro_state
         )
+
+        # 3.0 Clef-Flash System One 決策模型批次推論 (若啟用且有共振候選標的)
+        if getattr(report, "overlap_candidates", None) and config.clef.ENABLE_CLEF_DECISION:
+            try:
+                clef_verdicts = self.clef_client.evaluate_candidates_batch(
+                    report.overlap_candidates,
+                    macro_regime=getattr(macro_state, "regime", None)
+                )
+                for cand in report.overlap_candidates:
+                    t = cand.get("ticker")
+                    if t and t in clef_verdicts:
+                        v = clef_verdicts[t]
+                        cand["clef_verdict"] = v.to_dict()
+                        if v.tag and v.tag not in cand.get("tags", []):
+                            cand.setdefault("tags", []).append(v.tag)
+            except Exception as e:
+                logger.warning(f"⚠️ Clef batch evaluation skipped due to error: {e}")
         
         # 3.1 構造相容舊版結構字典，並附帶多維標籤與法人籌碼
         candidates_map = {}

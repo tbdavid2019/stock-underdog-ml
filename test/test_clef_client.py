@@ -410,6 +410,73 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(verdict.source_slot, "Clef-Aiurl")
         self.assertEqual(verdict.action_decision, "avoid")
 
+    @patch("requests.post")
+    def test_slot_auth_headers_with_api_key(self, mock_post):
+        """驗證當 ClefSlot 包含 api_key 時，請求 headers 帶上 Bearer 與 X-API-Key"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "model": "clef-flash",
+            "answers": {
+                "action_decision": {"choice": "buy", "confidence": 0.8},
+                "conviction_score": {"score": 4.0},
+                "is_favorable_entry": {"noul": 0.7}
+            }
+        }
+        mock_post.return_value = mock_response
+
+        custom_slot = ClefSlot(
+            name="Jev-SystemOne",
+            url="https://api.typesafe.ai/v1/systemone",
+            api_key="dummy-mock-token"
+        )
+        client = ClefDecisionClient(slots=[custom_slot])
+        verdict = client.evaluate_stock({"ticker": "2330.TW", "current_price": 1000.0})
+
+        self.assertTrue(verdict.success)
+        self.assertEqual(verdict.source_slot, "Jev-SystemOne")
+        
+        # 驗證 requests.post 收到的 headers
+        call_kwargs = mock_post.call_args[1]
+        sent_headers = call_kwargs.get("headers", {})
+        self.assertEqual(sent_headers.get("Authorization"), "Bearer dummy-mock-token")
+        self.assertEqual(sent_headers.get("X-API-Key"), "dummy-mock-token")
+
+    def test_format_stock_state_dual_timestral_model(self):
+        """驗證 format_stock_state 正確辨識並提取 Timestral 與 TimesFM 雙時序特徵"""
+        cand = {
+            "ticker": "2330.TW",
+            "current_price": 1050.0,
+            "composite_score": 90.0,
+            "timestral_potential": 5.5,
+            "timesfm_potential": 3.8,
+            "timestral_hit_rate": 0.75,
+            "timesfm_hit_rate": 0.68,
+            "tags": ["季線支撐", "土洋合買"]
+        }
+        state = ClefDecisionClient.format_stock_state(cand)
+        self.assertEqual(state["models"]["timestral_potential"], 5.5)
+        self.assertEqual(state["models"]["timesfm_potential"], 3.8)
+        self.assertEqual(state["models"]["timestral_hit_rate"], 0.75)
+        self.assertEqual(state["models"]["timesfm_hit_rate"], 0.68)
+        self.assertIn("季線支撐", state["tags"])
+
+    def test_local_rules_with_timestral_potential(self):
+        """驗證本地規則以 Timestral potential 作為主要潛力評估 strong_buy 與 buy"""
+        cand_strong = {
+            "ticker": "2330.TW",
+            "composite_score": 88.0,
+            "timestral_potential": 4.5,
+            "timesfm_potential": 1.0,
+            "risk_reward_ratio": 2.5,
+            "tags": ["季線支撐"]
+        }
+        client = ClefDecisionClient(enabled=False)
+        verdict = client.evaluate_stock(cand_strong)
+        self.assertTrue(verdict.success)
+        self.assertEqual(verdict.action_decision, "strong_buy")
+        self.assertIn("本地規則", verdict.tag)
+
 
 if __name__ == "__main__":
     unittest.main()

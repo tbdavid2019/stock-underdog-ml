@@ -51,6 +51,7 @@ class DataAPIConfig:
     SP500_URL: str = f"{BASE_URL}/SP500"
     NASDAQ100_URL: str = f"{BASE_URL}/nasdaq100"
     DOWJONES_URL: str = f"{BASE_URL}/dowjones"
+    PUBLIC_WEB_URL: str = os.getenv("PUBLIC_WEB_URL", "https://stockdata.david888.com").rstrip("/")
 
 
 class PipelineConfig:
@@ -116,6 +117,11 @@ class ClefConfig:
 
     FALLBACK2_NAME: str = os.getenv("CLEF_FALLBACK2_NAME", "Jev-SystemOne")
     FALLBACK2_URL: str = os.getenv("CLEF_FALLBACK2_URL", os.getenv("JEV_SYSTEMONE_URL", "https://api.typesafe.ai/v1/systemone"))
+    FALLBACK2_API_KEY: Optional[str] = (
+        os.getenv("TYPESAFE_API_KEY")
+        or os.getenv("JEV_API_KEY")
+        or os.getenv("CLEF_FALLBACK2_API_KEY")
+    )
 
     FALLBACK3_NAME: str = os.getenv("CLEF_FALLBACK3_NAME", "OpenAI-Decision")
     FALLBACK3_URL: str = os.getenv("CLEF_FALLBACK3_URL", "https://api.openai.com/v1/chat/completions")

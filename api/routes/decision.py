@@ -37,6 +37,36 @@ def _prune_rate_limit_store(now: float):
                 _RATE_LIMIT_STORE.pop(ip, None)
 
 
+def _resolve_client_ip(request: Request) -> str:
+    """Resolve real client IP prioritizing Cloudflare / Nginx edge headers."""
+    cf_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP")
+    if cf_ip and cf_ip.strip():
+        return cf_ip.strip().split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+def verify_public_decision_rate_limit(request: Request):
+    """
+    Sliding window rate limit for public web UI decision queries (per client IP).
+    Does NOT require DECISION_API_KEY.
+    """
+    client_ip = _resolve_client_ip(request)
+    now = time.time()
+    _prune_rate_limit_store(now)
+
+    history = _RATE_LIMIT_STORE[client_ip]
+    valid_history = [t for t in history if now - t < RATE_LIMIT_WINDOW_SECONDS]
+    _RATE_LIMIT_STORE[client_ip] = valid_history
+
+    if len(valid_history) >= DEFAULT_RATE_LIMIT_PER_MIN:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded: maximum {DEFAULT_RATE_LIMIT_PER_MIN} requests per minute."
+        )
+
+    _RATE_LIMIT_STORE[client_ip].append(now)
+
+
 def verify_decision_access(
     request: Request,
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
@@ -149,5 +179,57 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
     return {
         "success": verdict.success,
         "ticker": ticker,
+        "verdict": verdict.to_dict()
+    }
+
+
+@router.get("/stock/{ticker}", summary="Get Clef System One decision verdict for a single stock ticker", dependencies=[Depends(verify_public_decision_rate_limit)])
+def get_stock_decision(
+    ticker: str,
+    macro_regime: Optional[str] = "bull",
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    resolved = db.resolve_ticker(ticker) if hasattr(db, "resolve_ticker") else None
+    target_ticker = resolved.get("ticker") if resolved and isinstance(resolved, dict) else ticker.strip().upper()
+
+    snapshot = db.get_latest_candidate_snapshot(target_ticker) if hasattr(db, "get_latest_candidate_snapshot") else None
+    candidate_data = None
+    if snapshot:
+        candidate_data = snapshot
+    else:
+        hist = db.get_ticker_history(target_ticker, limit=10) if hasattr(db, "get_ticker_history") else []
+        if hist:
+            latest = hist[0]
+            candidate_data = {
+                "ticker": target_ticker,
+                "current_price": latest.get("current_price"),
+                "composite_score": latest.get("composite_score") or latest.get("score"),
+                "timesfm_potential": latest.get("timesfm_potential"),
+                "timestral_potential": latest.get("timestral_potential"),
+                "risk_reward_ratio": latest.get("risk_reward_ratio"),
+                "ma60": latest.get("ma60"),
+                "pullback_type": latest.get("pullback_type"),
+                "pe": latest.get("pe"),
+                "pb": latest.get("pb"),
+                "trust_net_5d": latest.get("trust_net_5d"),
+                "foreign_net_5d": latest.get("foreign_net_5d"),
+                "tags": latest.get("tags")
+            }
+
+    if not candidate_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No quantitative records found for ticker '{target_ticker}'."
+        )
+
+    verdict = decision_service.evaluate_stock(
+        candidate=candidate_data,
+        macro_regime=macro_regime,
+        force_refresh=force_refresh
+    )
+
+    return {
+        "success": verdict.success,
+        "ticker": target_ticker,
         "verdict": verdict.to_dict()
     }

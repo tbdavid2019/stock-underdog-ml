@@ -191,6 +191,45 @@ class TestDecisionAPI(unittest.TestCase):
             self.assertFalse(res_not_found["success"])
             self.assertIn("未在量化資料庫中找到標的", res_not_found["error"])
 
+    @patch("api.routes.decision.decision_service.evaluate_stock")
+    @patch("api.routes.decision.db.get_latest_candidate_snapshot")
+    def test_get_stock_decision_public_endpoint_success(self, mock_snap, mock_eval):
+        """驗證公開端點 GET /api/v1/decision/stock/{ticker} 正常解析並回傳決策"""
+        mock_snap.return_value = {
+            "ticker": "2330.TW",
+            "current_price": 1000.0,
+            "composite_score": 88.0,
+            "timestral_potential": 4.5,
+            "timesfm_potential": 3.2
+        }
+        mock_verdict = MagicMock()
+        mock_verdict.success = True
+        mock_verdict.to_dict.return_value = {
+            "ticker": "2330.TW",
+            "action_decision": "strong_buy",
+            "action_confidence": 0.85,
+            "conviction_score": 4.2,
+            "is_favorable_entry": 0.8,
+            "source_slot": "Clef-Create360",
+            "success": True
+        }
+        mock_eval.return_value = mock_verdict
+
+        resp = self.client.get("/api/v1/decision/stock/2330.TW")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["ticker"], "2330.TW")
+        self.assertEqual(data["verdict"]["action_decision"], "strong_buy")
+
+    @patch("api.routes.decision.db.get_ticker_history", return_value=[])
+    @patch("api.routes.decision.db.get_latest_candidate_snapshot", return_value=None)
+    def test_get_stock_decision_not_found_returns_404(self, mock_snap, mock_hist):
+        """驗證公開端點查無候選資料與歷史軌跡時回傳 404"""
+        resp = self.client.get("/api/v1/decision/stock/UNKNOWN999.TW")
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn("No quantitative records found", resp.json()["detail"])
+
     @classmethod
     def tearDownClass(cls):
         try:

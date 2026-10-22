@@ -319,6 +319,16 @@ export const ApiClient = {
         const res = await fetch('/api/v1/podcast/sync', { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
+    },
+
+    /**
+     * Get Clef System One stock decision verdict
+     */
+    async getStockDecision(ticker, forceRefresh = false) {
+        const url = `/api/v1/decision/stock/${encodeURIComponent(ticker)}${forceRefresh ? '?force_refresh=true' : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
     }
 };
 

@@ -112,11 +112,13 @@ class TestFormatter(unittest.TestCase):
 
     def test_telegram_message_structure_and_no_pre_block_for_recommendations(self):
         """
-        驗證 Telegram 訊息：
-        1. 不再使用巨大 <pre> 包含優先推薦
-        2. 採用清晰簡潔的層次標籤（【四重共振】、【三重共振】、【雙ML共振】）
-        3. 去除雜亂無章的 emoji 堆疊，維持專業金融資訊閱讀體驗
-        4. 包含 blockquote AI 解讀
+        驗證 Telegram 極簡報明牌日報：
+        1. 包含精簡標題與時間 (📊 多維量化投資日報｜台灣50)
+        2. 包含 1 行極簡大盤風控與建議曝險
+        3. 包含 blockquote AI 解讀
+        4. 包含 🎯【今日精選明牌 (優先推薦)】
+        5. 包含個股超連結、現價、模型潛力、核心亮點與詳情連結 (https://stockdata.david888.com/?tab=history&ticker=2330.TW)
+        6. 底部包含導流至 Web 互動儀表板之完整 URL (https://stockdata.david888.com/?index=)
         """
         msg = format_telegram_message(
             "台灣50",
@@ -127,33 +129,25 @@ class TestFormatter(unittest.TestCase):
             ai_summary=self.report_dict["ai_summary"]
         )
 
-        self.assertIn("<b>多維量化投資日報</b>", msg)
-        self.assertIn("<b>台灣50</b>", msg)
+        self.assertIn("<b>📊 多維量化投資日報｜台灣50</b>", msg)
         self.assertIn("<b>全面多頭 (Bullish)</b>", msg)
         self.assertIn("<blockquote>今日盤勢處於全面多頭", msg)
 
         # 優先推薦區塊
-        self.assertIn("<b>【優先推薦 (多維共振)】</b>", msg)
-        self.assertIn("<b>【四重共振】</b>", msg)
-        self.assertIn("<b>【三重共振】</b>", msg)
-        self.assertIn("<b>【雙ML共振】</b>", msg)
+        self.assertIn("<b>🎯【今日精選明牌 (優先推薦)】</b>", msg)
 
-        # 驗證個股卡片內容
+        # 驗證個股卡片內容與網站連結
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("<code>1,005.00</code>", msg)
         self.assertIn("LSTM <b>+5.2%</b>", msg)
         self.assertIn("TFM <b>+4.1%</b> (2.5x)", msg)
         self.assertIn("土洋合買", msg)
-        self.assertIn("PE:22.0 · PB:5.0", msg)
+        self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", msg)
+        self.assertIn("詳情↗", msg)
 
-        # 驗證沒有使用 <pre> 包裹優先推薦
-        cand_section = msg[msg.find("優先推薦"):msg.find("波段操作")]
-        self.assertNotIn("<pre>", cand_section, "優先推薦不應使用 <pre> 包裹以免手機版中英破版")
-
-        # 驗證波段操作已正名為季線支撐
-        self.assertIn("<b>【波段操作 (季線支撐)】</b>", msg)
-        self.assertIn("時序大模型 (TimesFM 預測 TOP 5)", msg)
-        self.assertIn("隔日目標 <code>1,046.2</code>", msg)
+        # 驗證網站完整查詢引導 Footer
+        self.assertIn("https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350", msg)
+        self.assertIn("開啟【台灣50】完整互動儀表板", msg)
 
     def test_discord_message_formatting(self):
         """驗證 Discord 訊息採用 Markdown 語法"""
@@ -321,9 +315,9 @@ class TestFormatter(unittest.TestCase):
         res = format_dual_strategy_message("台灣50", results, "2026-10-16 10:00:00", name_map=self.name_map)
         
         # Telegram checks
-        self.assertIn("Timestral-209M", res["telegram"])
         self.assertIn("Timestral <b>+4.8%</b>", res["telegram"])
         self.assertIn("TFM <b>+4.1%</b>", res["telegram"])
+        self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", res["telegram"])
         
         # Discord checks
         self.assertIn("Timestral-209M", res["discord"])
@@ -353,10 +347,9 @@ class TestFormatter(unittest.TestCase):
             "macro_state": self.macro
         }
         res = format_dual_strategy_message("台灣50", results, "2026-10-21 17:00:00", name_map=self.name_map)
-        # Telegram: should display 1,000.0 → 1,025.0 with interval and RR
-        self.assertIn("<code>1,000.0</code> → <code>1,025.0</code>", res["telegram"])
-        self.assertIn("區間 <code>990.0~1035.0</code>", res["telegram"])
-        self.assertIn("盈虧比: <b>3.0x</b>", res["telegram"])
+        # Telegram: when no overlap candidates, shows defensive notice & dashboard link
+        self.assertIn("本期無符合多維正向共振條件之標的", res["telegram"])
+        self.assertIn("https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350", res["telegram"])
 
         # Discord
         self.assertIn("`1,000.0` → `1,025.0`", res["discord"])

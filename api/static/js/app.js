@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.36';
+import { ApiClient } from '/static/js/api-client.js?v=2.4.37';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.37';
 
 const { createApp } = Vue;
 
@@ -122,6 +122,8 @@ export const app = createApp({
             historyDetailSubTab: 'profile', // 'profile' | 'network' | 'earnings' | 'tender'
             historyEarningsList: [],
             historyDetailsCollapsed: false,
+            historyDecisionVerdict: null,
+            historyDecisionLoading: false,
 
             // Earnings Calls State (Task B)
             upcomingEarningsCalls: [],
@@ -660,6 +662,8 @@ export const app = createApp({
             this.historyCompanyData = null;
             this.historyEarningsList = [];
             this.historyDetailsCollapsed = false;
+            this.historyDecisionVerdict = null;
+            this.historyDecisionLoading = false;
             this.updateUrl();
 
             try {
@@ -675,8 +679,9 @@ export const app = createApp({
                     this.historyDetailSubTab = 'profile';
                 }
 
-                // 並行啟動個股情報中心 (Profile / Network / Earnings / Tender) 查詢
+                // 並行啟動個股情報中心與 AI 綜合決策裁判查詢
                 this.loadHistoryCompanyData(resolution.ticker, requestId);
+                this.loadHistoryDecision(resolution.ticker, requestId);
 
                 const [historyData, instData] = await Promise.all([
                     ApiClient.getPredictionHistory(resolution.ticker, 240).catch(() => []),
@@ -702,6 +707,24 @@ export const app = createApp({
             } finally {
                 if (requestId === this.historyRequestId) {
                     this.historyLoading = false;
+                }
+            }
+        },
+        async loadHistoryDecision(ticker, requestId = null, forceRefresh = false) {
+            if (!ticker) return;
+            this.historyDecisionLoading = true;
+            try {
+                const res = await ApiClient.getStockDecision(ticker, forceRefresh);
+                if (requestId !== null && requestId !== this.historyRequestId) return;
+                if (res && res.verdict) {
+                    this.historyDecisionVerdict = res.verdict;
+                }
+            } catch (e) {
+                console.warn("Failed to load stock decision verdict:", e);
+                if (requestId !== null && requestId !== this.historyRequestId) return;
+            } finally {
+                if (!requestId || requestId === this.historyRequestId) {
+                    this.historyDecisionLoading = false;
                 }
             }
         },
@@ -1414,7 +1437,12 @@ export const app = createApp({
             try {
                 const params = new URLSearchParams(window.location.search);
                 const tab = params.get('tab');
-                this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) ? tab : 'dashboard';
+                const tickerParam = params.get('ticker');
+                if (!tab && tickerParam) {
+                    this.activeTab = 'history';
+                } else {
+                    this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) ? tab : 'dashboard';
+                }
 
                 const strat = params.get('strategy');
                 this.selectedStrategy = (strat && ['resonance', 'xuantie', 'timestral_bullish', 'timestral_bearish', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';

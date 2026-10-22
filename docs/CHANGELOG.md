@@ -4,6 +4,29 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-22 (v2.4.37)
+
+### Added & Enhanced (Clef-Flash System One Decision Engine Integration & Telegram Minimalist Stock Picks)
+- **⚡ Clef-Flash System One 決策模型前後端深度整合 (`core/config.py`, `data/clef_client.py`, `data/decision_service.py`, `pipeline/orchestrator.py`, `api/routes/decision.py`)**：
+  - **三級節點認證與金鑰防護**：於 `ClefConfig` 新增 Tier 3 (`FALLBACK2_URL`) API Key 安全讀取（`TYPESAFE_API_KEY` / `JEV_API_KEY` / `CLEF_FALLBACK2_API_KEY`），`ClefSlot` 支援 Bearer 與 `X-API-Key` 標頭驗證；絕無硬編碼金鑰。
+  - **雙時序模型特徵升級**：`ClefDecisionClient.format_stock_state()` 全面支援 `Timestral` + `TimesFM` 雙大模型目標潛力、歷史方向勝率（`timestral_hit_rate` / `timesfm_hit_rate`）與均線季線支撐解析；本地規則 `_evaluate_local_rules()` 以 `primary_pot` (`Timestral`/`LSTM`) 與 `TimesFM` 進行非自回歸機率與動作推論。
+  - **選股管線批次推論與公開個股查詢端點**：
+    - `PipelineOrchestrator` 於每日選股 Stage 3 自動並行執行 `evaluate_candidates_batch`，並為共振標的賦予 `clef_verdict`。
+    - 新增免金鑰、具每 IP 每分鐘滑動視窗防護之公開端點 `GET /api/v1/decision/stock/{ticker}`，自動解析代號與快照，回傳 4 選項動作機率、信心分與好買點勝率。
+- **📊 前端個股情報中心整合 Clef-Flash 決策卡 (`api-client.js`, `app.js`, `tab_history.html`)**：
+  - 於「歷史與 AI 準確率」分頁新增「⚡ AI 綜合決策裁判（Clef-Flash System One）」卡片，即時展示：建議操作（積極買進/逢低佈局/觀望等待/避開風險）、出手信心分（`conviction_score / 5.0`）、好買點機率與 4 維動作機率分佈條。
+  - 支援單鍵強制重新推論與推論來源節點標籤顯示；嚴格遵照 WCAG AA/AAA 與 `2md.aiurl.tw` 高對比暖米/深墨色彩標準。
+  - 短網址優化：網址帶 `?ticker=xxx` 自動切換至 `history` 分頁直達個股決策。
+- **📱 Telegram 日報極簡報明牌化與網站互動導流 (`evaluators/formatter.py`, `test/test_formatter.py`)**：
+  - 大幅精簡 Telegram 訊息結構，移除冗長之 4 大分項數據表，落實「報明牌就好，詳細請用戶到網站查」：
+    - 1 行極簡大盤風控與曝險建議。
+    - 1 段精簡 AI 操盤引言解讀。
+    - 🎯【今日精選明牌 (優先推薦)】：前 10 支標的採 2 行精簡卡片，包含現價、TFM/Timestral 潛力、季線支撐與專屬個股歷史連結（`/?tab=history&ticker=...`）。
+    - 🔗 底部包含指數完整互動儀表板導流連結（`/?index=...`）。
+- **🧪 單元測試與版本升級 (`test/test_clef_client.py`, `test/test_api_decision.py`, `test/test_formatter.py`, `core/version.py`, `app.js`)**：
+  - 版本正式升至 `v2.4.37`。
+  - 全數測試通過，包含 ClefSlot API Key Header 授權、Timestral 狀態解析與推論、公開端點限流與查詢、Telegram 極簡排版與 URL 驗證。
+
 ## 2026-10-22 (v2.4.36)
 
 ### Fixed & Enhanced (AI Model Accuracy Scorecard Refactoring & 50% Hit Rate Floor Defense)

@@ -30,6 +30,7 @@ class ClefSlot:
     name: str
     url: str
     timeout: int = 6
+    api_key: Optional[str] = None
 
 
 @dataclass
@@ -141,7 +142,8 @@ class ClefDecisionClient:
             ClefSlot(
                 name=config.clef.FALLBACK2_NAME,
                 url=config.clef.FALLBACK2_URL,
-                timeout=default_timeout
+                timeout=default_timeout,
+                api_key=config.clef.FALLBACK2_API_KEY
             )
         ]
 
@@ -152,15 +154,24 @@ class ClefDecisionClient:
             url_str = (slot.url or "").strip()
             if url_str and url_str not in seen_urls:
                 seen_urls.add(url_str)
-                self.slots.append(ClefSlot(name=slot.name, url=url_str, timeout=slot.timeout))
+                self.slots.append(ClefSlot(
+                    name=slot.name,
+                    url=url_str,
+                    timeout=slot.timeout,
+                    api_key=getattr(slot, "api_key", None)
+                ))
 
     def check_health(self) -> Dict[str, Any]:
         """Check health across all configured endpoints"""
         results = {}
         for slot in self.slots:
             health_url = slot.url.replace("/v1/systemone", "/health")
+            slot_headers = {}
+            if slot.api_key:
+                slot_headers["Authorization"] = f"Bearer {slot.api_key}"
+                slot_headers["X-API-Key"] = slot.api_key
             try:
-                resp = requests.get(health_url, timeout=3)
+                resp = requests.get(health_url, headers=slot_headers, timeout=3)
                 if resp.status_code == 200:
                     data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
                     results[slot.name] = {
@@ -211,11 +222,15 @@ class ClefDecisionClient:
         for slot in self.slots:
             if not slot.url:
                 continue
+            slot_headers = dict(headers)
+            if slot.api_key:
+                slot_headers["Authorization"] = f"Bearer {slot.api_key}"
+                slot_headers["X-API-Key"] = slot.api_key
             try:
                 resp = requests.post(
                     slot.url,
                     json=payload,
-                    headers=headers,
+                    headers=slot_headers,
                     timeout=slot.timeout
                 )
                 if resp.status_code == 200:
@@ -325,17 +340,20 @@ class ClefDecisionClient:
         pullback_type = tech.get("pullback_type") if tech else candidate.get("pullback_type", "")
 
         # Model potentials: preserve explicit None and avoid attributing TimesFM potential to LSTM
+        timestral_pot = models.get("timestral_potential") if models else candidate.get("timestral_potential")
         lstm_pot = models.get("lstm_potential") if models else candidate.get("lstm_potential")
         timesfm_pot = models.get("timesfm_potential") if models else candidate.get("timesfm_potential")
         rr = models.get("risk_reward_ratio") if models else candidate.get("risk_reward_ratio")
 
         # Fallback to generic 'potential' ONLY if model-specific keys are absent and record identifies model
-        if lstm_pot is None and timesfm_pot is None and candidate.get("potential") is not None:
+        if timestral_pot is None and lstm_pot is None and timesfm_pot is None and candidate.get("potential") is not None:
             m_name = (candidate.get("model_name") or candidate.get("strategy_type") or "").upper()
-            if "LSTM" in m_name:
-                lstm_pot = candidate.get("potential")
+            if "TIMESTRAL" in m_name:
+                timestral_pot = candidate.get("potential")
             elif "TIMESFM" in m_name:
                 timesfm_pot = candidate.get("potential")
+            elif "LSTM" in m_name:
+                lstm_pot = candidate.get("potential")
             else:
                 # Default generic legacy potential to lstm_potential
                 lstm_pot = candidate.get("potential")
@@ -373,6 +391,7 @@ class ClefDecisionClient:
                 "pullback_type": str(pullback_type) if pullback_type else ""
             },
             "models": {
+                "timestral_potential": float(timestral_pot) if timestral_pot is not None and pd.notna(timestral_pot) else None,
                 "lstm_potential": float(lstm_pot) if lstm_pot is not None and pd.notna(lstm_pot) else None,
                 "timesfm_potential": float(timesfm_pot) if timesfm_pot is not None and pd.notna(timesfm_pot) else None,
                 "risk_reward_ratio": float(rr) if rr is not None and pd.notna(rr) else None
@@ -384,6 +403,13 @@ class ClefDecisionClient:
                 "is_sync_buy": bool(is_sync)
             }
         }
+        tfm_hr = models.get("timesfm_hit_rate") if models else candidate.get("timesfm_hit_rate")
+        tml_hr = models.get("timestral_hit_rate") if models else candidate.get("timestral_hit_rate")
+        if tfm_hr is not None and pd.notna(tfm_hr):
+            state["models"]["timesfm_hit_rate"] = float(tfm_hr)
+        if tml_hr is not None and pd.notna(tml_hr):
+            state["models"]["timestral_hit_rate"] = float(tml_hr)
+
         if macro_regime:
             state["macro_regime"] = macro_regime
         return state
@@ -401,24 +427,25 @@ class ClefDecisionClient:
         tags = state.get("tags") or []
         composite_score = _safe_float(state.get("composite_score"), 0.0)
 
-        lstm_pot = _safe_float(models.get("lstm_potential"), 0.0)
+        tml_pot = _safe_float(models.get("timestral_potential"), _safe_float(models.get("lstm_potential"), 0.0))
         tfm_pot = _safe_float(models.get("timesfm_potential"), 0.0)
+        primary_pot = tml_pot if models.get("timestral_potential") is not None else _safe_float(models.get("lstm_potential"), 0.0)
         rr = _safe_float(models.get("risk_reward_ratio"), 0.0)
 
         is_sync_buy = bool(institutional.get("is_sync_buy") or "土洋合買" in tags)
-        has_pullback = bool(technical.get("pullback_type") or state.get("pullback_type") or "玄鐵買點" in tags)
+        has_pullback = bool(technical.get("pullback_type") or state.get("pullback_type") or "季線支撐" in tags or "玄鐵買點" in tags)
 
-        if lstm_pot <= -5.0 or (lstm_pot < 0 and tfm_pot < 0 and composite_score < 50):
+        if primary_pot <= -5.0 or (primary_pot < 0 and tfm_pot < 0 and composite_score < 50):
             action = "avoid"
             conviction = 1.0
             prob = {"strong_buy": 0.0, "buy": 0.05, "hold_watch": 0.25, "avoid": 0.70}
             tag = "🔻避開(本地規則)"
-        elif composite_score >= 85.0 and (lstm_pot > 3.0 or tfm_pot > 3.0 or is_sync_buy):
+        elif composite_score >= 85.0 and (primary_pot > 3.0 or tfm_pot > 3.0 or is_sync_buy):
             action = "strong_buy"
             conviction = 4.5
             prob = {"strong_buy": 0.65, "buy": 0.25, "hold_watch": 0.08, "avoid": 0.02}
             tag = "🤖AI強買(本地規則)"
-        elif composite_score >= 70.0 and (lstm_pot > 0.0 or has_pullback or is_sync_buy):
+        elif composite_score >= 70.0 and (primary_pot > 0.0 or tfm_pot > 0.0 or has_pullback or is_sync_buy):
             action = "buy"
             conviction = 3.5
             prob = {"strong_buy": 0.20, "buy": 0.60, "hold_watch": 0.15, "avoid": 0.05}

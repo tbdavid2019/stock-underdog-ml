@@ -60,7 +60,7 @@ class TestNotifierDual(unittest.TestCase):
 
         # 檢查傳送至 Telegram 之訊息內容
         tg_args = mock_telegram.call_args[0][0]
-        self.assertIn("<b>多維量化投資日報</b>", tg_args)
+        self.assertIn("多維量化投資日報", tg_args)
         self.assertIn("2330.TW 台積電", tg_args)
         self.assertIn("四重共振", tg_args)
 

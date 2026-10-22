@@ -116,7 +116,7 @@ class DecisionService:
         # Add JEV slot
         jev_url = config.clef.FALLBACK2_URL
         if config.clef.FALLBACK2_NAME not in health or health[config.clef.FALLBACK2_NAME].get("status") == "unconfigured":
-            health[config.clef.FALLBACK2_NAME] = self._ping_endpoint(jev_url)
+            health[config.clef.FALLBACK2_NAME] = self._ping_endpoint(jev_url, api_key=config.clef.FALLBACK2_API_KEY)
 
         # Add OpenAI slot
         openai_key = config.clef.FALLBACK3_API_KEY
@@ -146,12 +146,16 @@ class DecisionService:
             "endpoints": health
         }
 
-    def _ping_endpoint(self, url: Optional[str]) -> Dict[str, Any]:
+    def _ping_endpoint(self, url: Optional[str], api_key: Optional[str] = None) -> Dict[str, Any]:
         if not url:
             return {"status": "unconfigured", "url": None}
         health_url = url.replace("/v1/systemone", "/health")
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+            headers["X-API-Key"] = api_key
         try:
-            resp = requests.get(health_url, timeout=3)
+            resp = requests.get(health_url, headers=headers, timeout=3)
             if resp.status_code == 200:
                 return {"status": "healthy", "status_code": 200, "url": health_url}
             return {"status": "degraded", "status_code": resp.status_code, "url": health_url}
@@ -258,16 +262,16 @@ class DecisionService:
 
         # Try Tier 1 to Tier 3 (Clef Primary, Clef Aiurl, Jev)
         slots = [
-            ("clef_primary", config.clef.PRIMARY_URL),
-            ("clef_aiurl", config.clef.FALLBACK1_URL),
-            ("jev_systemone", config.clef.FALLBACK2_URL)
+            ("clef_primary", config.clef.PRIMARY_URL, None),
+            ("clef_aiurl", config.clef.FALLBACK1_URL, None),
+            ("jev_systemone", config.clef.FALLBACK2_URL, config.clef.FALLBACK2_API_KEY),
         ]
 
         last_error = None
-        for slot_name, slot_url in slots:
+        for slot_name, slot_url, slot_key in slots:
             if not slot_url:
                 continue
-            success, answers, err = self._call_remote_systemone(slot_url, state, questions)
+            success, answers, err = self._call_remote_systemone(slot_url, state, questions, api_key=slot_key)
             if success and answers:
                 try:
                     verdict = self._parse_remote_podcast_answers(episode_id, answers, tickers, slot_name)
@@ -301,7 +305,8 @@ class DecisionService:
         self,
         url: str,
         state: Dict[str, Any],
-        questions: Dict[str, Any]
+        questions: Dict[str, Any],
+        api_key: Optional[str] = None
     ) -> Tuple[bool, Dict[str, Any], Optional[str]]:
         """Call remote SystemOne API with strict timeout"""
         payload = {
@@ -310,6 +315,9 @@ class DecisionService:
             "questions": questions
         }
         headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+            headers["X-API-Key"] = api_key
         try:
             resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
             if resp.status_code == 200:
