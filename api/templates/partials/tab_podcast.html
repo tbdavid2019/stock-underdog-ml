@@ -7,7 +7,7 @@
             <div class="flex items-center space-x-2.5 mb-1.5">
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider"
                       :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
-                    AI INTELLIGENCE RADAR
+                    PODCAST INTELLIGENCE RADAR
                 </span>
                 <span class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     全球頂級音訊逐字稿 × 實體行情映射
@@ -21,7 +21,7 @@
                 Podcast 財經與科技情報雷達
             </h1>
             <p class="mt-1 text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
-                自動解析全球頂級深度對話（All-In、Lex Fridman、Bloomberg、小Lin說等），提煉 AI 繁中精華觀點，並將科技實體即時關聯上市公司代號與籌碼走勢。
+                自動解析全球頂級深度對話（All-In、Lex Fridman、Bloomberg、小Lin說等），提煉繁中精華觀點，並將科技實體即時關聯上市公司代號與籌碼走勢。
             </p>
         </div>
 
@@ -68,7 +68,7 @@
                     <span>全部頻道庫</span>
                 </h2>
                 <p class="text-xs sm:text-sm mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
-                    追蹤頻道建立專屬內容，涵蓋全球頂級總體經濟、科技 AI、生技與量化交易頻道
+                    追蹤頻道建立專屬內容，涵蓋全球頂級總體經濟、前沿科技、生技與量化交易頻道
                 </p>
             </div>
             <div class="flex items-center space-x-2">
@@ -263,7 +263,7 @@
                 <div class="flex flex-wrap items-center gap-1.5 shrink-0 justify-end">
                     <!-- AI Importance Badge (Clef / JEV System One / Local Rules) -->
                     <span v-if="ep.importance_score"
-                          :title="'AI 市場催化重要性評級: ' + ep.importance_score + ' 分'"
+                          :title="'市場催化重要性評級: ' + ep.importance_score + ' 分'"
                           class="px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 border"
                           :class="ep.importance_level === 'heavyweight' 
                               ? (isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20' : 'bg-amber-100 text-amber-900 border-amber-300 font-black') 
@@ -324,7 +324,7 @@
                 <div class="flex items-center justify-between text-sm font-bold text-amber-500">
                     <span class="flex items-center space-x-1.5">
                         <span class="material-symbols-outlined text-[18px] leading-none">smart_toy</span>
-                        <span>AI 深度觀點精煉 (TL;DR)</span>
+                        <span>重點觀點精煉 (TL;DR)</span>
                     </span>
                     <span class="text-xs num-font text-slate-400">Gemini 2.5 Flash</span>
                 </div>

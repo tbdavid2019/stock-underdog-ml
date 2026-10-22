@@ -1,6 +1,6 @@
 """
 evaluators/formatter.py - 終端機與多管道推播訊息排版格式化工具
-包含宏觀風控卡片、AI 操盤解讀、多維共振 (四重/三重/雙ML) 優先推薦與分項策略卡片。
+包含宏觀風控卡片、盤勢重點解讀、多維共振 (四重/三重/雙模型) 優先推薦與分項策略卡片。
 全面支援 Telegram (HTML 高級卡片)、Discord (Markdown 卡片)、Email (結構化純文字) 與 Terminal Log。
 """
 
@@ -94,7 +94,7 @@ def _format_telegram_candidate_card(
     if not tier:
         tags = cand.get("tags") or []
         tier_order = [
-            "綜合優選", "雙AI看漲", "👑四重共振", "🏆三重共振", "🔮雙大模型共振",
+            "綜合優選", "雙模型看漲", "雙AI看漲", "👑四重共振", "🏆三重共振", "🔮雙大模型共振",
             "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"
         ]
         tier = next((t for t in tier_order if t in tags), "")
@@ -185,7 +185,7 @@ def format_telegram_message(
         if len(raw_summary) > 300:
             raw_summary = raw_summary[:297] + "..."
         clean_summary = html.escape(raw_summary)
-        msg += f"<b>【AI 操盤解讀】</b>\n<blockquote>{clean_summary}</blockquote>\n\n"
+        msg += f"<b>【盤勢重點解讀】</b>\n<blockquote>{clean_summary}</blockquote>\n\n"
 
     # 🎯【今日精選明牌 (優先推薦)】
     msg += "<b>🎯【今日精選明牌 (優先推薦)】</b>\n"
@@ -430,7 +430,7 @@ def format_discord_message(
 
     if summary_text:
         quoted = summary_text.replace("\n", "\n> ")
-        msg += f"**【AI 操盤解讀】**:\n> {quoted}\n\n"
+        msg += f"**【盤勢重點解讀】**:\n> {quoted}\n\n"
 
     # 優先推薦 (多維共振)
     msg += "**【優先推薦 (多維共振)】**\n"
@@ -438,23 +438,24 @@ def format_discord_message(
         msg += f"符合共振條件: **{len(candidates)}** 支\n\n"
         tier_display_map = {
             "綜合優選": "【綜合優選】",
-            "雙AI看漲": "【雙AI看漲】",
+            "雙模型看漲": "【雙模型看漲】",
+            "雙AI看漲": "【雙模型看漲】",
             "👑四重共振": "【四重共振】",
             "🏆三重共振": "【三重共振】",
-            "🔮雙大模型共振": "【雙AI看漲】",
-            "👑雙時序共振": "【雙AI看漲】",
-            "🔮雙ML共振": "【雙ML共振】",
+            "🔮雙大模型共振": "【雙模型看漲】",
+            "👑雙時序共振": "【雙模型看漲】",
+            "🔮雙ML共振": "【雙模型看漲】",
             "🌟多維共振": "【多維共振】",
             "⭐雙重共振": "【雙重共振】",
             "四重共振": "【四重共振】",
             "三重共振": "【三重共振】",
-            "雙大模型共振": "【雙AI看漲】",
-            "雙ML共振": "【雙ML共振】",
+            "雙大模型共振": "【雙模型看漲】",
+            "雙ML共振": "【雙模型看漲】",
             "多維共振": "【多維共振】",
             "雙重共振": "【雙重共振】"
         }
         tier_order = [
-            "綜合優選", "雙AI看漲",
+            "綜合優選", "雙模型看漲", "雙AI看漲",
             "👑四重共振", "🏆三重共振", "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
             "四重共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
         ]
@@ -593,7 +594,7 @@ def format_email_message(
             msg += f"🇺🇸 美股宏觀風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     if summary_text:
-        msg += f"AI 操盤解讀:\n{summary_text}\n\n"
+        msg += f"盤勢重點解讀:\n{summary_text}\n\n"
 
     msg += "=" * 75 + "\n\n"
 
@@ -756,9 +757,9 @@ def print_evaluation_report(report: EvaluationReport, log=None):
                 logger.info(f"   • ⚠️  {w}")
         logger.info("")
 
-    # ====== 頂層 2: AI 量化操盤解讀 ======
+    # ====== 頂層 2: 盤勢重點解讀 ======
     if report.ai_summary:
-        logger.info("🧠 【AI 量化操盤解讀】")
+        logger.info("🧠 【盤勢重點解讀】")
         for line in report.ai_summary.split("\n"):
             logger.info(f"   {line}")
         logger.info("")

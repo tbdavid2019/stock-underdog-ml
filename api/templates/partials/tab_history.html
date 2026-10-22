@@ -673,7 +673,7 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">insights</span>
-                    <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與 AI 預測目標價趨勢折線圖</span>
+                    <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與隔日預測目標價趨勢折線圖</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     比對每日真實收盤/現價走勢與 Timestral、TimesFM、雙模型平均等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
@@ -755,7 +755,7 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">bolt</span>
-                    <span>⚡ AI 綜合操作建議</span>
+                    <span>⚡ 綜合操作建議</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     綜合雙模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率
@@ -905,7 +905,7 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">military_tech</span>
-                    <span>AI 模型隔日 (T+1) 預測準確率 PK 成績單</span>
+                    <span>雙模型隔日 (T+1) 預測準確率 PK 成績單</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     統計該股歷史所有已開獎交易日中，雙大模型針對「隔日收盤」之方向命中率、平均價格絕對誤差 (MAPE) 與對決勝出統計

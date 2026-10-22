@@ -131,6 +131,7 @@ class TestFormatter(unittest.TestCase):
 
         self.assertIn("<b>📊 多維量化投資日報｜台灣50</b>", msg)
         self.assertIn("<b>全面多頭 (Bullish)</b>", msg)
+        self.assertIn("<b>【盤勢重點解讀】</b>", msg)
         self.assertIn("<blockquote>今日盤勢處於全面多頭", msg)
 
         # 優先推薦區塊
@@ -165,6 +166,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("**【三重共振】**", msg)
         self.assertIn("**【波段操作 (季線支撐)】**", msg)
         self.assertIn("• **2330.TW 台積電** `1,005.00`", msg)
+        self.assertIn("**【盤勢重點解讀】**", msg)
         self.assertIn("> 今日盤勢處於全面多頭", msg)
 
     def test_email_message_formatting(self):
@@ -178,6 +180,7 @@ class TestFormatter(unittest.TestCase):
             ai_summary=self.report_dict["ai_summary"]
         )
         self.assertIn("多維量化策略投資日報", msg)
+        self.assertIn("盤勢重點解讀:\n今日盤勢處於全面多頭", msg)
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("[👑四重共振]", msg)
         self.assertIn("波段操作 (季線支撐)", msg)
@@ -358,6 +361,42 @@ class TestFormatter(unittest.TestCase):
         # Email
         self.assertIn("(1,000.0 → 1,025.0)", res["email"])
         self.assertIn("盈虧比: 3.00x", res["email"])
+
+    def test_formatter_dual_model_bullish_tier_formatting(self):
+        """驗證雙模型看漲與舊版雙AI看漲標籤在 Telegram 與 Discord 中皆正常排版為雙模型看漲"""
+        candidates = [
+            {
+                "ticker": "2454.TW",
+                "current_price": 1200.0,
+                "composite_score": 92.0,
+                "resonance_tier": "雙模型看漲",
+                "tags": ["雙模型看漲", "TimesFM看漲", "Timestral看漲"],
+                "timesfm_potential": 3.5,
+                "timestral_potential": 4.0,
+                "risk_reward_ratio": 2.8
+            },
+            {
+                "ticker": "2308.TW",
+                "current_price": 350.0,
+                "composite_score": 88.0,
+                "resonance_tier": "雙AI看漲",
+                "tags": ["雙AI看漲", "TimesFM看漲"],
+                "timesfm_potential": 2.8,
+                "timestral_potential": 3.2,
+                "risk_reward_ratio": 2.1
+            }
+        ]
+        results = {
+            "overlap_candidates": candidates,
+            "xuantie_results": pd.DataFrame(),
+            "timesfm_results": [],
+            "macro_state": self.macro
+        }
+        res = format_dual_strategy_message("台灣50", results, "2026-10-22 10:00:00", name_map=self.name_map)
+        self.assertIn("[雙模型看漲]", res["telegram"])
+        self.assertIn("[雙AI看漲]", res["telegram"])
+        self.assertIn("【雙模型看漲】", res["discord"])
+
 
 
 if __name__ == "__main__":

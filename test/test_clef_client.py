@@ -71,7 +71,7 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(verdict.ticker, "2330.TW")
         self.assertEqual(verdict.action_decision, "strong_buy")
         self.assertEqual(verdict.conviction_score, 4.2)
-        self.assertIn("🤖AI強買", verdict.tag)
+        self.assertIn("🚀強勢買進", verdict.tag)
         self.assertEqual(verdict.source_slot, "Clef-Create360")
 
     @patch("requests.post")

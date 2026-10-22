@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.37';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.38';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.39';
 
 const { createApp } = Vue;
 
@@ -31,7 +31,7 @@ export const app = createApp({
             strategyOptions: [
                 {
                     id: 'resonance',
-                    label: '綜合優選 (雙AI看漲)',
+                    label: '綜合優選 (雙模型看漲)',
                     icon: 'military_tech',
                     description: '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。'
                 },
@@ -39,13 +39,13 @@ export const app = createApp({
                     id: 'timestral_bullish',
                     label: 'Timestral 看漲排行',
                     icon: 'smart_toy',
-                    description: '【Mistral AI 預測】依 Timestral 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
+                    description: '【Timestral 預測】依 Timestral 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
                 },
                 {
                     id: 'timesfm_bullish',
                     label: 'TimesFM 看漲排行',
                     icon: 'auto_awesome',
-                    description: '【Google AI 預測】依 TimesFM 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
+                    description: '【TimesFM 預測】依 TimesFM 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
                 },
                 {
                     id: 'xuantie',
@@ -55,9 +55,9 @@ export const app = createApp({
                 },
                 {
                     id: 'timestral_bearish',
-                    label: 'AI 看跌避險排行',
+                    label: '看跌避險排行',
                     icon: 'shield',
-                    description: '【短線避險】AI 模型預測隔日跌幅較大或下行風險偏高之標的，供減碼或防守參考。'
+                    description: '【短線避險】時序模型預測隔日跌幅較大或下行風險偏高之標的，供減碼或防守參考。'
                 },
                 {
                     id: 'latest',
@@ -679,7 +679,7 @@ export const app = createApp({
                     this.historyDetailSubTab = 'profile';
                 }
 
-                // 並行啟動個股情報中心與 AI 綜合決策裁判查詢
+                // 並行啟動個股情報中心與綜合決策裁判查詢
                 this.loadHistoryCompanyData(resolution.ticker, requestId);
                 this.loadHistoryDecision(resolution.ticker, requestId);
 
@@ -1647,8 +1647,8 @@ export const app = createApp({
             if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
                 return '綜合優選';
             }
-            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振')) {
-                return '雙AI看漲';
+            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
+                return '雙模型看漲';
             }
             return s;
         },
@@ -1657,14 +1657,23 @@ export const app = createApp({
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
             return list.map(rawTag => {
                 let cleanLabel = this.stripEmojis(rawTag).replace(/\(本地規則\)/g, '').trim();
+                cleanLabel = cleanLabel.replace(/^[🤖\s]+/, '').trim();
+                if (cleanLabel.startsWith('AI強買')) cleanLabel = cleanLabel.replace(/^AI強買/, '強勢買進');
+                else if (cleanLabel.startsWith('AI看好')) cleanLabel = cleanLabel.replace(/^AI看好/, '偏多看好');
+                else if (cleanLabel.startsWith('AI建議觀察')) cleanLabel = cleanLabel.replace(/^AI建議觀察/, '建議觀察');
+                else if (cleanLabel.startsWith('AI建議避開')) cleanLabel = cleanLabel.replace(/^AI建議避開/, '建議避開');
+                else if (cleanLabel.startsWith('AI做多')) cleanLabel = cleanLabel.replace(/^AI做多/, '偏多佈局');
+                else if (cleanLabel.startsWith('AI中立')) cleanLabel = cleanLabel.replace(/^AI中立/, '中立觀望');
+                cleanLabel = cleanLabel.replace(/^AI\s*/, '').trim();
+
                 if (cleanLabel.includes('玄鐵重劍') || cleanLabel.includes('玄鐵買點') || cleanLabel.includes('玄鐵')) {
                     cleanLabel = cleanLabel.replace(/玄鐵重劍|玄鐵買點|玄鐵/g, '季線支撐');
                 }
                 if (/四重共振|三重共振|多維共振|雙重共振/.test(cleanLabel)) {
                     cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振/g, '綜合優選');
                 }
-                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振/g, '雙AI看漲');
+                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/g, '雙模型看漲');
                 }
                 let icon = null;
                 let badgeType = 'default';
@@ -1674,10 +1683,10 @@ export const app = createApp({
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
                     tooltip = '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。';
-                } else if (cleanLabel.includes('雙AI看漲')) {
+                } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                    tooltip = '【雙AI看漲】Google TimesFM 與 Mistral Timestral 雙時序大模型同步預測隔日看漲。';
+                    tooltip = '【雙模型看漲】Google TimesFM 與 Mistral Timestral 雙時序大模型同步預測隔日看漲。';
                 } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
@@ -1697,7 +1706,7 @@ export const app = createApp({
                 } else if (cleanLabel.includes('Timestral')) {
                     icon = 'smart_toy';
                     badgeType = 'ai_timestral';
-                    tooltip = '【Timestral看漲】Mistral AI 209M 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
+                    tooltip = '【Timestral看漲】Mistral 209M 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
@@ -2062,8 +2071,8 @@ const globalFormatStrategyName = (str) => {
     if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
         return '綜合優選';
     }
-    if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振')) {
-        return '雙AI看漲';
+    if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
+        return '雙模型看漲';
     }
     return s;
 };

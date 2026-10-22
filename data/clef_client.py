@@ -445,12 +445,12 @@ class ClefDecisionClient:
             action = "strong_buy"
             conviction = 4.5
             prob = {"strong_buy": 0.65, "buy": 0.25, "hold_watch": 0.08, "avoid": 0.02}
-            tag = "🤖AI強買(本地規則)"
+            tag = "🚀強勢買進(本地規則)"
         elif composite_score >= 70.0 and (primary_pot > 0.0 or tfm_pot > 0.0 or has_pullback or is_sync_buy):
             action = "buy"
             conviction = 3.5
             prob = {"strong_buy": 0.20, "buy": 0.60, "hold_watch": 0.15, "avoid": 0.05}
-            tag = "🤖AI做多(本地規則)"
+            tag = "📈偏多佈局(本地規則)"
         else:
             action = "hold_watch"
             conviction = 2.5
@@ -599,15 +599,15 @@ class ClefDecisionClient:
                 # Generate readable decision tag
                 prob_pct = int(action_probs.get(action_choice, action_conf) * 100)
                 if action_choice == "strong_buy":
-                    tag = f"🤖AI強買({prob_pct}%)"
+                    tag = f"🚀強勢買進({prob_pct}%)"
                 elif action_choice == "buy":
-                    tag = f"🤖AI看好({prob_pct}%)"
+                    tag = f"📈偏多看好({prob_pct}%)"
                 elif action_choice == "hold_watch":
-                    tag = "🤖AI建議觀察"
+                    tag = "👀建議觀察"
                 elif action_choice == "avoid":
-                    tag = f"⚠️AI建議避開({prob_pct}%)"
+                    tag = f"⚠️建議避開({prob_pct}%)"
                 else:
-                    tag = "🤖AI中立"
+                    tag = "⚖️中立觀望"
 
                 verdict = ClefDecisionVerdict(
                     ticker=ticker,

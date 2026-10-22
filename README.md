@@ -20,8 +20,8 @@
 高密度量化佈局、全球宏觀大盤風控、四大共振極選矩陣與個股深度分析抽屜：
 ![操盤看板桌面版](docs/screenshots/dashboard_desktop.png)
 
-### 🎙️ AI Podcast 財經與科技情報雷達 (100 頂級頻道 · 100 篇實體情報流)
-全量收錄全球 100 大頂級科技與宏觀財經頻道，AI 繁中精華 TL;DR 萃取，即時關聯上市公司股票代號行情 Badge：
+### 🎙️ Podcast 財經與科技情報雷達 (100 頂級頻道 · 100 篇實體情報流)
+全量收錄全球 100 大頂級科技與宏觀財經頻道，繁中精華 TL;DR 萃取，即時關聯上市公司股票代號行情 Badge：
 ![Podcast 財經情報雷達](docs/screenshots/podcast_radar.png)
 
 ### 📱 行動端雙層響應式體驗 (Mobile Hybrid Quant Experience)
@@ -104,9 +104,9 @@ graph TD
 * 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
 * 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
 
-### 7. ⭐ 綜合優選 / 雙AI看漲評估 (Dual Foundation Model Consensus)
+### 7. ⭐ 綜合優選 / 雙模型看漲評估 (Dual Foundation Model Consensus)
 * 跨維度篩選同時符合 **「季線支撐買點 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
-* 自動貼上 `綜合優選`、`雙AI看漲`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
+* 自動貼上 `綜合優選`、`雙模型看漲`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
 * 目標價以 TimesFM 與 Timestral P50 進行等權防禦性合成（$0.5 \times P_{TimesFM} + 0.5 \times P_{Timestral}$），單一模型缺漏時自動優雅退化降級。
 * **個股歷史查詢 (Ticker Explorer)**：
   - **T+1 目標兌現日平移折線圖**：第 $i$ 天之隔日預測平移至 $i+1$ 與次日真實收盤對照，杜絕「影子線」錯覺，右側設有 `'隔日預估 (T+1)'` 錨點。
@@ -143,11 +143,11 @@ graph TD
 * **⚡ 跨使用者 DuckDB 二級快取**：同一標的當日已推論之動作分佈（`strong_buy`, `buy`, `hold_watch`, `avoid`）與確信度評分直接自 DuckDB 毫秒級讀取，避免多使用者或重複點擊反覆向上游發送相同推論請求。
 * 提供 REST 端點 `POST /api/v1/decision/evaluate`（支援 `force_refresh` 參數）、`GET /api/v1/decision/health` 與原生 FastMCP / WebMCP 工具 `get_clef_stock_verdict`。
 
-### 11. 🎙️ Podcast 財經與科技情報雷達 (AI Financial & Tech Podcast Radar)
+### 11. 🎙️ Podcast 財經與科技情報雷達 (Financial & Tech Podcast Radar)
 * 匯聚國際頂級深度訪談與總經科技頻道（All-In, Lex Fridman, Bloomberg Businessweek, Odd Lots, Dwarkesh, The Diary of a CEO, 硅谷101, 瘋投圈, 小Lin說 等 **100 大主流頻道**），即時收錄全球深度對話。
-* **AI 結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
-* **⚡ AI 催化重要性評級與標的多空推論**：透過 5 級決策鏈推論市場催化強度（⭐ 重磅 / ⚡ 重要 / 📰 關注）以及上市公司股票的多空姿態（`↑ 看多`、`↓ 看空`、`↔ 持平`），並提供專屬快篩開關。
-* **💾 DuckDB 全量持久化與 0ms SWR 水合**：所有收錄頻道、單集情報與 AI 決策重要性評級全量持久化於本地 DuckDB，前端支援 Stale-While-Revalidate (SWR) 本地端即時水合，開啟網頁瞬間 0ms 秒級呈現，杜絕重複請求與等待延遲。
+* **結構化深度提煉**：即時解析單集主題、主持人 (Host)、特別嘉賓 (Guest) 與 150~200 字繁中核心 TL;DR 觀點。
+* **⚡ 市場催化重要性評級與標的多空推論**：透過 5 級決策鏈推論市場催化強度（⭐ 重磅 / ⚡ 重要 / 📰 關注）以及上市公司股票的多空姿態（`↑ 看多`、`↓ 看空`、`↔ 持平`），並提供專屬快篩開關。
+* **💾 DuckDB 全量持久化與 0ms SWR 水合**：所有收錄頻道、單集情報與決策重要性評級全量持久化於本地 DuckDB，前端支援 Stale-While-Revalidate (SWR) 本地端即時水合，開啟網頁瞬間 0ms 秒級呈現，杜絕重複請求與等待延遲。
 * **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
 * **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。
 
@@ -304,7 +304,7 @@ graph TD
 | `/api/v1/earnings-call/{ticker}` | `GET` | 查詢單一標的之法說會歷程、官方簡報 PDF 與影音回放網址 |
 | `/api/v1/earnings-call/calendar` | `GET` | 取得月度法說會日曆聚合場次、權值股場次計數與逐日結構化場次清單 |
 | `/api/v1/earnings-call/sync` | `POST` | 觸發非同步背景跨市場法說會資料全量同步 |
-| `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、AI 繁中 TL;DR 與關聯股票量化資料快照；快照不等同即時行情 |
+| `/api/v1/podcast/episodes` | `GET` | 查詢 Podcast 單集情報、繁中 TL;DR 與關聯股票量化資料快照；快照不等同即時行情 |
 | `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表；metadata 來源標記為 `seed_snapshot` |
 | `/api/v1/podcast/topics` | `GET` | 取得熱門科技實體與話題標籤頻次聚合排行榜 |
 | `/api/v1/podcast/sync` | `POST` | 觸發非同步背景 Podcast 最新 RSS 抓取與單集 raw metadata 同步 |

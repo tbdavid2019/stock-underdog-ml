@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-10-22 (v2.4.39)
+
+### Enhanced & Refined (Strict De-Buzzwording: Complete Purge of "AI" Marketing Buzzwords)
+- **🧹 全面淨化使用者介面與視覺術語（徹底移除「AI」行銷浮誇字眼）**：
+  - **`tab_history.html`**：
+    - 「股價與 AI 預測目標價趨勢折線圖」正名為「**股價與隔日預測目標價趨勢折線圖**」。
+    - 「⚡ AI 綜合操作建議」正名為「**⚡ 綜合操作建議**」。
+    - 「AI 模型隔日 (T+1) 預測準確率 PK 成績單」正名為「**雙模型隔日 (T+1) 預測準確率 PK 成績單**」。
+  - **`tab_dashboard.html`**：
+    - 策略選項與篩選標籤「雙AI看漲」統一正名為「**雙模型看漲**」。
+  - **`tab_podcast.html`**：
+    - 頂部標題標籤「AI INTELLIGENCE RADAR」正名為「**PODCAST INTELLIGENCE RADAR**」。
+    - 描述文案「提煉 AI 繁中精華觀點」改為「**提煉繁中精華觀點**」。
+    - 頻道分類「科技 AI」正名為「**前沿科技**」。
+    - 評級浮動提示「AI 市場催化重要性評級」改為「**市場催化重要性評級**」。
+    - 摘要標題「AI 深度觀點精煉 (TL;DR)」正名為「**重點觀點精煉 (TL;DR)**」。
+  - **`footer.html` & `tab_agent_hub.html`**：
+    - 底部工具按鈕提示「切換至 AI Agent 與 MCP 工具中心」改為「**切換至自動化與 MCP 工具中心**」。
+    - Agent Hub 說明文案移除「AI 爬蟲」，正名為「自動化爬蟲與 Agent 快速擷取」。
+- **⚙️ 前端應用控制器與歷史快取向後相容 (`api/static/js/app.js`)**：
+  - 策略清單標題與敘述去噪：`綜合優選 (雙模型看漲)`、`Timestral 預測`、`TimesFM 預測`、`看跌避險排行`，移除 Mistral AI / Google AI 等冗贅字樣。
+  - **歷史快取標籤向後相容降噪清洗 (`parseTags` / `formatStrategyName`)**：自動將 DuckDB 歷史快取資料中帶有 `雙AI看漲`、`🤖AI強買`、`🤖AI看好`、`🤖AI建議觀察`、`⚠️AI建議避開`、`🤖AI做多`、`🤖AI中立` 之舊版標籤動態正規化為 `雙模型看漲`、`強勢買進`、`偏多看好`、`建議觀察`、`建議避開`、`偏多佈局`、`中立觀望`。
+- **⚖️ 決策裁判與多渠道日報推播去噪 (`data/clef_client.py`, `evaluators/formatter.py`)**：
+  - **決策 Verdict 標籤淨化**：本地規則與遠端決策 Tag 移除 `AI` 前綴，改為清晰純粹之 `🚀強勢買進`、`📈偏多佈局`、`📈偏多看好`、`👀建議觀察`、`⚠️建議避開`、`⚖️中立觀望`。
+  - **推播排版規格對齊**：Telegram、Discord、Email 與 Terminal 推播將「【AI 操盤解讀】」正名為「**【盤勢重點解讀】**」，共振階層統一對齊「**雙模型看漲**」。
+- **🧪 完整單元測試與版本同步**：
+  - 更新 `test/test_clef_client.py` 與 `test/test_formatter.py` 斷言並新增雙模型共振相容性驗證，全數 294+ 單元測試通過。
+  - 專案版本全面升級至 `2.4.39`。
+
 ## 2026-10-22 (v2.4.38)
 
 ### Enhanced & Optimized (UI Clean Nomenclature & Singleflight Per-Key Locking Defense)
