@@ -11,12 +11,12 @@ export class ChartManager {
 
     getThemeTokens(isDark) {
         return {
-            gridColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
-            textColor: isDark ? '#9CA3AF' : '#6B7280',
-            tooltipBg: isDark ? '#0D0E11' : '#FFFFFF',
-            tooltipTitle: isDark ? '#F9FAFB' : '#111827',
-            tooltipBody: isDark ? '#E5E7EB' : '#374151',
-            tooltipBorder: isDark ? '#262626' : '#E5E7EB'
+            gridColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(101, 90, 67, 0.15)',
+            textColor: isDark ? '#9CA3AF' : '#4A3F2B',
+            tooltipBg: isDark ? '#0D0E11' : '#FFF9E8',
+            tooltipTitle: isDark ? '#F9FAFB' : '#2B251A',
+            tooltipBody: isDark ? '#E5E7EB' : '#2B251A',
+            tooltipBorder: isDark ? '#262626' : '#6B5B38'
         };
     }
 

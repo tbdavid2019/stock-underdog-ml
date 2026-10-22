@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '/static/js/api-client.js?v=2.4.30';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.34';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.35';
 
 const { createApp } = Vue;
 

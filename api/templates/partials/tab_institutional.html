@@ -4,13 +4,13 @@
     <!-- Sub-tab Navigation (Three Inst vs Broker) -->
     <div class="flex items-center space-x-2">
         <button @click="instSubTab = 'three_inst'"
-                :class="instSubTab === 'three_inst' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
+                :class="instSubTab === 'three_inst' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
                 class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
             <span class="material-symbols-outlined text-[16px] leading-none">account_balance</span>
             <span>三大法人籌碼與持股</span>
         </button>
         <button @click="instSubTab = 'broker'; if(!brokerDates.length) loadBrokerTrend()"
-                :class="instSubTab === 'broker' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
+                :class="instSubTab === 'broker' ? (isDark ? 'bg-amber-500 text-black font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:text-slate-900 shadow-sm')"
                 class="px-4 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
             <span class="material-symbols-outlined text-[16px] leading-none">domain</span>
             <span>券商分點主力追蹤</span>
@@ -67,7 +67,7 @@
                         <button v-for="opt in [{id: 'total_net', label: '三大法人合計'}, {id: 'foreign_net', label: '外資淨買賣'}, {id: 'trust_net', label: '投信淨買賣'}, {id: 'dealer_net', label: '自營商'}]"
                                 :key="opt.id"
                                 @click="instOrderBy = opt.id; loadInstitutionalFlows()"
-                                :class="instOrderBy === opt.id ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                                :class="instOrderBy === opt.id ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                                 class="px-2.5 py-1 rounded-lg transition-all text-xs">
                             {{ opt.label }}
                         </button>

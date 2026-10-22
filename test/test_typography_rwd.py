@@ -121,6 +121,39 @@ class TestTypographyAndRWD(unittest.TestCase):
         self.assertIn("(hover: hover) and (pointer: fine)", app_js)
         self.assertIn("Math.min(window.innerWidth - 24, 384)", app_js)
 
+    def test_2md_saffron_palette_and_wcag_contrast_rules(self):
+        """
+        Verify that:
+        1. header.html no longer contains the 888 StockQuant text next to the logo badge.
+        2. index.html defines the 2md.aiurl.tw color tokens (#FFB010, #17324D, #FFF9E8, #2B251A, #FFF0CC) and WCAG AA/AAA light-mode contrast overrides.
+        3. No bg-amber-500 text-white remains in any template (header.html or partials/*.html), ensuring WCAG AAA dark-ink-on-saffron contrast.
+        """
+        header_path = Path("api/templates/partials/header.html")
+        self.assertTrue(header_path.exists(), "header.html not found")
+        header_html = header_path.read_text(encoding="utf-8")
+
+        # 1. header.html removes the 888 StockQuant text next to the logo badge
+        self.assertNotIn('888&nbsp;<span class="text-amber-500">StockQuant</span>', header_html)
+        self.assertNotIn('888 StockQuant</span>', header_html)
+
+        # 2. index.html defines 2md.aiurl.tw color tokens and WCAG contrast rules
+        for token in ['#FFB010', '#17324D', '#FFF9E8', '#2B251A', '#FFF0CC']:
+            self.assertIn(token, self.html, f"Expected 2md color token {token} in index.html")
+
+        self.assertIn("html:not(.dark) .bg-white", self.html)
+        self.assertIn("html:not(.dark) .bg-amber-500", self.html)
+        self.assertIn("#065F46", self.html)  # Bullish WCAG AAA
+        self.assertIn("#991B1B", self.html)  # Bearish WCAG AAA
+
+        # 3. No bg-amber-500 text-white remains in any template
+        templates_dir = Path("api/templates")
+        violating_files = []
+        for html_file in templates_dir.glob("**/*.html"):
+            content = html_file.read_text(encoding="utf-8")
+            if "bg-amber-500 text-white" in content:
+                violating_files.append(str(html_file))
+        self.assertEqual(violating_files, [], f"Found bg-amber-500 text-white in: {violating_files}")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -46,13 +46,13 @@
     <div class="flex items-center space-x-2 border-b pb-3" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
         <button @click="togglePodcastSubView('episodes')"
                 class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center space-x-2"
-                :class="podcastSubView === 'episodes' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
+                :class="podcastSubView === 'episodes' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-[#2B251A] shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
             <span class="material-symbols-outlined text-[18px] leading-none">article</span>
             <span>深度情報單集 ({{ podcastEpisodes.length }})</span>
         </button>
         <button @click="togglePodcastSubView('channels')"
                 class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center space-x-2"
-                :class="podcastSubView === 'channels' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
+                :class="podcastSubView === 'channels' ? (isDark ? 'bg-amber-500 text-black shadow-md' : 'bg-amber-500 text-[#2B251A] shadow-sm') : (isDark ? 'text-slate-400 hover:text-white hover:bg-[#16181D]' : 'text-slate-600 hover:text-black hover:bg-[#F4F4F6]')">
             <span class="material-symbols-outlined text-[18px] leading-none">hub</span>
             <span>全部收錄頻道 ({{ podcastChannels.length }})</span>
         </button>
@@ -118,7 +118,7 @@
                 <div class="shrink-0 flex flex-col items-end gap-1.5">
                     <button @click="selectChannelAndFilter(ch.channel_id)"
                             class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                            :class="isDark ? 'bg-[#16181D] hover:bg-amber-500 hover:text-black text-amber-400 border border-[#262626]' : 'bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-800 border border-amber-200'"
+                            :class="isDark ? 'bg-[#16181D] hover:bg-amber-500 hover:text-black text-amber-400 border border-[#262626]' : 'bg-amber-50 hover:bg-amber-500 hover:text-[#2B251A] text-amber-800 border border-amber-200'"
                             title="查看此頻道所有精煉情報">
                         <span>查看單集</span>
                         <span class="material-symbols-outlined text-[13px] leading-none">arrow_forward</span>
@@ -149,7 +149,7 @@
                 <!-- "All" Pill -->
                 <button @click="setPodcastTopic('')"
                         class="px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-2 shrink-0"
-                        :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
+                        :class="!podcastSelectedTopic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                     <span class="material-symbols-outlined text-[16px] leading-none">auto_awesome</span>
                     <span>全部話題</span>
                     <span class="text-xs px-2 py-0.5 rounded-full font-bold"
@@ -162,7 +162,7 @@
                 <button v-for="t in podcastTopics" :key="t.topic"
                         @click="setPodcastTopic(t.topic)"
                         class="px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border flex items-center space-x-1.5 shrink-0"
-                        :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
+                        :class="podcastSelectedTopic === t.topic ? (isDark ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:border-amber-500/40 hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')">
                     <span>{{ t.topic }}</span>
                     <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
                           :class="podcastSelectedTopic === t.topic ? 'bg-black/25 text-white' : (isDark ? 'bg-[#262626] text-amber-400' : 'bg-amber-100 text-amber-800')">
@@ -201,7 +201,7 @@
                     <button v-for="imp in [{ id: 'ALL', label: '全部' }, { id: 'heavyweight', label: '⭐ 重磅' }, { id: 'important', label: '⚡ 重要' }]" :key="imp.id"
                             @click="setPodcastImportance(imp.id)"
                             class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
-                            :class="podcastSelectedImportance === imp.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                            :class="podcastSelectedImportance === imp.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                         {{ imp.label }}
                     </button>
                 </div>
@@ -212,7 +212,7 @@
                     <button v-for="l in [{ id: 'ALL', label: '全部' }, { id: 'en', label: '英文' }, { id: 'zh', label: '華語' }]" :key="l.id"
                             @click="setPodcastLang(l.id)"
                             class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
-                            :class="podcastSelectedLang === l.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                            :class="podcastSelectedLang === l.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                         {{ l.label }}
                     </button>
                 </div>

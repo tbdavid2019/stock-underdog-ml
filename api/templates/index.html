@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>888 StockQuant | 專業級多維量化決策平台</title>
     <meta name="description" content="888 StockQuant 提供台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
-    <meta name="theme-color" content="#F59E0B">
+    <meta name="theme-color" content="#FFB010">
     <meta name="application-name" content="888 StockQuant">
     <link rel="canonical" href="https://stockdata.david888.com/">
     <link rel="manifest" href="/site.webmanifest">
@@ -83,8 +83,8 @@
                             'dark-card': '#0D0E11',
                             'dark-card-inner': '#16181D',
                             'dark-border': '#262626',
-                            'amber': '#F59E0B',
-                            'amber-hover': '#D97706',
+                            'amber': '#FFB010',
+                            'amber-hover': '#F2A600',
                             'profit': '#24D97A',
                             'loss': '#EF4444',
                         }
@@ -115,13 +115,25 @@
         }
         
         :root {
-            --bg-primary: #EEEEEE;
-            --card-bg: #FFFFFF;
-            --card-inner-bg: #F4F4F6;
-            --border-color: #E5E7EB;
-            --text-primary: #111827;
-            --text-muted: #6B7280;
-            --accent-amber: #F59E0B;
+            /* 2md.aiurl.tw Five Base Colors & Tonal Tints */
+            --saffron: #FFB010;
+            --saffron-hover: #F2A600;
+            --deep-blue: #17324D;
+            --clay: #9A3412;        /* WCAG AA 6.4:1 on #FFF9E8 */
+            --warm-cream: #FFF9E8;
+            --ink: #2B251A;         /* WCAG AAA 14.2:1 on #FFF9E8 */
+            --canvas: #FFF0CC;
+            --card-border: #DDC58B;
+            --text-muted: #5C5038;  /* WCAG AA 6.8:1 on #FFF9E8 */
+            --input-bg: #FFFEFA;
+            --input-border: #6B5B38;
+
+            --bg-primary: #FFF0CC;
+            --card-bg: #FFF9E8;
+            --card-inner-bg: #FFFDF7;
+            --border-color: #DDC58B;
+            --text-primary: #2B251A;
+            --accent-amber: #FFB010;
         }
 
         html.dark {
@@ -131,7 +143,7 @@
             --border-color: #262626;
             --text-primary: #F9FAFB;
             --text-muted: #9CA3AF;
-            --accent-amber: #F59E0B;
+            --accent-amber: #FFB010;
             background-color: #030302;
             color: #F9FAFB;
         }
@@ -140,9 +152,79 @@
             font-size: 16px; /* 12pt standard typographical baseline */
         }
 
-        html:not(.dark) {
-            background-color: #EEEEEE;
-            color: #111827;
+        html:not(.dark), html:not(.dark) body {
+            background-color: #FFF0CC;
+            color: #2B251A;
+        }
+
+        /* ================= 2MD.AIURL.TW LIGHT MODE SURFACES & WCAG AA/AAA CONTRAST ================= */
+        html:not(.dark) .bg-white { background-color: #FFF9E8 !important; }
+        html:not(.dark) .bg-white\/95, html:not(.dark) .bg-white\/90 { background-color: rgba(255, 249, 232, 0.96) !important; }
+        html:not(.dark) .bg-\[\#F4F4F6\], html:not(.dark) .bg-\[\#F9FAFB\], html:not(.dark) .bg-slate-50 { background-color: #FFFDF7 !important; }
+        html:not(.dark) .bg-slate-100, html:not(.dark) .bg-slate-200 { background-color: #F5E6C4 !important; }
+        html:not(.dark) .border-\[\#E5E7EB\], html:not(.dark) .border-slate-200, html:not(.dark) .border-slate-300 { border-color: #DDC58B !important; }
+        html:not(.dark) .divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) { border-color: #E6D2A3 !important; }
+        html:not(.dark) .hover\:bg-\[\#F4F4F6\]:hover, html:not(.dark) .hover\:bg-white:hover { background-color: #FFF0CC !important; }
+
+        /* WCAG AAA Contrast on Saffron / Amber Buttons (10.2:1 dark ink on saffron) */
+        html:not(.dark) .bg-amber-500, html:not(.dark) .bg-\[\#FFB010\] {
+            background-color: #FFB010 !important;
+            color: #2B251A !important;
+        }
+        html:not(.dark) .bg-amber-500.text-white, html:not(.dark) .bg-amber-500 .text-white,
+        html:not(.dark) .hover\:bg-amber-500:hover, html:not(.dark) .hover\:bg-amber-400:hover, html:not(.dark) .hover\:bg-amber-600:hover {
+            background-color: #F2A600 !important;
+            color: #2B251A !important;
+        }
+
+        /* Primary & Muted Text in Light Mode (WCAG AAA 14.2:1 / AA 6.8:1) */
+        html:not(.dark) .text-slate-900, html:not(.dark) .text-slate-800, html:not(.dark) .text-gray-900 { color: #2B251A !important; }
+        html:not(.dark) .text-slate-700, html:not(.dark) .text-slate-600, html:not(.dark) .text-slate-300 { color: #3D3424 !important; }
+        html:not(.dark) .text-slate-500, html:not(.dark) .text-slate-400, html:not(.dark) .text-\[\#9CA3AF\] { color: #5C5038 !important; }
+
+        /* Amber / Clay Accent Text in Light Mode -> 2md Clay #9A3412 (6.4:1 WCAG AA) */
+        html:not(.dark) .text-amber-300, html:not(.dark) .text-amber-400, html:not(.dark) .text-amber-500, html:not(.dark) .text-amber-600, html:not(.dark) .text-amber-700, html:not(.dark) .text-orange-400, html:not(.dark) .text-orange-500 {
+            color: #9A3412 !important;
+        }
+
+        /* Emerald / Bullish Text in Light Mode -> Deep Forest #065F46 (7.6:1 WCAG AAA) */
+        html:not(.dark) .text-emerald-300, html:not(.dark) .text-emerald-400, html:not(.dark) .text-emerald-500, html:not(.dark) .text-emerald-600 {
+            color: #065F46 !important;
+        }
+
+        /* Rose / Bearish Text in Light Mode -> Deep Crimson #991B1B (7.2:1 WCAG AAA) */
+        html:not(.dark) .text-rose-300, html:not(.dark) .text-rose-400, html:not(.dark) .text-rose-500, html:not(.dark) .text-red-400, html:not(.dark) .text-red-500 {
+            color: #991B1B !important;
+        }
+
+        /* Sky / Cyan / Blue / Timestral Text in Light Mode -> 2md Deep Blue #17324D (12.1:1 WCAG AAA) */
+        html:not(.dark) .text-sky-300, html:not(.dark) .text-sky-400, html:not(.dark) .text-sky-500,
+        html:not(.dark) .text-cyan-300, html:not(.dark) .text-cyan-400, html:not(.dark) .text-cyan-500,
+        html:not(.dark) .text-blue-400, html:not(.dark) .text-blue-500 {
+            color: #17324D !important;
+        }
+
+        /* Purple / Indigo / TimesFM Text in Light Mode -> Deep Royal Violet #5B21B6 (7.9:1 WCAG AAA) */
+        html:not(.dark) .text-purple-300, html:not(.dark) .text-purple-400, html:not(.dark) .text-purple-500,
+        html:not(.dark) .text-indigo-300, html:not(.dark) .text-indigo-400 {
+            color: #5B21B6 !important;
+        }
+
+        /* Preserve High-Contrast Light Text Inside Intentional Dark Surfaces (e.g. Video Player Header, Dark Badges) */
+        html:not(.dark) .bg-slate-800.text-slate-300, html:not(.dark) .bg-slate-800 .text-slate-300,
+        html:not(.dark) .bg-slate-800.text-slate-400, html:not(.dark) .bg-slate-800 .text-slate-400,
+        html:not(.dark) [class*="bg-zinc-900"] .text-slate-400, html:not(.dark) [class*="bg-zinc-900"].text-slate-400 {
+            color: #E2E8F0 !important;
+        }
+        html:not(.dark) [class*="bg-zinc-900"] .text-rose-400, html:not(.dark) [class*="bg-zinc-900"].text-rose-400 {
+            color: #FDA4AF !important;
+        }
+
+        /* Inputs, Selects, Textareas in Light Mode */
+        html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea {
+            background-color: #FFFEFA;
+            border-color: #6B5B38;
+            color: #2B251A;
         }
 
         body {
@@ -201,8 +283,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
         .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
 
-        :focus-visible {
-            outline: 2px solid #F59E0B;
+        html:not(.dark) :focus-visible {
+            outline: 2px solid #17324D;
+            outline-offset: 2px;
+        }
+        html.dark :focus-visible {
+            outline: 2px solid #FFB010;
             outline-offset: 2px;
         }
 

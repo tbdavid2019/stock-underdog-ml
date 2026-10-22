@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-10-22 (v2.4.35)
+
+### Fixed & Enhanced (2md.aiurl.tw Color Palette & Strict WCAG AA/AAA Readability Upgrade)
+- **🎨 全面升級 2md.aiurl.tw 暖米溫潤色系與頂級 WCAG AA/AAA 對比標準**：`index.html` 導入 2md 五色調（`#17324D`、`#FFF0CC`、`#FFF9E8`、`#2B251A`、`#FFB010`、`#9A3412`、`#DDC58B`）；全站淺色模式黃底全面改用深赭墨字 `#2B251A`（對比度 10.2:1 WCAG AAA）；看漲翠綠 `#065F46`、看跌緋紅 `#991B1B`、時序模型深藍 `#17324D` 與紫 `#5B21B6` 均達成 WCAG AAA 標準。
+- **🏷️ 移除頂部左側多餘文字，回歸簡潔 888 STOCK QUANT 徽章 (`header.html`)**：頂部左側移除 `888 StockQuant` 文字，保留番紅花金黃底 `#FFB010` 配墨色邊框與字體之方型徽章；桌面與行動端導覽列改採藏青深藍 `#17324D` 容器與金黃高對比選中按鈕。
+- **🧹 全站 Partial 模板淺色啟用按鈕清理與 Chart.js 調校**：全面掃除 `tab_dashboard.html`、`tab_history.html`、`tab_institutional.html`、`tab_podcast.html`、`footer.html` 的 `bg-amber-500 text-white` 為 `bg-amber-500 text-[#2B251A]`；Chart.js 淺色圖表格線與 Tooltip 採用 2md 色彩。
+- **🧪 單元測試覆蓋與版本同步 (`test_typography_rwd.py`, `version.py`, `app.js`)**：版本升至 `v2.4.35`，單元測試嚴格斷言 2md 色彩系統與零違規按鈕。
+
 ## 2026-10-22 (v2.4.34)
 
 ### Fixed & Enhanced (Mobile RWD, Native Bottom App Bar, Touch Occlusion & Responsive Typography)

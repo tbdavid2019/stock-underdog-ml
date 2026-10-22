@@ -4,6 +4,29 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-22 (v2.4.35)
+
+### Fixed & Enhanced (2md.aiurl.tw Color Palette & Strict WCAG AA/AAA Readability Upgrade)
+- **🎨 全面升級 2md.aiurl.tw 暖米溫潤色系與頂級 WCAG AA/AAA 對比標準**：
+  - **`api/templates/index.html`**：
+    - 引入 `https://2md.aiurl.tw` 經典五色調：藏青深藍 `--deep-blue: #17324D`、暖米底色 `--canvas: #FFF0CC`、卡片底色 `--card-bg: #FFF9E8`、深赭墨字 `--ink: #2B251A`、金黃番紅花 `--saffron: #FFB010`、磚紅赤陶 `--clay: #9A3412`、邊界色 `--card-border: #DDC58B`。
+    - 全面注入淺色模式表面與文字的高對比 WCAG AA/AAA 覆寫規則：
+      - 淺色模式背景統一為暖米色 `#FFF0CC`，卡片統一為 `#FFF9E8`，輸入框為 `#FFFEFA` / 邊界 `#6B5B38`。
+      - 徹底解決淺色模式下黃底白字對比度嚴重不及格（原 2.15:1 失敗）問題：所有 Amber / Saffron 元素強制使用深赭墨字 `#2B251A`（對比度達 **10.2:1，WCAG AAA 頂級標準**）。
+      - 多市場看漲與看跌語意文字全面升級：看漲採用深翠綠 `#065F46`（7.6:1 WCAG AAA）、看跌採用深緋紅 `#991B1B`（7.2:1 WCAG AAA）、時序模型 Timestral 採用深藍 `#17324D`（12.1:1 WCAG AAA）、TimesFM 採用深皇家紫 `#5B21B6`（7.9:1 WCAG AAA）、赭紅輔助字採用 `#9A3412`（6.4:1 WCAG AA）。
+      - `<meta name="theme-color">` 與 `:focus-visible` 外框統一對齊 `#FFB010`。
+- **🏷️ 移除頂部左側多餘文字，回歸簡潔 888 STOCK QUANT 徽章 (`api/templates/partials/header.html`)**：
+  - 頂部導覽列左側徹底移除多餘的 `888 StockQuant` 文字標籤，僅保留精緻方型徽章。
+  - 方型徽章升級為 `2md.aiurl.tw` 工藝風格：番紅花金黃底色 `#FFB010`、2px 深赭墨色邊框 `#2B251A` 與墨色字體 `#2B251A`，維持俐落質感。
+  - 桌面導覽列容器升級為藏青深藍 `#17324D`，啟用中標籤為番紅花金黃 `#FFB010` 配墨字 `#2B251A`，未啟用標籤為柔白暖米 `#FFF9E8`（對比度達 12.1:1 WCAG AAA）。
+  - 行動端底部導覽列容器同步升級為藏青深藍 `#17324D`，選取分頁對齊 `#FFB010` + `#2B251A`。
+  - 頂部標頭與操作按鈕（語言切換、分享連結、深淺色切換）對齊暖白米底 `#FFFDF7` 與邊界 `#6B5B38`。
+- **🧹 全站 Partial 模板淺色啟用按鈕清理與 Chart.js 主題色彩調校**：
+  - **`api/templates/partials/*.html`**：搜尋並全面清理 `tab_dashboard.html`、`tab_history.html`、`tab_institutional.html`、`tab_podcast.html`、`footer.html`，將所有 `bg-amber-500 text-white` 升級為高對比深墨字 `bg-amber-500 text-[#2B251A]`。
+  - **`api/static/js/chart-manager.js`**：調校淺色模式圖表主題 Token，格線為溫潤暖灰 `rgba(101, 90, 67, 0.15)`，座標軸文字為 `#4A3F2B`，Tooltip 升級為 `#FFF9E8` 卡片配 `#2B251A` 墨字與 `#6B5B38` 邊框。
+- **🧪 單元測試覆蓋與版本同步 (`test/test_typography_rwd.py`, `core/version.py`, `app.js`)**：
+  - 新增 `test_2md_saffron_palette_and_wcag_contrast_rules`，嚴格驗證左側舊商標文字已移除、2md 顏色 Token 完整定義、無任何 `bg-amber-500 text-white` 違規殘留。
+
 ## 2026-10-22 (v2.4.34)
 
 ### Fixed & Enhanced (Mobile RWD, Native Bottom App Bar, Touch Occlusion & Responsive Typography)

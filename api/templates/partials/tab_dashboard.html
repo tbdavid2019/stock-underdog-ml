@@ -286,7 +286,7 @@
                         <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
                                 class="px-2 py-0.5 rounded-md text-xs font-bold transition-all whitespace-nowrap shrink-0"
-                                :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                                :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             {{ m === 'ALL' ? '全市場' : (m === 'TW' ? '台股' : (m === 'US' ? '美股' : (m === 'JP' ? '日股' : '韓股'))) }}
                         </button>
                     </div>
@@ -549,7 +549,7 @@
                     @click="setStrategy(strat.id)"
                     :aria-pressed="selectedStrategy === strat.id"
                     :title="strat.description"
-                    :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-white border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
+                    :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
                     class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 border">
                 <span class="material-symbols-outlined text-[17px] sm:text-[18px]">{{ strat.icon }}</span>
                 <span>{{ strat.label }}</span>
@@ -562,14 +562,14 @@
             <div class="inline-flex rounded-xl border p-0.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
                 <button @click="setViewMode('table')"
-                        :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
                         title="高密度表格檢視">
                     <span class="material-symbols-outlined text-[18px]">table_rows</span>
                     <span class="hidden sm:inline">表格</span>
                 </button>
                 <button @click="setViewMode('card')"
-                        :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
                         class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
                         title="卡片情報檢視">
                     <span class="material-symbols-outlined text-[18px]">grid_view</span>
@@ -630,7 +630,7 @@
          role="alert">
         <span class="material-symbols-outlined text-[40px] text-rose-500">error</span>
         <div class="text-base font-bold" :class="isDark ? 'text-rose-200' : 'text-rose-800'">{{ loadError }}</div>
-        <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white transition-all bg-amber-500 hover:bg-amber-600">
+        <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-black text-[#2B251A] transition-all bg-amber-500 hover:bg-amber-600">
             重新整理
         </button>
     </div>
@@ -743,7 +743,7 @@
                         </button>
                         <button @click="toggleRowDrawer(item.ticker)"
                                 class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-amber-500 text-white border-amber-500') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700')">
+                                :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-amber-500 text-[#2B251A] border-amber-500') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700')">
                             <span>{{ expandedDrawerTicker === item.ticker ? '收起' : '詳情' }}</span>
                             <span class="material-symbols-outlined text-[13px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
                         </button>
@@ -1073,13 +1073,13 @@
                                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                                     <button @click="drawerActiveSubTab = 'profile'"
                                             class="px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
-                                            :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                            :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">business</span>
                                         <span>基本面與新聞</span>
                                     </button>
                                     <button @click="drawerActiveSubTab = 'earnings'"
                                             class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
-                                            :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                            :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">event_note</span>
                                         <span>法說會與簡報</span>
                                         <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -1090,7 +1090,7 @@
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                                             @click="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
                                             class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
-                                            :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                            :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
                                         <span>集團股權網絡</span>
                                         <span v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -1101,7 +1101,7 @@
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                                             @click="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
                                             class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
-                                            :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                            :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[16px] leading-none">account_balance</span>
                                         <span>政府標案</span>
                                         <span v-if="expandedDrawerData?.company_tender?.wins" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -1246,7 +1246,7 @@
                                             <div class="space-y-1">
                                                 <div class="flex items-center space-x-2">
                                                     <span class="px-2.5 py-0.5 rounded text-xs font-black"
-                                                          :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')">
+                                                          :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : (isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-[#F5E6C4] text-[#5C5038] border border-[#DDC58B]'))">
                                                         {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                                     </span>
                                                     <span class="font-bold text-xs sm:text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
@@ -1826,7 +1826,7 @@
                     <!-- 詳情 Toggle -->
                     <button @click.stop="toggleRowDrawer(item.ticker, 'profile')"
                             class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-white border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')">
+                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')">
                         <span class="material-symbols-outlined text-[14px] leading-none">business</span>
                         <span>詳情</span>
                         <span class="material-symbols-outlined text-[13px] leading-none">{{ expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'profile' ? 'expand_less' : 'expand_more' }}</span>
@@ -1836,7 +1836,7 @@
                     <button v-if="isTwStock(item.ticker)"
                             @click.stop="toggleRowDrawer(item.ticker, 'network')"
                             class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-white border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] text-amber-700 hover:bg-amber-50')">
+                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] text-amber-700 hover:bg-amber-50')">
                         <span class="material-symbols-outlined text-[14px] leading-none">account_tree</span>
                         <span>集團網絡</span>
                     </button>
@@ -1844,7 +1844,7 @@
                     <!-- 法說會 Direct Trigger -->
                     <button @click.stop="toggleRowDrawer(item.ticker, 'earnings')"
                             class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-white border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')">
+                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')">
                         <span class="material-symbols-outlined text-[14px] leading-none">event_note</span>
                         <span>法說會</span>
                         <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="px-1 py-0.2 rounded-full text-[10px] font-black"
@@ -1857,7 +1857,7 @@
                     <button v-if="isTwStock(item.ticker)"
                             @click.stop="toggleRowDrawer(item.ticker, 'tender')"
                             class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm"
-                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-white border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-blue-400 hover:text-blue-300 hover:border-blue-500/50' : 'bg-white border-[#E5E7EB] text-blue-700 hover:bg-blue-50')">
+                            :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-blue-400 hover:text-blue-300 hover:border-blue-500/50' : 'bg-white border-[#E5E7EB] text-blue-700 hover:bg-blue-50')">
                         <span class="material-symbols-outlined text-[14px] leading-none">account_balance</span>
                         <span>標案</span>
                     </button>
@@ -1884,13 +1884,13 @@
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <button @click.stop="drawerActiveSubTab = 'profile'"
                             class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
-                            :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                            :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">business</span>
                         <span>基本面與新聞</span>
                     </button>
                     <button @click.stop="drawerActiveSubTab = 'earnings'"
                             class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
-                            :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                            :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
                         <span>法說會</span>
                         <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
@@ -1901,7 +1901,7 @@
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                             @click.stop="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
                             class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
-                            :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                            :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
                         <span>集團股權網絡</span>
                         <span v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
@@ -1912,7 +1912,7 @@
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                             @click.stop="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
                             class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
-                            :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                            :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
                         <span>政府標案</span>
                         <span v-if="expandedDrawerData?.company_tender?.wins" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
@@ -2049,8 +2049,8 @@
                              :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-1.5">
-                                    <span class="px-2 py-0.5 rounded text-[11px] font-black"
-                                          :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')">
+                                    <span class="px-2 py-0.5 rounded text-xs font-black"
+                                          :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : (isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-[#F5E6C4] text-[#5C5038] border border-[#DDC58B]'))">
                                         {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                     </span>
                                     <span class="font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
@@ -2539,7 +2539,7 @@
                         <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
                                 class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0"
-                                :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white') : (isDark ? 'text-slate-400 hover:text-white bg-[#14161C]' : 'text-slate-600 hover:text-black bg-slate-100')">
+                                :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white bg-[#14161C]' : 'text-slate-600 hover:text-black bg-slate-100')">
                             {{ m === 'ALL' ? '全部市場' : (m === 'TW' ? '台灣市場' : (m === 'US' ? '美國市場' : (m === 'JP' ? '日本市場' : '韓國市場'))) }}
                         </button>
                     </div>

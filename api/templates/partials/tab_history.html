@@ -96,7 +96,7 @@
                 <!-- Tab 1: Profile -->
                 <button @click="setHistoryDetailSubTab('profile')"
                         class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
-                        :class="historyDetailSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                        :class="historyDetailSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                     <span class="material-symbols-outlined text-[18px] leading-none">business</span>
                     <span>基本面與新聞</span>
                 </button>
@@ -105,7 +105,7 @@
                 <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_network"
                         @click="setHistoryDetailSubTab('network')"
                         class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
-                        :class="historyDetailSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                        :class="historyDetailSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                     <span class="material-symbols-outlined text-[18px] leading-none">account_tree</span>
                     <span>集團股權網絡</span>
                     <span v-if="(historyCompanyData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -117,7 +117,7 @@
                 <!-- Tab 3: Earnings -->
                 <button @click="setHistoryDetailSubTab('earnings')"
                         class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
-                        :class="historyDetailSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                        :class="historyDetailSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                     <span class="material-symbols-outlined text-[18px] leading-none">event_note</span>
                     <span>法說會與簡報</span>
                     <span v-if="historyEarningsList.length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -130,7 +130,7 @@
                 <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_tender"
                         @click="setHistoryDetailSubTab('tender')"
                         class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
-                        :class="historyDetailSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-white font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                        :class="historyDetailSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                     <span class="material-symbols-outlined text-[18px] leading-none">account_balance</span>
                     <span>政府標案 (ToBid)</span>
                     <span v-if="historyCompanyData?.company_tender?.wins" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
@@ -386,7 +386,7 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <span class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-black"
-                                      :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-300 border border-slate-700')">
+                                      :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : (isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-[#F5E6C4] text-[#5C5038] border border-[#DDC58B]'))">
                                     {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                 </span>
                                 <span class="font-bold text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
