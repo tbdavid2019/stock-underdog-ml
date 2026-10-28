@@ -31,6 +31,7 @@ class ClefSlot:
     url: str
     timeout: int = 45
     api_key: Optional[str] = None
+    model: str = "clef-flash"
 
 
 @dataclass
@@ -144,7 +145,8 @@ class ClefDecisionClient:
                 name=config.clef.FALLBACK2_NAME,
                 url=config.clef.FALLBACK2_URL,
                 timeout=default_timeout,
-                api_key=config.clef.FALLBACK2_API_KEY
+                api_key=config.clef.FALLBACK2_API_KEY,
+                model="jev-latest" if ("typesafe" in config.clef.FALLBACK2_URL or "jev" in config.clef.FALLBACK2_NAME.lower()) else "clef-flash"
             )
         ]
 
@@ -155,11 +157,20 @@ class ClefDecisionClient:
             url_str = (slot.url or "").strip()
             if url_str and url_str not in seen_urls:
                 seen_urls.add(url_str)
+                model_val = getattr(slot, "model", None)
+                if not model_val or model_val == "clef-flash":
+                    if "typesafe" in url_str.lower() or "jev" in slot.name.lower():
+                        model_name = "jev-latest"
+                    else:
+                        model_name = "clef-flash"
+                else:
+                    model_name = model_val
                 self.slots.append(ClefSlot(
                     name=slot.name,
                     url=url_str,
                     timeout=slot.timeout,
-                    api_key=getattr(slot, "api_key", None)
+                    api_key=getattr(slot, "api_key", None),
+                    model=model_name
                 ))
 
     def check_health(self) -> Dict[str, Any]:
@@ -227,10 +238,15 @@ class ClefDecisionClient:
             if slot.api_key:
                 slot_headers["Authorization"] = f"Bearer {slot.api_key}"
                 slot_headers["X-API-Key"] = slot.api_key
+            slot_payload = {
+                "model": getattr(slot, "model", "clef-flash"),
+                "state": state,
+                "questions": questions
+            }
             try:
                 resp = requests.post(
                     slot.url,
-                    json=payload,
+                    json=slot_payload,
                     headers=slot_headers,
                     timeout=slot.timeout
                 )

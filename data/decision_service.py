@@ -309,8 +309,9 @@ class DecisionService:
         api_key: Optional[str] = None
     ) -> Tuple[bool, Dict[str, Any], Optional[str]]:
         """Call remote SystemOne API with strict timeout"""
+        model_name = "jev-latest" if ("typesafe" in url or "jev" in url.lower()) else "clef-flash"
         payload = {
-            "model": "clef-flash",
+            "model": model_name,
             "state": state,
             "questions": questions
         }

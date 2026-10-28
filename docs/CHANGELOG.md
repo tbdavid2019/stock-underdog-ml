@@ -4,6 +4,18 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-28 (v2.4.40)
+
+### Security & Integrations (JEV / TypeSafe SystemOne Endpoint Model Auto-Detection & Key Renewal)
+- **🔑 JEV / TypeSafe SystemOne 金鑰更新與有效性驗證**：
+  - 檢測 `10.9.0.99` 伺服器既有金鑰狀態，確認舊金鑰已過期失效（HTTP 403 Authentication Error）。
+  - 全面更新 `10.9.0.99` 與本機環境之 `TYPESAFE_API_KEY` 與 `JEV_API_KEY` 為新配發金鑰，並通過真實 SystemOne 推論端點請求驗證（HTTP 200 OK）。
+  - 平滑重啟 `10.9.0.99` 上的 `stock-underdog-ml-api` 與 `stock-underdog-ml-cron` 容器，API 服務狀態維持 `healthy`。
+- **⚙️ ClefClient 與 DecisionService 外部節點模型名稱動態適配 (`data/clef_client.py`, `data/decision_service.py`)**：
+  - 修復遠端 JEV 節點請求時誤傳 `clef-flash` 模型代號導致 `400 Unknown model` 之問題：當 slot URL 或名稱包含 `typesafe` 或 `jev` 時，自動適配採用官方原生模型代號 `jev-latest`，其餘自建節點維持 `clef-flash`。
+- **🧪 測試套件加固**：
+  - 更新 `test/test_clef_client.py` 驗證 JEV 節點調用時 payload 之 `model: "jev-latest"`，23 項 Clef 決策測試全數通過。
+
 ## 2026-10-22 (v2.4.39)
 
 ### Enhanced & Refined (Strict De-Buzzwording: Complete Purge of "AI" Marketing Buzzwords)

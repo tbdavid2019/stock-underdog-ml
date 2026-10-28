@@ -436,11 +436,13 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertTrue(verdict.success)
         self.assertEqual(verdict.source_slot, "Jev-SystemOne")
         
-        # 驗證 requests.post 收到的 headers
+        # 驗證 requests.post 收到的 headers 與 payload model
         call_kwargs = mock_post.call_args[1]
         sent_headers = call_kwargs.get("headers", {})
+        sent_json = call_kwargs.get("json", {})
         self.assertEqual(sent_headers.get("Authorization"), "Bearer dummy-mock-token")
         self.assertEqual(sent_headers.get("X-API-Key"), "dummy-mock-token")
+        self.assertEqual(sent_json.get("model"), "jev-latest")
 
     def test_format_stock_state_dual_timestral_model(self):
         """驗證 format_stock_state 正確辨識並提取 Timestral 與 TimesFM 雙時序特徵"""
