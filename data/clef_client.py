@@ -312,8 +312,13 @@ class ClefDecisionClient:
         sc = answers["conviction_score"]
         if "score" not in sc or sc["score"] is None:
             return False, "conviction_score missing required 'score' field"
-        if not _is_finite_num(sc["score"]) or not (1.0 <= float(sc["score"]) <= 5.0):
-            return False, f"conviction score must be in [1.0, 5.0], got {sc['score']}"
+        if not _is_finite_num(sc["score"]):
+            return False, f"conviction score must be a finite number, got {sc['score']}"
+        raw_score = float(sc["score"])
+        if 0.0 <= raw_score <= 1.0:
+            sc["score"] = round(1.0 + raw_score * 4.0, 2)
+        elif not (1.0 <= raw_score <= 5.0):
+            return False, f"conviction score must be in [1.0, 5.0] or normalized [0.0, 1.0], got {sc['score']}"
 
         # 3. is_favorable_entry validation
         fe = answers["is_favorable_entry"]
