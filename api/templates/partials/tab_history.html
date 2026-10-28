@@ -142,7 +142,12 @@
 
             <!-- Loading State for Company Details -->
             <div v-if="historyCompanyLoading && !historyCompanyData" class="py-8 text-center text-amber-400 animate-pulse text-sm space-y-2">
-                <span class="material-symbols-outlined text-[28px] animate-spin">progress_activity</span>
+                <div class="flex items-center justify-center">
+                    <svg class="animate-spin h-7 w-7 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
                 <div class="font-bold">正在檢索個股情報、集團網絡、法說會與標案資料...</div>
             </div>
 
@@ -249,7 +254,12 @@
             <!-- Sub-tab 2: Network (集團股權網絡) -->
             <div v-else-if="historyDetailSubTab === 'network'" class="space-y-4 text-xs sm:text-sm">
                 <div v-if="historyCompanyLoading && !historyCompanyData?.company_network" class="py-8 text-center text-amber-400 animate-pulse space-y-2">
-                    <span class="material-symbols-outlined text-[28px] animate-spin">progress_activity</span>
+                    <div class="flex items-center justify-center">
+                        <svg class="animate-spin h-7 w-7 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
                     <div class="font-bold">正在解析集團股權網絡與官方拓撲圖譜...</div>
                 </div>
                 <div v-else-if="historyCompanyData?.company_network" class="space-y-4">
@@ -777,7 +787,10 @@
 
         <!-- Loading Skeleton -->
         <div v-if="historyDecisionLoading && !historyDecisionVerdict" class="py-6 flex flex-col items-center justify-center space-y-2">
-            <span class="material-symbols-outlined text-3xl text-amber-500 animate-spin">progress_activity</span>
+            <svg class="animate-spin h-8 w-8 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             <p class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">正在綜合技術面、籌碼面與模型預測計算操作建議...</p>
         </div>
 
@@ -1415,7 +1428,10 @@
     <!-- Loading State for Predictions & Charts -->
     <div v-if="historyLoading" class="text-center py-16 space-y-2">
         <div class="flex items-center justify-center">
-            <span class="material-symbols-outlined text-[28px] animate-spin text-amber-500">progress_activity</span>
+            <svg class="animate-spin h-7 w-7 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
         </div>
         <p class="text-xs font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">正在檢索歷史時序軌跡與法人籌碼...</p>
     </div>

@@ -4,6 +4,16 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-28 (v2.4.41)
+
+### Fixed & UI/UX Robustness (Native Vector SVG Spinners & FOUT Font Ligature Protection)
+- **🎨 圖標與旋轉載入圈強健性全面加固（防止 FOUT 造成英文單字旋轉與按鈕破版）**：
+  - **原生純向量 SVG Spinner 替換**：將 `tab_history.html`、`tab_dashboard.html`、`tab_broker.html`、`tab_institutional.html` 內所有以 Google Material Symbols 字型連字實作之 `<span ... animate-spin>progress_activity</span>` 全面替換為原生純向量 SVG 載入圈。徹底杜絕字型延遲載入或被用戶端擋廣告外掛（如 uBlock Origin）攔截時，在畫面中央旋轉 17 個英文字母單字之視覺異常。
+  - **Google Fonts `display=block` 設定**：在 `api/templates/index.html` 之 `Material Symbols Outlined` 樣式引用加入 `&display=block`，消除字型下載期間之未加工文字閃爍（FOUT）。
+  - **CSS 溢出限制與字重標準化**：替 `.material-symbols-outlined` 加上 `max-width: 1.5em; max-height: 1.5em; overflow: hidden;`，並將字重標準化為 400（相容靜態字型與可變字型），防止極端字型未載入情況下長單字（如 `dark_mode`）撐破圓形按鈕導致排版錯位。
+- **🧪 測試套件加固 (`test/test_api.py`)**：
+  - 新增 `test_homepage_icon_and_spinner_robustness` 單元測試，持續驗證 Google Fonts display 參數、SVG Spinner 結構與 CSS 防破版約束。
+
 ## 2026-10-28 (v2.4.40)
 
 ### Security & Integrations (JEV / TypeSafe SystemOne Endpoint Model Auto-Detection & Key Renewal)

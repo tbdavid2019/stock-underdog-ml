@@ -470,6 +470,26 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("earnings_calls", resp_llms_full.text)
         self.assertIn("### 4.4 Global Corporate Earnings Calls & Guidance", resp_llms_full.text)
 
+    def test_homepage_icon_and_spinner_robustness(self):
+        """驗證首頁與子分頁圖標與旋轉載入圈之強健性（防止 FOUT 造成英文單字旋轉與按鈕破版）"""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.text
+
+        # 1. Google Font 必須使用 display=block 避免未載入前文字閃爍
+        self.assertIn("family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block", html)
+
+        # 2. 禁止使用字型連字旋轉（防止 progress_activity 17 字母在畫面中央斜向旋轉）
+        self.assertNotIn('animate-spin">progress_activity</span>', html)
+        self.assertNotIn('animate-spin text-amber-500">progress_activity</span>', html)
+
+        # 3. 必須採用原生向量 SVG Spinner
+        self.assertIn('<svg class="animate-spin', html)
+
+        # 4. CSS 中必須包含防破版限制 (overflow: hidden 與 max-width)
+        self.assertIn("max-width: 1.5em;", html)
+        self.assertIn("overflow: hidden;", html)
+
 
 if __name__ == "__main__":
     unittest.main()
