@@ -201,6 +201,35 @@ class TestTimestralStrategy(unittest.TestCase):
         # All instances must be the exact same singleton
         self.assertTrue(all(inst is instances[0] for inst in instances))
 
+    def test_default_initialization_from_config(self):
+        """驗證 TimestralStrategy 預設值正確自 config 讀取 T+1 適配之 0.5% 與 1.2x 門檻"""
+        strat = TimestralStrategy()
+        self.assertEqual(strat.min_potential_hit, 0.5)
+        self.assertEqual(strat.min_risk_reward_hit, 1.2)
+
+    @patch("strategies.timestral.get_timestral_model")
+    def test_t1_moderate_bullish_hit_with_default_thresholds(self, mock_get_model):
+        """驗證單日 T+1 預期漲幅 +0.8% 與盈虧比 1.5x 標的在預設配置下成功命中"""
+        strat = TimestralStrategy()
+        mock_model = MagicMock()
+        mock_model.forecast_batch.return_value = {
+            "KLAC": {
+                "current_price": 150.0,
+                "predicted_price": 151.2,
+                "horizon_predicted_price": 153.0,
+                "potential": 0.8,
+                "horizon_potential": 2.0,
+                "day1_potential": 0.8,
+                "risk_reward_ratio": 1.5,
+                "quantiles": {"p10": 147.0, "p50": 151.2, "p90": 155.0},
+            }
+        }
+        mock_get_model.return_value = mock_model
+        ctx = StockContext(ticker="KLAC", df=pd.DataFrame({"Close": [150.0] * 70}))
+        res = strat.evaluate(ctx)
+        self.assertTrue(res.is_hit)
+        self.assertIn("Timestral看漲", res.tags)
+
 
 if __name__ == "__main__":
     unittest.main()

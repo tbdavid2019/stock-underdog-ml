@@ -73,13 +73,15 @@ class PipelineConfig:
     TIMESFM_MODEL_ID: str = os.getenv("TIMESFM_MODEL_ID", "google/timesfm-2.5-200m-pytorch")
     TIMESFM_HORIZON: int = int(os.getenv("TIMESFM_HORIZON", "5"))
     TIMESFM_CONTEXT_LEN: int = int(os.getenv("TIMESFM_CONTEXT_LEN", "128"))
-    TIMESFM_MIN_POTENTIAL: float = float(os.getenv("TIMESFM_MIN_POTENTIAL", "1.0"))
+    TIMESFM_MIN_POTENTIAL: float = float(os.getenv("TIMESFM_MIN_POTENTIAL", "0.5"))
+    TIMESFM_MIN_RISK_REWARD: float = float(os.getenv("TIMESFM_MIN_RISK_REWARD", "0.35"))
 
     # Timestral Model Configurations
     TIMESTRAL_MODEL_ID: str = os.getenv("TIMESTRAL_MODEL_ID", "mistralai/Timestral-209M")
     TIMESTRAL_HORIZON: int = int(os.getenv("TIMESTRAL_HORIZON", "5"))
     TIMESTRAL_CONTEXT_LEN: int = int(os.getenv("TIMESTRAL_CONTEXT_LEN", "128"))
-    TIMESTRAL_MIN_POTENTIAL: float = float(os.getenv("TIMESTRAL_MIN_POTENTIAL", "1.0"))
+    TIMESTRAL_MIN_POTENTIAL: float = float(os.getenv("TIMESTRAL_MIN_POTENTIAL", "0.5"))
+    TIMESTRAL_MIN_RISK_REWARD: float = float(os.getenv("TIMESTRAL_MIN_RISK_REWARD", "1.2"))
 
 
 class LLMConfig:

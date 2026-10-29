@@ -207,11 +207,11 @@ class CompositeEvaluator:
                 combined_tags.append("玄鐵買點")
             if timestral_res and timestral_res.is_hit:
                 combined_tags.append("Timestral看漲")
-                if timestral_res.signals.get("risk_reward_ratio", 0) >= 2.0:
+                if timestral_res.signals.get("risk_reward_ratio", 0) >= 1.5:
                     combined_tags.append("高風報比")
             if timesfm_res and timesfm_res.is_hit:
                 combined_tags.append("TimesFM看漲")
-                if timesfm_res.signals.get("risk_reward_ratio", 0) >= 2.0:
+                if timesfm_res.signals.get("risk_reward_ratio", 0) >= 1.0:
                     combined_tags.append("高盈虧比")
             if lstm_res and lstm_res.is_hit and not timestral_res:
                 combined_tags.append("LSTM看漲")

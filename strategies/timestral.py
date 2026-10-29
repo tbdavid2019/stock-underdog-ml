@@ -13,6 +13,7 @@ import pandas as pd
 from strategies.base import BaseStrategy, StockContext, StrategyResult
 from strategies.registry import register_strategy
 from models.timestral_model import get_timestral_model
+from core.config import config
 
 logger = logging.getLogger("stock_app.strategies.timestral")
 
@@ -30,17 +31,17 @@ class TimestralStrategy(BaseStrategy):
 
     def __init__(
         self,
-        model_id: str = "mistralai/Timestral-209M",
-        horizon: int = 5,
-        context_len: int = 128,
-        min_potential_hit: float = 1.0,
-        min_risk_reward_hit: float = 1.2,
+        model_id: Optional[str] = None,
+        horizon: Optional[int] = None,
+        context_len: Optional[int] = None,
+        min_potential_hit: Optional[float] = None,
+        min_risk_reward_hit: Optional[float] = None,
     ):
-        self.model_id = model_id
-        self.horizon = horizon
-        self.context_len = context_len
-        self.min_potential_hit = min_potential_hit
-        self.min_risk_reward_hit = min_risk_reward_hit
+        self.model_id = model_id or config.pipeline.TIMESTRAL_MODEL_ID
+        self.horizon = horizon if horizon is not None else config.pipeline.TIMESTRAL_HORIZON
+        self.context_len = context_len if context_len is not None else config.pipeline.TIMESTRAL_CONTEXT_LEN
+        self.min_potential_hit = min_potential_hit if min_potential_hit is not None else getattr(config.pipeline, "TIMESTRAL_MIN_POTENTIAL", 0.5)
+        self.min_risk_reward_hit = min_risk_reward_hit if min_risk_reward_hit is not None else getattr(config.pipeline, "TIMESTRAL_MIN_RISK_REWARD", 1.2)
         self._model_wrapper = None
 
     def _get_model(self):
@@ -144,7 +145,7 @@ class TimestralStrategy(BaseStrategy):
             elif potential <= -2.0:
                 tags.append("Timestral看跌")
 
-            if risk_reward >= 2.0:
+            if risk_reward >= 1.5:
                 tags.append("高風報比")
 
             signals = {

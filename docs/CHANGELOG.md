@@ -4,6 +4,20 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-29 (v2.4.42)
+
+### Fixed & Quant (T+1 Foundation Model Threshold Realignment & Dual-Model Consensus Recovery)
+- **🎯 雙時序基礎模型隔日 (T+1) 門檻科學校準 (`strategies/timesfm.py`, `strategies/timestral.py`, `core/config.py`)**：
+  - 修復自 v2.4.33 轉向 T+1 單日預測後沿用 5 日波段門檻導致美股連續多日綜合優選（雙大模型共振）掛零之核心缺陷。
+  - **TimesFM 盈虧比適配**：因 TimesFM 採用 `P50 (中位數期望)` / `P10 (10% VaR 下行)` 計算隔日盈虧比，單日下行波動率通常高達 3%~5%，導致原 `min_risk_reward_hit: 1.2` 相當於要求股票單日暴漲 >4.5% 才能命中。現將門檻合理校準為 `0.35x`，且 `rr_bonus` 評分依 `(risk_reward - 0.5) * 20.0` 平滑計算；「高盈虧比」標籤門檻依 Codex 審查建議定錨於 `>= 1.0`（預期期望值確實大於下行風險）。
+  - **Timestral 單日漲幅門檻優化**：`min_potential_hit` 由 1.0% 調校為 `0.5%`（單日預期漲幅達 0.5% 換算年化已逾 200%，具備顯著短線優勢），避免 LRCX (+0.89%)、KLAC (+0.89%)、AMAT (+0.78%) 等頂級科技標的遭過度過濾；「高風報比」標籤門檻依 OpenCode 審查建議放寬至 `>= 1.5`。
+- **⚙️ 全局 Config 策略工廠參數打通**：
+  - 在 `PipelineConfig` 新增 `TIMESFM_MIN_RISK_REWARD` 與 `TIMESTRAL_MIN_RISK_REWARD` 環境變數設定，並將 `MIN_POTENTIAL` 預設值同步調整為 0.5。
+  - 策略建構子支援 `Optional` 參數並防禦性 fallback 至全域組態。
+- **🧪 雙線 AI 審查與測試套件加固 (`test/test_timesfm_strategy.py`, `test/test_timestral_strategy.py`)**：
+  - 經 OpenAI Codex CLI 與 OpenCode CLI 雙線獨立 Code Review 並全數採納改進建議。
+  - 新增組態預設值與 T+1 溫和看漲命中單元測試。
+
 ## 2026-10-28 (v2.4.41)
 
 ### Fixed & UI/UX Robustness (Native Vector SVG Spinners & FOUT Font Ligature Protection)

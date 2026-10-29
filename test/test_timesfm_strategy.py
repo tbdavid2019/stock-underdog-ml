@@ -167,6 +167,35 @@ class TestTimesFMStrategy(unittest.TestCase):
         # T+1: p50_day1 = 101.0, p10_day1 = 99.0, curr = 100.0 -> reward 1.0, risk 1.0 -> rr 1.0
         self.assertEqual(result["risk_reward_ratio"], 1.0)
 
+    def test_default_initialization_from_config(self):
+        """驗證 TimesFMStrategy 預設值正確自 config 讀取 T+1 適配之 0.5% 與 0.35x 門檻"""
+        strat = TimesFMStrategy()
+        self.assertEqual(strat.min_potential_hit, 0.5)
+        self.assertEqual(strat.min_risk_reward_hit, 0.35)
+
+    @patch("strategies.timesfm.get_timesfm_model")
+    def test_t1_moderate_bullish_hit_with_default_thresholds(self, mock_get_model):
+        """驗證單日 T+1 溫和但顯著看漲標的 (+0.8%，盈虧比 0.45x) 可在預設配置下成功命中"""
+        strat = TimesFMStrategy()
+        mock_model = MagicMock()
+        mock_model.forecast_batch.return_value = {
+            "LRCX": {
+                "current_price": 250.0,
+                "predicted_price": 252.0,
+                "horizon_predicted_price": 255.0,
+                "potential": 0.8,
+                "horizon_potential": 2.0,
+                "day1_potential": 0.8,
+                "risk_reward_ratio": 0.45,
+                "quantiles": {"p10": 245.5, "p50": 252.0, "p90": 260.0},
+            }
+        }
+        mock_get_model.return_value = mock_model
+        ctx = StockContext(ticker="LRCX", df=pd.DataFrame({"Close": [250.0] * 60}))
+        res = strat.evaluate(ctx)
+        self.assertTrue(res.is_hit)
+        self.assertIn("TimesFM看漲", res.tags)
+
 
 if __name__ == "__main__":
     unittest.main()
