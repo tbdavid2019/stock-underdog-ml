@@ -203,6 +203,27 @@ else
     $PYTHON_EXEC -m data.podcast_service --sync 2>&1 | tee -a "$LOG_FILE"
 fi
 
+# Step 2.7: 執行 AI 產業鏈前沿挖掘機 (AI Tech Radar & Discovery Engine)
+log ""
+log "[2.7/3] 執行 AI 產業鏈前沿挖掘機 (arXiv 學術突破 × 台美關鍵供應鏈)..."
+if command -v flock >/dev/null 2>&1; then
+    FLOCK_CMD="flock -n /tmp/stock_discovery.lock"
+else
+    FLOCK_CMD=""
+fi
+
+if [ "$RUNNER" = "docker" ]; then
+    $FLOCK_CMD docker compose run --rm stock-ml python -m pipeline.discovery_pipeline 2>&1 | tee -a "$LOG_FILE"
+    DISCOVERY_EXIT=${PIPESTATUS[0]}
+else
+    $FLOCK_CMD $PYTHON_EXEC -m pipeline.discovery_pipeline 2>&1 | tee -a "$LOG_FILE"
+    DISCOVERY_EXIT=${PIPESTATUS[0]}
+fi
+
+if [ $DISCOVERY_EXIT -ne 0 ]; then
+    log "⚠️ [警告] Discovery Pipeline 執行非零退出碼 ($DISCOVERY_EXIT)，已記錄於日誌。"
+fi
+
 
 
 # Step 3: 清理舊日誌 (保留最近 30 天)

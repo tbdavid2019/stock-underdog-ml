@@ -47,9 +47,9 @@ class DuckDBManager:
         if storage_dir:
             os.makedirs(storage_dir, exist_ok=True)
 
-    def _get_connection(self) -> duckdb.DuckDBPyConnection:
-        """建立或取得 DuckDB 連線"""
-        return duckdb.connect(self.db_path)
+    def _get_connection(self, read_only: bool = False) -> duckdb.DuckDBPyConnection:
+        """建立或取得 DuckDB 連線，支援唯讀模式以防並發寫入鎖"""
+        return duckdb.connect(self.db_path, read_only=read_only)
 
     def _init_schema(self):
         """初始化表格結構 (若不存在則建立)"""
@@ -400,6 +400,86 @@ class DuckDBManager:
                     updated_at VARCHAR NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_company_fundamentals_ticker ON company_fundamentals (ticker);
+
+                -- ================= Discovery Engine Tables =================
+                CREATE TABLE IF NOT EXISTS discovery_candidates (
+                    ticker VARCHAR,
+                    market VARCHAR,
+                    name VARCHAR,
+                    theme_id VARCHAR,
+                    theme_name VARCHAR,
+                    total_score DOUBLE,
+                    recommendation VARCHAR,
+                    review_status VARCHAR,
+                    in_pool BOOLEAN,
+                    source_score DOUBLE,
+                    purity_score DOUBLE,
+                    paper_score DOUBLE,
+                    novelty_score DOUBLE,
+                    sentiment_score DOUBLE,
+                    setup_score DOUBLE,
+                    risk_score DOUBLE,
+                    catalyst_summary VARCHAR,
+                    us_anchor VARCHAR,
+                    paper_count BIGINT,
+                    signal_count BIGINT,
+                    run_id VARCHAR,
+                    as_of VARCHAR,
+                    created_at VARCHAR,
+                    updated_at VARCHAR,
+                    PRIMARY KEY (ticker, theme_id, as_of)
+                );
+                CREATE INDEX IF NOT EXISTS idx_disc_cand_rec ON discovery_candidates (recommendation);
+                CREATE INDEX IF NOT EXISTS idx_disc_cand_asof ON discovery_candidates (as_of);
+
+                CREATE TABLE IF NOT EXISTS discovery_papers (
+                    paper_id VARCHAR,
+                    title VARCHAR,
+                    authors VARCHAR,
+                    abstract VARCHAR,
+                    category VARCHAR,
+                    published_date VARCHAR,
+                    bottleneck_tag VARCHAR,
+                    related_tickers VARCHAR,
+                    url VARCHAR,
+                    significance_score DOUBLE,
+                    run_id VARCHAR,
+                    as_of VARCHAR,
+                    created_at VARCHAR,
+                    PRIMARY KEY (paper_id, as_of)
+                );
+                CREATE INDEX IF NOT EXISTS idx_disc_papers_date ON discovery_papers (published_date);
+
+                CREATE TABLE IF NOT EXISTS discovery_signals (
+                    signal_id VARCHAR,
+                    ticker VARCHAR,
+                    theme_id VARCHAR,
+                    source_type VARCHAR,
+                    title VARCHAR,
+                    content VARCHAR,
+                    url VARCHAR,
+                    sentiment_score DOUBLE,
+                    detected_at VARCHAR,
+                    run_id VARCHAR,
+                    as_of VARCHAR,
+                    created_at VARCHAR,
+                    PRIMARY KEY (signal_id, as_of)
+                );
+                CREATE INDEX IF NOT EXISTS idx_disc_signals_ticker ON discovery_signals (ticker);
+
+                CREATE TABLE IF NOT EXISTS discovery_history (
+                    run_id VARCHAR PRIMARY KEY,
+                    as_of VARCHAR,
+                    total_candidates BIGINT,
+                    propose_add_count BIGINT,
+                    observe_count BIGINT,
+                    already_in_pool_count BIGINT,
+                    paper_count BIGINT,
+                    signal_count BIGINT,
+                    avg_total_score DOUBLE,
+                    created_at VARCHAR
+                );
+                CREATE INDEX IF NOT EXISTS idx_disc_hist_asof ON discovery_history (as_of);
                 """);
 
                 # Schema migration for existing installations
@@ -3049,5 +3129,433 @@ class DuckDBManager:
             logger.warning(f"⚠️ 批次寫入基本面至 DuckDB 失敗: {e}")
             return saved
 
+    # ==================== Discovery Tech Radar Operations ====================
 
+    def save_discovery_snapshot(
+        self,
+        run_id: str,
+        as_of: str,
+        candidates: List[Dict[str, Any]],
+        papers: List[Dict[str, Any]],
+        signals: List[Dict[str, Any]],
+        history_summary: Optional[Dict[str, Any]] = None,
+        max_retries: int = 3,
+    ) -> bool:
+        """
+        交易式儲存 Discovery 前沿挖掘機之快照資料。
+        具備指數退避重試機制，保證 DuckDB 寫入原子性。
+        """
+        if not self.enabled:
+            return False
+
+        now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
+
+        for attempt in range(max_retries):
+            try:
+                with self._WRITE_LOCK:
+                    with self._get_connection() as con:
+                        con.begin()
+                        try:
+                            # 確保同日重跑之完全冪等性：清除當日舊快照
+                            con.execute("DELETE FROM discovery_candidates WHERE as_of = ?", [as_of])
+                            con.execute("DELETE FROM discovery_papers WHERE as_of = ?", [as_of])
+                            con.execute("DELETE FROM discovery_signals WHERE as_of = ?", [as_of])
+                            con.execute("DELETE FROM discovery_history WHERE as_of = ?", [as_of])
+
+                            # 1. 寫入候選標的
+                            for c in candidates:
+                                con.execute("""
+                                INSERT OR REPLACE INTO discovery_candidates (
+                                    ticker, market, name, theme_id, theme_name,
+                                    total_score, recommendation, review_status, in_pool,
+                                    source_score, purity_score, paper_score, novelty_score,
+                                    sentiment_score, setup_score, risk_score,
+                                    catalyst_summary, us_anchor, paper_count, signal_count,
+                                    run_id, as_of, created_at, updated_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                                """, [
+                                    str(c.get("ticker", "")),
+                                    str(c.get("market", "")),
+                                    c.get("name"),
+                                    str(c.get("theme_id", "")),
+                                    str(c.get("theme_name", "")),
+                                    float(c.get("total_score", 0.0)),
+                                    str(c.get("recommendation", "reject")),
+                                    str(c.get("review_status", "pending")),
+                                    bool(c.get("in_pool", False)),
+                                    float(c.get("source_score", 0.0)),
+                                    float(c.get("purity_score", 0.0)),
+                                    float(c.get("paper_score", 0.0)),
+                                    float(c.get("novelty_score", 0.0)),
+                                    float(c.get("sentiment_score", 0.0)),
+                                    float(c.get("setup_score", 0.0)),
+                                    float(c.get("risk_score", 0.0)),
+                                    c.get("catalyst_summary"),
+                                    c.get("us_anchor"),
+                                    int(c.get("paper_count", 0)),
+                                    int(c.get("signal_count", 0)),
+                                    run_id,
+                                    as_of,
+                                    c.get("created_at") or now_str,
+                                    now_str
+                                ])
+
+                            # 2. 寫入學術論文
+                            for p in papers:
+                                authors_str = json.dumps(p.get("authors", []), ensure_ascii=False) if isinstance(p.get("authors"), list) else str(p.get("authors") or "")
+                                rel_tickers_str = json.dumps(p.get("related_tickers", []), ensure_ascii=False) if isinstance(p.get("related_tickers"), list) else str(p.get("related_tickers") or "")
+                                con.execute("""
+                                INSERT OR REPLACE INTO discovery_papers (
+                                    paper_id, title, authors, abstract, category,
+                                    published_date, bottleneck_tag, related_tickers, url,
+                                    significance_score, run_id, as_of, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                                """, [
+                                    str(p.get("paper_id", "")),
+                                    str(p.get("title", "")),
+                                    authors_str,
+                                    str(p.get("abstract", "")),
+                                    str(p.get("category", "")),
+                                    str(p.get("published_date", "")),
+                                    str(p.get("bottleneck_tag", "")),
+                                    rel_tickers_str,
+                                    p.get("url"),
+                                    float(p.get("significance_score", 0.0)),
+                                    run_id,
+                                    as_of,
+                                    p.get("created_at") or now_str
+                                ])
+
+                            # 3. 寫入產業訊號
+                            for s in signals:
+                                con.execute("""
+                                INSERT OR REPLACE INTO discovery_signals (
+                                    signal_id, ticker, theme_id, source_type, title,
+                                    content, url, sentiment_score, detected_at,
+                                    run_id, as_of, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                                """, [
+                                    str(s.get("signal_id", "")),
+                                    str(s.get("ticker", "")),
+                                    str(s.get("theme_id", "")),
+                                    str(s.get("source_type", "")),
+                                    str(s.get("title", "")),
+                                    s.get("content"),
+                                    s.get("url"),
+                                    float(s.get("sentiment_score", 0.0)),
+                                    str(s.get("detected_at", now_str)),
+                                    run_id,
+                                    as_of,
+                                    s.get("created_at") or now_str
+                                ])
+
+                            # 4. 寫入歷史時序記錄
+                            if history_summary:
+                                con.execute("""
+                                INSERT OR REPLACE INTO discovery_history (
+                                    run_id, as_of, total_candidates, propose_add_count,
+                                    observe_count, already_in_pool_count, paper_count,
+                                    signal_count, avg_total_score, created_at
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                                """, [
+                                    run_id,
+                                    as_of,
+                                    int(history_summary.get("total_candidates", len(candidates))),
+                                    int(history_summary.get("propose_add_count", 0)),
+                                    int(history_summary.get("observe_count", 0)),
+                                    int(history_summary.get("already_in_pool_count", 0)),
+                                    int(history_summary.get("paper_count", len(papers))),
+                                    int(history_summary.get("signal_count", len(signals))),
+                                    float(history_summary.get("avg_total_score", 0.0)),
+                                    now_str
+                                ])
+
+                            con.commit()
+                            logger.info(f"✅ 成功交易式寫入 Discovery 快照 (run_id={run_id}, as_of={as_of})")
+                            return True
+                        except Exception as inner_e:
+                            con.rollback()
+                            raise inner_e
+            except Exception as e:
+                backoff = 2 ** attempt
+                logger.warning(f"⚠️ DuckDB 儲存 Discovery 快照重試中 ({attempt + 1}/{max_retries}), 等待 {backoff}s: {e}")
+                time.sleep(backoff)
+
+        logger.error(f"❌ DuckDB 儲存 Discovery 快照已達最大重試次數 ({max_retries})，放棄寫入。")
+        return False
+
+    def prune_discovery_expired_records(self, paper_ttl_days: int = 180, signal_ttl_days: int = 90) -> Dict[str, int]:
+        """
+        依 TTL 清理過期記錄：
+        - discovery_papers: 保留 180 天
+        - discovery_signals: 保留 90 天
+        - discovery_history: 永久保留
+        """
+        if not self.enabled:
+            return {"pruned_papers": 0, "pruned_signals": 0}
+
+        now = datetime.datetime.now(TZ_TAIPEI)
+        paper_cutoff = (now - datetime.timedelta(days=paper_ttl_days)).strftime("%Y-%m-%d")
+        signal_cutoff = (now - datetime.timedelta(days=signal_ttl_days)).strftime("%Y-%m-%d")
+
+        pruned_papers = 0
+        pruned_signals = 0
+
+        try:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    # 清理論文
+                    del_papers = con.execute("DELETE FROM discovery_papers WHERE as_of < ? OR published_date < ?", [paper_cutoff, paper_cutoff])
+                    pruned_papers = del_papers.fetchall()[0][0] if del_papers else 0
+
+                    # 清理快訊
+                    del_signals = con.execute("DELETE FROM discovery_signals WHERE as_of < ? OR detected_at < ?", [signal_cutoff, signal_cutoff])
+                    pruned_signals = del_signals.fetchall()[0][0] if del_signals else 0
+
+            logger.info(f"🧹 Discovery TTL 清理完成: 已刪除 {pruned_papers} 篇過期論文, {pruned_signals} 筆過期快訊")
+            return {"pruned_papers": pruned_papers, "pruned_signals": pruned_signals}
+        except Exception as e:
+            logger.warning(f"⚠️ Discovery TTL 清理異常: {e}")
+            return {"pruned_papers": 0, "pruned_signals": 0}
+
+    def get_discovery_candidates(
+        self,
+        recommendation: Optional[str] = None,
+        theme_id: Optional[str] = None,
+        as_of: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+        return_total: bool = False
+    ) -> Union[List[Dict[str, Any]], Tuple[List[Dict[str, Any]], int]]:
+        """以 read_only 模式查詢 Discovery 候選標的"""
+        if not self.enabled:
+            return ([], 0) if return_total else []
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                target_as_of = as_of
+                if not target_as_of:
+                    latest = con.execute("SELECT MAX(as_of) FROM discovery_candidates").fetchone()
+                    target_as_of = latest[0] if latest and latest[0] else None
+
+                if not target_as_of:
+                    return ([], 0) if return_total else []
+
+                base_where = "WHERE as_of = ?"
+                params: List[Any] = [target_as_of]
+
+                if recommendation:
+                    base_where += " AND recommendation = ?"
+                    params.append(recommendation)
+
+                if theme_id:
+                    base_where += " AND theme_id = ?"
+                    params.append(theme_id)
+
+                total_count = 0
+                if return_total:
+                    count_row = con.execute(f"SELECT COUNT(*) FROM discovery_candidates {base_where}", params).fetchone()
+                    total_count = count_row[0] if count_row else 0
+
+                query = f"SELECT * FROM discovery_candidates {base_where} ORDER BY total_score DESC LIMIT ? OFFSET ?"
+                query_params = list(params) + [limit, offset]
+
+                df = con.execute(query, query_params).df()
+                records = df.to_dict(orient="records")
+                return (records, total_count) if return_total else records
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_candidates 失敗: {e}")
+            return ([], 0) if return_total else []
+
+    def get_discovery_papers(
+        self,
+        theme_id: Optional[str] = None,
+        category: Optional[str] = None,
+        as_of: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+        return_total: bool = False
+    ) -> Union[List[Dict[str, Any]], Tuple[List[Dict[str, Any]], int]]:
+        """以 read_only 模式查詢前沿學術論文"""
+        if not self.enabled:
+            return ([], 0) if return_total else []
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                target_as_of = as_of
+                if not target_as_of:
+                    latest = con.execute("SELECT MAX(as_of) FROM discovery_papers").fetchone()
+                    target_as_of = latest[0] if latest and latest[0] else None
+
+                if not target_as_of:
+                    return ([], 0) if return_total else []
+
+                base_where = "WHERE as_of = ?"
+                params: List[Any] = [target_as_of]
+
+                if theme_id:
+                    base_where += " AND bottleneck_tag = ?"
+                    params.append(theme_id)
+
+                if category:
+                    base_where += " AND category = ?"
+                    params.append(category)
+
+                total_count = 0
+                if return_total:
+                    count_row = con.execute(f"SELECT COUNT(*) FROM discovery_papers {base_where}", params).fetchone()
+                    total_count = count_row[0] if count_row else 0
+
+                query = f"SELECT * FROM discovery_papers {base_where} ORDER BY significance_score DESC, published_date DESC LIMIT ? OFFSET ?"
+                query_params = list(params) + [limit, offset]
+
+                df = con.execute(query, query_params).df()
+                records = df.to_dict(orient="records")
+                for r in records:
+                    if isinstance(r.get("authors"), str):
+                        try:
+                            r["authors"] = json.loads(r["authors"])
+                        except Exception:
+                            r["authors"] = [r["authors"]]
+                    if isinstance(r.get("related_tickers"), str):
+                        try:
+                            r["related_tickers"] = json.loads(r["related_tickers"])
+                        except Exception:
+                            r["related_tickers"] = [r["related_tickers"]]
+                return (records, total_count) if return_total else records
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_papers 失敗: {e}")
+            return ([], 0) if return_total else []
+
+    def get_discovery_signals(
+        self,
+        ticker: Optional[str] = None,
+        theme_id: Optional[str] = None,
+        as_of: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+        return_total: bool = False
+    ) -> Union[List[Dict[str, Any]], Tuple[List[Dict[str, Any]], int]]:
+        """以 read_only 模式查詢產業訊號，限定最新日期或指定日期"""
+        if not self.enabled:
+            return ([], 0) if return_total else []
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                target_as_of = as_of
+                if not target_as_of:
+                    latest = con.execute("SELECT MAX(as_of) FROM discovery_signals").fetchone()
+                    target_as_of = latest[0] if latest and latest[0] else None
+
+                base_where = "WHERE 1=1"
+                params: List[Any] = []
+                if target_as_of:
+                    base_where += " AND as_of = ?"
+                    params.append(target_as_of)
+
+                if ticker:
+                    base_where += " AND ticker = ?"
+                    params.append(ticker)
+
+                if theme_id:
+                    base_where += " AND theme_id = ?"
+                    params.append(theme_id)
+
+                total_count = 0
+                if return_total:
+                    count_row = con.execute(f"SELECT COUNT(*) FROM discovery_signals {base_where}", params).fetchone()
+                    total_count = count_row[0] if count_row else 0
+
+                query = f"SELECT * FROM discovery_signals {base_where} ORDER BY detected_at DESC LIMIT ? OFFSET ?"
+                query_params = list(params) + [limit, offset]
+
+                df = con.execute(query, query_params).df()
+                records = df.to_dict(orient="records")
+                return (records, total_count) if return_total else records
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_signals 失敗: {e}")
+            return ([], 0) if return_total else []
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_signals 失敗: {e}")
+            return []
+
+    def get_discovery_history(self, limit: int = 30) -> List[Dict[str, Any]]:
+        """以 read_only 模式查詢 Discovery 歷史趨勢"""
+        if not self.enabled:
+            return []
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                query = "SELECT * FROM discovery_history ORDER BY as_of DESC LIMIT ?"
+                df = con.execute(query, [limit]).df()
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_history 失敗: {e}")
+            return []
+
+    def get_discovery_status(self) -> Dict[str, Any]:
+        """以 read_only 模式獲取 Discovery 最新狀態與統計資訊"""
+        if not self.enabled:
+            return {
+                "status": "error",
+                "stale": True,
+                "as_of": "1970-01-01",
+                "candidate_count": 0,
+                "paper_count": 0,
+                "signal_count": 0
+            }
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                latest_hist = con.execute("""
+                    SELECT run_id, as_of, total_candidates, paper_count, signal_count, created_at
+                    FROM discovery_history
+                    ORDER BY as_of DESC, created_at DESC
+                    LIMIT 1
+                """).fetchone()
+
+                if not latest_hist:
+                    return {
+                        "status": "empty",
+                        "stale": False,
+                        "as_of": datetime.date.today().isoformat(),
+                        "candidate_count": 0,
+                        "paper_count": 0,
+                        "signal_count": 0
+                    }
+
+                run_id, as_of, total_candidates, paper_count, signal_count, created_at = latest_hist
+
+                # 判斷是否 stale (> 24 小時)
+                stale = False
+                try:
+                    as_of_date = datetime.date.fromisoformat(as_of)
+                    today = datetime.datetime.now(TZ_TAIPEI).date()
+                    if (today - as_of_date).days > 1:
+                        stale = True
+                except Exception:
+                    pass
+
+                return {
+                    "status": "success",
+                    "stale": stale,
+                    "as_of": as_of,
+                    "run_id": run_id,
+                    "last_run_timestamp": created_at,
+                    "candidate_count": int(total_candidates or 0),
+                    "paper_count": int(paper_count or 0),
+                    "signal_count": int(signal_count or 0),
+                    "message": "Discovery pipeline normal"
+                }
+        except Exception as e:
+            logger.warning(f"DuckDB 讀取 discovery_status 失敗: {e}")
+            return {
+                "status": "error",
+                "stale": True,
+                "as_of": "1970-01-01",
+                "candidate_count": 0,
+                "paper_count": 0,
+                "signal_count": 0,
+                "message": str(e)
+            }
 

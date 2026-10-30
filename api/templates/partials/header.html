@@ -44,6 +44,12 @@
                     <span class="material-symbols-outlined text-[18px]">podcasts</span>
                     <span>Podcast 雷達</span>
                 </button>
+                <button @click="setTab('discovery')" :aria-current="activeTab === 'discovery' ? 'page' : undefined"
+                        :class="activeTab === 'discovery' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span class="material-symbols-outlined text-[18px]">radar</span>
+                    <span>前沿發現</span>
+                </button>
             </nav>
         </div>
 
@@ -98,34 +104,41 @@
      :class="isDark ? 'border-[#262626] bg-[#0D0E11]/95 shadow-2xl shadow-black' : 'border-[#17324D] bg-[#17324D]/95 shadow-lg'"
      style="padding-bottom: env(safe-area-inset-bottom, 0px);"
      aria-label="行動版底部分頁導覽">
-    <div class="grid grid-cols-4 gap-1 px-2 py-1.5">
+    <div class="flex overflow-x-auto no-scrollbar gap-1 px-2 py-1.5" style="-webkit-overflow-scrolling: touch;">
         <button @click="setTab('dashboard')"
                 :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
                 :class="activeTab === 'dashboard' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">monitoring</span>
             <span class="truncate">操盤看板</span>
         </button>
         <button @click="setTab('institutional')"
                 :aria-current="activeTab === 'institutional' ? 'page' : undefined"
                 :class="activeTab === 'institutional' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">account_balance</span>
             <span class="truncate">法人籌碼</span>
         </button>
         <button @click="setTab('history')"
                 :aria-current="activeTab === 'history' ? 'page' : undefined"
                 :class="activeTab === 'history' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">history</span>
             <span class="truncate">個股歷史</span>
         </button>
         <button @click="setTab('podcast')"
                 :aria-current="activeTab === 'podcast' ? 'page' : undefined"
                 :class="activeTab === 'podcast' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-1 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">podcasts</span>
             <span class="truncate">Podcast</span>
+        </button>
+        <button @click="setTab('discovery')"
+                :aria-current="activeTab === 'discovery' ? 'page' : undefined"
+                :class="activeTab === 'discovery' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+            <span class="material-symbols-outlined text-[20px] leading-none">radar</span>
+            <span class="truncate">前沿發現</span>
         </button>
     </div>
 </nav>

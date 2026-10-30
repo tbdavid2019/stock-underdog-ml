@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-10-30 (v2.4.43)
+
+### Added & Quant (AI Tech Radar & Discovery Engine: Academic Frontiers to Supply Chain Mapping)
+- **🔭 AI 產業鏈前沿挖掘機 (AI Tech Radar & Discovery Engine) 全新上線**：
+  - **前沿技術瓶頸外部化映射庫 (`config/discovery_supply_chain.json`, `core/supply_chain_map.py`)**：收錄 CPO 光互連、HBM/KV-cache、液冷散熱、具身智能機器人、先進封裝 CoWoS 等 5 大前沿技術瓶頸，對齊美股龍頭錨點（NVDA, AVGO, TSLA, VRT, AMD 等）並雙向映射台灣關鍵供應鏈（台積電 2330、聯發科 2454、奇鋐 3017、雙鴻 3324、信驊 5274、智邦 2345、光聖 6442、聯鈞 3450 等）。
+  - **標的代號正規化與 Universe 白名單硬過濾 (`core/ticker_canonicalizer.py`)**：統一處理台股代號（切除 `.TW`/`.TWO` 後綴，保留純代碼）、美股轉大寫，並與系統 DuckDB / Universe 股票池進行白名單硬交集，防範幻覺標的。
+  - **確定性 7 維多因子評分核心 (`core/discovery_scorer.py`)**：固化權重公式 $\text{Total} = \text{clamp}(0.20 S_{src} + 0.20 S_{purity} + 0.20 S_{paper} + 0.10 S_{novelty} + 0.10 S_{sent} + 0.10 S_{setup} - 0.10 S_{risk}, 0, 100)$，並嚴格分流至 `propose_add`（未在池且總分 $\ge 75$、純度 $\ge 60$）、`observe`（$60 \le \text{總分} < 75$）、`already_in_pool`（池內強化標的）與 `reject`。
+  - **雙層原子持久化資料管線 (`data/duckdb_manager.py`, `pipeline/discovery_pipeline.py`)**：DuckDB 連線管理器擴充 `read_only` 參數，新增 `discovery_candidates`、`discovery_papers`、`discovery_signals`、`discovery_history` 四張表格與指數退避重試交易；管線實作 arXiv API 爬取（3 秒節流與 429 退避）、DuckDB 交易寫入、`tempfile + os.replace` 原子替換靜態快取檔（`cache/discovery/*.json`）、網路逾時自動 fallback 至舊快照標記 `stale=true`、以及過期資料 TTL 清理（論文 180 天、訊號 90 天）。
+  - **FastAPI 唯讀加速 REST 端點 (`api/routes/discovery.py`, `api/schemas.py`, `api/main.py`)**：提供 `/candidates`、`/papers`、`/signals`、`/history`、`/status` 端點，全數採用 `read_only=True` 連線與本地快取優先策略。
+  - **彭博終端儀表板與 RWD 適配 (`tab_discovery.html`, `header.html`, `app.js`)**：新增曜石黑深色 / 高對比淺色彭博終端風格之「前沿發現」分頁，實作 KPI 摘要卡、原生 Inline SVG 趨勢迷你圖、4/2/1 響應式情報矩陣（桌面 4 欄、平板 2 欄、手機單欄堆疊）、研究卡（Dossier）lazy-render 展開、深連結支援與免責聲明；手機底部導覽列升級為支援橫向平滑滑動，完美容納 5 個分頁。
+  - **排程自動化與防重疊執行 (`run_daily.sh`)**：整合 Discovery Pipeline，並加入 `flock -n /tmp/stock_discovery.lock` 防撞鎖。
+
 ## 2026-10-29 (v2.4.42)
 
 ### Fixed & Quant (T+1 Foundation Model Threshold Realignment & Dual-Model Consensus Recovery)

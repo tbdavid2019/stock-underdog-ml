@@ -329,6 +329,76 @@ export const ApiClient = {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
+    },
+
+    // ==================== Discovery Tech Radar Operations ====================
+
+    /**
+     * Get Discovery candidate stocks
+     */
+    async getDiscoveryCandidates(params = {}) {
+        const query = new URLSearchParams();
+        if (params.recommendation) query.set('recommendation', params.recommendation);
+        if (params.themeId) query.set('theme_id', params.themeId);
+        if (params.asOf) query.set('as_of', params.asOf);
+        if (params.limit) query.set('limit', params.limit);
+        if (params.offset) query.set('offset', params.offset);
+
+        const qs = query.toString();
+        const res = await fetch(`/api/v1/discovery/candidates${qs ? '?' + qs : ''}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get Discovery arXiv technical papers
+     */
+    async getDiscoveryPapers(params = {}) {
+        const query = new URLSearchParams();
+        if (params.themeId) query.set('theme_id', params.themeId);
+        if (params.category) query.set('category', params.category);
+        if (params.asOf) query.set('as_of', params.asOf);
+        if (params.limit) query.set('limit', params.limit);
+        if (params.offset) query.set('offset', params.offset);
+
+        const qs = query.toString();
+        const res = await fetch(`/api/v1/discovery/papers${qs ? '?' + qs : ''}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get Discovery live industry signals
+     */
+    async getDiscoverySignals(params = {}) {
+        const query = new URLSearchParams();
+        if (params.ticker) query.set('ticker', params.ticker);
+        if (params.themeId) query.set('theme_id', params.themeId);
+        if (params.limit) query.set('limit', params.limit);
+        if (params.offset) query.set('offset', params.offset);
+
+        const qs = query.toString();
+        const res = await fetch(`/api/v1/discovery/signals${qs ? '?' + qs : ''}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get Discovery timeline history trends
+     */
+    async getDiscoveryHistory(limit = 30) {
+        const res = await fetch(`/api/v1/discovery/history?limit=${limit}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get Discovery engine health & freshness status
+     */
+    async getDiscoveryStatus() {
+        const res = await fetch('/api/v1/discovery/status');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
     }
 };
 

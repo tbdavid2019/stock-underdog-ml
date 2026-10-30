@@ -34,13 +34,6 @@ The system SHALL evaluate the XuanTie moving average strategy (major trend filte
 - **WHEN** MA60 is sloped upwards over the lookback window and price is within the tolerance band of MA60 or MA120
 - **THEN** XuanTie strategy flags is_hit as True and specifies the pullback type
 
-### Requirement: LSTM Model Strategy Implementation
-The system SHALL train or infer next-day closing price for a stock using LSTM architecture and output predicted potential percentage.
-
-#### Scenario: LSTM prediction calculated
-- **WHEN** valid historical sequence is provided to trained LSTM model
-- **THEN** model outputs predicted next-day price and calculates expected potential percentage
-
 ### Requirement: Macro and Sector Aware Strategy Implementations
 The system SHALL provide `SectorRotationStrategy` and `InstitutionalFlowStrategy` conforming to `BaseStrategy` to evaluate sector momentum and institutional accumulation alongside technical and ML models.
 
@@ -51,3 +44,14 @@ The system SHALL provide `SectorRotationStrategy` and `InstitutionalFlowStrategy
 #### Scenario: Executing Sector Rotation Strategy
 - **WHEN** multi-stock sector dataset is supplied to `SectorRotationStrategy`
 - **THEN** it generates ranked candidate selections for stocks belonging to the leading sectors
+
+### Requirement: Mistral Timestral Foundation Model Strategy Implementation
+The system SHALL infer forward price trajectories and multi-quantile distributions (P10, P50, P90) for a stock using the Mistral Timestral-209M foundation model architecture and output predicted potential percentage and risk-reward profile.
+
+#### Scenario: Timestral multi-quantile forecast generation
+- **WHEN** historical daily price series (at least 60 trading days) is provided to `TimestralStrategy`
+- **THEN** model outputs forward forecast horizon containing median target price (P50), upside ceiling (P90), downside floor (P10), and expected upside potential percentage
+
+#### Scenario: Asymmetric risk-reward calculation
+- **WHEN** Timestral produces valid P10, P50, and P90 price predictions
+- **THEN** strategy computes risk-reward ratio `(P90 - current_price) / (current_price - P10)` and flags high-conviction asymmetric opportunities

@@ -248,3 +248,122 @@ class PodcastSyncResponse(BaseModel):
     timestamp: str
 
 
+# ==================== Discovery Tech Radar Schemas ====================
+
+class DiscoveryCandidate(BaseModel):
+    ticker: str = Field(..., description="標的代碼 (台股純數字如 2330，美股大寫如 NVDA)")
+    market: str = Field(..., description="市場別 (TW / US)")
+    name: Optional[str] = Field(None, description="公司中文或英文名稱")
+    theme_id: str = Field(..., description="所屬前沿主題 ID")
+    theme_name: str = Field(..., description="主題名稱")
+    total_score: float = Field(..., description="7 維多因子綜合評分 [0, 100]")
+    recommendation: str = Field(..., description="推薦分類: propose_add / observe / already_in_pool / reject")
+    review_status: str = Field("pending", description="審查狀態: pending / approved / rejected")
+    in_pool: bool = Field(False, description="是否已在現有追蹤池內")
+    source_score: float = Field(0.0, description="來源權重分 (S_src)")
+    purity_score: float = Field(0.0, description="題材純度分 (S_purity)")
+    paper_score: float = Field(0.0, description="前沿技術訊號分 (S_paper)")
+    novelty_score: float = Field(0.0, description="新穎度分 (S_novelty)")
+    sentiment_score: float = Field(0.0, description="語意情緒評分 (S_sent)")
+    setup_score: float = Field(0.0, description="量價技術位置分 (S_setup)")
+    risk_score: float = Field(0.0, description="商業化與執行風險扣分 (S_risk)")
+    catalyst_summary: Optional[str] = Field(None, description="前沿催化劑或供應鏈突破論述摘要")
+    us_anchor: Optional[str] = Field(None, description="對應美股產業鏈錨點代碼 (如 NVDA)")
+    paper_count: int = Field(0, description="關聯前沿論文數量")
+    signal_count: int = Field(0, description="關聯產業快訊數量")
+    run_id: Optional[str] = Field(None, description="批次運行 ID (UUID)")
+    as_of: Optional[str] = Field(None, description="資料分析基準日 (YYYY-MM-DD)")
+    created_at: Optional[str] = Field(None, description="建立時間戳記")
+    updated_at: Optional[str] = Field(None, description="更新時間戳記")
+
+
+class DiscoveryPaper(BaseModel):
+    paper_id: str = Field(..., description="論文唯一識別碼 (如 arXiv ID 2410.12345)")
+    title: str = Field(..., description="論文標題")
+    authors: List[str] = Field(default_factory=list, description="作者清單")
+    abstract: str = Field(..., description="論文摘要")
+    category: str = Field(..., description="主要學術分類 (如 cs.AI, cs.RO, cs.LG, cs.CV)")
+    published_date: str = Field(..., description="發布日期 (YYYY-MM-DD)")
+    bottleneck_tag: str = Field(..., description="解決之關鍵架構瓶頸標籤")
+    related_tickers: List[str] = Field(default_factory=list, description="映射關聯標的代號")
+    url: Optional[str] = Field(None, description="論文原文連結 (arXiv)")
+    significance_score: float = Field(0.0, description="學術前沿突破重要度評分 [0, 100]")
+    run_id: Optional[str] = Field(None, description="批次運行 ID")
+    as_of: Optional[str] = Field(None, description="資料基準日")
+    created_at: Optional[str] = Field(None, description="建立時間戳記")
+
+
+class DiscoverySignal(BaseModel):
+    signal_id: str = Field(..., description="快訊唯一識別碼")
+    ticker: str = Field(..., description="關聯標的代號")
+    theme_id: str = Field(..., description="所屬技術主題 ID")
+    source_type: str = Field(..., description="資訊來源類別 (arxiv / official_announcement / secondary_media)")
+    title: str = Field(..., description="快訊標題")
+    content: Optional[str] = Field(None, description="快訊內文或精華")
+    url: Optional[str] = Field(None, description="來源超連結")
+    sentiment_score: float = Field(0.0, description="情緒分數 [0, 100]")
+    detected_at: str = Field(..., description="偵測發現時間戳記")
+    run_id: Optional[str] = Field(None, description="批次運行 ID")
+    as_of: Optional[str] = Field(None, description="資料基準日")
+    created_at: Optional[str] = Field(None, description="建立時間戳記")
+
+
+class DiscoveryHistory(BaseModel):
+    run_id: str = Field(..., description="批次運行 ID")
+    as_of: str = Field(..., description="資料基準日 (YYYY-MM-DD)")
+    total_candidates: int = Field(0, description="候選標的總數")
+    propose_add_count: int = Field(0, description="建議納入 (propose_add) 數量")
+    observe_count: int = Field(0, description="觀察中 (observe) 數量")
+    already_in_pool_count: int = Field(0, description="池內強化 (already_in_pool) 數量")
+    paper_count: int = Field(0, description="涵蓋論文總數")
+    signal_count: int = Field(0, description="涵蓋快訊總數")
+    avg_total_score: float = Field(0.0, description="當期平均評分")
+    created_at: Optional[str] = Field(None, description="建立時間戳記")
+
+
+class DiscoveryStatus(BaseModel):
+    status: str = Field("success", description="管線執行狀態: success / fallback / error")
+    stale: bool = Field(False, description="資料是否已逾期降級使用舊快照")
+    as_of: str = Field(..., description="目前資料快照所屬基準日")
+    run_id: Optional[str] = Field(None, description="最新運行 ID")
+    last_run_timestamp: Optional[str] = Field(None, description="上次執行完成時間戳記")
+    candidate_count: int = Field(0, description="目前可用候選總數")
+    paper_count: int = Field(0, description="目前可用論文總數")
+    signal_count: int = Field(0, description="目前可用快訊總數")
+    message: Optional[str] = Field(None, description="狀態附加資訊")
+
+
+class DiscoveryCandidatesResponse(BaseModel):
+    success: bool = True
+    total_count: int = Field(..., description="符合篩選之總筆數")
+    as_of: Optional[str] = Field(None, description="資料基準日")
+    stale: bool = Field(False, description="是否為降級舊快取")
+    data: List[DiscoveryCandidate] = Field(default_factory=list, description="候選標的清單")
+
+
+class DiscoveryPapersResponse(BaseModel):
+    success: bool = True
+    total_count: int = Field(..., description="符合篩選之總論文數")
+    as_of: Optional[str] = Field(None, description="資料基準日")
+    stale: bool = Field(False, description="是否為降級舊快取")
+    data: List[DiscoveryPaper] = Field(default_factory=list, description="論文清單")
+
+
+class DiscoverySignalsResponse(BaseModel):
+    success: bool = True
+    total_count: int = Field(..., description="符合篩選之總快訊數")
+    as_of: Optional[str] = Field(None, description="資料基準日")
+    stale: bool = Field(False, description="是否為降級舊快取")
+    data: List[DiscoverySignal] = Field(default_factory=list, description="快訊清單")
+
+
+class DiscoveryHistoryResponse(BaseModel):
+    success: bool = True
+    total_count: int = Field(..., description="歷史記錄總天數")
+    data: List[DiscoveryHistory] = Field(default_factory=list, description="歷史時序清單")
+
+
+class DiscoveryStatusResponse(BaseModel):
+    success: bool = True
+    data: DiscoveryStatus = Field(..., description="Discovery 管線健康度與新鮮度資訊")
+

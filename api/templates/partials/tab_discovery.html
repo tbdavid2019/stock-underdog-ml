@@ -1,0 +1,511 @@
+<!-- ================= TAB: AI TECH RADAR & DISCOVERY ENGINE (BLOOMBERG TERMINAL CRAFT) ================= -->
+<div v-if="activeTab === 'discovery'" class="space-y-6">
+
+    <!-- 1. Hero Header Banner -->
+    <section class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4" aria-labelledby="discovery-radar-title">
+        <div class="max-w-3xl">
+            <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider"
+                      :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
+                    AI TECH RADAR & DISCOVERY ENGINE
+                </span>
+                <span class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    學術前沿瓶頸 (arXiv) × 台美關鍵供應鏈硬體映射
+                </span>
+                <!-- Freshness / Stale Status Badge -->
+                <span class="text-xs px-2 py-0.5 rounded border flex items-center space-x-1"
+                      :class="discoveryStatus.stale ? (isDark ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-300') : (isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-300')">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="discoveryStatus.stale ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'"></span>
+                    <span>{{ discoveryStatus.stale ? '降級舊快照 (Stale ' + (discoveryStatus.as_of || '') + ')' : '最新快照 (' + (discoveryStatus.as_of || '今日') + ')' }}</span>
+                </span>
+            </div>
+            <h1 id="discovery-radar-title" class="text-2xl sm:text-3xl font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
+                AI 產業鏈前沿挖掘機
+            </h1>
+            <p class="mt-1 text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
+                自動追蹤 arXiv 前沿突破（CPO 光互連、HBM/KV-cache、液冷散熱、具身智能機器人、先進封裝 CoWoS），結合 7 維確定性多因子評分與白名單硬過濾，在技術萌芽期提前挖掘核心台美供應鏈。
+            </p>
+        </div>
+
+        <!-- Quick Status & Refresh Button -->
+        <div class="flex items-center gap-3 shrink-0 self-start lg:self-auto">
+            <div class="px-3.5 py-1.5 rounded-full border text-xs font-bold transition-colors flex items-center space-x-2"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-white border-[#E5E7EB] text-slate-700 shadow-sm'">
+                <span class="w-2 h-2 rounded-full" :class="discoveryLoading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'"></span>
+                <span>{{ discoveryLoading ? '雷達掃描計算中…' : '監測 ' + discoveryCandidates.length + ' 檔標的 · ' + discoveryPapers.length + ' 篇論文' }}</span>
+            </div>
+            <button @click="loadDiscoveryData(true)"
+                    :disabled="discoveryLoading"
+                    class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1.5 border shadow-sm hover:scale-105 active:scale-95 disabled:opacity-50"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:border-amber-500 hover:text-amber-300' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
+                    title="立即更新前沿雷達資料">
+                <span class="material-symbols-outlined text-[16px] leading-none" :class="discoveryLoading ? 'animate-spin' : ''">sync</span>
+                <span>更新雷達</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- 2. KPI Summary Cards & Native Inline SVG Sparklines -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="前沿雷達 KPI 摘要">
+        <!-- KPI 1: Propose Add Candidates -->
+        <div class="p-3.5 sm:p-4 rounded-2xl border transition-colors relative overflow-hidden"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B] shadow-sm'">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider" :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">
+                    建議納入候選
+                </span>
+                <span class="px-2 py-0.5 rounded-md text-xs font-black"
+                      :class="isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-800'">
+                    PROPOSE ADD
+                </span>
+            </div>
+            <div class="mt-2 flex items-baseline space-x-2">
+                <span class="text-2xl sm:text-3xl font-black num-font" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                    {{ discoveryProposeAddCount }}
+                </span>
+                <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">檔高潛力標的</span>
+            </div>
+            <div class="mt-1 text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                7 維評分 ≥ 75 且純度 ≥ 60
+            </div>
+        </div>
+
+        <!-- KPI 2: In-Pool Reinforced -->
+        <div class="p-3.5 sm:p-4 rounded-2xl border transition-colors relative overflow-hidden"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B] shadow-sm'">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider" :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">
+                    池內題材強化
+                </span>
+                <span class="px-2 py-0.5 rounded-md text-xs font-black"
+                      :class="isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800'">
+                    IN POOL
+                </span>
+            </div>
+            <div class="mt-2 flex items-baseline space-x-2">
+                <span class="text-2xl sm:text-3xl font-black num-font" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                    {{ discoveryInPoolCount }}
+                </span>
+                <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">檔受前沿加持</span>
+            </div>
+            <div class="mt-1 text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                雙時序池內獲得新架構訊號
+            </div>
+        </div>
+
+        <!-- KPI 3: arXiv Papers Ingested -->
+        <div class="p-3.5 sm:p-4 rounded-2xl border transition-colors relative overflow-hidden"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B] shadow-sm'">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider" :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">
+                    前沿突破論文
+                </span>
+                <span class="px-2 py-0.5 rounded-md text-xs font-black"
+                      :class="isDark ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-100 text-sky-800'">
+                    arXiv
+                </span>
+            </div>
+            <div class="mt-2 flex items-baseline space-x-2">
+                <span class="text-2xl sm:text-3xl font-black num-font" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                    {{ discoveryPapers.length }}
+                </span>
+                <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">篇頂級架構研究</span>
+            </div>
+            <div class="mt-1 text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                涵蓋 cs.AI / RO / LG / CV
+            </div>
+        </div>
+
+        <!-- KPI 4: Average Score & Mini Sparkline -->
+        <div class="p-3.5 sm:p-4 rounded-2xl border transition-colors relative overflow-hidden flex flex-col justify-between"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B] shadow-sm'">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider" :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">
+                        候選綜合均分
+                    </span>
+                    <span class="text-xs font-bold num-font" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                        {{ discoveryHistory.length }} 日時序
+                    </span>
+                </div>
+                <div class="mt-2 flex items-baseline space-x-2">
+                    <span class="text-2xl sm:text-3xl font-black num-font text-amber-500">
+                        {{ discoveryAvgScore.toFixed(1) }}
+                    </span>
+                    <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">/ 100</span>
+                </div>
+            </div>
+
+            <!-- Native Inline SVG Sparkline -->
+            <div class="mt-2 h-7 w-full">
+                <svg class="w-full h-full overflow-visible" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+                    <path :d="discoverySparklinePath" fill="none"
+                          :stroke="isDark ? '#FFB010' : '#9A3412'"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Theme Filter Tabs / Pills -->
+    <section class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1" aria-label="技術瓶頸主題過濾">
+        <button @click="discoverySelectedTheme = 'ALL'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'ALL' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>全部主題 ({{ discoveryCandidates.length }})</span>
+        </button>
+        <button @click="discoverySelectedTheme = 'cpo_optical_interconnect'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'cpo_optical_interconnect' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>⚡ CPO 光互連</span>
+        </button>
+        <button @click="discoverySelectedTheme = 'hbm_kv_cache'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'hbm_kv_cache' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>🧠 HBM / 頻寬牆</span>
+        </button>
+        <button @click="discoverySelectedTheme = 'liquid_cooling'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'liquid_cooling' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>❄️ 液冷散熱</span>
+        </button>
+        <button @click="discoverySelectedTheme = 'embodied_ai_robotics'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'embodied_ai_robotics' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>🤖 具身智能機器人</span>
+        </button>
+        <button @click="discoverySelectedTheme = 'advanced_packaging_cowos'"
+                class="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1 border"
+                :class="discoverySelectedTheme === 'advanced_packaging_cowos' ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-[#FFB010] text-[#2B251A] border-[#FFB010]') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038] hover:bg-[#FFF0CC]')">
+            <span>🔬 先進封裝 CoWoS</span>
+        </button>
+    </section>
+
+    <!-- 4. 4/2/1 Responsive Intelligence Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 items-start">
+
+        <!-- COLUMN 1: Propose Add / Observe Candidates -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#DDC58B]'">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <h2 class="text-sm font-black tracking-tight uppercase" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                        觀察候選探索
+                    </h2>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
+                      :class="isDark ? 'bg-[#16181D] text-slate-400 border border-[#262626]' : 'bg-[#FFFDF7] text-[#5C5038] border border-[#DDC58B]'">
+                    {{ filteredNewCandidates.length }} 檔
+                </span>
+            </div>
+
+            <!-- Candidate Cards List -->
+            <div v-if="filteredNewCandidates.length === 0" class="p-6 text-center rounded-2xl border"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-[#9CA3AF]' : 'bg-[#FFF9E8] border-[#DDC58B] text-[#5C5038]'">
+                目前篩選條件下無候選標的
+            </div>
+
+            <div v-for="cand in filteredNewCandidates" :key="cand.ticker + '_' + cand.theme_id"
+                 class="p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 space-y-3"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-amber-600 shadow-sm'">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="font-black text-base cursor-pointer hover:underline"
+                                  role="button" tabindex="0"
+                                  :class="isDark ? 'text-white' : 'text-[#2B251A]'"
+                                  @click="searchTickerHistory(cand.ticker)"
+                                  @keydown.enter="searchTickerHistory(cand.ticker)">
+                                {{ cand.name || cand.ticker }}
+                            </span>
+                            <span class="text-xs font-bold num-font px-1.5 py-0.5 rounded"
+                                  :class="isDark ? 'bg-[#16181D] text-amber-400' : 'bg-[#FFF0CC] text-[#9A3412]'">
+                                {{ cand.ticker }}
+                            </span>
+                            <span class="text-xs font-black px-1.5 py-0.5 rounded uppercase"
+                                  :class="cand.market === 'TW' ? 'bg-sky-500/10 text-sky-400' : 'bg-purple-500/10 text-purple-400'">
+                                {{ cand.market }}
+                            </span>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                            {{ cand.theme_name }}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-black num-font text-amber-500">
+                            {{ cand.total_score.toFixed(1) }}
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-xs font-black uppercase"
+                              :class="cand.recommendation === 'propose_add' ? (isDark ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-900 border border-amber-300') : (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-900')">
+                            {{ cand.recommendation === 'propose_add' ? '建議納入' : '持續觀察' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="text-xs leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">
+                    {{ cand.catalyst_summary }}
+                </div>
+
+                <!-- Anchors & Actions -->
+                <div class="flex items-center justify-between pt-2 border-t text-xs"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E6D2A3]'">
+                    <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                        美股錨點: <strong class="num-font text-amber-500">{{ cand.us_anchor || '—' }}</strong>
+                    </span>
+                    <button @click="toggleCandidateDossier(cand.ticker + '_' + cand.theme_id)"
+                            :aria-expanded="isDossierExpanded(cand.ticker + '_' + cand.theme_id)"
+                            :aria-controls="'dossier-' + cand.ticker + '_' + cand.theme_id"
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors flex items-center space-x-1"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#9A3412] hover:bg-[#FFF0CC]'">
+                        <span class="material-symbols-outlined text-[14px]">analytics</span>
+                        <span>{{ isDossierExpanded(cand.ticker + '_' + cand.theme_id) ? '收起研究卡' : '展開研究卡' }}</span>
+                    </button>
+                </div>
+
+                <!-- Lazy-rendered Dossier Breakdown -->
+                <div v-if="isDossierExpanded(cand.ticker + '_' + cand.theme_id)"
+                     :id="'dossier-' + cand.ticker + '_' + cand.theme_id"
+                     class="pt-3 border-t space-y-2.5"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E6D2A3]'">
+                    <div class="text-xs font-black uppercase tracking-wider" :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                        7 維度確定性因子評分
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">消息來源 (20%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.source_score }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">題材純度 (20%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.purity_score }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">前沿論文 (20%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.paper_score }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">新穎加分 (10%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.novelty_score }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">語意情緒 (10%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.sentiment_score }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                            <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">量價位階 (10%):</span>
+                            <span class="font-bold num-font text-amber-500">{{ cand.setup_score }}</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center p-1.5 rounded text-xs" :class="isDark ? 'bg-[#16181D]' : 'bg-[#FFFDF7]'">
+                        <span :class="isDark ? 'text-slate-400' : 'text-slate-600'">執行與估值風險 (-10%):</span>
+                        <span class="font-bold num-font text-rose-500">-{{ cand.risk_score }}</span>
+                    </div>
+                    <button @click="searchTickerHistory(cand.ticker)"
+                            class="w-full py-1.5 rounded-lg text-xs font-black transition-colors text-center"
+                            :class="isDark ? 'bg-amber-500 text-black hover:bg-amber-400' : 'bg-[#FFB010] text-[#2B251A] hover:bg-[#F2A600]'">
+                        前往查看完整技術與籌碼分析 →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 2: In-Pool Reinforcement Candidates -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#DDC58B]'">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <h2 class="text-sm font-black tracking-tight uppercase" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                        池內題材強化
+                    </h2>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
+                      :class="isDark ? 'bg-[#16181D] text-slate-400 border border-[#262626]' : 'bg-[#FFFDF7] text-[#5C5038] border border-[#DDC58B]'">
+                    {{ filteredInPoolCandidates.length }} 檔
+                </span>
+            </div>
+
+            <div v-if="filteredInPoolCandidates.length === 0" class="p-6 text-center rounded-2xl border"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-[#9CA3AF]' : 'bg-[#FFF9E8] border-[#DDC58B] text-[#5C5038]'">
+                目前追蹤池中無符合此主題之標的
+            </div>
+
+            <div v-for="cand in filteredInPoolCandidates" :key="cand.ticker + '_' + cand.theme_id"
+                 class="p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 space-y-3"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-emerald-500/50' : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-emerald-600 shadow-sm'">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="font-black text-base cursor-pointer hover:underline"
+                                  role="button" tabindex="0"
+                                  :class="isDark ? 'text-white' : 'text-[#2B251A]'"
+                                  @click="searchTickerHistory(cand.ticker)"
+                                  @keydown.enter="searchTickerHistory(cand.ticker)">
+                                {{ cand.name || cand.ticker }}
+                            </span>
+                            <span class="text-xs font-bold num-font px-1.5 py-0.5 rounded"
+                                  :class="isDark ? 'bg-[#16181D] text-emerald-400' : 'bg-[#E6F4EA] text-[#065F46]'">
+                                {{ cand.ticker }}
+                            </span>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                            {{ cand.theme_name }}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-black num-font text-emerald-400">
+                            {{ cand.total_score.toFixed(1) }}
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-xs font-black uppercase"
+                              :class="isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'">
+                            雙時序已在池
+                        </span>
+                    </div>
+                </div>
+
+                <div class="text-xs leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">
+                    {{ cand.catalyst_summary }}
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t text-xs"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E6D2A3]'">
+                    <span class="text-xs" :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                        美股錨點: <strong class="num-font text-amber-500">{{ cand.us_anchor || '—' }}</strong>
+                    </span>
+                    <button @click="searchTickerHistory(cand.ticker)"
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-emerald-400 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#065F46] hover:bg-[#FFF0CC]'">
+                        查看雙模型預測 →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 3: arXiv Academic Papers Radar -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#DDC58B]'">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                    <h2 class="text-sm font-black tracking-tight uppercase" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                        arXiv 論文雷達
+                    </h2>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
+                      :class="isDark ? 'bg-[#16181D] text-slate-400 border border-[#262626]' : 'bg-[#FFFDF7] text-[#5C5038] border border-[#DDC58B]'">
+                    {{ filteredPapers.length }} 篇
+                </span>
+            </div>
+
+            <div v-if="filteredPapers.length === 0" class="p-6 text-center rounded-2xl border"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-[#9CA3AF]' : 'bg-[#FFF9E8] border-[#DDC58B] text-[#5C5038]'">
+                暫無相關 arXiv 突破論文
+            </div>
+
+            <div v-for="paper in filteredPapers" :key="paper.paper_id"
+                 class="p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 space-y-2.5"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-sky-500/50' : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-sky-600 shadow-sm'">
+                <div class="flex items-start justify-between gap-2">
+                    <span class="text-xs font-black px-2 py-0.5 rounded uppercase"
+                          :class="isDark ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-100 text-sky-900'">
+                        {{ paper.category }}
+                    </span>
+                    <span class="text-xs num-font" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                        {{ paper.published_date }}
+                    </span>
+                </div>
+
+                <a :href="paper.url" target="_blank" rel="noopener noreferrer"
+                   class="font-bold text-xs sm:text-sm hover:underline block leading-snug"
+                   :class="isDark ? 'text-white hover:text-amber-400' : 'text-[#2B251A] hover:text-[#9A3412]'">
+                    {{ paper.title }}
+                </a>
+
+                <p class="text-xs line-clamp-3 leading-relaxed" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                    {{ paper.abstract }}
+                </p>
+
+                <div class="pt-2 border-t flex flex-wrap items-center gap-1.5"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E6D2A3]'">
+                    <span class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">關聯代號:</span>
+                    <span v-for="t in paper.related_tickers" :key="t"
+                          @click="searchTickerHistory(t)"
+                          class="px-1.5 py-0.5 rounded text-xs font-mono cursor-pointer transition-colors"
+                          :class="isDark ? 'bg-[#16181D] text-amber-400 hover:bg-[#262626]' : 'bg-[#FFF0CC] text-[#9A3412] hover:bg-[#FFE299]'">
+                        {{ t }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 4: Industry Signals Stream -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b"
+                 :class="isDark ? 'border-[#262626]' : 'border-[#DDC58B]'">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                    <h2 class="text-sm font-black tracking-tight uppercase" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                        產業即時快訊
+                    </h2>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold"
+                      :class="isDark ? 'bg-[#16181D] text-slate-400 border border-[#262626]' : 'bg-[#FFFDF7] text-[#5C5038] border border-[#DDC58B]'">
+                    {{ filteredSignals.length }} 則
+                </span>
+            </div>
+
+            <div v-if="filteredSignals.length === 0" class="p-6 text-center rounded-2xl border"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-[#9CA3AF]' : 'bg-[#FFF9E8] border-[#DDC58B] text-[#5C5038]'">
+                暫無即時快訊
+            </div>
+
+            <div v-for="sig in filteredSignals" :key="sig.signal_id"
+                 class="p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 space-y-2"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-purple-500/50' : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-purple-600 shadow-sm'">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold px-1.5 py-0.5 rounded uppercase"
+                          :class="sig.source_type === 'arxiv' ? (isDark ? 'bg-sky-500/20 text-sky-400' : 'bg-sky-100 text-sky-900') : (isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-900')">
+                        {{ sig.source_type }}
+                    </span>
+                    <span class="text-xs font-mono" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                        {{ sig.detected_at.substring(5, 16) }}
+                    </span>
+                </div>
+
+                <div class="font-bold text-xs" :class="isDark ? 'text-white' : 'text-[#2B251A]'">
+                    {{ sig.title }}
+                </div>
+
+                <p class="text-xs leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                    {{ sig.content }}
+                </p>
+
+                <div class="pt-2 border-t flex items-center justify-between text-xs"
+                     :class="isDark ? 'border-[#262626]' : 'border-[#E6D2A3]'">
+                    <span :class="isDark ? 'text-slate-400' : 'text-[#5C5038]'">
+                        情緒指標: <strong class="num-font text-emerald-400">{{ sig.sentiment_score }}</strong>
+                    </span>
+                    <span class="cursor-pointer font-bold num-font text-amber-500 hover:underline"
+                          @click="searchTickerHistory(sig.ticker)">
+                        {{ sig.ticker }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 5. Terminal Disclaimer Banner -->
+    <section class="p-4 rounded-2xl border text-xs leading-relaxed select-none"
+             :class="isDark ? 'bg-[#16181D]/60 border-[#262626] text-slate-400' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#5C5038]'">
+        <div class="flex items-start space-x-2">
+            <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0 mt-0.5">info</span>
+            <div>
+                <strong class="font-bold" :class="isDark ? 'text-slate-200' : 'text-[#2B251A]'">前沿挖掘機免責聲明：</strong>
+                前沿學術突破與供應鏈映射僅代表技術架構萌芽之早期探索信號，不等同即刻商業量產訂單或財報營收保證。實際投資決策請務必結合公司公布財報、法人與券商籌碼面、以及雙時序大模型（TimesFM + Timestral）之右側確認。
+            </div>
+        </div>
+    </section>
+
+</div>

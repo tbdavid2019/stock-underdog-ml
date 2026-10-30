@@ -214,12 +214,103 @@ export const app = createApp({
                 }
             }, null, 2),
 
+            // AI Tech Radar & Discovery State
+            discoveryCandidates: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_discovery_candidates_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            discoveryPapers: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_discovery_papers_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            discoverySignals: (() => {
+                try {
+                    const cached = localStorage.getItem('stock_quant_discovery_signals_cache');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            discoveryHistory: [],
+            discoveryStatus: {
+                status: 'success',
+                stale: false,
+                as_of: '',
+                candidate_count: 0,
+                paper_count: 0,
+                signal_count: 0
+            },
+            discoveryLoading: false,
+            discoverySelectedTheme: 'ALL',
+            discoveryExpandedDossiers: {},
+
             pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
         };
     },
     computed: {
         currentStrategyMeta() {
             return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
+        },
+        discoveryProposeAddCount() {
+            return (this.discoveryCandidates || []).filter(c => c.recommendation === 'propose_add').length;
+        },
+        discoveryInPoolCount() {
+            return (this.discoveryCandidates || []).filter(c => c.recommendation === 'already_in_pool' || c.in_pool).length;
+        },
+        discoveryAvgScore() {
+            const list = this.discoveryCandidates || [];
+            if (!list.length) return 0;
+            const sum = list.reduce((acc, c) => acc + (Number(c.total_score) || 0), 0);
+            return sum / list.length;
+        },
+        discoverySparklinePath() {
+            const hist = this.discoveryHistory || [];
+            if (!hist.length) {
+                return "M 0 16 Q 25 8, 50 14 T 100 10";
+            }
+            const points = hist.slice(-10).map((h, i, arr) => {
+                const x = (i / Math.max(1, arr.length - 1)) * 100;
+                const score = Number(h.avg_total_score) || 75;
+                const y = Math.max(2, Math.min(22, 24 - (score / 100) * 22));
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            });
+            return "M " + points.map((p, idx) => (idx === 0 ? p : `L ${p}`)).join(" ");
+        },
+        filteredNewCandidates() {
+            let list = (this.discoveryCandidates || []).filter(c => c.recommendation === 'propose_add' || c.recommendation === 'observe');
+            if (this.discoverySelectedTheme !== 'ALL') {
+                list = list.filter(c => c.theme_id === this.discoverySelectedTheme);
+            }
+            return list;
+        },
+        filteredInPoolCandidates() {
+            let list = (this.discoveryCandidates || []).filter(c => c.recommendation === 'already_in_pool');
+            if (this.discoverySelectedTheme !== 'ALL') {
+                list = list.filter(c => c.theme_id === this.discoverySelectedTheme);
+            }
+            return list;
+        },
+        filteredPapers() {
+            let list = this.discoveryPapers || [];
+            if (this.discoverySelectedTheme !== 'ALL') {
+                list = list.filter(p => p.bottleneck_tag === this.discoverySelectedTheme);
+            }
+            return list;
+        },
+        filteredSignals() {
+            let list = this.discoverySignals || [];
+            if (this.discoverySelectedTheme !== 'ALL') {
+                list = list.filter(s => s.theme_id === this.discoverySelectedTheme);
+            }
+            return list;
         },
         dailyHistoryRows() {
             if (!this.historyRecords || !this.historyRecords.length) return [];
@@ -1168,6 +1259,8 @@ export const app = createApp({
                 this.loadPodcastEpisodes();
                 this.loadPodcastChannels();
                 this.loadPodcastTopics();
+            } else if (tab === 'discovery') {
+                this.loadDiscoveryData();
             }
         },
         async loadPodcastEpisodes() {
@@ -1361,6 +1454,73 @@ export const app = createApp({
             const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
             return match ? `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=1` : '';
         },
+        toggleCandidateDossier(id) {
+            this.discoveryExpandedDossiers[id] = !this.discoveryExpandedDossiers[id];
+        },
+        isDossierExpanded(id) {
+            return !!this.discoveryExpandedDossiers[id];
+        },
+        async loadDiscoveryData(force = false) {
+            if (!this.discoveryCandidates || !this.discoveryCandidates.length || force) {
+                this.discoveryLoading = true;
+            }
+            try {
+                const [candRes, paperRes, sigRes, statRes, histRes] = await Promise.all([
+                    ApiClient.getDiscoveryCandidates({ limit: 100 }).catch(() => null),
+                    ApiClient.getDiscoveryPapers({ limit: 40 }).catch(() => null),
+                    ApiClient.getDiscoverySignals({ limit: 60 }).catch(() => null),
+                    ApiClient.getDiscoveryStatus().catch(() => null),
+                    ApiClient.getDiscoveryHistory(30).catch(() => null)
+                ]);
+
+                if (candRes && candRes.data && Array.isArray(candRes.data) && candRes.data.length > 0) {
+                    this.discoveryCandidates = candRes.data;
+                    try {
+                        localStorage.setItem('stock_quant_discovery_candidates_cache', JSON.stringify(candRes.data));
+                    } catch (e) {}
+                } else if (!this.discoveryCandidates || !this.discoveryCandidates.length) {
+                    try {
+                        const local = localStorage.getItem('stock_quant_discovery_candidates_cache');
+                        if (local) this.discoveryCandidates = JSON.parse(local);
+                    } catch (e) {}
+                }
+
+                if (paperRes && paperRes.data && Array.isArray(paperRes.data) && paperRes.data.length > 0) {
+                    this.discoveryPapers = paperRes.data;
+                    try {
+                        localStorage.setItem('stock_quant_discovery_papers_cache', JSON.stringify(paperRes.data));
+                    } catch (e) {}
+                } else if (!this.discoveryPapers || !this.discoveryPapers.length) {
+                    try {
+                        const local = localStorage.getItem('stock_quant_discovery_papers_cache');
+                        if (local) this.discoveryPapers = JSON.parse(local);
+                    } catch (e) {}
+                }
+
+                if (sigRes && sigRes.data && Array.isArray(sigRes.data) && sigRes.data.length > 0) {
+                    this.discoverySignals = sigRes.data;
+                    try {
+                        localStorage.setItem('stock_quant_discovery_signals_cache', JSON.stringify(sigRes.data));
+                    } catch (e) {}
+                } else if (!this.discoverySignals || !this.discoverySignals.length) {
+                    try {
+                        const local = localStorage.getItem('stock_quant_discovery_signals_cache');
+                        if (local) this.discoverySignals = JSON.parse(local);
+                    } catch (e) {}
+                }
+
+                if (statRes && statRes.data) {
+                    this.discoveryStatus = statRes.data;
+                }
+                if (histRes && histRes.data) {
+                    this.discoveryHistory = histRes.data;
+                }
+            } catch (err) {
+                console.warn("載入 Discovery 資料異常:", err);
+            } finally {
+                this.discoveryLoading = false;
+            }
+        },
         setStrategy(stratId) {
             this.selectedStrategy = stratId;
             this.updateUrl();
@@ -1419,6 +1579,10 @@ export const app = createApp({
                     if (this.podcastSelectedLang && this.podcastSelectedLang !== 'ALL') {
                         params.set('lang', this.podcastSelectedLang);
                     }
+                } else if (this.activeTab === 'discovery') {
+                    if (this.discoverySelectedTheme && this.discoverySelectedTheme !== 'ALL') {
+                        params.set('theme', this.discoverySelectedTheme);
+                    }
                 }
                 const queryStr = params.toString();
                 const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
@@ -1441,7 +1605,7 @@ export const app = createApp({
                 if (!tab && tickerParam) {
                     this.activeTab = 'history';
                 } else {
-                    this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast'].includes(tab)) ? tab : 'dashboard';
+                    this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast', 'discovery'].includes(tab)) ? tab : 'dashboard';
                 }
 
                 const strat = params.get('strategy');
@@ -1462,6 +1626,7 @@ export const app = createApp({
                 this.podcastSelectedTopic = params.get('topic') || '';
                 this.podcastSelectedChannel = params.get('channel') || 'ALL';
                 this.podcastSelectedLang = params.get('lang') || 'ALL';
+                this.discoverySelectedTheme = params.get('theme') || 'ALL';
             } catch (e) {
                 console.debug("Parse URL params error:", e);
             }
@@ -1484,6 +1649,8 @@ export const app = createApp({
                 this.loadPodcastEpisodes();
                 this.loadPodcastChannels();
                 this.loadPodcastTopics();
+            } else if (this.activeTab === 'discovery') {
+                this.loadDiscoveryData();
             }
         },
         copyShareLink() {
@@ -2013,6 +2180,8 @@ export const app = createApp({
             this.loadPodcastEpisodes();
             this.loadPodcastChannels();
             this.loadPodcastTopics();
+        } else if (this.activeTab === 'discovery') {
+            this.loadDiscoveryData();
         } else {
             this.loadData();
         }

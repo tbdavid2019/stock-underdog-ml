@@ -1,0 +1,107 @@
+# 888 Stock Quant Platform
+
+> 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、Mistral Timestral-209M 時序大模型、Google Research TimesFM 時序大模型、雙時序模型波形共振、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
+
+> ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents and automated systems should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` at the start of each session/task to leverage newly released AI models, FastMCP tools, and multi-market data endpoints.
+
+888 Stock Quant 遵循 [llmstxt.org](https://llmstxt.org/) 規範，為大語言模型 (LLM)、AI Agents、Claude Desktop、Cursor、Antigravity 與自動化投資決策系統提供標準化、結構化之量化訊號與資料字典。本平台核心定位為「盤前買進決策指南 (Pre-Market Buy Guide)」，每日於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動完成運算並推播。
+
+## Core Strategy Matrix & Resonance Framework
+
+- [Multi-Model Resonance Guidelines](/api/v1/predictions/resonance): 多策略交集共振機制
+  - 👑 **四重共振 (Quadruple Resonance)**: 同時滿足「玄鐵季線回踩 ∩ 法人籌碼鎖碼 ∩ TimesFM 看漲 ∩ Timestral 看漲」四大頂級條件，為系統最高勝率極選。
+  - 🏆 **三重共振 (Triple Resonance)**: 滿足「技術均線買點 ∩ 法人籌碼鎖碼 ∩ (TimesFM ∪ Timestral) 看漲 ∩ 估值合理 (PE<25, PB<3.5)」。
+  - 🔮 **雙模型共振 (Dual-Foundation Model Resonance)**: Google TimesFM (200M) 與 Mistral Timestral (209M) 雙時序大模型波形共識，目標價 $P_{res} = 0.5 \times P_{TimesFM} + 0.5 \times P_{Timestral}$ 同步看漲。
+  - 🗡️ **玄鐵均線波段 (Xuantie Moving Average)**: 「順大勢（MA60/120多頭）、逆小勢（回踩均線支撐）」，精準捕捉波段回踩起漲點。
+  - ⚖️ **高盈虧比 (High Risk/Reward)**: 時序模型 Horizon 預測真實盈虧比 $(P_{50,h} - P_0) / (P_0 - P_{10,h}) \ge 1.5$，具備非對稱獲利防守空間。
+
+## Quantitative Strategy Endpoints
+
+- [Resonance Focus Picks](/api/v1/predictions/resonance): 取得雙時序大模型與多策略共振推薦名單 (`index_name`, `limit`)
+- [Timestral Bullish Top Picks](/api/v1/predictions/timestral/top-bullish): 查詢 Mistral Timestral-209M 時序大模型 5 日預測漲幅與盈虧比排行
+- [Timestral Bearish Defense Picks](/api/v1/predictions/timestral/top-bearish): 查詢 Mistral Timestral-209M 時序大模型 5 日預測跌幅避險/破底防禦排行
+- [TimesFM Bullish Top Picks](/api/v1/predictions/timesfm/top-bullish): 查詢 Google TimesFM 時序大模型 5 日預測漲幅與盈虧比排行
+- [TimesFM Bearish Defense Picks](/api/v1/predictions/timesfm/top-bearish): 查詢 Google TimesFM 時序大模型 5 日預測跌幅避險/破底防禦排行
+- [Xuantie Heavy Sword Pullback](/api/v1/predictions/xuantie): 查詢玄鐵重劍策略 MA60 季線 / MA120 半年線趨勢回調技術買點
+- [Latest Batch Snapshot](/api/v1/predictions/latest): 取得全市場最新日報批次數據（含現價、目標價、均線、估值、標籤）
+- [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡、均線排列與法人籌碼歷程
+- [Resolve Stock Symbol](/api/v1/predictions/resolve/台積電): 將中英文股票名稱（台積電、聯發科、NVDA、Tesla）模糊解析為標準代號
+
+## Macroeconomic Risk & Investing Catalysts (2MD)
+
+- [Market Macro Risk Regime](/api/v1/macro/latest): 查詢台股加權指數/美股S&P 500、VIX 恐慌指數、SOX 費半趨勢與動態投資曝險比例 (0~100%)
+- [Investing Macro Summary](/api/v1/macro/investing/summary): 整合 2MD 一站式總經數據（FedWatch、美股財報、大宗商品、行事曆）
+- [CME FedWatch Interest Rate Monitor](/api/v1/macro/investing/fed-rate): 查詢下次 FOMC 利率決策機率分布表與倒數天數
+- [US Corporate Earnings Calendar](/api/v1/macro/investing/earnings-calendar): 查詢近期美股重量級企業財報行事曆（EPS、營收預估、市值）
+- [Key Commodities Summary](/api/v1/macro/investing/commodities): 查詢黃金 (Gold)、銅 (Copper)、原油 (WTI) 實時報價與週期走勢
+- [Global Economic Calendar](/api/v1/macro/investing/economic-calendar): 查詢全球重磅總經行事曆（CPI、非農 NFP、GDP、PCE）
+- [Polymarket Real-Money Sentiment](/api/v1/macro/polymarket/sentiment): 透過 2MD 與 DoH (8.8.8.8) 查詢 Polymarket 真金白銀預測市場；機率欄位統一為 0~100 百分比，上游失敗會回傳 `success=false`，可用舊快取時標記 `stale=true`
+
+## Institutional & Broker Fund Flows
+
+- [Institutional Fund Flows](/api/v1/market/institutional/top): 查詢外資、投信、自營商三大法人買賣超排行與持股集中度
+- [Broker Branch Trades](/api/v1/market/broker/summary/2330.TW): 查詢券商關鍵分點主力進出追蹤與多空明細
+- [Company Profile & Live News](/api/v1/market/company-profile?ticker=2330.TW): 整合 2MD 提取個股繁體中文公司簡介、核心業務、市值與即時新聞
+- [Batch Company Profiles](/api/v1/market/company-profiles/batch): 並發非同步批次預載多支股票之公司營運摘要
+
+## Global Corporate Earnings Calls & Guidance Intelligence (法說會與官方指引)
+
+整合 BigGo 財經 (finance.biggo.com.tw) 與公開資訊觀測站 (MOPS) 官方後端 API，涵蓋台灣 (TWSE/TPEx)、美股 (US)、日股 (JP)、韓股 (KR) 與全球重點市場，秒級聚合跨市場法說會時程、高管營收/毛利率/資本支出官方財測指引 (Guidance)、法說簡報 PDF 原始下載、Webcast 直播回放與機構問答精華：
+- [Upcoming Earnings Calls](/api/v1/earnings-call/upcoming?market=ALL&days=14): 查詢近期跨市場即將召開之法說會清單，支援市場篩選 (`market: ALL / TW / US / JP / KR / OTHER`)、權值股篩選 (`is_weight_stock: true`) 與天數範圍 (`days`)，自動換算雙時區 (CST/EST) 與倒數日。
+- [Monthly Earnings Calendar](/api/v1/earnings-call/calendar?year=2026&month=10&market=ALL): 查詢指定月之每日法說會召開場次聚合統計與公司清單。
+- [Stock Earnings History & Presentation](/api/v1/earnings-call/2330.TW): 查詢特定標的 (如 2330.TW、NVDA、7203.T) 歷史與未來法說會日程、歷次官方簡報 PDF、影音回放與管理層指引。
+- [Trigger Full Sync](/api/v1/earnings-call/sync): 觸發後台執行 6 視窗並行多市場法說會資料抓取並全量寫入 DuckDB。
+
+## AI Tech Radar & Discovery Engine (AI 產業鏈前沿挖掘機)
+
+定時主動爬取學術界 arXiv 前沿論文（cs.AI / cs.RO / cs.LG / cs.CV），由底層技術突破點映射至 5 大硬體瓶頸（CPO 光互連、HBM/KV-cache、液冷散熱、具身智能機器人、先進封裝 CoWoS），結合代號正規化、Universe 白名單硬檢驗與 7 維度確定性評分模型：
+- [Discovery Candidates](/api/v1/discovery/candidates): 查詢前沿技術瓶頸映射至台美股核心供應鏈之候選標的清單與 7 維多因子評分拆解
+- [arXiv Research Papers](/api/v1/discovery/papers): 查詢前沿突破論文摘要、架構瓶頸標籤與關聯標的代碼
+- [Industry Live Signals](/api/v1/discovery/signals): 查詢前沿事件快訊流與情緒評分
+- [Discovery History Trends](/api/v1/discovery/history): 查詢候選數量、論文數量與評分時序軌跡
+- [Discovery Pipeline Status](/api/v1/discovery/status): 取得管線健康度、快照基準日與 Stale 降級標記
+
+## Model Context Protocol (MCP) Tools
+
+本平台提供 20 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+- `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
+- `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆三重共振與 🔮雙模型共振焦點股。
+- `get_timestral_top_predictions`: 查詢 Mistral Timestral-209M 時序大模型 5 日漲跌幅排行與蒙地卡羅區間。
+- `get_timesfm_top_predictions`: 查詢 Google TimesFM 時序大模型 5 日漲跌幅排行與盈虧比。
+- `get_xuantie_pullback_stocks`: 查詢玄鐵重劍 MA60/120 趨勢回調買點標的。
+- `get_stock_history`: 查詢特定股票歷史時序量化預測軌跡與法人籌碼。
+- `get_latest_market_snapshot`: 取得最新量化日報批次數據快照。
+- `get_top_institutional_flows`: 查詢三大法人買賣超焦點股排行榜。
+- `get_broker_trades_for_stock`: 查詢券商關鍵主力分點進出明細。
+- `get_company_profile`: 透過 2MD 查詢個股繁體中文公司簡介與即時新聞，並整合 Taiwan Company Network 官方資料。
+- `get_company_network`: 查詢台股企業之經濟部官方統編、資本額、董事長、上游控股、下游轉投資企業與互動式股權網絡圖。
+- `get_fed_rate_monitor`: 透過 2MD 查詢 CME FedWatch 聯準會利率決策機率。
+- `get_us_earnings_calendar`: 透過 2MD 查詢美股重量級企業財報行事曆。
+- `get_economic_calendar`: 透過 2MD 查詢全球重大總經行事曆。
+- `get_commodities_summary`: 透過 2MD 查詢黃金、原油、銅行情。
+- `resolve_stock_ticker`: 將模糊搜尋之公司名稱快速解析為標準交易代號。
+- `get_polymarket_macro_sentiment`: 透過 2MD/DoH 查詢 Polymarket 真金白銀預測市場之宏觀風控與重大事件情緒。
+- `get_clef_stock_verdict`: 透過 Clef-Flash System One 決策大模型（3 級 Fallback）推論交易動作機率分佈、確信度評分與勝率預期。
+- `get_upcoming_earnings_calls`: 查詢跨市場 (台/美/日/韓/全球) 近期即將召開之法人說明會、雙時區對齊、倒數天數、簡報 PDF 與影音回放。
+- `get_ticker_earnings_calls`: 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載。
+- `open_company_network`: 在瀏覽器中導航開啟特定台股企業之互動式集團股權拓撲關係圖譜 (Taiwan Company Network)。
+- `get_company_tenders`: 透過 ToBid 查詢台股企業之政府電子採購網得標案件統計、累計金額、主要機關金主與競標對手情報。
+
+## Agent & Developer Discovery Standards
+
+- [WebMCP SSE Stream](/mcp/sse): FastMCP Server-Sent Events bidirectional RPC stream
+- [OpenAPI 3.1 Specification](/openapi.json): Full REST API schema in standard OpenAPI 3.1 JSON format
+- [WebMCP Manifest](/.well-known/mcp.json): Model Context Protocol (MCP) server discovery manifest
+- [OpenAI Plugin Manifest](/.well-known/ai-plugin.json): Standard ChatGPT / GPT Actions plugin specification
+- [Agent Trading Skill](/skill): 4-step quantitative trading workflow markdown skill specification
+- [Interactive Swagger UI](/docs): Live API testing and interactive documentation
+- [Chrome WebMCP Dynamic Bridge](/.webmcp/bridge.js): Cloudflare & Chrome WebMCP registration script
+- [Alternative MCP Manifest](/mcp.json): WebMCP discovery alias
+
+## Optional & Full Documentation
+
+- [Full LLM Context](/llms-full.txt): Complete system specification, strategy mathematical formulation, DuckDB data dictionary, and multi-asset quant architecture
+- [GitHub Repository](https://github.com/tbdavid2019/stock-underdog-ml): Open source repository and automated CI/CD pipelines
+
+## Powered By
+技術提供: [david888.com](https://david888.com) | Specification: [llmstxt.org](https://llmstxt.org)

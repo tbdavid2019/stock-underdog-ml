@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -63,6 +63,7 @@ app.include_router(market.router, prefix="/api/v1")
 app.include_router(decision.router, prefix="/api/v1")
 app.include_router(earnings_call.router, prefix="/api/v1")
 app.include_router(podcast.router, prefix="/api/v1")
+app.include_router(discovery.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -329,6 +330,15 @@ def get_llms_txt():
 - [Stock Earnings History & Presentation](/api/v1/earnings-call/2330.TW): 查詢特定標的 (如 2330.TW、NVDA、7203.T) 歷史與未來法說會日程、歷次官方簡報 PDF、影音回放與管理層指引。
 - [Trigger Full Sync](/api/v1/earnings-call/sync): 觸發後台執行 6 視窗並行多市場法說會資料抓取並全量寫入 DuckDB。
 
+## AI Tech Radar & Discovery Engine (AI 產業鏈前沿挖掘機)
+
+定時主動爬取學術界 arXiv 前沿論文（cs.AI / cs.RO / cs.LG / cs.CV），由底層技術突破點映射至 5 大硬體瓶頸（CPO 光互連、HBM/KV-cache、液冷散熱、具身智能機器人、先進封裝 CoWoS），結合代號正規化、Universe 白名單硬檢驗與 7 維度確定性評分模型：
+- [Discovery Candidates](/api/v1/discovery/candidates): 查詢前沿技術瓶頸映射至台美股核心供應鏈之候選標的清單與 7 維多因子評分拆解
+- [arXiv Research Papers](/api/v1/discovery/papers): 查詢前沿突破論文摘要、架構瓶頸標籤與關聯標的代碼
+- [Industry Live Signals](/api/v1/discovery/signals): 查詢前沿事件快訊流與情緒評分
+- [Discovery History Trends](/api/v1/discovery/history): 查詢候選數量、論文數量與評分時序軌跡
+- [Discovery Pipeline Status](/api/v1/discovery/status): 取得管線健康度、快照基準日與 Stale 降級標記
+
 ## Model Context Protocol (MCP) Tools
 
 本平台提供 20 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
@@ -444,6 +454,14 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
   `id` (VARCHAR), `market` (VARCHAR: TW/US/JP/KR/OTHER), `ticker` (VARCHAR), `name` (VARCHAR), `call_date` (VARCHAR: YYYY-MM-DD), `call_time` (VARCHAR), `timezone` (VARCHAR), `meeting_type` (VARCHAR), `location` (VARCHAR), `webcast_url` (VARCHAR), `presentation_url` (VARCHAR), `transcript_url` (VARCHAR), `language` (VARCHAR), `eps_estimate` (DOUBLE), `eps_actual` (DOUBLE), `revenue_estimate` (DOUBLE), `revenue_actual` (DOUBLE), `is_weight_stock` (BOOLEAN), `financial_period` (VARCHAR), `guidance_summary` (VARCHAR), `guidance_outlook` (VARCHAR), `guidance_margin` (VARCHAR), `guidance_capex` (VARCHAR), `guidance_qa` (VARCHAR), `source` (VARCHAR)
 - `macro_snapshots`:
   `category` (VARCHAR: PRIMARY KEY, 如 fed_rate_monitor, investing_summary, commodities_summary, economic_calendar, polymarket_macro_sentiment), `data_json` (VARCHAR: JSON 結構), `source` (VARCHAR), `updated_at` (VARCHAR: YYYY-MM-DD HH:MM:SS)
+- `discovery_candidates`:
+  `ticker`, `market`, `name`, `theme_id`, `theme_name`, `total_score` (DOUBLE), `recommendation` (VARCHAR), `review_status`, `in_pool` (BOOLEAN), 7-factor breakdown scores, `catalyst_summary`, `us_anchor`, `run_id`, `as_of`
+- `discovery_papers`:
+  `paper_id`, `title`, `authors`, `abstract`, `category`, `published_date`, `bottleneck_tag`, `related_tickers`, `url`, `significance_score`, `as_of`
+- `discovery_signals`:
+  `signal_id`, `ticker`, `theme_id`, `source_type`, `title`, `content`, `url`, `sentiment_score`, `detected_at`, `as_of`
+- `discovery_history`:
+  `run_id`, `as_of`, `total_candidates`, `propose_add_count`, `observe_count`, `already_in_pool_count`, `paper_count`, `signal_count`, `avg_total_score`
 
 ## 4. REST API Endpoints Specification
 

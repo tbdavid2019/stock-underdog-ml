@@ -151,12 +151,25 @@ graph TD
 * **科技實體至上市公司 Ticker 聯結**：自動識別單集談及的科技實體（Claude, OpenAI, NVIDIA, Google, TSMC, ASML 等），無縫映射至上市股票代號（`NVDA`, `2330.TW`, `MSFT`, `GOOGL`），點擊 Badge 即可秒級開展個股時序與三大法人籌碼抽屜。
 * **熱門實體快篩軌**：頂部提供橫向滑動熱門關鍵字（Top Entities Rail），點擊即可一秒過濾相關標的對話。
 
-### 12. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
+### 12. 🔭 AI 產業鏈前沿挖掘機 (AI Tech Radar & Discovery Engine)
+* **左側前瞻題材捕捉**：突破單純右側技術跟隨與籌碼追蹤，定時主動爬取學術界 arXiv 前沿論文（`cs.AI`, `cs.RO`, `cs.LG`, `cs.CV`），由技術突破點直接映射至關鍵硬體瓶頸。
+* **5 大前沿技術瓶頸與台美供應鏈映射**：
+  - **CPO 光互連與矽光子**：美股錨點 `NVDA`, `AVGO`, `COHR`；台灣供應鏈台積電 `2330`、智邦 `2345`、光聖 `6442`、聯鈞 `3450` 等。
+  - **HBM / KV-cache 記憶體牆**：美股錨點 `NVDA`, `MU`, `AMD`；台灣供應鏈聯發科 `2454`、信驊 `5274`、創意 `3443` 等。
+  - **液冷散熱與熱管理**：美股錨點 `VRT`, `SMCI`；台灣供應鏈奇鋐 `3017`、雙鴻 `3324`、建準 `2421` 等。
+  - **具身智能機器人**：美股錨點 `TSLA`, `NVDA`；台灣供應鏈所羅門 `2359`、上銀 `2049`、台灣精銳 `4583` 等。
+  - **先進封裝 CoWoS**：美股錨點 `NVDA`, `TSM`；台灣供應鏈台積電 `2330`、弘塑 `3131`、辛耘 `3583` 等。
+* **代號正規化與 Universe 白名單硬過濾**：自動正規化台股代碼（去 `.TW`/`.TWO` 後綴）與美股大寫，嚴格與股票池白名單交集，杜絕虛構下市標的。
+* **確定性 7 維多因子評分核心**：固化權重公式 $\text{Total} = \text{clamp}(0.20 S_{src} + 0.20 S_{purity} + 0.20 S_{paper} + 0.10 S_{novelty} + 0.10 S_{sent} + 0.10 S_{setup} - 0.10 S_{risk}, 0, 100)$，嚴格分流至 `propose_add`、`observe`、`already_in_pool` 與 `reject`。
+* **雙層原子持久化與連線分離**：DuckDB 交易成功 commit 後，以 `tempfile + os.replace` 原子替換靜態 JSON 快照；FastAPI 查詢端強制使用 `read_only=True`，杜絕連線衝突。
+* **4/2/1 彭博終端情報矩陣**：前端整合 KPI 摘要卡、原生 Inline SVG 趨勢迷你圖、個股研究卡（Dossier）lazy-render 展開與手機底部橫向滾動適配。
+
+### 13. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
 * **智慧裝置自適應**：手機直向螢幕（`< 768px`）自動預設為單欄式高密度情報卡片（`Card View`），觸控人體工學友善，手動切換狀態自動同步至 `localStorage`。
 * **表格模式 RWD 混合轉譯 (Hybrid Table-to-Card)**：當使用者在手機上選擇表格模式時，自動轉譯為**「高密度行動量化卡片」**，保留 # 排名、代號、現價、目標價、PE/PB、法人籌碼與抽屜展開，文字絕不垂直擠壓折行。
 * **桌面彭博寬表格**：平板與桌面端（`>= 768px`）提供專業級寬表格，賦予 `min-w-[980px]` 與所有欄位 `whitespace-nowrap`，保障橫向滑動體驗流暢穩固。
 
-### 13. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
+### 14. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
 本系統核心定位為**「開盤前的進場買進指南（Pre-Market Buy Guide）」**，所有計算與數據抓取均嚴格在市場開盤前完成，並透過 `--market auto` 實施智慧時段防護（白天專注台股、夜間專注美股，非手動指定全市場時杜絕資源浪費）：
 
 * **🇹🇼 台股開盤前指南 (每日 08:00 執行 / UTC 00:00，時段 05:00~13:30 派發)**：
@@ -308,6 +321,11 @@ graph TD
 | `/api/v1/podcast/channels` | `GET` | 取得收錄之國際頂級科技與總經 Podcast 頻道庫列表；metadata 來源標記為 `seed_snapshot` |
 | `/api/v1/podcast/topics` | `GET` | 取得熱門科技實體與話題標籤頻次聚合排行榜 |
 | `/api/v1/podcast/sync` | `POST` | 觸發非同步背景 Podcast 最新 RSS 抓取與單集 raw metadata 同步 |
+| `/api/v1/discovery/candidates` | `GET` | 查詢前沿技術瓶頸映射至台美股供應鏈之候選標的清單與 7 維多因子評分拆解 |
+| `/api/v1/discovery/papers` | `GET` | 查詢 arXiv 前沿突破論文（cs.AI / RO / LG / CV）、架構瓶頸標籤與關聯標的 |
+| `/api/v1/discovery/signals` | `GET` | 查詢前沿訊號事件流與情緒指標 |
+| `/api/v1/discovery/history` | `GET` | 查詢前沿雷達候選數量、論文數量與評分時序趨勢 |
+| `/api/v1/discovery/status` | `GET` | 取得 Discovery 管線健康度、快照基準日與 Stale 降級標記 |
 
 ---
 

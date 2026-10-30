@@ -1,0 +1,237 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-10-30",
+  "themes": [
+    {
+      "id": "cpo_optical_interconnect",
+      "name_zh": "CPO 光互連與矽光子",
+      "name_en": "CPO & Silicon Photonics",
+      "bottleneck_description": "傳統銅線傳輸在高頻超大帶寬下遭遇嚴重衰減與功耗牆，共同封裝光學 (CPO) 與矽光子 (SiPh) 成為次世代 AI 資料中心與晶片間極限頻寬之唯一物理出路。",
+      "us_anchors": ["NVDA", "AVGO", "COHR", "MRVL", "LITE"],
+      "tw_supply_chain": [
+        {
+          "ticker": "2330",
+          "name": "台積電",
+          "role": "COUPE 矽光子晶片整合封裝與製造",
+          "relevance_weight": 0.95
+        },
+        {
+          "ticker": "2345",
+          "name": "智邦",
+          "role": "800G/1.6T 高階交換器與 CPO 光引擎整機整合",
+          "relevance_weight": 0.92
+        },
+        {
+          "ticker": "6442",
+          "name": "光聖",
+          "role": "光被動元件、高密度光纖跳接線與光分歧器",
+          "relevance_weight": 0.88
+        },
+        {
+          "ticker": "3450",
+          "name": "聯鈞",
+          "role": "矽光子晶片雷射二極體封測與模組封裝",
+          "relevance_weight": 0.90
+        },
+        {
+          "ticker": "3363",
+          "name": "上詮",
+          "role": "CPO 專用保偏光纖陣列 (FAU) 與高精度連接",
+          "relevance_weight": 0.89
+        },
+        {
+          "ticker": "3081",
+          "name": "聯亞",
+          "role": "磷化銦 (InP) 與砷化鎵 (GaAs) 雷射磊晶片",
+          "relevance_weight": 0.86
+        },
+        {
+          "ticker": "4977",
+          "name": "眾達-KY",
+          "role": "共同封裝光學 (CPO) 外部雷射光源模組 (ELS)",
+          "relevance_weight": 0.85
+        },
+        {
+          "ticker": "3163",
+          "name": "波若威",
+          "role": "光波長多工器 (WDM) 與高速光模組光學元件",
+          "relevance_weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "hbm_kv_cache",
+      "name_zh": "HBM 與 KV-Cache 記憶體牆突破",
+      "name_en": "HBM & KV-Cache Bandwidth",
+      "bottleneck_description": "大語言模型推論階段之 KV-Cache 佔用與吞吐量受限於記憶體頻寬牆，HBM3e/HBM4、客製 ASIC 記憶體階層架構與高頻寬快顯擴充為關鍵瓶頸。",
+      "us_anchors": ["NVDA", "MU", "AMD", "INTC"],
+      "tw_supply_chain": [
+        {
+          "ticker": "2330",
+          "name": "台積電",
+          "role": "CoWoS-S 矽中介層與 3DFabric HBM 整合晶圓代工",
+          "relevance_weight": 0.96
+        },
+        {
+          "ticker": "2454",
+          "name": "聯發科",
+          "role": "客製化 AI ASIC 與 HBM3e/4 高頻寬晶片設計服務",
+          "relevance_weight": 0.88
+        },
+        {
+          "ticker": "5274",
+          "name": "信驊",
+          "role": "AI 伺服器 BMC 遠端管理晶片與記憶體池化控制",
+          "relevance_weight": 0.91
+        },
+        {
+          "ticker": "3443",
+          "name": "創意",
+          "role": "HBM 實體層 (PHY) IP 與晶粒互連 (Die-to-Die) ASIC",
+          "relevance_weight": 0.90
+        },
+        {
+          "ticker": "3661",
+          "name": "世芯-KY",
+          "role": "3nm/2nm 先進製程 AI 晶片架構與超寬記憶體互連設計",
+          "relevance_weight": 0.92
+        },
+        {
+          "ticker": "8299",
+          "name": "群聯",
+          "role": "aiDAPTIV+ 平台與 PCIe Gen5 快顯儲存擴充架構",
+          "relevance_weight": 0.84
+        }
+      ]
+    },
+    {
+      "id": "liquid_cooling",
+      "name_zh": "液冷散熱與熱管理架構",
+      "name_en": "Liquid Cooling & Thermal Management",
+      "bottleneck_description": "GB200 / B200 晶片 TDP 攀升突破 1000W~1200W，氣冷散熱逼近物理極限，冷板式液冷、浸沒式冷卻與冷卻分配單元 (CDU) 成為資料中心必配架構。",
+      "us_anchors": ["VRT", "SMCI", "NVDA"],
+      "tw_supply_chain": [
+        {
+          "ticker": "3017",
+          "name": "奇鋐",
+          "role": "3D VC 散熱模組、水冷冷板 (Cold Plate) 與分歧管 (Manifold)",
+          "relevance_weight": 0.95
+        },
+        {
+          "ticker": "3324",
+          "name": "雙鴻",
+          "role": "水冷冷板、冷卻分配單元 (CDU) 與全套機櫃水冷系統",
+          "relevance_weight": 0.94
+        },
+        {
+          "ticker": "2421",
+          "name": "建準",
+          "role": "高風壓液冷伺服器輔助風扇與微型水泵",
+          "relevance_weight": 0.85
+        },
+        {
+          "ticker": "8996",
+          "name": "高力",
+          "role": "板式熱交換器與分歧管焊接零組件",
+          "relevance_weight": 0.87
+        },
+        {
+          "ticker": "3653",
+          "name": "健策",
+          "role": "均熱片 (Heat Spreader) 與微水道水冷散熱模組",
+          "relevance_weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "embodied_ai_robotics",
+      "name_zh": "具身智能機器人與實體 AI",
+      "name_en": "Embodied AI & Robotics",
+      "bottleneck_description": "視覺-語言-動作 (VLA) 多模態大模型走向物理世界，伺服驅動器、微型精密減速機、觸覺感知與邊緣端實時算力為人形機器人落地之核心硬體束縛。",
+      "us_anchors": ["TSLA", "NVDA", "ISRG", "GOOGL"],
+      "tw_supply_chain": [
+        {
+          "ticker": "2359",
+          "name": "所羅門",
+          "role": "3D 機器視覺、AI 瑕疵辨識與機器人視覺導航演算法",
+          "relevance_weight": 0.91
+        },
+        {
+          "ticker": "2049",
+          "name": "上銀",
+          "role": "滾珠螺桿、線性滑軌、諧波減速機與機器人關節元件",
+          "relevance_weight": 0.92
+        },
+        {
+          "ticker": "4583",
+          "name": "台灣精銳",
+          "role": "超精密行星齒輪減速機與機器人自動化傳動組件",
+          "relevance_weight": 0.89
+        },
+        {
+          "ticker": "2317",
+          "name": "鴻海",
+          "role": "人形機器人整機組裝、伺服驅動與關鍵零組件製造",
+          "relevance_weight": 0.88
+        },
+        {
+          "ticker": "2454",
+          "name": "聯發科",
+          "role": "邊緣物聯網 AI 運算晶片與機器人神經主控晶片",
+          "relevance_weight": 0.85
+        },
+        {
+          "ticker": "6188",
+          "name": "廣明",
+          "role": "達明機器人協作型手臂 (TM Robot) 與內建 AI 視覺系統",
+          "relevance_weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "advanced_packaging_cowos",
+      "name_zh": "先進封裝 CoWoS 與 3DFabric",
+      "name_en": "Advanced Packaging & CoWoS",
+      "bottleneck_description": "摩爾定律放緩下，小晶片 (Chiplet) 與 2.5D/3D 晶圓級先進封裝產能成為所有前沿 AI GPU/ASIC 出貨之首要瓶頸，濕製程清洗、點膠與 AOI 設備需求爆發。",
+      "us_anchors": ["NVDA", "AMD", "TSM"],
+      "tw_supply_chain": [
+        {
+          "ticker": "2330",
+          "name": "台積電",
+          "role": "CoWoS 與 SoIC (System-on-Integrated-Chips) 封裝代工龍頭",
+          "relevance_weight": 0.98
+        },
+        {
+          "ticker": "3131",
+          "name": "弘塑",
+          "role": "CoWoS 濕製程單晶圓清洗機台與自動化蝕刻設備",
+          "relevance_weight": 0.94
+        },
+        {
+          "ticker": "3583",
+          "name": "辛耘",
+          "role": "濕製程清洗設備、自製晶圓剝離設備與再生晶圓代工",
+          "relevance_weight": 0.93
+        },
+        {
+          "ticker": "6187",
+          "name": "萬潤",
+          "role": "CoWoS 點膠機、散熱片壓合機與晶片貼合自動化機台",
+          "relevance_weight": 0.92
+        },
+        {
+          "ticker": "3711",
+          "name": "日月光投控",
+          "role": "全球半導體封測龍頭，提供 oS (on-Substrate) 與 2.5D 先進封裝",
+          "relevance_weight": 0.90
+        },
+        {
+          "ticker": "6669",
+          "name": "緯穎",
+          "role": "超大規模雲端資料中心客製化 AI 機櫃與運算節點",
+          "relevance_weight": 0.86
+        }
+      ]
+    }
+  ]
+}
