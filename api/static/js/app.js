@@ -2410,6 +2410,11 @@ export const app = createApp({
             }
             this.highlightedNodes = Array.from(connected);
             this.highlightedEdges = connEdges;
+            if (connEdges.length === 0) {
+                const themeObj = (this.industryThemes || []).find(t => t.id === this.selectedTheme);
+                const themeLabel = themeObj ? themeObj.name : this.selectedTheme;
+                this.showToast(`提示：${ticker} 在「${themeLabel}」主題下暫無直連邊，可切換至「全部主題」查看完整網絡`);
+            }
             this.$nextTick(() => {
                 this.renderIndustryBeziers();
             });

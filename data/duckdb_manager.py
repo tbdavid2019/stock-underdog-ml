@@ -3643,9 +3643,10 @@ class DuckDBManager:
             logger.error(f"❌ 寫入 tw_industry_chains 失敗: {e}", exc_info=True)
             return 0
 
-    def save_industry_nodes_batch(self, records: List[Dict[str, Any]]) -> int:
+    def save_industry_nodes_batch(self, records: List[Dict[str, Any]], clear_existing: bool = False) -> int:
         """
         批次寫入產業鏈節點，自動去重 (Upsert on ticker + chain_id + layer)
+        若 clear_existing=True 則在寫入前清空全表以確保完全同步最新節點定義。
         """
         if not self.enabled or not records:
             return 0
@@ -3662,6 +3663,8 @@ class DuckDBManager:
         try:
             with self._WRITE_LOCK:
                 with self._get_connection() as con:
+                    if clear_existing:
+                        con.execute("DELETE FROM tw_industry_nodes;")
                     con.register("temp_industry_nodes_df", df[expected_cols])
                     con.execute("""
                     DELETE FROM tw_industry_nodes
@@ -3676,9 +3679,10 @@ class DuckDBManager:
             logger.error(f"❌ 寫入 tw_industry_nodes 失敗: {e}", exc_info=True)
             return 0
 
-    def save_industry_relations_batch(self, records: List[Dict[str, Any]]) -> int:
+    def save_industry_relations_batch(self, records: List[Dict[str, Any]], clear_existing: bool = False) -> int:
         """
         批次寫入產業鏈關係邊，自動去重 (Upsert on source_ticker + target_ticker + relation_type)
+        若 clear_existing=True 則在寫入前清空全表以確保完全同步最新關係定義。
         """
         if not self.enabled or not records:
             return 0
@@ -3693,6 +3697,8 @@ class DuckDBManager:
         try:
             with self._WRITE_LOCK:
                 with self._get_connection() as con:
+                    if clear_existing:
+                        con.execute("DELETE FROM tw_industry_relations;")
                     con.register("temp_industry_rels_df", df[expected_cols])
                     con.execute("""
                     DELETE FROM tw_industry_relations

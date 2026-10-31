@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-10-31 (v2.4.50)
+
+### Enhanced & Core (Comprehensive Industry Value Chain Supply Graph Expansion - 158 Edges & Zero Isolated Nodes)
+- **🕸️ 全面補齊擴充產業價值鏈真實供應鏈傳導鏈 (自 51 條擴充至 158 條，全圖譜 88 檔標的 100% 覆蓋零孤島)**：
+  - **智邦 (2345) 關鍵上下游網絡**：
+    - **上游核心料件與晶片**：Broadcom (AVGO Tomahawk 5/Jericho 3-AI 交換晶片)、Marvell (MRVL 高速光電轉換 DSP)、訊芯-KY (6451 800G CPO 光引擎)、台光電 (2383 超低損耗 CCL)、金像電 (2368 30+ 層高階 PCB 主板)、奇鋐 (3017 800G 交換器液冷模組)、聯鈞 (3450 矽光子雷射封裝)、波若威 (3163 高密度光纖連接)。
+    - **下游雲端巨頭與機箱整合**：Amazon AWS (第一大白牌交換器代工夥伴)、Meta OCP (Minipack/Wedge 交換器主力供應商)、微軟 Azure (SONiC 開放網路系統)、Google Cloud (TPU 叢集光互連)、廣達雲達 (2382 Spine-Leaf 高速網路)、緯穎 (6669 ToR Switch 頂部交換器)。
+  - **台達電 (2308) 跨主題電源與液冷中樞網絡**：
+    - **上游協力**：富世達 (6805 水冷快接頭 UQD 模組整合至台達電 CDU)、奇鋐 (3017 散熱水冷板)、雙鴻 (3324 散熱導管)。
+    - **中游伺服器 ODM 巨頭**：NVIDIA (33kW/66kW 鈦金高密度電源與液冷 CDU)、廣達雲達 (2382 高效率 PSU 與水冷系統)、鴻海 (2317 GB200 電源轉換與 Busbar)、緯穎 (6669 OCP 液冷電源與 Sidecar)、緯創 (3231 GPU 基板電源)。
+    - **下游雲端終端大客戶**：微軟 Azure (HVDC 高壓直流電源系統)、Amazon AWS (全球雲端機房鈦金級 PSU)、Google Cloud (高效能節能電源)、Tesla (Optimus 機器人馬達驅動器與超充系統)。
+  - **全面消除 42 檔孤島節點**：為光寶科、勤誠、晟銘電、健策、建準、高力、聯發科、英業達、Supermicro (SMCI)、力成、穎崴、群聯、研華、大立光、技嘉、華碩、Dell、HPE、Arista (ANET) 等補齊真實、可驗證之上下游業務網絡。
+  - **跨主題標籤 (Theme Tags) 動態補強**：賦予 NVIDIA、AMD、台達電、智邦、雙鴻、建準、高力等多維主題屬性，使 `SERVER_ODM` 邊數由 6 條激增至 96 條，`POWER_COOLING` 由 4 條激增至 58 條，`CPO_OPTICAL` 由 14 條激增至 27 條。
+  - **DuckDB 批次同步支援全表更新清理 (`clear_existing=True`)**：確保全庫節點與關係邊隨程式碼最新定義完全覆蓋更新。
+  - **前端互動優化**：於節點選取時若該主題下暫無直連關係，提供溫和 Toast 提示引導切換至「全部主題」，杜絕卡片獨立引起的視覺誤解。
+- **🏷️ 版本升級至 v2.4.50 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.49)
 
 ### Documentation & Governance (Industry Value Chain Architectural & Maintenance Guide)
