@@ -1433,6 +1433,15 @@ export const app = createApp({
             if (isNaN(num)) return String(val);
             return '$' + num.toFixed(2);
         },
+        formatNumber(val, decimals = 2) {
+            if (val === null || val === undefined || val === '') return '—';
+            const num = Number(val);
+            if (isNaN(num)) return String(val);
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+                maximumFractionDigits: decimals,
+            });
+        },
         selectChannelAndFilter(channelId) {
             this.podcastSelectedChannel = channelId;
             this.podcastSubView = 'episodes';
@@ -2684,6 +2693,18 @@ const globalFormatPrice = (val, ticker = null) => {
 };
 app.config.globalProperties.formatPrice = globalFormatPrice;
 window.formatPrice = globalFormatPrice;
+
+const globalFormatNumber = (val, decimals = 2) => {
+    if (val === null || val === undefined || val === '') return '—';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+        maximumFractionDigits: decimals,
+    });
+};
+app.config.globalProperties.formatNumber = globalFormatNumber;
+window.formatNumber = globalFormatNumber;
 
 // Auto-mount on load
 app.mount('#app');

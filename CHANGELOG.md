@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-10-31 (v2.4.49)
+
+### Fixed & UI Stability (Frontend Industry Chain Template Render Error)
+- **🐛 修復前端產業圖譜畫面因缺失 `formatNumber` 函數導致 Vue 模板渲染崩潰 (白畫面 / `TypeError: formatNumber is not a function`) 的重大 Bug**：
+  - 在 `api/static/js/app.js` Vue 實例之 `methods`、`app.config.globalProperties` 與 `window` 統一補齊 `formatNumber` 數字格式化工具，支援千分位分割與小數點動態修約。
+  - 杜絕渲染股票卡片現價與漲跌幅時因函數未定義觸發未捕獲之 TypeError，恢復整個 Web App 畫面的正常掛載與展示。
+- **🏷️ 版本升級至 v2.4.49 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.48)
 
 ### Added & Core (Cross-Market AI Value Chain & Supply Graph Engine)
