@@ -23,4 +23,4 @@
 - [x] 4.1 執行全專案單元測試確保 100% 通過
 - [x] 4.2 更新 `CHANGELOG.md`、`docs/CHANGELOG.md` 與 `README.md`
 - [x] 4.3 進行 Codex CLI 與 OpenCode CLI 雙重代碼審查並修復建議項目
-- [ ] 4.4 遠端伺服器部署與線上視覺驗證
+- [x] 4.4 遠端伺服器部署與線上視覺驗證
