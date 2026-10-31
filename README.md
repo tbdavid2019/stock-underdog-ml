@@ -428,6 +428,14 @@ python scripts/export_supabase_to_duckdb.py
 > 本專案整合 PyTorch、TensorFlow、DuckDB 等大型科學計算與深度學習依賴庫，若在本地自行從原始碼構建 (`docker build`) 通常需耗時 10~20 分鐘以上，且極易因本機記憶體不足或編譯工具差異中斷。
 > 官方 GitHub Actions CI/CD 會在每次更新時自動完成雙架構優化編譯與全量單元測試，發布至 Docker Hub，**直接 `docker pull` 數十秒內即可完成部署！**
 
+#### 🌟 0. 新機器全自動一鍵安裝 (One-Click Setup on New Machine)
+```bash
+# Clone 專案後執行一鍵安裝腳本，自動完成依賴檢測、目錄初始化、.env 配置、API 服務與定時排程啟動與健康驗證：
+git clone https://github.com/tbdavid2019/stock-underdog-ml.git
+cd stock-underdog-ml
+bash scripts/install_new_machine.sh
+```
+
 #### 🐳 A. 直接拉取 Docker Hub 官方映像檔
 ```bash
 # 1. 直接拉取 Docker Hub 最新多架構映像檔 (強烈推薦，免本地編譯)

@@ -5,18 +5,27 @@ SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 PYTHONPATH=/app
 
-# 1. 台股開盤前買進決策 (週一至週五 早上 08:00)
+# 1. 前沿挖掘機 arXiv 論文與題材前瞻巡檢 (週一至週五 早上 06:00)
+0 6 * * 1-5 cd /app && python -m pipeline.discovery_pipeline >> /app/logs/cron_discovery.log 2>&1
+
+# 2. 產業價值鏈與官方平台雙週快取巡檢同步 (每週一 早上 07:00)
+0 7 * * 1 cd /app && python -c "from data.industry_chain_fetcher import IndustryChainFetcher; print(IndustryChainFetcher().sync_to_duckdb())" >> /app/logs/cron_industry.log 2>&1
+
+# 3. yfinance 依賴庫版本自動巡檢 (週一至週五 早上 07:30)
+30 7 * * 1-5 cd /app && bash scripts/check_yfinance_update.sh >> /app/logs/yfinance_updater.log 2>&1
+
+# 4. 台股開盤前買進決策 (週一至週五 早上 08:00)
 0 8 * * 1-5 cd /app && python scripts/sync_twse_market.py >> /app/logs/cron_tw.log 2>&1 && python scripts/sync_global_universe.py >> /app/logs/cron_tw.log 2>&1 && python main.py --market tw >> /app/logs/cron_tw.log 2>&1
 
-# 2. 台股盤後結算管線 (週一至週五 下午 16:00 - 結算當日收盤日 K、三大法人、券商主力與法說會)
+# 5. 台股盤後結算管線 (週一至週五 下午 16:00 - 結算當日收盤日 K、三大法人、券商主力與法說會)
 0 16 * * 1-5 cd /app && python scripts/sync_twse_market.py >> /app/logs/cron_tw_close.log 2>&1 && python scripts/sync_global_universe.py >> /app/logs/cron_tw_close.log 2>&1
 
-# 3. 美股開盤前買進決策 (週一至週五 晚上 20:30)
+# 6. 美股開盤前買進決策 (週一至週五 晚上 20:30)
 30 20 * * 1-5 cd /app && python scripts/sync_global_universe.py >> /app/logs/cron_us.log 2>&1 && python main.py --market us >> /app/logs/cron_us.log 2>&1
 
-# 4. Podcast 財經雷達定時巡檢 (每 3 小時自動同步最新 BigGo 音訊情報)
+# 7. Podcast 財經雷達定時巡檢 (每 3 小時自動同步最新 BigGo 音訊情報)
 0 */3 * * * cd /app && python -m data.podcast_service --sync --pages=3 >> /app/logs/podcast_cron.log 2>&1
 
-# 5. 每週日誌輪轉維護 (每週日 04:00 清理 30 天以前過期日誌)
+# 8. 每週日誌輪轉維護 (每週日 04:00 清理 30 天以前過期日誌)
 0 4 * * 0 find /app/logs/ -name "*.log" -mtime +30 -delete > /dev/null 2>&1
 

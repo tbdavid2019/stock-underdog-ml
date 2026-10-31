@@ -24,6 +24,14 @@
     - 寫入前於記憶體預先去重，杜絕批次內部重複鍵違反 PRIMARY KEY 約束。
   - **圖譜自動偵測升級遷移**：在 `get_theme_graph` 查詢時自動偵測 DuckDB 節點與邊數是否落後於最新代碼版本，自動觸發無縫熱升級，無需維運人員手動執行同步。
   - **主題標籤補強**：為 Broadcom (AVGO) 與 Vertiv (VRT) 補齊 `SERVER_ODM` 標籤，使伺服器與資料中心冷卻產業鏈更加完整。
+  - **⏰ 定時巡檢排程全面覆蓋與新機器安裝腳本 (`docker/crontab`, `scripts/install_new_machine.sh`, `README.md`)**：
+    - **Crontab 完整補齊自動巡檢**：
+      - 平日 06:00：前沿挖掘機 arXiv 論文與新架構瓶頸自動探索 (`pipeline.discovery_pipeline`)。
+      - 每週一 07:00：產業價值鏈官方平台 (TPEx/SEC) 雙週快取巡檢與 DuckDB 自動同步。
+      - 平日 07:30：yfinance 依賴庫版本自動巡檢與相容性檢查 (`check_yfinance_update.sh`)。
+      - 平日 08:00、16:00、20:30：台美股盤前決策指南運算與盤後籌碼結算。
+      - 每 3 小時：Podcast 科技財經雷達音訊情報定時爬取。
+    - **新機器一鍵安裝腳本 (`scripts/install_new_machine.sh`)**：支援 Linux / macOS 一鍵部署，自動完成 Docker 環境檢測、9 大持久化目錄初始化、.env 配置、雙服務容器啟動與健康檢查自我驗證。
   - **前端互動優化**：於節點選取時若該主題下暫無直連關係，提供溫和 Toast 提示引導切換至「全部主題」，杜絕卡片獨立引起的視覺誤解。
 - **🏷️ 版本升級至 v2.4.50 (`core/version.py`)**。
 
