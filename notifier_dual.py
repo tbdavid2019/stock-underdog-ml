@@ -5,7 +5,7 @@
 import datetime
 from typing import Dict, Optional, Any
 from notifier import send_to_telegram, send_to_discord, send_email
-from config import EmailConfig
+from core.config import EmailConfig
 from logger import logger
 from evaluators.formatter import (
     format_dual_strategy_message,

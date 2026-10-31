@@ -8,7 +8,7 @@ import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List, Dict, Any
-from config import EmailConfig, TelegramConfig, DiscordConfig
+from core.config import EmailConfig, TelegramConfig, DiscordConfig
 
 
 def send_email(subject: str, body: str, to_emails: List[str]):

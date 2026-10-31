@@ -21,10 +21,6 @@ class TestConfig(unittest.TestCase):
         self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["timesfm"], 0.25)
         self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["timestral"], 0.25)
 
-    def test_legacy_import_compatibility(self):
-        import config as legacy_config
-        self.assertEqual(legacy_config.config.api.BASE_URL, "https://answerbook.david888.com")
-
 
 if __name__ == "__main__":
     unittest.main()

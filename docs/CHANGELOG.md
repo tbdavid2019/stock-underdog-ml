@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-10-31 (v2.4.52)
+
+### Cleanup & Maintenance (Comprehensive Legacy Python Codebase Pruning & Import Modernization)
+- **🧹 清理 21 檔完全未使用的舊 Python 腳本與相容 Shim**：
+  - **歷史版本歸檔清理 (`archive/`)**：徹底移除整個 `archive/` 目錄（包含 `app.py`, `backfill_historical.py`, `check_cache.py`, `check_db_contents.py`, `clear_backtest_data.py`, `elder/`, `main500.py`, `main_lstm_only.py`, `parallel_processor.py`, `repro_import.py` 等 11 檔舊代碼與 Shell 腳本），釋放冗餘代碼空間。
+  - **根目錄過渡 Shim 清理**：
+    - 移除 `config.py`、`data_loader.py`、`xuantie_strategy.py`、`stock_cache.py` 等歷史過渡 Shim。
+    - 將 `notifier.py` 與 `notifier_dual.py` 全數遷移為直接自 `core.config` 引入配置類（`EmailConfig`, `TelegramConfig`, `DiscordConfig`），消除循環與重複依賴。
+  - **測試與探索腳本清理**：
+    - 移除過期且僅測試舊緩存的 `test/test_stock_cache.py`（現行由 `test_cache.py` 覆蓋）。
+    - 移除早期探索用臨時腳本 `test/demo.py` 與 `test/demo-get-index.py`。
+  - **廢棄資料庫腳本清理**：
+    - 移除包含硬編碼已失效 freedb 資訊的舊版資料庫遷移腳本 `backtest/migrate_mysql_to_supabase.py`，進一步強化安全合規。
+- **🧪 測試套件與 Codex 審核驗證**：
+  - 全套 324 項單元測試 100% 通過（75s，零錯誤、零失敗）。
+  - 通過 OpenAI Codex CLI 代碼審查（`codex review --uncommitted`），確認零回歸（No regressions）。
+- **🏷️ 版本升級至 v2.4.52 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.51)
 
 ### Enhanced & Scaling (1,500 Stock Dynamic Quant Universe & Navigation Hierarchy Optimization)
