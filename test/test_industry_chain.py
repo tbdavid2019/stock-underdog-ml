@@ -188,13 +188,36 @@ class TestDuckDBIndustryPersistence(unittest.TestCase):
         fetcher = IndustryChainFetcher()
         sync_stats = fetcher.sync_to_duckdb(self.db)
         self.assertGreater(sync_stats["nodes"], 50)
-        self.assertGreater(sync_stats["relations"], 20)
+        self.assertGreater(sync_stats["relations"], 100)
         self.assertEqual(sync_stats["chains"], len(THEME_DEFINITIONS))
 
         # 驗證 tw_industry_chains 資料表確實已成功寫入持久化
         with self.db._get_connection(read_only=True) as con:
             count = con.execute("SELECT COUNT(*) FROM tw_industry_chains").fetchone()[0]
             self.assertEqual(count, len(THEME_DEFINITIONS))
+
+    def test_atomic_replacement_and_dedup(self):
+        """測試 DuckDB 節點與邊之記憶體去重、原子事務及平滑升級"""
+        self.db.init_industry_chain_tables()
+
+        # 包含重複鍵之節點列表 (ticker, chain_id, layer)
+        dup_nodes = [
+            {"ticker": "2330", "company": "台積電", "market": "TW", "chain_id": "D000", "layer": "midstream", "role": "代工", "theme_tags": ["AI"]},
+            {"ticker": "2330", "company": "台積電", "market": "TW", "chain_id": "D000", "layer": "midstream", "role": "代工新版", "theme_tags": ["AI"]},
+        ]
+        saved = self.db.save_industry_nodes_batch(dup_nodes, clear_existing=True)
+        self.assertEqual(saved, 1)
+
+        # 驗證只有 1 筆被保存且為最新
+        queried = self.db.get_industry_nodes()
+        self.assertEqual(len(queried), 1)
+        self.assertEqual(queried[0]["role"], "代工新版")
+
+        # 測試自動升級：當 DuckDB 中資料小於內嵌版本時，get_theme_graph 自動補齊同步
+        fetcher = IndustryChainFetcher()
+        graph_data = fetcher.get_theme_graph(theme="ALL", duckdb_mgr=self.db)
+        self.assertGreaterEqual(graph_data["total_nodes"], 88)
+        self.assertGreaterEqual(len(graph_data["edges"]), 150)
 
     def test_enriched_industry_quotes(self):
         self.db.init_industry_chain_tables()

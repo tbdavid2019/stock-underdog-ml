@@ -547,7 +547,7 @@ EMBEDDED_NODES: List[Dict[str, Any]] = [
         "layer": "midstream",
         "role": "客製化 AI ASIC 晶片與 CPO 交換器晶片龍頭",
         "key_focus": "Tomahawk 5/6、Google TPU ASIC、PCIe Gen6",
-        "theme_tags": ["AI_CHIPS", "CPO_OPTICAL"],
+        "theme_tags": ["AI_CHIPS", "CPO_OPTICAL", "SERVER_ODM"],
     },
     {
         "ticker": "2454",
@@ -565,7 +565,7 @@ EMBEDDED_NODES: List[Dict[str, Any]] = [
         "layer": "midstream",
         "role": "全球資料中心電力系統與液冷冷卻基礎設施龍頭",
         "key_focus": "Liebert 液冷冷卻液分配器 CDU、高密度不斷電",
-        "theme_tags": ["POWER_COOLING"],
+        "theme_tags": ["POWER_COOLING", "SERVER_ODM"],
     },
     {
         "ticker": "2317",
@@ -2236,9 +2236,16 @@ class IndustryChainFetcher:
         if duckdb_mgr and getattr(duckdb_mgr, "enabled", False):
             try:
                 db_nodes = duckdb_mgr.get_industry_nodes()
+                db_rels = duckdb_mgr.get_industry_relations()
+                # 自動偵測舊版或落後資料集 (例如現有持久化數量小於最新內嵌版本)，執行即時平滑升級同步
+                if len(db_nodes) < len(EMBEDDED_NODES) or len(db_rels) < len(EMBEDDED_RELATIONS):
+                    logger.info("檢測到 DuckDB 產業圖譜為舊版或不完整，自動執行平滑升級同步...")
+                    self.sync_to_duckdb(duckdb_mgr)
+                    db_nodes = duckdb_mgr.get_industry_nodes()
+                    db_rels = duckdb_mgr.get_industry_relations()
+
                 if db_nodes:
                     all_nodes = db_nodes
-                db_rels = duckdb_mgr.get_industry_relations()
                 if db_rels:
                     all_relations = [
                         {

@@ -19,7 +19,11 @@
     - **下游雲端終端大客戶**：微軟 Azure (HVDC 高壓直流電源系統)、Amazon AWS (全球雲端機房鈦金級 PSU)、Google Cloud (高效能節能電源)、Tesla (Optimus 機器人馬達驅動器與超充系統)。
   - **全面消除 42 檔孤島節點**：為光寶科、勤誠、晟銘電、健策、建準、高力、聯發科、英業達、Supermicro (SMCI)、力成、穎崴、群聯、研華、大立光、技嘉、華碩、Dell、HPE、Arista (ANET) 等補齊真實、可驗證之上下游業務網絡。
   - **跨主題標籤 (Theme Tags) 動態補強**：賦予 NVIDIA、AMD、台達電、智邦、雙鴻、建準、高力等多維主題屬性，使 `SERVER_ODM` 邊數由 6 條激增至 96 條，`POWER_COOLING` 由 4 條激增至 58 條，`CPO_OPTICAL` 由 14 條激增至 27 條。
-  - **DuckDB 批次同步支援全表更新清理 (`clear_existing=True`)**：確保全庫節點與關係邊隨程式碼最新定義完全覆蓋更新。
+  - **DuckDB 批次同步支援全表更新清理 (`clear_existing=True`) 與交易原子性**：
+    - 引入 `BEGIN TRANSACTION ... COMMIT / ROLLBACK` 事務機制，若寫入遭遇異常絕不清空現有資料。
+    - 寫入前於記憶體預先去重，杜絕批次內部重複鍵違反 PRIMARY KEY 約束。
+  - **圖譜自動偵測升級遷移**：在 `get_theme_graph` 查詢時自動偵測 DuckDB 節點與邊數是否落後於最新代碼版本，自動觸發無縫熱升級，無需維運人員手動執行同步。
+  - **主題標籤補強**：為 Broadcom (AVGO) 與 Vertiv (VRT) 補齊 `SERVER_ODM` 標籤，使伺服器與資料中心冷卻產業鏈更加完整。
   - **前端互動優化**：於節點選取時若該主題下暫無直連關係，提供溫和 Toast 提示引導切換至「全部主題」，杜絕卡片獨立引起的視覺誤解。
 - **🏷️ 版本升級至 v2.4.50 (`core/version.py`)**。
 

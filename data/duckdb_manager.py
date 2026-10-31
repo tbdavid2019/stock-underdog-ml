@@ -3647,6 +3647,7 @@ class DuckDBManager:
         """
         批次寫入產業鏈節點，自動去重 (Upsert on ticker + chain_id + layer)
         若 clear_existing=True 則在寫入前清空全表以確保完全同步最新節點定義。
+        使用事務保證原子性：若寫入發生異常則自動 ROLLBACK，絕不破壞既有資料。
         """
         if not self.enabled or not records:
             return 0
@@ -3659,20 +3660,29 @@ class DuckDBManager:
         df["theme_tags"] = df["theme_tags"].apply(
             lambda v: json.dumps(v, ensure_ascii=False) if isinstance(v, (list, set)) else str(v or "[]")
         )
+        # 記憶體預先去重，杜絕批次內部重複鍵違反 PRIMARY KEY 約束
+        df = df.drop_duplicates(subset=["ticker", "chain_id", "layer"], keep="last")
 
         try:
             with self._WRITE_LOCK:
                 with self._get_connection() as con:
-                    if clear_existing:
-                        con.execute("DELETE FROM tw_industry_nodes;")
                     con.register("temp_industry_nodes_df", df[expected_cols])
-                    con.execute("""
-                    DELETE FROM tw_industry_nodes
-                    WHERE (ticker, chain_id, layer) IN (
-                        SELECT ticker, chain_id, layer FROM temp_industry_nodes_df
-                    );
-                    """)
-                    con.execute("INSERT INTO tw_industry_nodes SELECT * FROM temp_industry_nodes_df;")
+                    con.execute("BEGIN TRANSACTION;")
+                    try:
+                        if clear_existing:
+                            con.execute("DELETE FROM tw_industry_nodes;")
+                        else:
+                            con.execute("""
+                            DELETE FROM tw_industry_nodes
+                            WHERE (ticker, chain_id, layer) IN (
+                                SELECT ticker, chain_id, layer FROM temp_industry_nodes_df
+                            );
+                            """)
+                        con.execute("INSERT INTO tw_industry_nodes SELECT * FROM temp_industry_nodes_df;")
+                        con.execute("COMMIT;")
+                    except Exception:
+                        con.execute("ROLLBACK;")
+                        raise
             logger.info(f"💾 成功寫入/更新 {len(df)} 筆產業鏈節點至 DuckDB")
             return len(df)
         except Exception as e:
@@ -3683,6 +3693,7 @@ class DuckDBManager:
         """
         批次寫入產業鏈關係邊，自動去重 (Upsert on source_ticker + target_ticker + relation_type)
         若 clear_existing=True 則在寫入前清空全表以確保完全同步最新關係定義。
+        使用事務保證原子性：若寫入發生異常則自動 ROLLBACK，絕不破壞既有資料。
         """
         if not self.enabled or not records:
             return 0
@@ -3693,20 +3704,29 @@ class DuckDBManager:
                 df[col] = None
 
         df["weight"] = pd.to_numeric(df["weight"], errors="coerce").fillna(1.0)
+        # 記憶體預先去重，杜絕批次內部重複鍵違反 PRIMARY KEY 約束
+        df = df.drop_duplicates(subset=["source_ticker", "target_ticker", "relation_type"], keep="last")
 
         try:
             with self._WRITE_LOCK:
                 with self._get_connection() as con:
-                    if clear_existing:
-                        con.execute("DELETE FROM tw_industry_relations;")
                     con.register("temp_industry_rels_df", df[expected_cols])
-                    con.execute("""
-                    DELETE FROM tw_industry_relations
-                    WHERE (source_ticker, target_ticker, relation_type) IN (
-                        SELECT source_ticker, target_ticker, relation_type FROM temp_industry_rels_df
-                    );
-                    """)
-                    con.execute("INSERT INTO tw_industry_relations SELECT * FROM temp_industry_rels_df;")
+                    con.execute("BEGIN TRANSACTION;")
+                    try:
+                        if clear_existing:
+                            con.execute("DELETE FROM tw_industry_relations;")
+                        else:
+                            con.execute("""
+                            DELETE FROM tw_industry_relations
+                            WHERE (source_ticker, target_ticker, relation_type) IN (
+                                SELECT source_ticker, target_ticker, relation_type FROM temp_industry_rels_df
+                            );
+                            """)
+                        con.execute("INSERT INTO tw_industry_relations SELECT * FROM temp_industry_rels_df;")
+                        con.execute("COMMIT;")
+                    except Exception:
+                        con.execute("ROLLBACK;")
+                        raise
             logger.info(f"💾 成功寫入/更新 {len(df)} 筆產業鏈關係邊至 DuckDB")
             return len(df)
         except Exception as e:
