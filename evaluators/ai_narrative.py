@@ -134,9 +134,26 @@ class AINarrativeEngine:
         report_data: Dict[str, Any]
     ) -> str:
         """構造傳入 LLM 的數據文本"""
-        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
+        is_jp = (getattr(macro_state, "market", "") == "JP") or any(k in index_name for k in ("日經", "日股", "JP225", "N225", "NIKKEI")) or index_name.endswith(".T")
+        is_tw = (getattr(macro_state, "market", "") == "TW") or index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000") or any(k in index_name for k in ("台股", "台灣")) or index_name.endswith(".TW")
         
-        if is_tw:
+        if is_jp:
+            market_type = "🇯🇵 日本股市 (TSE / Nikkei 225)"
+            if macro_state:
+                n225_flag = getattr(macro_state, "twii_above_ma60", None)
+                sox_flag = getattr(macro_state, "sox_above_ma60", None)
+                n225_status = "站穩MA60季線" if n225_flag is True else "跌破MA60季線" if n225_flag is False else "資料不足"
+                sox_status = "站穩季線" if sox_flag is True else "破季線" if sox_flag is False else "資料不足"
+                vix_text = f"{macro_state.vix:.1f}" if macro_state.vix is not None else "資料不足"
+                macro_info = (
+                    f"日股大盤狀態: {macro_state.regime_name}\n"
+                    f"建議曝險比例: {int(macro_state.exposure*100) if macro_state.exposure is not None else '資料不足'}%\n"
+                    f"日經225指數 (^N225): {n225_status}\n"
+                    f"科技半導體連動: 費城半導體{sox_status}, 國際VIX恐慌指數 {vix_text}"
+                )
+            else:
+                macro_info = "日股大盤數據缺失"
+        elif is_tw:
             market_type = "🇹🇼 台灣股市 (TWSE/TPEX)"
             if macro_state:
                 twii_flag = getattr(macro_state, "twii_above_ma60", None)
@@ -255,8 +272,9 @@ class AINarrativeEngine:
         report_data: Dict[str, Any]
     ) -> str:
         """規則式純文字模板生成 (零依賴終極備援)"""
-        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
-        market_label = "台股大盤" if is_tw else "美股宏觀環境"
+        is_jp = (getattr(macro_state, "market", "") == "JP") or any(k in index_name for k in ("日經", "日股", "JP225", "N225", "NIKKEI")) or index_name.endswith(".T")
+        is_tw = (getattr(macro_state, "market", "") == "TW") or index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000") or any(k in index_name for k in ("台股", "台灣")) or index_name.endswith(".TW")
+        market_label = "日股大盤 (Nikkei 225)" if is_jp else ("台股大盤" if is_tw else "美股宏觀環境")
 
         overlap_raw = report_data.get("overlap_results")
         if isinstance(overlap_raw, pd.DataFrame):

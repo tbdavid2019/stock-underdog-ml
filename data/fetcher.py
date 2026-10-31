@@ -4,6 +4,8 @@ Retrieves stock lists from various indices (with answerbook upstream and cache f
 and downloads market price series with native batch support and indicator preparation.
 """
 import os
+import re
+import urllib.request
 import logging
 import requests
 import time
@@ -60,6 +62,34 @@ def add_base_indicators(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# 備援日經 225 成分股清單 (全數 225 檔東京證券交易所上市龍頭，支援離線與 API 降級容錯)
+FALLBACK_NIKKEI225_STOCKS = [
+    "1332.T", "1605.T", "1721.T", "1801.T", "1802.T", "1803.T", "1808.T", "1812.T", "1925.T", "1928.T",
+    "1963.T", "2002.T", "2269.T", "2282.T", "2413.T", "2432.T", "2501.T", "2502.T", "2503.T", "2768.T",
+    "2801.T", "2802.T", "285A.T", "2871.T", "2914.T", "3086.T", "3092.T", "3099.T", "3289.T", "3382.T",
+    "3401.T", "3402.T", "3405.T", "3407.T", "3436.T", "3659.T", "3697.T", "3861.T", "4004.T", "4005.T",
+    "4021.T", "4042.T", "4043.T", "4061.T", "4063.T", "4151.T", "4183.T", "4188.T", "4208.T", "4307.T",
+    "4324.T", "4385.T", "4452.T", "4502.T", "4503.T", "4506.T", "4507.T", "4519.T", "4523.T", "4543.T",
+    "4568.T", "4578.T", "4661.T", "4689.T", "4704.T", "4751.T", "4755.T", "4901.T", "4902.T", "4911.T",
+    "5019.T", "5020.T", "5101.T", "5108.T", "5201.T", "5214.T", "5233.T", "5301.T", "5332.T", "5333.T",
+    "5401.T", "5406.T", "5411.T", "543A.T", "5631.T", "5706.T", "5711.T", "5713.T", "5714.T", "5801.T",
+    "5802.T", "5803.T", "5831.T", "6098.T", "6103.T", "6113.T", "6146.T", "6178.T", "6273.T", "6301.T",
+    "6302.T", "6305.T", "6326.T", "6361.T", "6367.T", "6471.T", "6472.T", "6473.T", "6479.T", "6501.T",
+    "6503.T", "6504.T", "6506.T", "6526.T", "6532.T", "6594.T", "6645.T", "6701.T", "6702.T", "6723.T",
+    "6724.T", "6752.T", "6753.T", "6758.T", "6762.T", "6770.T", "6841.T", "6857.T", "6861.T", "6902.T",
+    "6920.T", "6954.T", "6963.T", "6971.T", "6976.T", "6981.T", "6988.T", "7004.T", "7011.T", "7012.T",
+    "7013.T", "7186.T", "7201.T", "7202.T", "7203.T", "7211.T", "7261.T", "7267.T", "7269.T", "7270.T",
+    "7272.T", "7453.T", "7532.T", "7731.T", "7733.T", "7735.T", "7741.T", "7751.T", "7752.T", "7832.T",
+    "7911.T", "7912.T", "7951.T", "7974.T", "8001.T", "8002.T", "8015.T", "8031.T", "8035.T", "8053.T",
+    "8058.T", "8233.T", "8252.T", "8253.T", "8267.T", "8304.T", "8306.T", "8308.T", "8309.T", "8316.T",
+    "8331.T", "8354.T", "8411.T", "8591.T", "8601.T", "8604.T", "8630.T", "8697.T", "8725.T", "8750.T",
+    "8766.T", "8795.T", "8801.T", "8802.T", "8804.T", "8830.T", "9001.T", "9005.T", "9007.T", "9008.T",
+    "9009.T", "9020.T", "9021.T", "9022.T", "9064.T", "9101.T", "9104.T", "9107.T", "9147.T", "9201.T",
+    "9202.T", "9432.T", "9433.T", "9434.T", "9501.T", "9502.T", "9503.T", "9531.T", "9532.T", "9602.T",
+    "9735.T", "9766.T", "9843.T", "9983.T", "9984.T"
+]
+
+
 class StockFetcher:
     """Fetcher for Index Constituents and OHLCV Market Data"""
 
@@ -82,7 +112,10 @@ class StockFetcher:
             if resp.status_code == 200:
                 data = resp.json()
                 items = data.get(json_key, {})
-                name_map = {f"{code}{suffix}": name for code, name in items.items()}
+                name_map = {
+                    (f"{code}{suffix}" if suffix and not str(code).endswith(suffix) else str(code)): name
+                    for code, name in items.items()
+                }
                 stocks = list(name_map.keys())
                 if limit:
                     stocks = stocks[:limit]
@@ -229,6 +262,65 @@ class StockFetcher:
         return stocks
 
     @classmethod
+    def get_nikkei225_stocks(cls, limit: Optional[int] = None) -> List[str]:
+        """
+        取得日經 225 (Nikkei 225) 成分股清單。
+        具備 4 層容錯：
+        1. 優先透過 DataAPI / Cloudflare KV (NIKKEI225_URL) 抓取。
+        2. 其次自本機快取 cache/stock_lists.json (NIKKEI225) 讀取。
+        3. 若快取過期，嘗試線上向 Wikipedia 抓取最新 225 檔清單並更新快取。
+        4. 若外部抓取失敗，自動降級使用完整 225 檔內嵌備援清單 (FALLBACK_NIKKEI225_STOCKS)。
+        """
+        # 1. 嘗試向 DataAPI / Cloudflare KV 抓取
+        nikkei_url = getattr(config.api, "NIKKEI225_URL", None)
+        if nikkei_url:
+            try:
+                resp = requests.get(nikkei_url, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json().get("NIKKEI225", {})
+                    if len(data) == 225:
+                        stocks = [f"{c}.T" if not str(c).endswith(".T") else c for c in data.keys()]
+                        return stocks[:limit] if limit else stocks
+            except Exception as e:
+                logger.debug(f"DataAPI NIKKEI225 抓取失敗: {e}")
+
+        index_key = "NIKKEI225"
+        cached = CacheManager.get_index_cache(index_key, max_age_days=config.pipeline.INDEX_CACHE_MAX_AGE_DAYS)
+        if cached:
+            stocks = cached if isinstance(cached, list) else cached.get("stocks", [])
+            if stocks and len(stocks) == 225:
+                return stocks[:limit] if limit else stocks
+
+        # 嘗試向 Wikipedia 線上抓取最新日經 225 清單
+        scraped_stocks = []
+        try:
+            req = urllib.request.Request(
+                "https://en.wikipedia.org/wiki/Nikkei_225",
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                html = resp.read().decode("utf-8")
+                comp_start = html.find('id="Components"')
+                stat_start = html.find('id="Statistics"', comp_start) if comp_start != -1 else -1
+                comp_html = html[comp_start:stat_start] if comp_start != -1 and stat_start != -1 else html
+                codes = sorted(list(set(re.findall(r"topSearchStr=([0-9A-Z]{4})", comp_html))))
+                # 日經 225 必須為完整 225 檔，若因結構變更或不全則視為抓取未竟全功，退回使用內嵌備援
+                if len(codes) == 225:
+                    scraped_stocks = [f"{c}.T" for c in codes]
+        except Exception as e:
+            logger.debug(f"線上抓取日經 225 成分股失敗: {e}")
+
+        final_stocks = scraped_stocks if len(scraped_stocks) == 225 else list(FALLBACK_NIKKEI225_STOCKS)
+
+        # 寫入快取
+        try:
+            CacheManager.set_index_cache(index_key, final_stocks, {})
+        except Exception as e:
+            logger.debug(f"寫入日經 225 快取失敗: {e}")
+
+        return final_stocks[:limit] if limit else final_stocks
+
+    @classmethod
     def get_index_name_map(cls, index_name: str) -> Dict[str, str]:
         index_map = {
             "台灣50": ("TW0050", config.api.TW0050_URL, "TW0050", ".TW"),
@@ -264,6 +356,35 @@ class StockFetcher:
                 logger.debug(f"DuckDB 台股名稱提取失敗: {e}")
             return merged_map
 
+        if index_name in ("日經225", "日股225", "NIKKEI225", "N225", "JP225"):
+            name_map = {}
+            try:
+                from data.duckdb_manager import DuckDBManager
+                db_names = DuckDBManager().get_jp_name_map()
+                if db_names:
+                    name_map.update(db_names)
+            except Exception as e:
+                logger.debug(f"DuckDB 日股名稱提取失敗: {e}")
+            # 確保重點龍頭名稱繁體化/知名度提升
+            name_map.setdefault("8035.T", "東京威力科創 (Tokyo Electron)")
+            name_map.setdefault("9984.T", "軟銀集團 (SoftBank)")
+            name_map.setdefault("6857.T", "愛德萬測試 (Advantest)")
+            name_map.setdefault("6146.T", "迪思科 (DISCO)")
+            name_map.setdefault("4063.T", "信越化學 (Shin-Etsu)")
+            name_map.setdefault("6920.T", "Lasertec (EUV檢測)")
+            name_map.setdefault("6758.T", "索尼集團 (SONY)")
+            name_map.setdefault("7203.T", "豐田汽車 (TOYOTA)")
+            name_map.setdefault("7974.T", "任天堂 (Nintendo)")
+            name_map.setdefault("6861.T", "基恩斯 (Keyence)")
+            name_map.setdefault("9983.T", "迅銷 (Fast Retailing / UNIQLO)")
+            name_map.setdefault("6723.T", "瑞薩電子 (Renesas)")
+            name_map.setdefault("7741.T", "豪雅 (HOYA)")
+            name_map.setdefault("6501.T", "日立製作所 (Hitachi)")
+            name_map.setdefault("8058.T", "三菱商事 (Mitsubishi)")
+            name_map.setdefault("6954.T", "發那科 (FANUC 機器人)")
+            name_map.setdefault("6506.T", "安川電機 (Yaskawa 機器人)")
+            return name_map
+
         return {}
 
     @classmethod
@@ -279,6 +400,11 @@ class StockFetcher:
             "NASDAQ": cls.get_nasdaq_stocks,
             "費城半導體": cls.get_sox_stocks,
             "道瓊": cls.get_dji_stocks,
+            "日經225": cls.get_nikkei225_stocks,
+            "日股225": cls.get_nikkei225_stocks,
+            "NIKKEI225": cls.get_nikkei225_stocks,
+            "N225": cls.get_nikkei225_stocks,
+            "JP225": cls.get_nikkei225_stocks,
         }
         fetcher = mapping.get(index_name)
         return fetcher() if fetcher else []

@@ -93,16 +93,20 @@ class MacroRegimeAnalyzer:
 
     US_MACRO_TICKERS = ["SPY", "^VIX", "^SOX"]
     TW_MACRO_TICKERS = ["^TWII", "^SOX", "^VIX"]
+    JP_MACRO_TICKERS = ["^N225", "^SOX", "^VIX", "JPY=X"]
 
     _cache: Dict[str, Tuple[float, Any]] = {}
     CACHE_TTL_SECONDS: float = 300.0
 
     @classmethod
     def evaluate_market(cls, index_name: str, period: str = "6mo", force_refresh: bool = False) -> MacroState:
-        """根據目標指數名稱自動路由台股或美股大盤風控評估，支援 5 分鐘記憶體快取加速"""
+        """根據目標指數名稱自動路由台股、美股或日股大盤風控評估，支援 5 分鐘記憶體快取加速"""
         norm_name = index_name.strip()
-        is_tw = norm_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or norm_name.startswith("TW") or norm_name.endswith(".TW")
-        cache_key = f"{'TW' if is_tw else 'US'}_{period}"
+        val_upper = norm_name.upper()
+        is_jp = val_upper in ("JP", "JPX", "TSE", "NIKKEI", "NIKKEI225", "N225", "JP225", "JAPAN") or any(k in norm_name for k in ("日經", "日股")) or norm_name.endswith(".T")
+        is_tw = val_upper in ("TW", "TWSE", "TPEX", "TAIWAN", "0050", "0051", "TW0050", "TW0051", "TW1000") or any(k in norm_name for k in ("台股", "台灣")) or norm_name.endswith(".TW")
+        market_code = "JP" if is_jp else ("TW" if is_tw else "US")
+        cache_key = f"{market_code}_{period}"
         now = time.time()
 
         if not force_refresh and cache_key in cls._cache:
@@ -110,11 +114,16 @@ class MacroRegimeAnalyzer:
             if now - ts < cls.CACHE_TTL_SECONDS and cached_state.data_available:
                 return cached_state
 
-        state = cls.evaluate_tw_market(period=period) if is_tw else cls.evaluate_us_market(period=period)
+        if is_jp:
+            state = cls.evaluate_jp_market(period=period)
+        elif is_tw:
+            state = cls.evaluate_tw_market(period=period)
+        else:
+            state = cls.evaluate_us_market(period=period)
+
         if state.data_available:
             cls._cache[cache_key] = (now, state)
         elif cache_key in cls._cache:
-            # 若上游抓取失敗但過去有快取，優雅降級使用舊快取
             return cls._cache[cache_key][1]
         return state
 
@@ -228,6 +237,125 @@ class MacroRegimeAnalyzer:
         except Exception as e:
             logger.error(f"❌ 計算台股大盤狀態失敗: {e}", exc_info=True)
             state.mark_unavailable(f"台股大盤計算異常 ({e})")
+
+        return state
+
+    @classmethod
+    def evaluate_jp_market(cls, period: str = "6mo") -> MacroState:
+        """
+        抓取日經 225 (^N225)、費城半導體 (^SOX)、VIX 恐慌指數與美元兌日圓 (JPY=X)，
+        評估日股大盤趨勢、半導體共振風向與日圓匯率動向，給出建議曝險與風控狀態。
+        """
+        state = MacroState(market="JP")
+        try:
+            logger.info("🌐 正在下載日股大盤與國際連動數據 (^N225, ^SOX, ^VIX, JPY=X)...")
+            data = yf.download(cls.JP_MACRO_TICKERS, period=period, progress=False, group_by="ticker")
+
+            if data is None or data.empty:
+                logger.warning("⚠️ 未能下載日股大盤數據，暫停產生曝險建議")
+                state.mark_unavailable("日股大盤資料缺失")
+                return state
+
+            # 1. 解析 VIX 恐慌指數
+            vix_val = cls._extract_latest_close(data, "^VIX")
+            state.vix = vix_val if vix_val is not None else 20.0
+
+            # 2. 解析 SOX (費城半導體)
+            sox_series = cls._extract_close_series(data, "^SOX")
+            if sox_series is not None and len(sox_series) >= 60:
+                state.sox_price = float(sox_series.iloc[-1])
+                state.sox_ma60 = float(sox_series.rolling(60).mean().iloc[-1])
+                state.sox_above_ma60 = state.sox_price >= state.sox_ma60
+                if len(sox_series) >= 20:
+                    state.sox_mom_20d = float((state.sox_price / sox_series.iloc[-20] - 1.0) * 100)
+            else:
+                state.sox_above_ma60 = True
+
+            # 3. 解析 ^N225 (日經 225 指數)
+            n225_series = cls._extract_close_series(data, "^N225")
+            if (
+                vix_val is None
+                or sox_series is None
+                or len(sox_series) < 60
+                or n225_series is None
+                or len(n225_series) < 60
+            ):
+                logger.warning("⚠️ 日股宏觀資料不完整，暫停產生曝險建議")
+                state.mark_unavailable("日股宏觀資料不完整")
+                return state
+
+            state.data_available = True
+            n225_price = float(n225_series.iloc[-1])
+            n225_ma60 = float(n225_series.rolling(60).mean().iloc[-1])
+            n225_ma20 = float(n225_series.rolling(20).mean().iloc[-1])
+            n225_above_ma60 = n225_price >= n225_ma60
+            n225_above_ma20 = n225_price >= n225_ma20
+
+            # 借用 twii_price 儲存日經收盤價方便渲染
+            state.twii_price = n225_price
+            state.twii_ma60 = n225_ma60
+            state.twii_above_ma60 = n225_above_ma60
+            state.twii_above_ma20 = n225_above_ma20
+
+            # 4. 解析美元兌日圓 (JPY=X)
+            jpy_val = cls._extract_latest_close(data, "JPY=X")
+
+            warnings = []
+
+            # (A) 國際恐慌熔斷
+            if state.vix >= 28.0:
+                state.regime_name = "全球恐慌避險"
+                state.exposure = 0.0
+                warnings.append(f"國際 VIX 恐慌指數過高 ({state.vix:.1f} > 28)，全球避險熔斷，建議日股多單暫停進場")
+            # (B) 日經指數跌破季線 MA60
+            elif not n225_above_ma60:
+                if not state.sox_above_ma60:
+                    state.regime_name = "日美雙破季線"
+                    state.exposure = 0.3
+                    warnings.append("日經225與費城半導體同步跌破季線 MA60，建議降至 30% 輕倉防禦")
+                else:
+                    state.regime_name = "日經弱勢整理"
+                    state.exposure = 0.5
+                    warnings.append("日經225處於季線 (MA60) 之下，防範假突破，嚴格控制部位")
+            # (C) 日經指數站穩季線 MA60
+            else:
+                if n225_above_ma20:
+                    if state.sox_above_ma60:
+                        state.regime_name = "日股全面多頭"
+                        state.exposure = 1.0
+                    else:
+                        state.regime_name = "多頭回調"
+                        state.exposure = 0.85
+                        warnings.append("日經指數多頭排列，但費半處於季線之下，半導體設備與出口類股留意回測震盪")
+                else:
+                    state.regime_name = "日股多頭回調"
+                    state.exposure = 0.85
+                    warnings.append("日經指數回測月線支撐，順應季線多頭趨勢分批佈局")
+
+            # (D) 匯率提醒
+            if jpy_val is not None:
+                if jpy_val > 155.0:
+                    warnings.append(f"日圓匯率目前處於偏弱區間 (1 USD = {jpy_val:.1f} JPY)，出口權值股受惠但須防範日本央行 (BOJ) 干預")
+                elif jpy_val < 145.0:
+                    warnings.append(f"日圓強勢升值 (1 USD = {jpy_val:.1f} JPY)，留意日股獲利了結與套利交易 (Carry Trade) 平倉波動")
+
+            state.warnings = warnings
+            summary_parts = [
+                f"大盤: {state.regime_name}",
+                f"建議曝險: {int(state.exposure * 100)}%",
+                f"日經225: {'站穩MA60' if n225_above_ma60 else '跌破MA60'}",
+                f"國際連動: 費半{'站穩MA60' if state.sox_above_ma60 else '破季線'} (VIX {state.vix:.1f})"
+            ]
+            if jpy_val is not None:
+                summary_parts.append(f"日圓 {jpy_val:.1f}")
+            state.summary = " | ".join(summary_parts)
+            cls._enrich_with_investing(state)
+            cls._enrich_with_polymarket(state)
+            logger.info(f"✅ 日股大盤風控評估完成: {state.summary}")
+
+        except Exception as e:
+            logger.error(f"❌ 計算日股大盤狀態失敗: {e}", exc_info=True)
+            state.mark_unavailable(f"日股大盤計算異常 ({e})")
 
         return state
 

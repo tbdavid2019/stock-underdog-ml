@@ -40,9 +40,9 @@ def parse_args():
     )
     parser.add_argument(
         "--market", "-m",
-        choices=["auto", "tw", "us", "all"],
+        choices=["auto", "tw", "us", "jp", "all"],
         default="auto",
-        help="目標市場: auto (依台北時間智慧判定: 白天台股/晚上美股，預設), tw (台股盤前 08:00), us (美股盤前 20:30), all (全市場，僅限手動指定)"
+        help="目標市場: auto (依台北時間智慧判定: 白天台股/晚上美股，預設), tw (台股盤前 08:00), us (美股盤前 20:30), jp (日股盤前 07:15), all (全市場，僅限手動指定)"
     )
     parser.add_argument(
         "--index", "-i",

@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-10-31 (v2.4.53)
+
+### Features & Multi-Market Expansion (Nikkei 225 Japanese Equities Quant Integration)
+- **🇯🇵 日股（日經 225 / Nikkei 225）量化時序大模型預測與風控整合**：
+  - **成分股高可用抓取與多層容錯 (`StockFetcher.get_nikkei225_stocks`)**：
+    - 支援 DataAPI / Cloudflare KV (`NIKKEI225_URL`)、本機快取 `cache/stock_lists.json`、Wikipedia 線上解析與完整 225 檔內嵌備援清單 (`FALLBACK_NIKKEI225_STOCKS`)，嚴格要求 225 檔完整度方予採納。
+    - `get_index_name_map` 支援日文名稱映射（如 8035.T 東京威力科創、9984.T 軟銀集團、6857.T 愛德萬測試、7203.T 豐田汽車、6758.T 索尼等）。
+    - 指數別名全面相容：`日經225`、`日股225`、`NIKKEI225`、`N225`、`JP225`、`JP`。
+  - **日股宏觀風控評估引擎 (`MacroRegimeAnalyzer.evaluate_jp_market`)**：
+    - 追蹤日經 225 (`^N225`) MA20/MA60 均線趨勢、費城半導體 (`^SOX`) 科技共振、國際 VIX 恐慌指數熔斷與日圓匯率 (`JPY=X`)，動態計算 0%~100% 建議曝險與風控警示。
+    - `MacroRegimeAnalyzer.evaluate_market` 支援 `jp`、`JP`、`japan`、`日股` 等別名自動路由。
+  - **東證交易行事曆與假日推算 (`MarketCalendar`)**：
+    - 支援 TSE 全年度休市日（元日、正月休市、成人の日、建國記念、天皇誕生日、春分/秋分天文推算、昭和之日、黃金週、海之日、山之日、敬老之日、祝日法第3條國民之休日/銀髮週、文化之日、勤勞感謝日、大晦日）。
+    - 支援 Asia/Tokyo 時區推算與 15:30 JST 收盤出表門檻。
+  - **AI 產業價值鏈拓譜融入日股核心半導體與 AI 樞紐 (`data/industry_chain_fetcher.py`)**：
+    - 於 `EMBEDDED_NODES` 納入東京威力科創 (`8035.T`)、愛德萬測試 (`6857.T`)、迪思科 (`6146.T`)、信越化學 (`4063.T`)、雷泰光電 (`6920.T`)、軟銀集團 (`9984.T`) 等 6 檔關鍵晶片、設備與先進封裝樞紐。
+    - 於 `EMBEDDED_RELATIONS` 建立與台積電 (`2330`)、輝達 (`NVDA`) 之間的高權重實體依賴與大客戶關係邊。
+  - **前台 UI 與貨幣符號國際化 (`tab_dashboard.html`, `tab_industry_chain.html`, `app.js`)**：
+    - 操盤看板下拉選單新增 `🇯🇵 日經225 (Nikkei 225)`。
+    - 價格格式化引擎支援日股 `.T` 標的自適應以日圓 `¥` 顯示與整數/單小數千分位格式化。
+    - 產業圖譜節點新增 `JP` 玫瑰粉專屬標籤，現價自適應以 `¥` 呈現。
+  - **自動化排程與管線派發 (`run_daily.sh`, `docker/crontab`)**：
+    - `run_daily.sh` 新增 `jp` 參數支援日股前瞻排程派發。
+    - `docker/crontab` 新增每日 07:15（台北時間 / 東京 08:15 開盤前）自動執行全球清冊同步與日經 225 量化預測。
+  - **報告與 AI 操盤解讀獨立分類 (`AINarrativeEngine`, `evaluators/formatter.py`)**：
+    - 獨立區分日股大盤與科技連動風向，終端機與通知卡片清晰呈現日經趨勢與日圓計價目標價。
+- **🧪 測試套件全面覆蓋**：新增 `test/test_nikkei225_pipeline.py`，全套 333 項單元測試 100% 通過。
+- **🏷️ 版本升級至 v2.4.53 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.52)
 
 ### Cleanup & Maintenance (Comprehensive Legacy Python Codebase Pruning & Import Modernization)

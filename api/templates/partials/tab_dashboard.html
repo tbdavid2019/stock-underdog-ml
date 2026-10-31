@@ -587,6 +587,7 @@
                 <option value="台股活躍精選">台股活躍精選 (TW-Active 850)</option>
                 <option value="台股1000">台股全市場1000 (TW1000)</option>
                 <option value="SP500">S&P 500 (美股標普 500)</option>
+                <option value="日經225">🇯🇵 日經225 (Nikkei 225)</option>
                 <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
             </select>
 
@@ -695,13 +696,13 @@
                     <div>
                         <div class="text-[11px] font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">現價</div>
                         <div class="text-base font-black num-font" :class="isDark ? 'text-white' : 'text-slate-900'">
-                            ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
+                            {{ formatPrice(item.current_price, item.ticker) }}
                         </div>
                     </div>
                     <div>
                         <div class="text-[11px] font-medium text-amber-500">目標價 / 均線</div>
                         <div class="text-base font-black num-font text-amber-500">
-                            <span v-if="item.predicted_price">${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
+                            <span v-if="item.predicted_price">{{ formatPrice(item.predicted_price, item.ticker) }}</span>
                             <span v-else-if="item.pullback_type" class="text-xs font-bold">{{ item.pullback_type }}</span>
                             <span v-else class="text-slate-400">-</span>
                         </div>
@@ -1002,10 +1003,10 @@
                                 <span>{{ formatStrategyName(item.strategy_type || item.model_name) }}</span>
                             </td>
                             <td class="py-2.5 px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
-                                ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
+                                {{ formatPrice(item.current_price, item.ticker) }}
                             </td>
                             <td class="py-2.5 px-2 text-right font-black num-font text-amber-500 text-xs sm:text-sm whitespace-nowrap">
-                                <span v-if="item.predicted_price">${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</span>
+                                <span v-if="item.predicted_price">{{ formatPrice(item.predicted_price, item.ticker) }}</span>
                                 <span v-else-if="item.pullback_type" class="text-xs font-bold text-amber-500">{{ item.pullback_type }}</span>
                                 <span v-else class="text-xs text-slate-400">-</span>
                             </td>
@@ -1765,14 +1766,14 @@
                     <div>
                         <div class="text-xs font-bold tracking-normal" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">當前現價</div>
                         <div class="text-lg sm:text-xl font-black num-font truncate" :class="isDark ? 'text-slate-100' : 'text-slate-900'">
-                            ${{ item.current_price ? Number(item.current_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-' }}
+                            {{ formatPrice(item.current_price, item.ticker) }}
                         </div>
                     </div>
 
                     <div v-if="item.predicted_price">
                         <div class="text-xs font-bold tracking-normal text-amber-500">預測目標價</div>
                         <div class="text-lg sm:text-xl font-black num-font truncate text-amber-500">
-                            ${{ Number(item.predicted_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
+                            {{ formatPrice(item.predicted_price, item.ticker) }}
                         </div>
                     </div>
                     <div v-else-if="item.pullback_type">

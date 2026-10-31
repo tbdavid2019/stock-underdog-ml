@@ -1431,7 +1431,10 @@ export const app = createApp({
             if (val === null || val === undefined || val === '') return '—';
             const num = Number(val);
             if (isNaN(num)) return String(val);
-            return '$' + num.toFixed(2);
+            if (ticker && (String(ticker).endsWith('.T') || String(ticker).endsWith('.JP'))) {
+                return '¥' + num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+            }
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
         formatNumber(val, decimals = 2) {
             if (val === null || val === undefined || val === '') return '—';
@@ -2694,7 +2697,10 @@ const globalFormatPrice = (val, ticker = null) => {
     if (val === null || val === undefined || val === '') return '—';
     const num = Number(val);
     if (isNaN(num)) return String(val);
-    return '$' + num.toFixed(2);
+    if (ticker && (String(ticker).endsWith('.T') || String(ticker).endsWith('.JP'))) {
+        return '¥' + num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+    }
+    return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 app.config.globalProperties.formatPrice = globalFormatPrice;
 window.formatPrice = globalFormatPrice;

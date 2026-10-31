@@ -1752,6 +1752,23 @@ class DuckDBManager:
             logger.debug(f"讀取台股名稱對照表失敗: {e}")
             return {}
 
+    def get_jp_name_map(self) -> Dict[str, str]:
+        """獲取日股代號與名稱對照表 (自 market_universe 最新快照提取)"""
+        if not self.enabled:
+            return {}
+        try:
+            with self._get_connection() as con:
+                tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
+                if "market_universe" not in tables:
+                    return {}
+                rows = con.execute(
+                    "SELECT DISTINCT normalized_symbol, COALESCE(name_local, name_en) FROM market_universe WHERE market = 'JP' AND snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE market = 'JP')"
+                ).fetchall()
+                return {r[0]: r[1] for r in rows if r[0] and r[1]}
+        except Exception as e:
+            logger.debug(f"讀取日股名稱對照表失敗: {e}")
+            return {}
+
     def save_universe_sync_run(
         self,
         source_id: str,

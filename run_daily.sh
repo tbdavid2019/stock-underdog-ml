@@ -63,6 +63,10 @@ case "$RAW_ARG" in
         TARGET_MARKET="us"
         MARKET_DESC="🇺🇸 美股開盤前指南 (盤前 20:30)"
         ;;
+    jp|--jp|--market=jp)
+        TARGET_MARKET="jp"
+        MARKET_DESC="🇯🇵 日股開盤前指南 (日經225 盤前 07:15)"
+        ;;
     all|--all|--market=all)
         TARGET_MARKET="all"
         MARKET_DESC="🌐 全市場開盤前指南 (手動指定)"
@@ -119,7 +123,7 @@ fi
 
 # Step 0: 執行官方全球證券清冊與台股全市場日 K 棒同步至 DuckDB
 log ""
-if [ "$TARGET_MARKET" = "us" ]; then
+if [ "$TARGET_MARKET" = "us" ] || [ "$TARGET_MARKET" = "jp" ]; then
     log "[0/3] 同步全球官方清冊 (NASDAQ/NYSE/AMEX/ARCA/BATS/IEX、HKEX、JPX、SSE、SZSE、Euronext、LSE)..."
     if [ "$RUNNER" = "docker" ]; then
         docker compose run --rm stock-ml python scripts/sync_global_universe.py 2>&1 | tee -a "$LOG_FILE"

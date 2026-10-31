@@ -51,6 +51,7 @@ class DataAPIConfig:
     SP500_URL: str = f"{BASE_URL}/SP500"
     NASDAQ100_URL: str = f"{BASE_URL}/nasdaq100"
     DOWJONES_URL: str = f"{BASE_URL}/dowjones"
+    NIKKEI225_URL: str = f"{BASE_URL}/NIKKEI225"
     PUBLIC_WEB_URL: str = os.getenv("PUBLIC_WEB_URL", "https://stockdata.david888.com").rstrip("/")
 
 

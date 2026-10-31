@@ -37,6 +37,7 @@ class MarketCalendar:
     _TW_HOLIDAY_CACHE: Dict[int, Dict[str, Dict[str, str]]] = {}
     _TW_SPECIAL_TRADING_CACHE: Dict[int, set] = {}
     _US_HOLIDAY_CACHE: Dict[int, Dict[str, Dict[str, str]]] = {}
+    _JP_HOLIDAY_CACHE: Dict[int, Dict[str, Dict[str, str]]] = {}
 
     # 備援離線資料庫 (2024 ~ 2027 台股官方公告重要休市與封關交割日)
     FALLBACK_TW_HOLIDAYS: Dict[str, Dict[str, str]] = {
@@ -129,8 +130,12 @@ class MarketCalendar:
         if not ticker_or_market:
             return "TW"
         val = str(ticker_or_market).strip().upper()
-        if val in ("TW", "TWSE", "TPEX", "TAIWAN"):
+        if val in ("TW", "TWSE", "TPEX", "TAIWAN") or any(k in val for k in ("台股", "台灣")):
             return "TW"
+        if val in ("JP", "JPX", "TSE", "NIKKEI", "NIKKEI225", "N225", "JP225", "JAPAN") or any(k in val for k in ("日經", "日股")):
+            return "JP"
+        if val.endswith(".T") or re.match(r"^\d{4,5}\.T$", val):
+            return "JP"
         if ".TW" in val or ".TWO" in val:
             return "TW"
         if re.match(r"^\d{4,6}(\.TW|\.TWO)?$", val):
@@ -425,6 +430,93 @@ class MarketCalendar:
         return holidays
 
     @classmethod
+    def _observe_jp_holiday(cls, dt: datetime.date) -> datetime.date:
+        """日本國定假日遇週日則週一補假 (振替休日)"""
+        if dt.weekday() == 6:  # 週日
+            return dt + datetime.timedelta(days=1)
+        return dt
+
+    @classmethod
+    def _get_jp_holidays(cls, year: int) -> Dict[str, Dict[str, str]]:
+        """東京證券交易所 (JPX/TSE) 國定節日與休市清冊"""
+        if year in cls._JP_HOLIDAY_CACHE:
+            return cls._JP_HOLIDAY_CACHE[year]
+
+        holidays: Dict[str, Dict[str, str]] = {}
+
+        def _add(dt: datetime.date, name: str):
+            iso = dt.strftime("%Y-%m-%d")
+            holidays[iso] = {"date": iso, "name": name, "description": f"東京證交所國定節日: {name}"}
+
+        # 1. 元旦與正月休み (1月1日 ~ 1月3日)
+        _add(datetime.date(year, 1, 1), "元日")
+        _add(datetime.date(year, 1, 2), "正月休市")
+        _add(datetime.date(year, 1, 3), "正月休市")
+
+        # 2. 成人の日 (1 月第二個星期一)
+        d_jan1 = datetime.date(year, 1, 1)
+        m_adult = d_jan1 + datetime.timedelta(days=(0 - d_jan1.weekday()) % 7) + datetime.timedelta(days=7)
+        _add(m_adult, "成人の日")
+
+        # 3. 建國記念之日 (2月11日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 2, 11)), "建國記念之日")
+
+        # 4. 天皇誕生日 (2月23日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 2, 23)), "天皇誕生日")
+
+        # 5. 春分之日 (~3月20或21日，官方天文推算)
+        spring_day = int(20.8431 + 0.242194 * (year - 1980) - int((year - 1980) / 4))
+        _add(cls._observe_jp_holiday(datetime.date(year, 3, spring_day)), "春分之日")
+
+        # 6. 昭和之日 (4月29日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 4, 29)), "昭和之日")
+
+        # 7. 黃金週連休 (5月3日 憲法記念日、5月4日 綠之日、5月5日 兒童之日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 5, 3)), "憲法記念日")
+        _add(cls._observe_jp_holiday(datetime.date(year, 5, 4)), "綠之日")
+        _add(cls._observe_jp_holiday(datetime.date(year, 5, 5)), "兒童之日")
+        if datetime.date(year, 5, 3).weekday() == 6 or datetime.date(year, 5, 4).weekday() == 6:
+            _add(datetime.date(year, 5, 6), "黃金週補假 (振替休日)")
+
+        # 8. 海之日 (7 月第三個星期一)
+        d_jul1 = datetime.date(year, 7, 1)
+        m_marine = d_jul1 + datetime.timedelta(days=(0 - d_jul1.weekday()) % 7) + datetime.timedelta(days=14)
+        _add(m_marine, "海之日")
+
+        # 9. 山之日 (8月11日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 8, 11)), "山之日")
+
+        # 10. 敬老之日 (9 月第三個星期一)
+        d_sep1 = datetime.date(year, 9, 1)
+        m_respect = d_sep1 + datetime.timedelta(days=(0 - d_sep1.weekday()) % 7) + datetime.timedelta(days=14)
+        _add(m_respect, "敬老之日")
+
+        # 11. 秋分之日 (~9月22或23日，官方天文推算)
+        autumn_day = int(23.2488 + 0.242194 * (year - 1980) - int((year - 1980) / 4))
+        _add(cls._observe_jp_holiday(datetime.date(year, 9, autumn_day)), "秋分之日")
+
+        # 祝日法第3條第3項：若敬老之日 (週一) 與秋分之日 (週三) 間夾週二，則週二自動成為「國民之休日」
+        if m_respect.weekday() == 0 and autumn_day == 23 and datetime.date(year, 9, 23).weekday() == 2:
+            _add(datetime.date(year, 9, 22), "國民之休日")
+
+        # 12. 運動之日 (10 月第二個星期一)
+        d_oct1 = datetime.date(year, 10, 1)
+        m_sports = d_oct1 + datetime.timedelta(days=(0 - d_oct1.weekday()) % 7) + datetime.timedelta(days=7)
+        _add(m_sports, "運動之日")
+
+        # 13. 文化之日 (11月3日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 11, 3)), "文化之日")
+
+        # 14. 勤勞感謝之日 (11月23日)
+        _add(cls._observe_jp_holiday(datetime.date(year, 11, 23)), "勤勞感謝之日")
+
+        # 15. 年末休市 (12月31日)
+        _add(datetime.date(year, 12, 31), "大晦日 (年末休市)")
+
+        cls._JP_HOLIDAY_CACHE[year] = holidays
+        return holidays
+
+    @classmethod
     def _normalize_date(
         cls,
         date_val: Union[datetime.date, datetime.datetime, str, None] = None,
@@ -432,15 +524,21 @@ class MarketCalendar:
     ) -> datetime.date:
         """
         標準化各類輸入日期為 datetime.date 物件。
-        若為 None，預設依市場時區取今日日期 (TW: Asia/Taipei, US: America/New_York)
+        若為 None，預設依市場時區取今日日期 (TW: Asia/Taipei, JP: Asia/Tokyo, US: America/New_York)
         """
         if date_val is None:
             try:
                 import zoneinfo
-                tz_name = "Asia/Taipei" if market == "TW" else "America/New_York"
+                if market == "TW":
+                    tz_name = "Asia/Taipei"
+                elif market == "JP":
+                    tz_name = "Asia/Tokyo"
+                else:
+                    tz_name = "America/New_York"
                 tz = zoneinfo.ZoneInfo(tz_name)
             except Exception:
-                tz = datetime.timezone(datetime.timedelta(hours=8 if market == "TW" else -4))
+                offset = 8 if market == "TW" else (9 if market == "JP" else -4)
+                tz = datetime.timezone(datetime.timedelta(hours=offset))
             return datetime.datetime.now(tz).date()
 
         if isinstance(date_val, datetime.datetime):
@@ -477,6 +575,14 @@ class MarketCalendar:
                 return True
             # 一般週末週六 (5) 與週日 (6) 休市
             if cur.weekday() >= 5:
+                return False
+            return True
+        elif market == "JP":
+            # 東證日股
+            if cur.weekday() >= 5:
+                return False
+            jp_holidays = cls._get_jp_holidays(cur.year)
+            if date_iso in jp_holidays:
                 return False
             return True
         else:
@@ -527,6 +633,10 @@ class MarketCalendar:
                             reason = f"{item['name']} ({item['description']})"
                     else:
                         reason = "市場休市日 (Holiday)"
+                elif market == "JP":
+                    jp_holidays = cls._get_jp_holidays(cur.year)
+                    item = jp_holidays.get(date_iso)
+                    reason = item["name"] if item else "東證市場休市日"
                 else:
                     us_holidays = cls._get_us_holidays(cur.year)
                     item = us_holidays.get(date_iso)
@@ -589,16 +699,23 @@ class MarketCalendar:
         推算最近 count 個開盤交易日 (嚴格排除週末與國定假日) 之 YYYYMMDD 日期字串清單 (由近至遠排列)。
         遵守盤後出表截止時間門檻：
         - 台股 (TWSE): 15:30 前籌碼與收盤數據尚未齊備，起算基準往前推算一日。
+        - 日股 (TSE): 東京時間 15:30 前不包含當日。
         - 美股 (US): 美東時間 16:00 前不包含當日。
         """
         market = cls.resolve_market(market_or_ticker)
         if reference_dt is None:
             try:
                 import zoneinfo
-                tz_name = "Asia/Taipei" if market == "TW" else "America/New_York"
+                if market == "TW":
+                    tz_name = "Asia/Taipei"
+                elif market == "JP":
+                    tz_name = "Asia/Tokyo"
+                else:
+                    tz_name = "America/New_York"
                 tz = zoneinfo.ZoneInfo(tz_name)
             except Exception:
-                tz = datetime.timezone(datetime.timedelta(hours=8 if market == "TW" else -4))
+                tz_offset = 8 if market == "TW" else (9 if market == "JP" else -4)
+                tz = datetime.timezone(datetime.timedelta(hours=tz_offset))
             ref_now = datetime.datetime.now(tz)
         else:
             ref_now = reference_dt
@@ -606,6 +723,10 @@ class MarketCalendar:
         cur = ref_now.date()
         if market == "TW":
             # 證交所 T86 約於 15:00~15:30 始出表，在 15:30 前（含午夜換日與 08:00 盤前）不包含當日
+            if ref_now.hour < 15 or (ref_now.hour == 15 and ref_now.minute < 30):
+                cur -= datetime.timedelta(days=1)
+        elif market == "JP":
+            # 東證 TSE 於東京時間 15:30 收盤，在 15:30 前不包含當日
             if ref_now.hour < 15 or (ref_now.hour == 15 and ref_now.minute < 30):
                 cur -= datetime.timedelta(days=1)
         else:
@@ -631,6 +752,8 @@ class MarketCalendar:
         resolved_market = cls.resolve_market(market)
         if resolved_market == "TW":
             holidays = cls._load_tw_holidays(year)
+        elif resolved_market == "JP":
+            holidays = cls._get_jp_holidays(year)
         else:
             holidays = cls._get_us_holidays(year)
 

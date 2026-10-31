@@ -230,7 +230,7 @@
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono"
-                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'">
+                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : (node.market === 'JP' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30')">
                                     {{ node.market }}
                                 </span>
                                 <span class="font-mono font-black text-base"
@@ -270,7 +270,7 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : 'NT$') + formatNumber(node.current_price) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"
@@ -330,7 +330,7 @@
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono"
-                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'">
+                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : (node.market === 'JP' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30')">
                                     {{ node.market }}
                                 </span>
                                 <span class="font-mono font-black text-base"
@@ -370,7 +370,7 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : 'NT$') + formatNumber(node.current_price) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"
@@ -435,7 +435,7 @@
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono"
-                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'">
+                                      :class="node.market === 'TW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : (node.market === 'JP' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30')">
                                     {{ node.market }}
                                 </span>
                                 <span class="font-mono font-black text-base"
@@ -475,7 +475,7 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : 'NT$') + formatNumber(node.current_price) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"

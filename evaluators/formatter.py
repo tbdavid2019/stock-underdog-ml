@@ -85,7 +85,10 @@ def _format_telegram_candidate_card(
     stock_url = f"{base_url}/?tab=history&ticker={quote(ticker)}"
     ticker_label = html.escape(format_ticker_label(ticker, lookup))
     curr_price = cand.get("current_price") or 0.0
-    price_str = f"{curr_price:,.2f}" if curr_price > 0 else "N/A"
+    if ticker.endswith(".T"):
+        price_str = f"¥{curr_price:,.0f}" if curr_price > 0 else "N/A"
+    else:
+        price_str = f"{curr_price:,.2f}" if curr_price > 0 else "N/A"
 
     # Clef badge or Tier badge
     clef_verdict = cand.get("clef_verdict") or {}
@@ -316,7 +319,10 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
     ticker = cand.get("ticker", "")
     ticker_label = format_ticker_label(ticker, lookup)
     curr_price = cand.get("current_price") or 0.0
-    price_str = f"{curr_price:,.2f}" if curr_price > 0 else "N/A"
+    if ticker.endswith(".T"):
+        price_str = f"¥{curr_price:,.0f}" if curr_price > 0 else "N/A"
+    else:
+        price_str = f"{curr_price:,.2f}" if curr_price > 0 else "N/A"
 
     lines = [f"• **{ticker_label}** `{price_str}`"]
 
@@ -741,8 +747,15 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     # ====== 頂層 1: 大盤與宏觀風控 ======
     if macro:
-        is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
-        if is_tw:
+        is_jp = (getattr(macro, "market", "") == "JP") or any(k in index_name for k in ("日經", "日股", "JP225", "N225", "NIKKEI")) or index_name.endswith(".T")
+        is_tw = (getattr(macro, "market", "") == "TW") or index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000") or any(k in index_name for k in ("台股", "台灣")) or index_name.endswith(".TW")
+        if is_jp:
+            logger.info("🇯🇵 【日股大盤與科技連動風向】")
+            logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
+            n225_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
+            sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
+            logger.info(f"   • 關鍵指標: 日經225={n225_str} | 國際連動={sox_str} (VIX={_format_vix(macro)})")
+        elif is_tw:
             logger.info("🇹🇼 【台股大盤與籌碼風向】")
             logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
             twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
