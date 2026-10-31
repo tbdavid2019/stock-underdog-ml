@@ -769,9 +769,118 @@
             </div>
         </div>
 
+        <!-- K-Chart 區間快選與縮放操作工具列 -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+            <!-- 左側：K 線時間區間快選按鈕 (Timeframe Range Pills) -->
+            <div class="flex items-center space-x-1 sm:space-x-1.5 text-xs font-mono">
+                <span class="text-xs font-bold mr-1 hidden sm:inline-flex items-center space-x-1"
+                      :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                    <span class="material-symbols-outlined text-[15px]" aria-hidden="true">date_range</span>
+                    <span>區間:</span>
+                </span>
+                <button type="button" @click="setPriceChartRange('22')"
+                        :aria-pressed="priceChartRange === '22'"
+                        title="近 1 個月交易日 (約 22 根 K 棒)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        :class="priceChartRange === '22'
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
+                            : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
+                    近1月
+                </button>
+                <button type="button" @click="setPriceChartRange('45')"
+                        :aria-pressed="priceChartRange === '45'"
+                        title="近 2 個月交易日 (約 45 根 K 棒，聚焦近期 AI 密集預測)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        :class="priceChartRange === '45'
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
+                            : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
+                    近2月
+                </button>
+                <button type="button" @click="setPriceChartRange('66')"
+                        :aria-pressed="priceChartRange === '66'"
+                        title="近 1 季交易日 (約 66 根 K 棒)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        :class="priceChartRange === '66'
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
+                            : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
+                    近1季
+                </button>
+                <button type="button" @click="setPriceChartRange('130')"
+                        :aria-pressed="priceChartRange === '130'"
+                        title="半年交易日 (約 130 根 K 棒)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        :class="priceChartRange === '130'
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
+                            : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
+                    半年
+                </button>
+                <button type="button" @click="setPriceChartRange('ALL')"
+                        :aria-pressed="priceChartRange === 'ALL'"
+                        title="全部歷史交易日"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        :class="priceChartRange === 'ALL'
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
+                            : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
+                    全部
+                </button>
+            </div>
+
+            <!-- 右側：縮放控制與平移按鈕 (Zoom & Pan Controls) -->
+            <div class="flex items-center space-x-1 sm:space-x-1.5 text-xs">
+                <button type="button" @click="zoomPriceChartIn()"
+                        title="放大檢視 (或於圖表滾動滑鼠滾輪)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
+                    <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">zoom_in</span>
+                    <span>放大</span>
+                </button>
+                <button type="button" @click="zoomPriceChartOut()"
+                        title="縮小檢視"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
+                    <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">zoom_out</span>
+                    <span>縮小</span>
+                </button>
+                <button type="button" @click="panPriceChartLeft()"
+                        title="向過去歷史平移 (或按住圖表向右拖曳)"
+                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
+                    <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">chevron_left</span>
+                    <span>左移</span>
+                </button>
+                <button type="button" @click="panPriceChartRight()"
+                        title="向最新日期平移 (或按住圖表向左拖曳)"
+                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
+                    <span>右移</span>
+                    <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">chevron_right</span>
+                </button>
+                <button type="button" @click="resetPriceChartZoom()"
+                        title="重置為全部交易日區間 (或雙擊圖表)"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-amber-400 hover:border-amber-500/50' : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-amber-700 hover:border-amber-300'">
+                    <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">restart_alt</span>
+                    <span>重置</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 互動操作提示文字 (Interactive Hint) -->
+        <div class="flex items-center space-x-1.5 text-[11px] px-0.5"
+             :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+            <span class="text-amber-500 font-bold" aria-hidden="true">💡</span>
+            <span>支援滑鼠滾輪縮放、按住拖曳平移、手機雙指縮放（雙擊圖表重置）</span>
+        </div>
+
         <!-- Canvas Chart -->
         <div class="w-full h-[300px] sm:h-[400px] relative pt-2">
-            <canvas id="pricePredictChartCanvas"></canvas>
+            <canvas id="pricePredictChartCanvas"
+                    role="img"
+                    aria-label="股價與隔日預測目標價趨勢折線圖"
+                    style="touch-action: pan-y;"
+                    @dblclick="resetPriceChartZoom()"
+                    class="cursor-grab active:cursor-grabbing w-full h-full block"></canvas>
         </div>
 
     </div>

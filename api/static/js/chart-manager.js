@@ -7,6 +7,11 @@
 export class ChartManager {
     constructor() {
         this.instances = {};
+        if (typeof Chart !== 'undefined' && typeof ChartZoom !== 'undefined' && Chart.register) {
+            try {
+                Chart.register(ChartZoom);
+            } catch (_) {}
+        }
     }
 
     getThemeTokens(isDark) {
@@ -207,6 +212,9 @@ export class ChartManager {
                 }
             }
             if (found) {
+                if (chartKey === 'pricePredictChart') {
+                    this.autoFitPriceChartYScale(chart);
+                }
                 chart.update();
                 return true;
             }
@@ -214,10 +222,80 @@ export class ChartManager {
         const ds = chart.data.datasets.find(d => d.key === seriesKey);
         if (ds) {
             ds.hidden = !isVisible;
+            if (chartKey === 'pricePredictChart') {
+                this.autoFitPriceChartYScale(chart);
+            }
             chart.update();
             return true;
         }
         return false;
+    }
+
+    /**
+     * Dynamically auto-fit Y-axis scale and point radii to visible X-range in price chart
+     * @param {Object} [chartInstance] - Optional Chart.js instance, defaults to this.instances['pricePredictChart']
+     */
+    autoFitPriceChartYScale(chartInstance) {
+        const chart = chartInstance || this.instances['pricePredictChart'];
+        if (!chart || !chart.data || !chart.data.datasets || !chart.data.labels) return;
+
+        const totalLabels = chart.data.labels.length;
+        if (totalLabels <= 0) return;
+
+        let rawMin = chart.scales?.x?.min !== undefined ? chart.scales.x.min : chart.options?.scales?.x?.min;
+        let rawMax = chart.scales?.x?.max !== undefined ? chart.scales.x.max : chart.options?.scales?.x?.max;
+
+        if (typeof rawMin === 'string') {
+            rawMin = chart.data.labels.indexOf(rawMin);
+        }
+        if (typeof rawMax === 'string') {
+            rawMax = chart.data.labels.indexOf(rawMax);
+        }
+
+        const minIdx = Math.max(0, Math.floor(rawMin ?? 0));
+        const maxIdx = Math.min(totalLabels - 1, Math.ceil(rawMax ?? (totalLabels - 1)));
+
+        // Collect all numeric values across active visible datasets within visible window
+        const vals = [];
+        for (const ds of chart.data.datasets) {
+            if (ds.hidden) continue;
+            if (!Array.isArray(ds.data)) continue;
+            for (let i = minIdx; i <= maxIdx; i++) {
+                const v = ds.data[i];
+                if (v !== null && v !== undefined && !isNaN(v) && typeof v === 'number' && v > 0) {
+                    vals.push(v);
+                }
+            }
+        }
+
+        if (vals.length > 0) {
+            const minVal = Math.min(...vals);
+            const maxVal = Math.max(...vals);
+            const pad = Math.max((maxVal - minVal) * 0.08, minVal * 0.012, 0.02);
+
+            if (!chart.options.scales) chart.options.scales = {};
+            if (!chart.options.scales.y) chart.options.scales.y = {};
+            chart.options.scales.y.min = Math.max(0, Number((minVal - pad).toFixed(2)));
+            chart.options.scales.y.max = Number((maxVal + pad).toFixed(2));
+            if (chart.scales && chart.scales.y) {
+                chart.scales.y.min = chart.options.scales.y.min;
+                chart.scales.y.max = chart.options.scales.y.max;
+            }
+        } else if (chart.options?.scales?.y) {
+            delete chart.options.scales.y.min;
+            delete chart.options.scales.y.max;
+        }
+
+        // Dynamically adjust point sizes when zoomed in (visibleCount <= 45 trading days)
+        const visibleCount = maxIdx - minIdx + 1;
+        const isRelaxed = visibleCount <= 45;
+        for (const ds of chart.data.datasets) {
+            if (ds._relaxedPointRadius !== undefined && ds._densePointRadius !== undefined) {
+                ds.pointRadius = isRelaxed ? ds._relaxedPointRadius : ds._densePointRadius;
+            } else if (ds.key === 'price') {
+                ds.pointRadius = isRelaxed ? 3.5 : 1.5;
+            }
+        }
     }
 
     /**
@@ -226,10 +304,17 @@ export class ChartManager {
      * @param {Array} historyRecords - Array of raw prediction history records
      * @param {boolean} isDark - Dark mode active flag
      * @param {Object} visibility - Map of seriesKey -> boolean
+     * @param {number|string} rangeDays - Timeframe window in trading days (0 or 'ALL' for full range)
      */
-    renderPricePredictChart(canvas, historyRecords, isDark, visibility = {}) {
+    renderPricePredictChart(canvas, historyRecords, isDark, visibility = {}, rangeDays = 0) {
         const el = typeof canvas === 'string' ? document.getElementById(canvas) : canvas;
         if (!el || !historyRecords || !historyRecords.length || typeof Chart === 'undefined') return null;
+
+        if (typeof ChartZoom !== 'undefined' && Chart.register) {
+            try {
+                Chart.register(ChartZoom);
+            } catch (_) {}
+        }
 
         const chartKey = 'pricePredictChart';
         this.destroy(chartKey);
@@ -301,6 +386,13 @@ export class ChartManager {
 
         // Future anchor point label for T+1 prediction target day
         const labels = [...dates, '隔日預估 (T+1)'];
+        const totalPoints = labels.length;
+        let xMin = undefined;
+        let xMax = undefined;
+        if (rangeDays && rangeDays !== 'ALL' && Number(rangeDays) > 0 && totalPoints > Number(rangeDays) + 1) {
+            xMin = Math.max(0, totalPoints - 1 - Number(rangeDays));
+            xMax = totalPoints - 1;
+        }
 
         const theme = this.getThemeTokens(isDark);
 
@@ -357,22 +449,23 @@ export class ChartManager {
          */
         const computeMarkerStyles = (predArray, defaultStyle, modelColor) => {
             const pointStyles = [];
-            const pointRadii = [];
+            const denseRadii = [];
+            const relaxedRadii = [];
             const pointHoverRadii = [];
             const pointBgColors = [];
             const pointBorderColors = [];
             const pointBorderWidths = [];
 
-            const isDense = labels.length > 40;
-            const baseHitRadius = isDense ? 2.5 : 4.5;
-            const baseMissRadius = isDense ? 4.5 : 6.5;
-            const baseT1Radius = isDense ? 5.5 : 7.5;
+            const denseHit = 2.5, relaxedHit = 4.5;
+            const denseMiss = 4.5, relaxedMiss = 6.5;
+            const denseT1 = 5.5, relaxedT1 = 7.5;
 
             for (let idx = 0; idx <= n; idx++) {
                 const val = predArray[idx];
                 if (val === null || val === undefined || isNaN(val)) {
                     pointStyles.push(defaultStyle);
-                    pointRadii.push(0);
+                    denseRadii.push(0);
+                    relaxedRadii.push(0);
                     pointHoverRadii.push(0);
                     pointBgColors.push('transparent');
                     pointBorderColors.push('transparent');
@@ -383,8 +476,9 @@ export class ChartManager {
                 // T+1 Upcoming target anchor (idx === n)
                 if (idx === n) {
                     pointStyles.push('star');
-                    pointRadii.push(baseT1Radius);
-                    pointHoverRadii.push(baseT1Radius + 2.5);
+                    denseRadii.push(denseT1);
+                    relaxedRadii.push(relaxedT1);
+                    pointHoverRadii.push(relaxedT1 + 2.5);
                     pointBgColors.push(modelColor);
                     pointBorderColors.push(isDark ? '#FFFFFF' : '#0F172A');
                     pointBorderWidths.push(2);
@@ -407,16 +501,18 @@ export class ChartManager {
                         if (isHit) {
                             // 方向命中 (Hit): 實心幾何形狀
                             pointStyles.push(defaultStyle);
-                            pointRadii.push(baseHitRadius);
-                            pointHoverRadii.push(baseHitRadius + 2.5);
+                            denseRadii.push(denseHit);
+                            relaxedRadii.push(relaxedHit);
+                            pointHoverRadii.push(relaxedHit + 2.5);
                             pointBgColors.push(modelColor);
                             pointBorderColors.push(isDark ? '#0D0E11' : '#FFFFFF');
                             pointBorderWidths.push(1.5);
                         } else {
                             // 方向相反 / 偏離 (Miss / Opposite direction): ✕ 叉號標點
                             pointStyles.push('crossRot');
-                            pointRadii.push(baseMissRadius);
-                            pointHoverRadii.push(baseMissRadius + 3);
+                            denseRadii.push(denseMiss);
+                            relaxedRadii.push(relaxedMiss);
+                            pointHoverRadii.push(relaxedMiss + 3);
                             pointBgColors.push(colorOpposite);
                             pointBorderColors.push(colorOpposite);
                             pointBorderWidths.push(2.5);
@@ -427,16 +523,20 @@ export class ChartManager {
 
                 // Fallback for missing baseline/actual price
                 pointStyles.push(defaultStyle);
-                pointRadii.push(baseHitRadius);
-                pointHoverRadii.push(baseHitRadius + 2);
+                denseRadii.push(denseHit);
+                relaxedRadii.push(relaxedHit);
+                pointHoverRadii.push(relaxedHit + 2);
                 pointBgColors.push(modelColor);
                 pointBorderColors.push(isDark ? '#0D0E11' : '#FFFFFF');
                 pointBorderWidths.push(1.5);
             }
 
+            const isDense = labels.length > 40;
             return {
                 pointStyle: pointStyles,
-                pointRadius: pointRadii,
+                pointRadius: isDense ? [...denseRadii] : [...relaxedRadii],
+                _densePointRadius: denseRadii,
+                _relaxedPointRadius: relaxedRadii,
                 pointHoverRadius: pointHoverRadii,
                 pointBackgroundColor: pointBgColors,
                 pointBorderColor: pointBorderColors,
@@ -463,6 +563,8 @@ export class ChartManager {
                         borderWidth: 2.8,
                         tension: 0.25,
                         pointRadius: labels.length > 40 ? 1.5 : 3.5,
+                        _densePointRadius: 1.5,
+                        _relaxedPointRadius: 3.5,
                         pointHoverRadius: 6,
                         pointBackgroundColor: colorPrice,
                         pointBorderColor: isDark ? '#0D0E11' : '#FFFFFF',
@@ -580,6 +682,34 @@ export class ChartManager {
                 },
                 plugins: {
                     legend: { display: false },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            threshold: 4,
+                            onPanComplete: ({ chart }) => {
+                                this.autoFitPriceChartYScale(chart);
+                                chart.update('none');
+                            }
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                speed: 0.12
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                            onZoomComplete: ({ chart }) => {
+                                this.autoFitPriceChartYScale(chart);
+                                chart.update('none');
+                            }
+                        },
+                        limits: {
+                            x: { min: 0, max: labels.length - 1, minRange: 6 }
+                        }
+                    },
                     tooltip: {
                         backgroundColor: theme.tooltipBg,
                         titleColor: theme.tooltipTitle,
@@ -711,6 +841,8 @@ export class ChartManager {
                 },
                 scales: {
                     x: {
+                        min: xMin,
+                        max: xMax,
                         grid: { color: theme.gridColor },
                         ticks: {
                             color: theme.textColor,
@@ -744,7 +876,162 @@ export class ChartManager {
         });
 
         this.instances[chartKey] = chart;
+        this.autoFitPriceChartYScale(chart);
+        chart.update('none');
         return chart;
+    }
+
+    /**
+     * Slice or zoom the price chart to a specific trading day timeframe
+     * @param {number|string} rangeDays - Number of trading days (e.g. 22, 45, 66, 130) or 0/'ALL'
+     * @returns {boolean}
+     */
+    setPriceChartRange(rangeDays) {
+        const chart = this.instances['pricePredictChart'];
+        if (!chart || !chart.data || !chart.data.labels) return false;
+        const total = chart.data.labels.length;
+        if (!total) return false;
+
+        if (!rangeDays || rangeDays === 'ALL' || Number(rangeDays) <= 0 || total <= Number(rangeDays) + 1) {
+            if (typeof chart.resetZoom === 'function') {
+                try {
+                    chart.resetZoom('none');
+                } catch (e) {
+                    console.debug('resetZoom error fallback:', e);
+                }
+            }
+            if (chart.options.scales && chart.options.scales.x) {
+                delete chart.options.scales.x.min;
+                delete chart.options.scales.x.max;
+            }
+            if (chart.scales && chart.scales.x) {
+                chart.scales.x.min = 0;
+                chart.scales.x.max = total - 1;
+            }
+        } else {
+            const days = Number(rangeDays);
+            const min = Math.max(0, total - 1 - days);
+            const max = total - 1;
+            if (!chart.options.scales) chart.options.scales = {};
+            if (!chart.options.scales.x) chart.options.scales.x = {};
+            chart.options.scales.x.min = min;
+            chart.options.scales.x.max = max;
+            if (chart.scales && chart.scales.x) {
+                chart.scales.x.min = min;
+                chart.scales.x.max = max;
+            }
+        }
+
+        this.autoFitPriceChartYScale(chart);
+        chart.update('none');
+        return true;
+    }
+
+    /**
+     * Zoom in or out by a scaling factor
+     * @param {number} factor - Zoom factor (> 1 zooms in, < 1 zooms out)
+     * @returns {boolean}
+     */
+    zoomPriceChart(factor = 1.25) {
+        const chart = this.instances['pricePredictChart'];
+        if (!chart || !chart.data || !chart.data.labels) return false;
+
+        const total = chart.data.labels.length;
+        let handled = false;
+        if (typeof chart.zoom === 'function') {
+            try {
+                chart.zoom(factor);
+                handled = true;
+                if (chart.scales?.x) {
+                    const syncedMin = Math.max(0, Math.floor(chart.scales.x.min ?? 0));
+                    const syncedMax = Math.min(total - 1, Math.ceil(chart.scales.x.max ?? (total - 1)));
+                    if (!chart.options.scales) chart.options.scales = {};
+                    if (!chart.options.scales.x) chart.options.scales.x = {};
+                    chart.options.scales.x.min = syncedMin;
+                    chart.options.scales.x.max = syncedMax;
+                }
+            } catch (e) {
+                console.debug('chart.zoom error, using fallback:', e);
+            }
+        }
+
+        if (!handled) {
+            let min = chart.scales?.x?.min !== undefined ? chart.scales.x.min : (chart.options?.scales?.x?.min ?? 0);
+            let max = chart.scales?.x?.max !== undefined ? chart.scales.x.max : (chart.options?.scales?.x?.max ?? (total - 1));
+            if (typeof min === 'string') min = chart.data.labels.indexOf(min);
+            if (typeof max === 'string') max = chart.data.labels.indexOf(max);
+            if (min < 0 || isNaN(min)) min = 0;
+            if (max >= total || isNaN(max)) max = total - 1;
+
+            const curRange = Math.max(6, max - min);
+            const newRange = Math.max(6, Math.min(total - 1, Math.round(curRange / factor)));
+            const newMin = Math.max(0, max - newRange);
+
+            if (!chart.options.scales) chart.options.scales = {};
+            if (!chart.options.scales.x) chart.options.scales.x = {};
+            chart.options.scales.x.min = newMin;
+            chart.options.scales.x.max = max;
+            if (chart.scales && chart.scales.x) {
+                chart.scales.x.min = newMin;
+                chart.scales.x.max = max;
+            }
+        }
+
+        this.autoFitPriceChartYScale(chart);
+        chart.update('none');
+        return true;
+    }
+
+    /**
+     * Pan visible window horizontally by ratio
+     * @param {number} stepRatio - Fraction of current window to move (+ moves forward/right, - moves backward/left)
+     * @returns {boolean}
+     */
+    panPriceChart(stepRatio = 0.25) {
+        const chart = this.instances['pricePredictChart'];
+        if (!chart || !chart.data || !chart.data.labels) return false;
+        const total = chart.data.labels.length;
+        let min = chart.scales?.x?.min !== undefined ? chart.scales.x.min : (chart.options?.scales?.x?.min ?? 0);
+        let max = chart.scales?.x?.max !== undefined ? chart.scales.x.max : (chart.options?.scales?.x?.max ?? (total - 1));
+        if (typeof min === 'string') min = chart.data.labels.indexOf(min);
+        if (typeof max === 'string') max = chart.data.labels.indexOf(max);
+        if (min < 0 || isNaN(min)) min = 0;
+        if (max >= total || isNaN(max)) max = total - 1;
+
+        const curRange = max - min;
+        const delta = Math.round(curRange * stepRatio);
+        let newMin = min + delta;
+        let newMax = max + delta;
+
+        if (newMin < 0) {
+            newMax += (0 - newMin);
+            newMin = 0;
+        }
+        if (newMax > total - 1) {
+            newMin -= (newMax - (total - 1));
+            newMax = total - 1;
+            newMin = Math.max(0, newMin);
+        }
+
+        if (!chart.options.scales) chart.options.scales = {};
+        if (!chart.options.scales.x) chart.options.scales.x = {};
+        chart.options.scales.x.min = newMin;
+        chart.options.scales.x.max = newMax;
+        if (chart.scales && chart.scales.x) {
+            chart.scales.x.min = newMin;
+            chart.scales.x.max = newMax;
+        }
+        this.autoFitPriceChartYScale(chart);
+        chart.update('none');
+        return true;
+    }
+
+    /**
+     * Reset zoom and pan to display full date range
+     * @returns {boolean}
+     */
+    resetPriceChartZoom() {
+        return this.setPriceChartRange('ALL');
     }
 
     /**
@@ -894,7 +1181,7 @@ export class ChartManager {
             if (chart.data?.datasets) {
                 const priceDs = chart.data.datasets.find(d => d.key === 'price');
                 if (priceDs) {
-                    priceDs.backgroundColor = isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.05)';
+                    priceDs.backgroundColor = isDark ? 'rgba(96, 165, 250, 0.08)' : 'rgba(29, 78, 216, 0.05)';
                 }
                 const ma60Ds = chart.data.datasets.find(d => d.key === 'ma60');
                 if (ma60Ds) {

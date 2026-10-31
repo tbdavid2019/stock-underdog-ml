@@ -110,6 +110,7 @@ export const app = createApp({
                 resonance: false,
                 ma60: false
             },
+            priceChartRange: 'ALL', // 'ALL' | '130' | '66' | '45' | '22'
             tickerInstHistory: [],
             tickerInstLoading: false,
             hasSearched: false,
@@ -937,10 +938,49 @@ export const app = createApp({
                 this.renderPricePredictChart();
             }
         },
+        setPriceChartRange(range) {
+            this.priceChartRange = String(range);
+            const ok = typeof chartManager.setPriceChartRange === 'function' &&
+                chartManager.setPriceChartRange(range === 'ALL' ? 0 : Number(range));
+            if (!ok) {
+                this.renderPricePredictChart();
+            }
+        },
+        zoomPriceChartIn() {
+            this.priceChartRange = 'CUSTOM';
+            if (typeof chartManager.zoomPriceChart === 'function') {
+                chartManager.zoomPriceChart(1.3);
+            }
+        },
+        zoomPriceChartOut() {
+            this.priceChartRange = 'CUSTOM';
+            if (typeof chartManager.zoomPriceChart === 'function') {
+                chartManager.zoomPriceChart(0.75);
+            }
+        },
+        panPriceChartLeft() {
+            this.priceChartRange = 'CUSTOM';
+            if (typeof chartManager.panPriceChart === 'function') {
+                chartManager.panPriceChart(-0.35);
+            }
+        },
+        panPriceChartRight() {
+            this.priceChartRange = 'CUSTOM';
+            if (typeof chartManager.panPriceChart === 'function') {
+                chartManager.panPriceChart(0.35);
+            }
+        },
+        resetPriceChartZoom() {
+            this.priceChartRange = 'ALL';
+            if (typeof chartManager.resetPriceChartZoom === 'function') {
+                chartManager.resetPriceChartZoom();
+            }
+        },
         renderPricePredictChart() {
             this.$nextTick(() => {
                 if (typeof chartManager.renderPricePredictChart === 'function') {
-                    chartManager.renderPricePredictChart('pricePredictChartCanvas', this.historyRecords, this.isDark, this.priceChartVisibility);
+                    const rangeDays = (this.priceChartRange === 'ALL' || this.priceChartRange === 'CUSTOM') ? 0 : Number(this.priceChartRange);
+                    chartManager.renderPricePredictChart('pricePredictChartCanvas', this.historyRecords, this.isDark, this.priceChartVisibility, rangeDays);
                 } else {
                     console.warn("chartManager.renderPricePredictChart is not available on active instance");
                 }

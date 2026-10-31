@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-31 (v2.4.46)
+
+### Added & Interactive UI (Stock K-Chart Style Interactive Zoom, Pan & Timeframe Range Control)
+- **📈 K 線級高互動縮放與平移體驗 (`api/templates/index.html`, `api/static/js/chart-manager.js`)**：
+  - 引進 `hammerjs` 與 `chartjs-plugin-zoom`，在「真實股價 vs AI 目標價時序軌跡圖」全面支援滑鼠滾輪縮放 (Wheel Zoom)、按住拖曳平移 (Pan / Drag)、手機雙指縮放 (Pinch to Zoom) 與雙擊畫布重置 (Double-Click Reset)。
+  - 畫布支援 `cursor-grab active:cursor-grabbing` 動態游標反饋，並設定 X 軸極限邊界 (`minRange: 6`) 防止過度縮放或超出資料範圍。
+- **⏱️ K 線時間區間快選工具列 (`api/templates/partials/tab_history.html`, `api/static/js/app.js`)**：
+  - 新增 TradingView / 看盤軟體風格的時間區間快選標籤（`近1月 (22D)`、`近2月 (45D)`、`近1季 (66D)`、`半年 (130D)`、`全部 (ALL)`），一鍵直達最聚焦的預測開獎視角，徹底解決長天期歷史圖表中近期預測點被擠在右側窄欄的問題。
+  - 整合 `放大 (🔍+)`、`縮小 (🔍-)`、`← 左移`、`右移 →` 與 `重置 (↺)` 控制按鈕與輔助提示；自由縮放或平移時自動分流為 `CUSTOM` 自訂視角，切換按鈕具備 `:aria-pressed` 與無障礙狀態反饋。
+  - Canvas 畫布配置 `touch-action: pan-y`，確保行動端雙指縮放時縱向頁面滾動順暢不打架。
+- **🎯 視窗動態 Y 軸自動貼合與標點尺度自適應 (`autoFitPriceChartYScale`)**：
+  - 在縮放、拖曳平移、時間區間切換或指標可見度（MA60、Timestral P10~P90 帶）切換時，自動根據當前可見 X 軸視窗內的所有有效數值重新計算 Y 軸之 `min` / `max` 並加上動態 8% padding，徹底告別傳統固定全域座標系留白過大或波幅扁平的問題。
+  - **低價股自適應襯距**：Padding 底部下限改為相對比例動態下限（`0.02`），避免低價股（如 10~30 元標的）被原固定 0.5 元襯距過度壓平波幅；無有效數值時自動清除 Y 軸範圍保證優雅降級。
+  - 當視窗縮放至 $\le 45$ 個交易日（近 1~2 個月）時，標點（圓形、方形、菱形、✕ 偏離叉號、★ 隔日預估星號）半徑自動放大為 relaxed 尺寸，確保開獎標點與預測命中率細節清晰可辨。
+- **🏷️ 版本升級至 v2.4.46 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.45)
 
 ### Fixed & Quant (AI Tech Radar & Discovery Engine Multi-Theme Consensus & Supply Chain Expansion)
