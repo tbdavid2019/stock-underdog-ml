@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-10-31 (v2.4.45)
+
+### Fixed & Quant (AI Tech Radar & Discovery Engine Multi-Theme Consensus & Supply Chain Expansion)
+- **⚡ 解決標的白名單 Catch-22 悖論與追蹤池嚴格隔離 (`core/ticker_canonicalizer.py`, `pipeline/discovery_pipeline.py`)**：
+  - 修復原 `TickerUniverseValidator.get_whitelist()` 僅從 DuckDB 既有宇宙與 TW0050 讀取白名單，導致前沿設定檔 `config/discovery_supply_chain.json` 中之潛力新標的（如光聖 6442、聯鈞 3450、上詮 3363、雙鴻 3324、弘塑 3131、萬潤 6187、亞德客 1590 等）在尚未入池前即遭 `validator.is_valid()` 過濾而永遠無法生成 `propose_add` 推薦之核心死鎖。
+  - `get_whitelist()` 自動載入前沿挖掘機產業鏈台美標的為合法 Universe。
+  - **追蹤池隔離 (Codex/OpenCode 審查)**：`get_tracked_pool_tickers()` 嚴格排除 `market_universe` 全市場與 `TW0051`/`SP500` 泛指數，僅自 `predictions` 表與 `TW0050` 核心池讀取，確保未入預測池之台美供應鏈潛力股精準分流至 `propose_add` 或 `observe`。
+- **🇺🇸 納入美股關鍵錨點龍頭、詞界比對與連字號支援 (`config/discovery_supply_chain.json`, `core/supply_chain_map.py`, `core/ticker_canonicalizer.py`)**：
+  - 擴充 5 大主題之學術與架構關鍵字群（CPO 光互連、HBM 頻寬牆、液冷散熱、具身智能機器人、先進封裝 CoWoS）。
+  - 各主題正式新增 `us_supply_chain` 結構化陣列，完整收錄美股核心領導廠（VRT, NVDA, AVGO, TSM, COHR, MU, AMD, LITE, ISRG, AMKR, INTC 等）之角色、代號與權重，並支援 `get_combined_supply_chain_for_theme()` 與雙向台美反向查詢。
+  - **短詞詞界比對**：新增 `_keyword_matches` 輔助函式，針對 `inp`, `fau`, `vla`, `cxl` 等 $\le 4$ 碼英數採用正規詞界 (`\b`)，根除 `input`, `default`, `vlan` 等子字串誤判。
+  - **美股代號連字號標準化**：美股正規化支援 `BRK-B` 自動轉為 `BRK.B`。
+- **📊 7 維度多因子評分基準科學校準與 arXiv 基準補齊 (`pipeline/discovery_pipeline.py`)**：
+  - `fetch_arxiv_papers()` 新增 `cs.AR`（計算機架構）論文類別；針對當日 arXiv 未覆蓋之硬體主題，在 live run 下補齊真實 arXiv 專屬檢索連結之基準參考論文，發布日期固定於 `2026-01-01`，防止快取與資料庫每日重複膨脹。
+  - **空論文 Fallback 保障**：在無有效論文時優先觸發 Fallback 降級，再執行基準補齊。
+  - **平滑因子擴展與多主題歸屬**：擴大論文計數 0 至 5+ 篇之平滑加分級距，論文資料結構支援 `matched_themes` 多主題雙向計分；科學校準後高純度未入池標的穩定達標 $\ge 75$ 分進入 `propose_add`，中純度標的穩定落在 $68 \sim 74.9$ 分進入 `observe`，池內既有標的維持 $\ge 70.9$ 分精確歸入 `already_in_pool`，達成零誤殺（0 reject）。
+  - **歷史記錄去重**：`history_record` 採用 `ticker` 去重後統計，與前端 KPI 獨立標的檔數保持完全一致。
+- **🖥️ 前端跨主題標的去重、多主題徽章與 WCAG 無障礙對比度提升 (`api/static/js/app.js`, `api/templates/partials/tab_discovery.html`)**：
+  - `app.js` 新增 `deduplicateCandidates()` 方法：在「全部主題」模式下依 `ticker` 聚合標的，動態掛載 `all_themes` 並合併論文/訊號計數；在特定主題分頁時亦能透過全局地圖標註跨領域主題標籤。
+  - KPI 計數器全面校準為獨立標的檔數，避免重複計數。
+  - **WCAG 2.1 對比度與無障礙加固**：
+    - 市場標籤（`TW` / `US`）採用淺深主題自適應高對比度邊框與文字（深色 `text-sky-300` / `text-purple-300`，淺色 `text-sky-900` / `text-purple-900`）。
+    - 淺色模式下池內綠色與訊號指標全面切換為 `#065F46`，風險負分切換為 `#B91C1C`。
+    - 裝飾性圖標加上 `aria-hidden="true"`，論文與快訊之關聯代碼標籤增加鍵盤無障礙操作支援 (`tabindex="0"`, `@keydown.enter`)。
+- **🏷️ 版本升級至 v2.4.45 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.44)
 
 ### Accessibility & UI (WCAG 2.1 Color-Blind Safe Palette & Direction Hit/Miss Visual Marker Overhaul)

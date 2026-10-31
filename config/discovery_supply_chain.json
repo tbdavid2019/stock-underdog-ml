@@ -1,13 +1,51 @@
 {
-  "version": "1.0.0",
-  "updated_at": "2026-10-30",
+  "version": "1.1.0",
+  "updated_at": "2026-10-31",
   "themes": [
     {
       "id": "cpo_optical_interconnect",
       "name_zh": "CPO 光互連與矽光子",
       "name_en": "CPO & Silicon Photonics",
       "bottleneck_description": "傳統銅線傳輸在高頻超大帶寬下遭遇嚴重衰減與功耗牆，共同封裝光學 (CPO) 與矽光子 (SiPh) 成為次世代 AI 資料中心與晶片間極限頻寬之唯一物理出路。",
+      "keywords": [
+        "co-packaged", "cpo", "silicon photonics", "optical interconnect",
+        "optical transceiver", "light engine", "photonic integrated", "laser diode",
+        "inp", "gaas", "wdm", "fiber array", "fau", "coupe", "laser", "optical",
+        "photonics", "interconnect", "光互連", "矽光子", "共同封裝光學", "光收發"
+      ],
       "us_anchors": ["NVDA", "AVGO", "COHR", "MRVL", "LITE"],
+      "us_supply_chain": [
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA",
+          "role": "AI 叢集與 Spectrum-X 光互連架構霸主",
+          "relevance_weight": 0.95
+        },
+        {
+          "ticker": "AVGO",
+          "name": "Broadcom",
+          "role": "CPO 光學交換器與 Tomahawk 晶片龍頭",
+          "relevance_weight": 0.96
+        },
+        {
+          "ticker": "MRVL",
+          "name": "Marvell",
+          "role": "光電 DSP 與高速互連晶片領導廠商",
+          "relevance_weight": 0.90
+        },
+        {
+          "ticker": "COHR",
+          "name": "Coherent",
+          "role": "矽光子光收發模組與 CW 雷射源龍頭",
+          "relevance_weight": 0.92
+        },
+        {
+          "ticker": "LITE",
+          "name": "Lumentum",
+          "role": "超高速光通訊 EML/CW 雷射核心供應商",
+          "relevance_weight": 0.89
+        }
+      ],
       "tw_supply_chain": [
         {
           "ticker": "2330",
@@ -25,7 +63,7 @@
           "ticker": "6442",
           "name": "光聖",
           "role": "光被動元件、高密度光纖跳接線與光分歧器",
-          "relevance_weight": 0.88
+          "relevance_weight": 0.92
         },
         {
           "ticker": "3450",
@@ -64,7 +102,39 @@
       "name_zh": "HBM 與 KV-Cache 記憶體牆突破",
       "name_en": "HBM & KV-Cache Bandwidth",
       "bottleneck_description": "大語言模型推論階段之 KV-Cache 佔用與吞吐量受限於記憶體頻寬牆，HBM3e/HBM4、客製 ASIC 記憶體階層架構與高頻寬快顯擴充為關鍵瓶頸。",
+      "keywords": [
+        "memory bandwidth", "kv cache", "kv-cache", "hbm", "hbm3", "hbm3e",
+        "hbm4", "memory wall", "pim", "processing-in-memory", "dram", "cxl",
+        "die-to-die", "high bandwidth memory", "attention cache", "context length",
+        "bandwidth bottleneck", "記憶體牆", "高頻寬記憶體", "記憶體頻寬"
+      ],
       "us_anchors": ["NVDA", "MU", "AMD", "INTC"],
+      "us_supply_chain": [
+        {
+          "ticker": "MU",
+          "name": "Micron",
+          "role": "HBM3E/HBM4 高頻寬記憶體核心大廠",
+          "relevance_weight": 0.95
+        },
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA",
+          "role": "Blackwell/Rubin 高頻寬記憶體算力平台霸主",
+          "relevance_weight": 0.94
+        },
+        {
+          "ticker": "AMD",
+          "name": "AMD",
+          "role": "MI300/MI350 大容量 HBM 加速器領導廠",
+          "relevance_weight": 0.88
+        },
+        {
+          "ticker": "INTC",
+          "name": "Intel",
+          "role": "Gaudi 3 記憶體架構與 CXL 互連晶片",
+          "relevance_weight": 0.84
+        }
+      ],
       "tw_supply_chain": [
         {
           "ticker": "2330",
@@ -109,7 +179,33 @@
       "name_zh": "液冷散熱與熱管理架構",
       "name_en": "Liquid Cooling & Thermal Management",
       "bottleneck_description": "GB200 / B200 晶片 TDP 攀升突破 1000W~1200W，氣冷散熱逼近物理極限，冷板式液冷、浸沒式冷卻與冷卻分配單元 (CDU) 成為資料中心必配架構。",
+      "keywords": [
+        "thermal", "cooling", "heat dissipation", "power density", "datacenter energy",
+        "two-phase", "immersion", "cold plate", "liquid cooling", "immersion cooling",
+        "cdu", "cooling distribution", "thermal management", "two-phase cooling",
+        "manifold", "vapor chamber", "散熱", "液冷", "水冷", "冷板"
+      ],
       "us_anchors": ["VRT", "SMCI", "NVDA"],
+      "us_supply_chain": [
+        {
+          "ticker": "VRT",
+          "name": "Vertiv",
+          "role": "AI 資料中心液冷 CDU 與熱管理全球龍頭",
+          "relevance_weight": 0.96
+        },
+        {
+          "ticker": "SMCI",
+          "name": "Supermicro",
+          "role": "整機櫃 DLC 液冷 AI 伺服器解決方案先驅",
+          "relevance_weight": 0.86
+        },
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA",
+          "role": "GB200 NVL72 水冷機櫃公版架構制訂者",
+          "relevance_weight": 0.95
+        }
+      ],
       "tw_supply_chain": [
         {
           "ticker": "3017",
@@ -148,7 +244,38 @@
       "name_zh": "具身智能機器人與實體 AI",
       "name_en": "Embodied AI & Robotics",
       "bottleneck_description": "視覺-語言-動作 (VLA) 多模態大模型走向物理世界，伺服驅動器、微型精密減速機、觸覺感知與邊緣端實時算力為人形機器人落地之核心硬體束縛。",
+      "keywords": [
+        "embodied", "humanoid", "robotics", "actuator", "bimanual", "manipulation",
+        "vision-language-action", "vla", "harmonic drive", "cycloidal", "tactile sensor",
+        "servo", "robot", "dexterous", "locomotion", "具身智能", "機器人", "減速機", "關節"
+      ],
       "us_anchors": ["TSLA", "NVDA", "ISRG", "GOOGL"],
+      "us_supply_chain": [
+        {
+          "ticker": "TSLA",
+          "name": "Tesla",
+          "role": "Optimus 人形機器人與 FSD 具身智慧領航者",
+          "relevance_weight": 0.94
+        },
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA",
+          "role": "Project GR00T 機器人基礎模型與 Isaac 平台",
+          "relevance_weight": 0.93
+        },
+        {
+          "ticker": "ISRG",
+          "name": "Intuitive Surgical",
+          "role": "達文西精準醫療手術機器人全球霸主",
+          "relevance_weight": 0.89
+        },
+        {
+          "ticker": "GOOGL",
+          "name": "Alphabet (Google)",
+          "role": "RT-2 / Gemini 具身多模態大模型核心研發",
+          "relevance_weight": 0.87
+        }
+      ],
       "tw_supply_chain": [
         {
           "ticker": "2359",
@@ -167,6 +294,12 @@
           "name": "台灣精銳",
           "role": "超精密行星齒輪減速機與機器人自動化傳動組件",
           "relevance_weight": 0.89
+        },
+        {
+          "ticker": "1590",
+          "name": "亞德客-KY",
+          "role": "微型高精度氣動元件、精密線性滑軌與機器人關節傳動",
+          "relevance_weight": 0.86
         },
         {
           "ticker": "2317",
@@ -193,7 +326,44 @@
       "name_zh": "先進封裝 CoWoS 與 3DFabric",
       "name_en": "Advanced Packaging & CoWoS",
       "bottleneck_description": "摩爾定律放緩下，小晶片 (Chiplet) 與 2.5D/3D 晶圓級先進封裝產能成為所有前沿 AI GPU/ASIC 出貨之首要瓶頸，濕製程清洗、點膠與 AOI 設備需求爆發。",
-      "us_anchors": ["NVDA", "AMD", "TSM"],
+      "keywords": [
+        "chiplet", "interposer", "3d ic", "wafer-scale", "heterogeneous integration",
+        "hybrid bonding", "packaging", "cowos", "soic", "2.5d", "3d packaging",
+        "wafer-level packaging", "fan-out", "advanced packaging", "先進封裝", "小晶片", "晶圓級"
+      ],
+      "us_anchors": ["TSM", "AMKR", "INTC", "NVDA", "AMD"],
+      "us_supply_chain": [
+        {
+          "ticker": "TSM",
+          "name": "TSMC (ADR)",
+          "role": "CoWoS / SoIC 3D 先進封裝全球獨家晶圓代工龍頭",
+          "relevance_weight": 0.98
+        },
+        {
+          "ticker": "AMKR",
+          "name": "Amkor",
+          "role": "美系 2.5D/先進封裝委外封測 (OSAT) 核心夥伴",
+          "relevance_weight": 0.89
+        },
+        {
+          "ticker": "INTC",
+          "name": "Intel",
+          "role": "EMIB / Foveros 3D 先進封裝與玻璃基板先驅",
+          "relevance_weight": 0.84
+        },
+        {
+          "ticker": "NVDA",
+          "name": "NVIDIA",
+          "role": "CoWoS-L 超大尺寸雙晶粒 GPU 封裝核心需求方",
+          "relevance_weight": 0.96
+        },
+        {
+          "ticker": "AMD",
+          "name": "AMD",
+          "role": "MI300 3D Chiplet 與 CoWoS 混合鍵合架構先驅",
+          "relevance_weight": 0.90
+        }
+      ],
       "tw_supply_chain": [
         {
           "ticker": "2330",

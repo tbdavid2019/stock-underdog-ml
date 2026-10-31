@@ -63,6 +63,13 @@ def test_paper_to_theme_mapping():
     assert "cpo_optical_interconnect" in matched
     assert "hbm_kv_cache" in matched
 
+    # 驗證詞界比對，防範 "input", "default", "vlan" 產生短詞誤判
+    false_title = "Input Data Normalization with Default Settings on VLAN Switch"
+    false_abstract = "We evaluate simple neural networks on standard benchmarks without hardware bottlenecks."
+    false_matched = scm.map_paper_to_themes(false_title, false_abstract)
+    assert "cpo_optical_interconnect" not in false_matched
+    assert "embodied_ai_robotics" not in false_matched
+
 
 def test_all_supply_chain_tickers_set():
     scm = SupplyChainMap()
@@ -76,3 +83,27 @@ def test_all_supply_chain_tickers_set():
     assert "6442" in all_tickers
     assert "3450" in all_tickers
     assert "NVDA" in all_tickers
+
+
+def test_us_supply_chain_and_combined_lookup():
+    scm = SupplyChainMap()
+    # 測試液冷主題之美股供應鏈
+    us_cooling = scm.get_us_supply_chain_for_theme("liquid_cooling")
+    us_tickers = [item["ticker"] for item in us_cooling]
+    assert "VRT" in us_tickers
+    assert "SMCI" in us_tickers
+
+    # 測試台美合併供應鏈
+    combined_cooling = scm.get_combined_supply_chain_for_theme("liquid_cooling")
+    comb_tickers = [item["ticker"] for item in combined_cooling]
+    assert "3017" in comb_tickers
+    assert "3324" in comb_tickers
+    assert "VRT" in comb_tickers
+
+    # 測試美股反向查詢
+    vrt_themes = scm.get_themes_for_ticker("VRT")
+    assert any(t["theme_id"] == "liquid_cooling" for t in vrt_themes)
+    assert any(t["market"] == "US" for t in vrt_themes)
+
+    tsm_themes = scm.get_themes_for_ticker("TSM")
+    assert any(t["theme_id"] == "advanced_packaging_cowos" for t in tsm_themes)

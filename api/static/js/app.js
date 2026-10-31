@@ -259,14 +259,23 @@ export const app = createApp({
         currentStrategyMeta() {
             return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
         },
+        uniqueDiscoveryCandidates() {
+            return this.deduplicateCandidates(this.discoveryCandidates || []);
+        },
+        discoveryUniqueCandidateCount() {
+            return this.uniqueDiscoveryCandidates.length;
+        },
         discoveryProposeAddCount() {
-            return (this.discoveryCandidates || []).filter(c => c.recommendation === 'propose_add').length;
+            return this.uniqueDiscoveryCandidates.filter(c => c.recommendation === 'propose_add').length;
+        },
+        discoveryObserveCount() {
+            return this.uniqueDiscoveryCandidates.filter(c => c.recommendation === 'observe').length;
         },
         discoveryInPoolCount() {
-            return (this.discoveryCandidates || []).filter(c => c.recommendation === 'already_in_pool' || c.in_pool).length;
+            return this.uniqueDiscoveryCandidates.filter(c => c.recommendation === 'already_in_pool' || c.in_pool).length;
         },
         discoveryAvgScore() {
-            const list = this.discoveryCandidates || [];
+            const list = this.uniqueDiscoveryCandidates;
             if (!list.length) return 0;
             const sum = list.reduce((acc, c) => acc + (Number(c.total_score) || 0), 0);
             return sum / list.length;
@@ -285,18 +294,36 @@ export const app = createApp({
             return "M " + points.map((p, idx) => (idx === 0 ? p : `L ${p}`)).join(" ");
         },
         filteredNewCandidates() {
-            let list = (this.discoveryCandidates || []).filter(c => c.recommendation === 'propose_add' || c.recommendation === 'observe');
-            if (this.discoverySelectedTheme !== 'ALL') {
-                list = list.filter(c => c.theme_id === this.discoverySelectedTheme);
+            if (this.discoverySelectedTheme === 'ALL') {
+                return this.uniqueDiscoveryCandidates.filter(c => c.recommendation === 'propose_add' || c.recommendation === 'observe');
             }
-            return list;
+            const list = (this.discoveryCandidates || []).filter(
+                c => c.theme_id === this.discoverySelectedTheme && (c.recommendation === 'propose_add' || c.recommendation === 'observe')
+            );
+            const deduped = this.deduplicateCandidates(list);
+            const globalThemeMap = new Map(this.uniqueDiscoveryCandidates.map(u => [u.ticker, u.all_themes]));
+            for (const c of deduped) {
+                if (globalThemeMap.has(c.ticker)) {
+                    c.all_themes = globalThemeMap.get(c.ticker);
+                }
+            }
+            return deduped;
         },
         filteredInPoolCandidates() {
-            let list = (this.discoveryCandidates || []).filter(c => c.recommendation === 'already_in_pool');
-            if (this.discoverySelectedTheme !== 'ALL') {
-                list = list.filter(c => c.theme_id === this.discoverySelectedTheme);
+            if (this.discoverySelectedTheme === 'ALL') {
+                return this.uniqueDiscoveryCandidates.filter(c => c.recommendation === 'already_in_pool' || c.in_pool);
             }
-            return list;
+            const list = (this.discoveryCandidates || []).filter(
+                c => c.theme_id === this.discoverySelectedTheme && (c.recommendation === 'already_in_pool' || c.in_pool)
+            );
+            const deduped = this.deduplicateCandidates(list);
+            const globalThemeMap = new Map(this.uniqueDiscoveryCandidates.map(u => [u.ticker, u.all_themes]));
+            for (const c of deduped) {
+                if (globalThemeMap.has(c.ticker)) {
+                    c.all_themes = globalThemeMap.get(c.ticker);
+                }
+            }
+            return deduped;
         },
         filteredPapers() {
             let list = this.discoveryPapers || [];
@@ -1453,6 +1480,51 @@ export const app = createApp({
             if (!url) return '';
             const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
             return match ? `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=1` : '';
+        },
+        deduplicateCandidates(rawList) {
+            if (!rawList || !rawList.length) return [];
+            const map = new Map();
+            for (const item of rawList) {
+                const key = item.ticker;
+                if (!map.has(key)) {
+                    map.set(key, {
+                        ...item,
+                        all_themes: item.theme_name ? [item.theme_name] : [],
+                        all_theme_ids: item.theme_id ? [item.theme_id] : [],
+                        combined_paper_count: item.paper_count || 0,
+                        combined_signal_count: item.signal_count || 0,
+                    });
+                } else {
+                    const existing = map.get(key);
+                    if (item.theme_name && !existing.all_themes.includes(item.theme_name)) {
+                        existing.all_themes.push(item.theme_name);
+                    }
+                    if (item.theme_id && !existing.all_theme_ids.includes(item.theme_id)) {
+                        existing.all_theme_ids.push(item.theme_id);
+                    }
+                    existing.combined_paper_count += (item.paper_count || 0);
+                    existing.combined_signal_count += (item.signal_count || 0);
+                    existing.paper_count = existing.combined_paper_count;
+                    existing.signal_count = existing.combined_signal_count;
+                    // 當標的跨主題時，若分數更高則覆蓋主要推薦欄位
+                    if (Number(item.total_score || 0) > Number(existing.total_score || 0)) {
+                        existing.total_score = item.total_score;
+                        existing.recommendation = item.recommendation;
+                        existing.theme_id = item.theme_id;
+                        existing.theme_name = item.theme_name;
+                        existing.catalyst_summary = item.catalyst_summary;
+                        existing.source_score = item.source_score;
+                        existing.purity_score = item.purity_score;
+                        existing.paper_score = item.paper_score;
+                        existing.novelty_score = item.novelty_score;
+                        existing.sentiment_score = item.sentiment_score;
+                        existing.setup_score = item.setup_score;
+                        existing.risk_score = item.risk_score;
+                        existing.us_anchor = item.us_anchor;
+                    }
+                }
+            }
+            return Array.from(map.values()).sort((a, b) => (Number(b.total_score) || 0) - (Number(a.total_score) || 0));
         },
         toggleCandidateDossier(id) {
             this.discoveryExpandedDossiers[id] = !this.discoveryExpandedDossiers[id];

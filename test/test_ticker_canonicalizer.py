@@ -26,6 +26,8 @@ def test_canonicalize_us_tickers():
     assert canonicalize_ticker("AAPL") == "AAPL"
     assert canonicalize_ticker("  msft  ") == "MSFT"
     assert canonicalize_ticker("brk.b") == "BRK.B"
+    assert canonicalize_ticker("BRK-B") == "BRK.B"
+    assert canonicalize_ticker("  brk-b  ") == "BRK.B"
     assert canonicalize_ticker("GOOGL") == "GOOGL"
 
 
@@ -65,3 +67,21 @@ def test_whitelist_filtering():
     assert "9999.TW" in rejected
     assert "FAKE_STOCK" in rejected
     assert "" in rejected
+
+
+def test_discovery_supply_chain_whitelist():
+    validator = TickerUniverseValidator()
+    wl = validator.get_whitelist(force_refresh=True)
+
+    # 驗證前沿技術鏈與美股錨點均已自動納入系統白名單
+    assert "6442" in wl  # 光聖
+    assert "3450" in wl  # 聯鈞
+    assert "3017" in wl  # 奇鋐
+    assert "3324" in wl  # 雙鴻
+    assert "VRT" in wl   # Vertiv
+    assert "NVDA" in wl  # NVIDIA
+    assert "COHR" in wl  # Coherent
+
+    assert validator.is_valid("6442.TW") is True
+    assert validator.is_valid("VRT") is True
+    assert validator.is_valid("COHR") is True

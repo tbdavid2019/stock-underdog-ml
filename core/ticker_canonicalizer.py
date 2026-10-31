@@ -43,8 +43,8 @@ def canonicalize_ticker(raw_ticker: str) -> Optional[str]:
     if re.fullmatch(r"\d{4,6}", cleaned):
         return cleaned
 
-    # 2. 判斷是否為美股代碼 (1 到 5 碼英文字母，可含點號如 BRK.B)
-    cleaned_us = cleaned.upper()
+    # 2. 判斷是否為美股代碼 (1 到 5 碼英文字母，可含點號或連字號如 BRK.B / BRK-B)
+    cleaned_us = cleaned.upper().replace("-", ".")
     if re.fullmatch(r"[A-Z]{1,5}(\.[A-Z])?", cleaned_us):
         return cleaned_us
 
@@ -152,6 +152,57 @@ class TickerUniverseValidator:
                                     c = canonicalize_ticker(s)
                                     if c:
                                         whitelist.add(c)
+        except Exception:
+            pass
+
+        # 4. 合併前沿挖掘機產業鏈設定檔 (config/discovery_supply_chain.json)
+        try:
+            import json
+            candidate_paths = [
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "discovery_supply_chain.json"),
+                "config/discovery_supply_chain.json"
+            ]
+            for c_path in candidate_paths:
+                if os.path.exists(c_path):
+                    with open(c_path, "r", encoding="utf-8") as f:
+                        sc_data = json.load(f)
+                        for theme in sc_data.get("themes", []):
+                            # 台股供應鏈
+                            for item in theme.get("tw_supply_chain", []):
+                                c = canonicalize_ticker(item.get("ticker", ""))
+                                if c:
+                                    whitelist.add(c)
+                            # 美股錨點標的
+                            for a in theme.get("us_anchors", []):
+                                c = canonicalize_ticker(a)
+                                if c:
+                                    whitelist.add(c)
+                            # 美股供應鏈標的
+                            for item in theme.get("us_supply_chain", []):
+                                c = canonicalize_ticker(item.get("ticker", ""))
+                                if c:
+                                    whitelist.add(c)
+                    break
+        except Exception as e:
+            logger.debug("自 discovery_supply_chain.json 讀取供應鏈白名單異常: %s", e)
+
+        # 5. 合併台灣 50 成分股設定檔 (若存在)
+        try:
+            import json
+            tw0050_paths = [
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "tw0050_tickers.json"),
+                "config/tw0050_tickers.json"
+            ]
+            for p in tw0050_paths:
+                if os.path.exists(p):
+                    with open(p, "r", encoding="utf-8") as f:
+                        t_data = json.load(f)
+                        t_list = t_data if isinstance(t_data, list) else t_data.get("tickers", [])
+                        for t in t_list:
+                            c = canonicalize_ticker(t)
+                            if c:
+                                whitelist.add(c)
+                    break
         except Exception:
             pass
 
