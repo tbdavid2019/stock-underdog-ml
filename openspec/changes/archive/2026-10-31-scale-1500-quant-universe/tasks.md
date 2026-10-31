@@ -20,7 +20,7 @@
   - [x] 4.1 Create `test/test_scaled_universe.py` testing TW1000 selection, delisting filtering, US500 fetching, and chunked download.
   - [x] 4.2 Run existing regression test suite (`test_fetcher.py`, `test_orchestrator.py`, etc.).
 
-- [ ] 5. Code Review, Commit, & Server Deployment
-  - [ ] 5.1 Run dual-code-review protocol (Codex CLI / OpenCode).
-  - [ ] 5.2 Update `CHANGELOG.md` and `docs/CHANGELOG.md`.
-  - [ ] 5.3 Commit, push to GitHub, and deploy to production server `10.9.0.99`.
+- [x] 5. Code Review, Commit, & Server Deployment
+  - [x] 5.1 Run dual-code-review protocol (Codex CLI / OpenCode).
+  - [x] 5.2 Update `CHANGELOG.md` and `docs/CHANGELOG.md`.
+  - [x] 5.3 Commit, push to GitHub, and deploy to production server `10.9.0.99`.
