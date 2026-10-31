@@ -399,6 +399,27 @@ export const ApiClient = {
         const res = await fetch('/api/v1/discovery/status');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
+    },
+
+    /**
+     * Get available AI industry value chain themes
+     */
+    async getIndustryThemes() {
+        const res = await fetch('/api/v1/industry-chain/themes');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get AI industry value chain graph topology with quant indicators
+     */
+    async getIndustryGraph(theme = 'ALL', relationType = 'ALL') {
+        const params = new URLSearchParams();
+        if (theme) params.set('theme', theme);
+        if (relationType) params.set('relation_type', relationType);
+        const res = await fetch(`/api/v1/industry-chain/graph?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
     }
 };
 

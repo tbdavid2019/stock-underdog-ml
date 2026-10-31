@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -64,6 +64,7 @@ app.include_router(decision.router, prefix="/api/v1")
 app.include_router(earnings_call.router, prefix="/api/v1")
 app.include_router(podcast.router, prefix="/api/v1")
 app.include_router(discovery.router, prefix="/api/v1")
+app.include_router(industry_chain.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")

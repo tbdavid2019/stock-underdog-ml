@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-10-31 (v2.4.48)
+
+### Added & Core (Cross-Market AI Value Chain & Supply Graph Engine)
+- **🕸️ 跨市場產業價值鏈動態圖譜擷取模組 (`data/industry_chain_fetcher.py`)**：
+  - **TPEx 產業價值鏈平台官方爬蟲與 14 天快取**：串接櫃買中心產業價值鏈資訊平台 (`ic.tpex.org.tw`)，解析半導體 (`D000`)、電腦週邊/AI 伺服器 (`E000`) 與網通/光通信 (`G000`) 之官方上中下游分類與成分股。
+  - **高保真離線備援資料庫**：內嵌涵蓋台美核心 AI 產業鏈 (含美股巨頭 `US_AI_CORE`：NVDA, TSM, ASML, AVGO, MRVL, MU, COHR, LITE, FN, VRT, DELL, CLS, CRWV, MSFT, AMZN, GOOG, META, ORCL, TSLA 等)，確保在無外網或離線環境下 100% 穩定產出。
+  - **SEC EDGAR 10-K 大客戶實體披露**：擷取美股 10-K 年報中 "Major Customers" 法定揭露 (>10% 營收依賴度) 與戰略供應鏈傳導關聯。
+  - **8 大 AI 前沿技術主題**：支援 `全部主題`、`HBM/儲存`、`CPO/光互聯`、`電力/液冷`、`先進封裝`、`AI晶片/算力`、`伺服器/ODM` 與 `機器人/具身智能` 之三欄層級拓撲檢索。
+- **🦆 DuckDB 產業鏈圖譜持久化與量化指標注入 (`data/duckdb_manager.py`)**：
+  - 新增 `tw_industry_chains`、`tw_industry_nodes` 與 `tw_industry_relations` 實體圖譜表格與索引。
+  - 實作 `init_industry_chain_tables()`、`save_industry_nodes_batch()`、`save_industry_relations_batch()`、`get_industry_nodes()`、`get_industry_relations()`。
+  - 實作 `get_enriched_industry_quotes()`：圖譜節點動態關聯最新收盤價、當日真實漲跌幅、Mistral Timestral 與 Google TimesFM 雙時序大模型目標價與投信連買籌碼天數。
+- **🌐 產業圖譜 REST API 端點與 Pydantic 資料模型 (`api/schemas.py`, `api/routes/industry_chain.py`, `api/main.py`)**：
+  - 新增 `IndustryThemeItem`、`IndustryThemesResponse`、`IndustryGraphNode`、`IndustryGraphEdge` 與 `IndustryGraphResponse`。
+  - 新增 `GET /api/v1/industry-chain/themes`：回傳主題清單與上中下游成分股數量統計。
+  - 新增 `GET /api/v1/industry-chain/graph`：支援 `theme` 與 `relation_type` 篩選，回傳動態量化注入之圖譜拓撲。
+- **🎨 前端三欄式產業圖譜畫布與動態 SVG 貝茲曲線 (`api/templates/partials/tab_industry_chain.html`, `api/templates/partials/header.html`, `api/templates/index.html`, `api/static/js/api-client.js`, `api/static/js/app.js`)**：
+  - 三欄階層式畫布（`上游 UPSTREAM` ➔ `中游 MIDSTREAM` ➔ `下游 DOWNSTREAM`），支援 Bloomberg 終端曜石黑深色與 2md 暖米淺色雙模式 (WCAG AAA)。
+  - 互動 SVG 貝茲連線計算 (`M x1 y1 C cx1 cy1, cx2 cy2, x2 y2`)，區分 `產業鏈`、`資本開支`、`大客戶依賴` 與 `主題關聯` 顏色光暈。
+  - 支援卡片點選高亮傳導網絡（無關節點半透明淡化至 0.2）、畫布滾輪/按鈕縮放 (60%~160%)、隱藏未連線節點開關與一鍵跳轉個股歷史 K 線。
+  - 桌面導覽列與行動端底部 App Bar 整合「產業圖譜」分頁。
+- **🧪 完整單元測試覆蓋 (`test/test_industry_chain.py`)**：
+  - 100% 覆蓋擷取器、離線降級、DuckDB 讀寫與 FastAPI REST 端點測試。
+- **🏷️ 版本升級至 v2.4.48 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.47)
 
 ### Added & Core (Production-Grade Market Trading Calendar & Holiday Guard Engine)

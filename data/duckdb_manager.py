@@ -491,6 +491,7 @@ class DuckDBManager:
                 except Exception as alter_e:
                     logger.debug(f"DuckDB schema migration note: {alter_e}")
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
+            self.init_industry_chain_tables()
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
 
@@ -3558,4 +3559,372 @@ class DuckDBManager:
                 "signal_count": 0,
                 "message": str(e)
             }
+
+    # =========================================================================
+    # 產業價值鏈與實體關係圖譜持久化 (Industry Supply Chain Knowledge Graph)
+    # =========================================================================
+
+    def init_industry_chain_tables(self):
+        """初始化產業價值鏈與實體關係圖譜表格"""
+        if not self.enabled:
+            return
+        try:
+            with self._get_connection() as con:
+                con.execute("""
+                CREATE TABLE IF NOT EXISTS tw_industry_chains (
+                    chain_id VARCHAR PRIMARY KEY,
+                    name VARCHAR,
+                    name_en VARCHAR,
+                    category VARCHAR,
+                    description VARCHAR,
+                    updated_at VARCHAR
+                );
+                ALTER TABLE tw_industry_chains ADD COLUMN IF NOT EXISTS name_en VARCHAR;
+                ALTER TABLE tw_industry_chains ADD COLUMN IF NOT EXISTS description VARCHAR;
+
+                CREATE TABLE IF NOT EXISTS tw_industry_nodes (
+                    ticker VARCHAR,
+                    company VARCHAR,
+                    market VARCHAR,
+                    chain_id VARCHAR,
+                    layer VARCHAR,
+                    role VARCHAR,
+                    key_focus VARCHAR,
+                    theme_tags VARCHAR,
+                    PRIMARY KEY (ticker, chain_id, layer)
+                );
+
+                CREATE TABLE IF NOT EXISTS tw_industry_relations (
+                    source_ticker VARCHAR,
+                    target_ticker VARCHAR,
+                    relation_type VARCHAR,
+                    description VARCHAR,
+                    weight DOUBLE,
+                    PRIMARY KEY (source_ticker, target_ticker, relation_type)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_ind_nodes_ticker ON tw_industry_nodes (ticker);
+                CREATE INDEX IF NOT EXISTS idx_ind_nodes_chain ON tw_industry_nodes (chain_id);
+                CREATE INDEX IF NOT EXISTS idx_ind_rel_src ON tw_industry_relations (source_ticker);
+                CREATE INDEX IF NOT EXISTS idx_ind_rel_tgt ON tw_industry_relations (target_ticker);
+                """)
+            logger.info("✅ DuckDB 產業鏈圖譜表格 (tw_industry_chains / nodes / relations) 初始化成功")
+        except Exception as e:
+            logger.error(f"❌ 初始化產業鏈圖譜表格失敗: {e}")
+
+    def save_industry_chains_batch(self, records: List[Dict[str, Any]]) -> int:
+        """
+        批次寫入產業鏈主題定義，自動去重 (Upsert on chain_id)
+        """
+        if not self.enabled or not records:
+            return 0
+        df = pd.DataFrame(records)
+        expected_cols = ["chain_id", "name", "name_en", "category", "description"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        try:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    con.register("temp_industry_chains_df", df[expected_cols])
+                    con.execute("""
+                    DELETE FROM tw_industry_chains
+                    WHERE chain_id IN (SELECT chain_id FROM temp_industry_chains_df);
+                    """)
+                    con.execute("""
+                    INSERT INTO tw_industry_chains (chain_id, name, name_en, category, description, updated_at)
+                    SELECT chain_id, name, name_en, category, description, CURRENT_TIMESTAMP
+                    FROM temp_industry_chains_df;
+                    """)
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆產業鏈主題至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_industry_chains 失敗: {e}", exc_info=True)
+            return 0
+
+    def save_industry_nodes_batch(self, records: List[Dict[str, Any]]) -> int:
+        """
+        批次寫入產業鏈節點，自動去重 (Upsert on ticker + chain_id + layer)
+        """
+        if not self.enabled or not records:
+            return 0
+        df = pd.DataFrame(records)
+        expected_cols = ["ticker", "company", "market", "chain_id", "layer", "role", "key_focus", "theme_tags"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        df["theme_tags"] = df["theme_tags"].apply(
+            lambda v: json.dumps(v, ensure_ascii=False) if isinstance(v, (list, set)) else str(v or "[]")
+        )
+
+        try:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    con.register("temp_industry_nodes_df", df[expected_cols])
+                    con.execute("""
+                    DELETE FROM tw_industry_nodes
+                    WHERE (ticker, chain_id, layer) IN (
+                        SELECT ticker, chain_id, layer FROM temp_industry_nodes_df
+                    );
+                    """)
+                    con.execute("INSERT INTO tw_industry_nodes SELECT * FROM temp_industry_nodes_df;")
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆產業鏈節點至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_industry_nodes 失敗: {e}", exc_info=True)
+            return 0
+
+    def save_industry_relations_batch(self, records: List[Dict[str, Any]]) -> int:
+        """
+        批次寫入產業鏈關係邊，自動去重 (Upsert on source_ticker + target_ticker + relation_type)
+        """
+        if not self.enabled or not records:
+            return 0
+        df = pd.DataFrame(records)
+        expected_cols = ["source_ticker", "target_ticker", "relation_type", "description", "weight"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = None
+
+        df["weight"] = pd.to_numeric(df["weight"], errors="coerce").fillna(1.0)
+
+        try:
+            with self._WRITE_LOCK:
+                with self._get_connection() as con:
+                    con.register("temp_industry_rels_df", df[expected_cols])
+                    con.execute("""
+                    DELETE FROM tw_industry_relations
+                    WHERE (source_ticker, target_ticker, relation_type) IN (
+                        SELECT source_ticker, target_ticker, relation_type FROM temp_industry_rels_df
+                    );
+                    """)
+                    con.execute("INSERT INTO tw_industry_relations SELECT * FROM temp_industry_rels_df;")
+            logger.info(f"💾 成功寫入/更新 {len(df)} 筆產業鏈關係邊至 DuckDB")
+            return len(df)
+        except Exception as e:
+            logger.error(f"❌ 寫入 tw_industry_relations 失敗: {e}", exc_info=True)
+            return 0
+
+    def get_industry_nodes(
+        self,
+        chain_id: Optional[str] = None,
+        layer: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        查詢產業鏈節點，支援依 chain_id 或 layer 篩選
+        """
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection(read_only=True) as con:
+                query = "SELECT ticker, company, market, chain_id, layer, role, key_focus, theme_tags FROM tw_industry_nodes WHERE 1=1"
+                params = []
+                if chain_id:
+                    query += " AND chain_id = ?"
+                    params.append(chain_id)
+                if layer:
+                    query += " AND layer = ?"
+                    params.append(layer)
+                query += " ORDER BY layer, ticker"
+                df = con.execute(query, params).df()
+                if df.empty:
+                    return []
+                records = df.to_dict(orient="records")
+                for r in records:
+                    tt = r.get("theme_tags")
+                    if isinstance(tt, str):
+                        try:
+                            r["theme_tags"] = json.loads(tt)
+                        except Exception:
+                            r["theme_tags"] = [t.strip() for t in tt.split(",") if t.strip()]
+                    elif not isinstance(tt, list):
+                        r["theme_tags"] = []
+                return records
+        except Exception as e:
+            logger.warning(f"DuckDB 查詢 industry_nodes 失敗: {e}")
+            return []
+
+    def get_industry_relations(
+        self,
+        source_ticker: Optional[str] = None,
+        target_ticker: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        查詢產業鏈關係邊，支援依 source_ticker 或 target_ticker 篩選
+        """
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection(read_only=True) as con:
+                query = "SELECT source_ticker, target_ticker, relation_type, description, weight FROM tw_industry_relations WHERE 1=1"
+                params = []
+                if source_ticker:
+                    query += " AND source_ticker = ?"
+                    params.append(source_ticker)
+                if target_ticker:
+                    query += " AND target_ticker = ?"
+                    params.append(target_ticker)
+                df = con.execute(query, params).df()
+                if df.empty:
+                    return []
+                return df.to_dict(orient="records")
+        except Exception as e:
+            logger.warning(f"DuckDB 查詢 industry_relations 失敗: {e}")
+            return []
+
+    def get_enriched_industry_quotes(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        為圖譜節點批次關聯最新收盤價、漲跌幅、Timestral/TimesFM 目標價與法人連買天數
+        """
+        if not self.enabled or not tickers:
+            return {}
+
+        clean_map = {}
+        for t in tickers:
+            if not t:
+                continue
+            raw = str(t).strip().upper()
+            clean_map[raw] = raw
+            if "." in raw:
+                clean_map[raw.split(".")[0]] = raw
+
+        unique_tickers = list(set(clean_map.keys()))
+        enrichment: Dict[str, Dict[str, Any]] = {}
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                # 1. 批次查詢 predictions 表中最新時序大模型預測與現價
+                placeholders = ",".join(["?"] * len(unique_tickers))
+                pred_query = f"""
+                    WITH targets AS (SELECT UNNEST([{placeholders}]) AS t_raw),
+                    ranked_pred AS (
+                        SELECT
+                            p.ticker,
+                            p.current_price,
+                            p.potential,
+                            p.model_name,
+                            p.timestral_potential,
+                            p.timesfm_potential,
+                            p.dual_model_consensus,
+                            p.trust_net_5d,
+                            p.foreign_net_5d,
+                            p.timestamp,
+                            DENSE_RANK() OVER (PARTITION BY p.ticker ORDER BY p.timestamp DESC) as rank_time
+                        FROM predictions p
+                        WHERE p.ticker IN (SELECT t_raw FROM targets)
+                           OR p.ticker IN (SELECT t_raw || '.TW' FROM targets)
+                           OR p.ticker IN (SELECT t_raw || '.TWO' FROM targets)
+                    )
+                    SELECT
+                        ticker,
+                        MAX(current_price) as current_price,
+                        MAX(COALESCE(timestral_potential, CASE WHEN LOWER(model_name) LIKE '%timestral%' THEN potential END)) as timestral_potential,
+                        MAX(COALESCE(timesfm_potential, CASE WHEN LOWER(model_name) LIKE '%timesfm%' THEN potential END)) as timesfm_potential,
+                        BOOL_OR(COALESCE(dual_model_consensus, FALSE)) as dual_model_consensus,
+                        MAX(trust_net_5d) as trust_net_5d,
+                        MAX(foreign_net_5d) as foreign_net_5d
+                    FROM ranked_pred
+                    WHERE rank_time = 1
+                    GROUP BY ticker;
+                """
+                pred_df = con.execute(pred_query, unique_tickers).df()
+                if not pred_df.empty:
+                    for _, row in pred_df.iterrows():
+                        t_key = str(row["ticker"]).split(".")[0]
+                        enrichment[t_key] = {
+                            "current_price": float(row["current_price"]) if row["current_price"] is not None and not pd.isna(row["current_price"]) else None,
+                            "change_pct": None,
+                            "timestral_potential": float(row["timestral_potential"]) if row["timestral_potential"] is not None and not pd.isna(row["timestral_potential"]) else None,
+                            "timesfm_potential": float(row["timesfm_potential"]) if row["timesfm_potential"] is not None and not pd.isna(row["timesfm_potential"]) else None,
+                            "dual_model_consensus": bool(row["dual_model_consensus"]) if row["dual_model_consensus"] is not None and not pd.isna(row["dual_model_consensus"]) else None,
+                            "institutional_streak": None,
+                        }
+                        # 若有 5 日投信買超記錄，可作初步籌碼標記
+                        t_net = row.get("trust_net_5d")
+                        if t_net is not None and not pd.isna(t_net) and int(t_net) > 0:
+                            enrichment[t_key]["institutional_streak"] = f"投信5D+{int(t_net):,}張"
+
+                # 2. 批次從 tw_daily_bars 取得最新兩日收盤價以計算真實當日漲跌幅
+                try:
+                    bars_query = f"""
+                        WITH targets AS (SELECT UNNEST([{placeholders}]) AS t_raw),
+                        ranked_bars AS (
+                            SELECT
+                                b.ticker,
+                                b.close,
+                                b.date,
+                                ROW_NUMBER() OVER (PARTITION BY b.ticker ORDER BY b.date DESC) as rn
+                            FROM tw_daily_bars b
+                            WHERE b.ticker IN (SELECT t_raw FROM targets)
+                               OR b.ticker IN (SELECT t_raw || '.TW' FROM targets)
+                               OR b.ticker IN (SELECT t_raw || '.TWO' FROM targets)
+                        )
+                        SELECT ticker, close, date, rn FROM ranked_bars WHERE rn <= 2;
+                    """
+                    bars_df = con.execute(bars_query, unique_tickers).df()
+                    if not bars_df.empty:
+                        for (raw_t,), group in bars_df.groupby(["ticker"]):
+                            t_key = str(raw_t).split(".")[0]
+                            sorted_group = group.sort_values(by="rn")
+                            if len(sorted_group) >= 1:
+                                latest_close = float(sorted_group.iloc[0]["close"])
+                                if t_key not in enrichment:
+                                    enrichment[t_key] = {"current_price": latest_close}
+                                else:
+                                    enrichment[t_key]["current_price"] = latest_close
+
+                                if len(sorted_group) >= 2:
+                                    prev_close = float(sorted_group.iloc[1]["close"])
+                                    if prev_close > 0:
+                                        pct = round(((latest_close - prev_close) / prev_close) * 100, 2)
+                                        enrichment[t_key]["change_pct"] = pct
+                except Exception as bar_e:
+                    logger.debug(f"tw_daily_bars 查詢補充略過: {bar_e}")
+
+                # 3. 批次查詢 tw_institutional_daily 連買天數
+                try:
+                    inst_query = f"""
+                        WITH targets AS (SELECT UNNEST([{placeholders}]) AS t_raw),
+                        ranked_inst AS (
+                            SELECT
+                                i.ticker,
+                                i.trust_net,
+                                i.foreign_net,
+                                i.date,
+                                ROW_NUMBER() OVER (PARTITION BY i.ticker ORDER BY i.date DESC) as rn
+                            FROM tw_institutional_daily i
+                            WHERE i.ticker IN (SELECT t_raw FROM targets)
+                               OR i.ticker IN (SELECT t_raw || '.TW' FROM targets)
+                               OR i.ticker IN (SELECT t_raw || '.TWO' FROM targets)
+                        )
+                        SELECT ticker, trust_net, foreign_net, date, rn FROM ranked_inst WHERE rn <= 5;
+                    """
+                    inst_df = con.execute(inst_query, unique_tickers).df()
+                    if not inst_df.empty:
+                        for (raw_t,), group in inst_df.groupby(["ticker"]):
+                            t_key = str(raw_t).split(".")[0]
+                            sorted_group = group.sort_values(by="rn")
+                            # 計算投信連買
+                            trust_streak = 0
+                            for _, r in sorted_group.iterrows():
+                                if r["trust_net"] is not None and r["trust_net"] > 0:
+                                    trust_streak += 1
+                                else:
+                                    break
+                            if trust_streak >= 2:
+                                if t_key in enrichment:
+                                    enrichment[t_key]["institutional_streak"] = f"投信連買{trust_streak}D"
+                            elif trust_streak == 1:
+                                if t_key in enrichment and not enrichment[t_key].get("institutional_streak"):
+                                    enrichment[t_key]["institutional_streak"] = "投信買超"
+                except Exception as inst_e:
+                    logger.debug(f"tw_institutional_daily 連買查詢略過: {inst_e}")
+
+        except Exception as e:
+            logger.warning(f"DuckDB 批量補強行情失敗: {e}")
+
+        return enrichment
+
 

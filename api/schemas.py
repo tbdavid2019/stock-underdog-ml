@@ -386,3 +386,61 @@ class TradingDayStatusResponse(BaseModel):
     previous_trading_day: Optional[str] = Field(None, description="前一開盤交易日 (YYYY-MM-DD)")
 
 
+# =========================================================================
+# 產業價值鏈與實體關係圖譜 Pydantic 模型 (Industry Value Chain Graph)
+# =========================================================================
+
+class IndustryThemeItem(BaseModel):
+    id: str = Field(..., description="主題代號 (如 ALL, HBM_STORAGE, CPO_OPTICAL)")
+    name: str = Field(..., description="主題名稱")
+    name_en: Optional[str] = Field(None, description="主題英文名稱")
+    description: Optional[str] = Field(None, description="主題描述與瓶頸說明")
+    count: int = Field(0, description="納入標的總數")
+    upstream_count: int = Field(0, description="上游標的數量")
+    midstream_count: int = Field(0, description="中游標的數量")
+    downstream_count: int = Field(0, description="下游標的數量")
+
+
+class IndustryThemesResponse(BaseModel):
+    success: bool = True
+    total_themes: int = Field(..., description="主題總數")
+    data: List[IndustryThemeItem] = Field(default_factory=list, description="主題清單")
+
+
+class IndustryGraphNode(BaseModel):
+    ticker: str = Field(..., description="股票代號 (如 2330, NVDA)")
+    company: str = Field(..., description="公司名稱")
+    market: str = Field(..., description="所屬市場 (TW 或 US)")
+    layer: str = Field(..., description="產業鏈層級 (upstream, midstream, downstream)")
+    role: str = Field(..., description="產業角色定位")
+    key_focus: Optional[str] = Field(None, description="關鍵核心業務或產品")
+    theme_tags: List[str] = Field(default_factory=list, description="所屬主題標籤清單")
+    current_price: Optional[float] = Field(None, description="最新收盤價")
+    change_pct: Optional[float] = Field(None, description="今日漲跌幅 (%)")
+    timestral_potential: Optional[float] = Field(None, description="Timestral 模型預測漲跌幅 (%)")
+    timesfm_potential: Optional[float] = Field(None, description="TimesFM 模型預測漲跌幅 (%)")
+    institutional_streak: Optional[str] = Field(None, description="法人連買賣超天數 (如 投信連買4D)")
+    dual_model_consensus: Optional[bool] = Field(None, description="雙時序模型是否看漲共振")
+
+
+class IndustryGraphEdge(BaseModel):
+    source: str = Field(..., description="來源股票代號")
+    target: str = Field(..., description="目標股票代號")
+    relation_type: str = Field(..., description="關係類型 (產業鏈, 資本開支, 大客戶依賴, 主題關聯)")
+    desc: Optional[str] = Field(None, description="關係細部描述")
+    weight: Optional[float] = Field(1.0, description="關係權重 (0.0 ~ 1.0)")
+
+
+class IndustryGraphResponse(BaseModel):
+    success: bool = True
+    theme: str = Field(..., description="當前選定主題")
+    relation_filter: str = Field(..., description="當前關係篩選")
+    total_nodes: int = Field(..., description="圖譜總節點數")
+    upstream_nodes: List[IndustryGraphNode] = Field(default_factory=list, description="上游節點")
+    midstream_nodes: List[IndustryGraphNode] = Field(default_factory=list, description="中游節點")
+    downstream_nodes: List[IndustryGraphNode] = Field(default_factory=list, description="下游節點")
+    edges: List[IndustryGraphEdge] = Field(default_factory=list, description="關係邊清單")
+    summary: Dict[str, Any] = Field(default_factory=dict, description="統計概況")
+
+
+

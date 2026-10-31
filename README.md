@@ -165,7 +165,16 @@ graph TD
 * **雙層原子持久化與連線分離**：DuckDB 交易成功 commit 後，以 `tempfile + os.replace` 原子替換靜態 JSON 快照；FastAPI 查詢端強制使用 `read_only=True`，杜絕連線衝突。
 * **4/2/1 彭博終端情報矩陣**：前端整合 KPI 摘要卡、原生 Inline SVG 趨勢迷你圖、個股研究卡（Dossier）lazy-render 展開與手機底部橫向滾動適配。
 
-### 13. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
+### 13. 🕸️ 跨市場 AI 產業價值鏈與供應鏈傳導圖譜 (Cross-Market AI Value Chain & Supply Graph)
+* **官方權威分類與 SEC 10-K 大客戶披露結合**：串接櫃買中心與證交所「產業價值鏈資訊平台 (`ic.tpex.org.tw`)」，結合美國 SEC EDGAR 10-K 年報中主要客戶法定文字披露（>10% 營收依賴），打造零 Key、免付費、權威度高之台美產業動態圖譜。
+* **8 大前沿主題與三欄階層畫布（上游 ➔ 中游 ➔ 下游）**：
+  - 涵蓋 `全部主題`、`HBM/儲存`、`CPO/光互聯`、`電力/液冷`、`先進封裝`、`AI晶片/算力`、`伺服器/ODM` 與 `機器人/具身智能`。
+  - 採用前端動態 SVG 三次貝茲曲線 (`M x1 y1 C cx1 cy1, cx2 cy2, x2 y2`) 連結上中下游，視覺化呈現零組件供應、雲端 CapEx 驅動、大客戶依賴與戰略生態關聯。
+* **即時量化預測與法人籌碼動態注入**：
+  - 每個產業鏈節點在查詢時由 DuckDB 時序引擎即時融合：最新收盤價、今日真實漲跌幅、Mistral Timestral-209M 與 Google TimesFM 隔日目標價預測，以及三大法人/投信連買天數標籤。
+* **流暢互動導航**：點擊任一標的卡片即時高亮其上下游關聯供應鏈網絡（無關節點淡化），支援滾輪縮放、平移、隱藏未連線節點與一鍵直達個股技術 K 線歷史。
+
+### 14. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
 * **智慧裝置自適應**：手機直向螢幕（`< 768px`）自動預設為單欄式高密度情報卡片（`Card View`），觸控人體工學友善，手動切換狀態自動同步至 `localStorage`。
 * **表格模式 RWD 混合轉譯 (Hybrid Table-to-Card)**：當使用者在手機上選擇表格模式時，自動轉譯為**「高密度行動量化卡片」**，保留 # 排名、代號、現價、目標價、PE/PB、法人籌碼與抽屜展開，文字絕不垂直擠壓折行。
 * **桌面彭博寬表格**：平板與桌面端（`>= 768px`）提供專業級寬表格，賦予 `min-w-[980px]` 與所有欄位 `whitespace-nowrap`，保障橫向滑動體驗流暢穩固。
@@ -337,6 +346,8 @@ graph TD
 | `/api/v1/discovery/signals` | `GET` | 查詢前沿訊號事件流與情緒指標 |
 | `/api/v1/discovery/history` | `GET` | 查詢前沿雷達候選數量、論文數量與評分時序趨勢 |
 | `/api/v1/discovery/status` | `GET` | 取得 Discovery 管線健康度、快照基準日與 Stale 降級標記 |
+| `/api/v1/industry-chain/themes` | `GET` | 取得 AI 產業價值鏈主題清單與上中下游成分股數量統計 |
+| `/api/v1/industry-chain/graph` | `GET` | 查詢跨市場產業價值鏈三欄拓撲結構，動態注入現價、漲跌幅、時序大模型目標價與法人連買籌碼 |
 
 ---
 

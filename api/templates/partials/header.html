@@ -38,6 +38,12 @@
                     <span class="material-symbols-outlined text-[18px]">history</span>
                     <span>個股歷史</span>
                 </button>
+                <button @click="setTab('industry_chain')" :aria-current="activeTab === 'industry_chain' ? 'page' : undefined"
+                        :class="activeTab === 'industry_chain' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                    <span class="material-symbols-outlined text-[18px]">hub</span>
+                    <span>產業圖譜</span>
+                </button>
                 <button @click="setTab('podcast')" :aria-current="activeTab === 'podcast' ? 'page' : undefined"
                         :class="activeTab === 'podcast' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
                         class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
@@ -125,6 +131,13 @@
                 class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">history</span>
             <span class="truncate">個股歷史</span>
+        </button>
+        <button @click="setTab('industry_chain')"
+                :aria-current="activeTab === 'industry_chain' ? 'page' : undefined"
+                :class="activeTab === 'industry_chain' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+            <span class="material-symbols-outlined text-[20px] leading-none">hub</span>
+            <span class="truncate">產業圖譜</span>
         </button>
         <button @click="setTab('podcast')"
                 :aria-current="activeTab === 'podcast' ? 'page' : undefined"

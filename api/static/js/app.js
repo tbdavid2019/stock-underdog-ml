@@ -98,6 +98,25 @@ export const app = createApp({
             brokerSeries: [],
             brokerSummary: {},
 
+            // Industry Value Chain Knowledge Graph
+            industryThemes: [],
+            selectedTheme: 'ALL',
+            selectedRelationType: 'ALL',
+            industryGraphData: {
+                summary: { upstream_count: 0, midstream_count: 0, downstream_count: 0, edge_count: 0 },
+                upstream_nodes: [],
+                midstream_nodes: [],
+                downstream_nodes: [],
+                edges: []
+            },
+            selectedNodeTicker: null,
+            highlightedNodes: [],
+            highlightedEdges: [],
+            industryLoading: false,
+            graphZoom: 1.0,
+            hideUnconnectedNodes: false,
+            bezierPaths: [],
+
             // Ticker Explorer
             searchTicker: '2330.TW',
             historyRecords: [],
@@ -1326,6 +1345,8 @@ export const app = createApp({
                 this.loadPodcastEpisodes();
                 this.loadPodcastChannels();
                 this.loadPodcastTopics();
+            } else if (tab === 'industry_chain') {
+                this.loadIndustryChainData();
             } else if (tab === 'discovery') {
                 this.loadDiscoveryData();
             }
@@ -1695,6 +1716,13 @@ export const app = createApp({
                     if (this.discoverySelectedTheme && this.discoverySelectedTheme !== 'ALL') {
                         params.set('theme', this.discoverySelectedTheme);
                     }
+                } else if (this.activeTab === 'industry_chain') {
+                    if (this.selectedTheme && this.selectedTheme !== 'ALL') {
+                        params.set('theme', this.selectedTheme);
+                    }
+                    if (this.selectedRelationType && this.selectedRelationType !== 'ALL') {
+                        params.set('rel', this.selectedRelationType);
+                    }
                 }
                 const queryStr = params.toString();
                 const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
@@ -1717,7 +1745,7 @@ export const app = createApp({
                 if (!tab && tickerParam) {
                     this.activeTab = 'history';
                 } else {
-                    this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'agent_hub', 'podcast', 'discovery'].includes(tab)) ? tab : 'dashboard';
+                    this.activeTab = (tab && ['dashboard', 'institutional', 'history', 'industry_chain', 'agent_hub', 'podcast', 'discovery'].includes(tab)) ? tab : 'dashboard';
                 }
 
                 const strat = params.get('strategy');
@@ -1739,6 +1767,10 @@ export const app = createApp({
                 this.podcastSelectedChannel = params.get('channel') || 'ALL';
                 this.podcastSelectedLang = params.get('lang') || 'ALL';
                 this.discoverySelectedTheme = params.get('theme') || 'ALL';
+                if (tab === 'industry_chain') {
+                    if (params.get('theme')) this.selectedTheme = params.get('theme');
+                    if (params.get('rel')) this.selectedRelationType = params.get('rel');
+                }
             } catch (e) {
                 console.debug("Parse URL params error:", e);
             }
@@ -1757,6 +1789,8 @@ export const app = createApp({
                 if (this.searchTicker) {
                     this.loadHistory();
                 }
+            } else if (this.activeTab === 'industry_chain') {
+                this.loadIndustryChainData();
             } else if (this.activeTab === 'podcast') {
                 this.loadPodcastEpisodes();
                 this.loadPodcastChannels();
@@ -2267,6 +2301,252 @@ export const app = createApp({
             } catch (e) {
                 console.warn('[Chrome WebMCP] Registration warning:', e);
             }
+        },
+
+        // =========================================================================
+        // AI 產業價值鏈與供應鏈傳導圖譜 (Industry Value Chain Knowledge Graph)
+        // =========================================================================
+
+        async loadIndustryChainData() {
+            await this.fetchIndustryThemes();
+            await this.fetchIndustryGraph();
+        },
+
+        async fetchIndustryThemes() {
+            try {
+                const res = await ApiClient.getIndustryThemes();
+                if (res && res.data) {
+                    this.industryThemes = res.data;
+                }
+            } catch (e) {
+                console.warn("fetchIndustryThemes error:", e);
+            }
+        },
+
+        async fetchIndustryGraph() {
+            if (!this.industryGraphData || !this.industryGraphData.upstream_nodes || !this.industryGraphData.upstream_nodes.length) {
+                this.industryLoading = true;
+            }
+            if (this._industryGraphReqId === undefined) this._industryGraphReqId = 0;
+            const reqId = ++this._industryGraphReqId;
+
+            try {
+                const res = await ApiClient.getIndustryGraph(this.selectedTheme, this.selectedRelationType);
+                if (reqId !== this._industryGraphReqId) {
+                    return; // 忽略被後續篩選請求覆蓋的過期回應
+                }
+                if (res && res.success) {
+                    this.industryGraphData = res;
+                    if (this.selectedNodeTicker) {
+                        const allNodes = [
+                            ...(res.upstream_nodes || []),
+                            ...(res.midstream_nodes || []),
+                            ...(res.downstream_nodes || []),
+                        ];
+                        const exists = allNodes.some(n => n.ticker === this.selectedNodeTicker);
+                        if (exists) {
+                            this.selectNode(this.selectedNodeTicker);
+                        } else {
+                            this.clearNodeSelection();
+                        }
+                    }
+                    this.$nextTick(() => {
+                        this.renderIndustryBeziers();
+                    });
+                }
+            } catch (e) {
+                if (reqId !== this._industryGraphReqId) return;
+                console.warn("fetchIndustryGraph error:", e);
+                this.showToast("載入產業鏈圖譜失敗：" + e.message);
+            } finally {
+                if (reqId === this._industryGraphReqId) {
+                    this.industryLoading = false;
+                }
+            }
+        },
+
+        selectTheme(themeId) {
+            if (this.selectedTheme === themeId) return;
+            this.selectedTheme = themeId;
+            this.clearNodeSelection();
+            this.fetchIndustryGraph();
+            this.updateUrl();
+        },
+
+        selectRelationType(relType) {
+            if (this.selectedRelationType === relType) return;
+            this.selectedRelationType = relType;
+            this.fetchIndustryGraph();
+            this.updateUrl();
+        },
+
+        selectNode(ticker) {
+            if (this.selectedNodeTicker === ticker) {
+                this.clearNodeSelection();
+                return;
+            }
+            this.selectedNodeTicker = ticker;
+            const connected = new Set([ticker]);
+            const connEdges = [];
+            const edges = this.industryGraphData.edges || [];
+            for (const e of edges) {
+                if (e.source === ticker) {
+                    connected.add(e.target);
+                    connEdges.push(e);
+                }
+                if (e.target === ticker) {
+                    connected.add(e.source);
+                    connEdges.push(e);
+                }
+            }
+            this.highlightedNodes = Array.from(connected);
+            this.highlightedEdges = connEdges;
+            this.$nextTick(() => {
+                this.renderIndustryBeziers();
+            });
+        },
+
+        clearNodeSelection() {
+            if (!this.selectedNodeTicker) return;
+            this.selectedNodeTicker = null;
+            this.highlightedNodes = [];
+            this.highlightedEdges = [];
+            this.$nextTick(() => {
+                this.renderIndustryBeziers();
+            });
+        },
+
+        onCanvasBackgroundClick(event) {
+            const target = event.target;
+            if (target && !target.closest('[data-ticker]')) {
+                this.clearNodeSelection();
+            }
+        },
+
+        hasNodeConnections(ticker) {
+            const edges = this.industryGraphData.edges || [];
+            return edges.some(e => e.source === ticker || e.target === ticker);
+        },
+
+        getNodeCardClasses(ticker) {
+            const isDark = this.isDark;
+            if (!this.selectedNodeTicker) {
+                return isDark
+                    ? 'bg-[#0D0E11] border-[#262626] hover:border-slate-500 hover:shadow-md'
+                    : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-[#6B5B38] hover:shadow-md';
+            }
+
+            if (ticker === this.selectedNodeTicker) {
+                return (isDark ? 'bg-[#16181D] ' : 'bg-[#FFFDF7] ') +
+                    'ring-2 ring-amber-400 border-amber-400 shadow-xl shadow-amber-500/20 scale-[1.02] z-30';
+            }
+
+            if (this.highlightedNodes.includes(ticker)) {
+                return (isDark ? 'bg-[#16181D] ' : 'bg-[#FFFDF7] ') +
+                    'ring-1 ring-sky-400 border-sky-400 shadow-md shadow-sky-500/10 opacity-100 z-20';
+            }
+
+            return (isDark ? 'bg-[#0D0E11] border-[#262626] ' : 'bg-[#FFF9E8] border-[#DDC58B] ') +
+                'opacity-20 grayscale-[70%]';
+        },
+
+        zoomIn() {
+            if (this.graphZoom < 1.6) {
+                this.graphZoom = Math.round((this.graphZoom + 0.1) * 10) / 10;
+                this.$nextTick(() => this.renderIndustryBeziers());
+                setTimeout(() => this.renderIndustryBeziers(), 160);
+            }
+        },
+
+        zoomOut() {
+            if (this.graphZoom > 0.6) {
+                this.graphZoom = Math.round((this.graphZoom - 0.1) * 10) / 10;
+                this.$nextTick(() => this.renderIndustryBeziers());
+                setTimeout(() => this.renderIndustryBeziers(), 160);
+            }
+        },
+
+        resetZoom() {
+            this.graphZoom = 1.0;
+            this.$nextTick(() => this.renderIndustryBeziers());
+            setTimeout(() => this.renderIndustryBeziers(), 160);
+        },
+
+        renderIndustryBeziers() {
+            if (this.activeTab !== 'industry_chain') return;
+            const svgEl = document.getElementById('industry-chain-svg');
+            const wrapperEl = document.getElementById('industry-canvas-wrapper');
+            if (!svgEl || !wrapperEl) return;
+
+            const wrapperRect = wrapperEl.getBoundingClientRect();
+            const scrollLeft = wrapperEl.scrollLeft || 0;
+            const scrollTop = wrapperEl.scrollTop || 0;
+
+            const edges = this.industryGraphData.edges || [];
+            const paths = [];
+
+            for (const edge of edges) {
+                const srcEl = document.getElementById('ind-card-' + edge.source);
+                const tgtEl = document.getElementById('ind-card-' + edge.target);
+                if (!srcEl || !tgtEl) continue;
+
+                // 檢查是否被隱藏
+                if (srcEl.offsetParent === null || tgtEl.offsetParent === null) continue;
+
+                const srcRect = srcEl.getBoundingClientRect();
+                const tgtRect = tgtEl.getBoundingClientRect();
+
+                // 相對於 canvas wrapper 之錨點坐標
+                const x1 = (srcRect.right - wrapperRect.left) + scrollLeft;
+                const y1 = (srcRect.top + srcRect.height / 2 - wrapperRect.top) + scrollTop;
+                const x2 = (tgtRect.left - wrapperRect.left) + scrollLeft;
+                const y2 = (tgtRect.top + tgtRect.height / 2 - wrapperRect.top) + scrollTop;
+
+                // 若源卡片在目標卡片右側 (例如回流反向邊) 或同行
+                const isForward = x2 > x1 + 40;
+                const dx = isForward ? Math.max(40, (x2 - x1) * 0.5) : 60;
+                const cx1 = isForward ? x1 + dx : x1 + dx;
+                const cy1 = y1;
+                const cx2 = isForward ? x2 - dx : x2 - dx;
+                const cy2 = y2;
+                const d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${cx1.toFixed(1)} ${cy1.toFixed(1)}, ${cx2.toFixed(1)} ${cy2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+
+                let color = '#38BDF8'; // 產業鏈 (Sky blue)
+                if (edge.relation_type === '資本開支') color = '#34D399'; // Emerald
+                else if (edge.relation_type === '大客戶依賴') color = '#F59E0B'; // Amber
+                else if (edge.relation_type === '主題關聯') color = '#A855F7'; // Purple
+
+                let opacity = 0.45;
+                let width = 1.5;
+                let isHighlighted = false;
+                let dashArray = 'none';
+
+                if (this.selectedNodeTicker) {
+                    if (edge.source === this.selectedNodeTicker || edge.target === this.selectedNodeTicker) {
+                        opacity = 1.0;
+                        width = 2.8;
+                        isHighlighted = true;
+                    } else {
+                        opacity = 0.08;
+                        width = 1.0;
+                    }
+                }
+
+                if (edge.relation_type === '主題關聯') {
+                    dashArray = '4 4';
+                }
+
+                paths.push({
+                    d,
+                    color,
+                    width,
+                    opacity,
+                    isHighlighted,
+                    dashArray
+                });
+            }
+
+            this.bezierPaths = paths;
         }
     },
     mounted() {
@@ -2292,6 +2572,8 @@ export const app = createApp({
             this.loadPodcastEpisodes();
             this.loadPodcastChannels();
             this.loadPodcastTopics();
+        } else if (this.activeTab === 'industry_chain') {
+            this.loadIndustryChainData();
         } else if (this.activeTab === 'discovery') {
             this.loadDiscoveryData();
         } else {
@@ -2302,9 +2584,18 @@ export const app = createApp({
             this.syncStateFromUrl();
         });
 
+        window.addEventListener('resize', () => {
+            if (this.activeTab === 'industry_chain') {
+                this.renderIndustryBeziers();
+            }
+        });
+
         window.addEventListener('scroll', () => {
             if (this.hoverVisible) {
                 this.hideCompanyHover(true);
+            }
+            if (this.activeTab === 'industry_chain') {
+                this.renderIndustryBeziers();
             }
         }, { passive: true });
 
