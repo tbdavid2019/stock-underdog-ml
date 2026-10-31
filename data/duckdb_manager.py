@@ -1652,6 +1652,106 @@ class DuckDBManager:
             logger.warning("讀取 market_universe 失敗: %s", e)
             return []
 
+    def get_tw_ranked_active_stocks(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """
+        獲取依近期成交金額降序排列之台股有效活躍清冊。
+        嚴格鎖定最新 market_universe 快照 (listing_status='ACTIVE') 與近期 30 天累積成交金額 > 0，
+        全面排除下市、下櫃與零成交殭屍股；當日 K 無資料時自動降級回傳最新有效清冊。
+        """
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection() as con:
+                tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
+                if "market_universe" not in tables:
+                    return []
+
+                # 檢查 tw_daily_bars 是否存在且有筆數
+                has_bars = False
+                if "tw_daily_bars" in tables:
+                    bar_count = con.execute("SELECT count(*) FROM tw_daily_bars").fetchone()[0]
+                    has_bars = bar_count > 0
+
+                if not has_bars:
+                    # 無日 K 或表為空時降級回傳 market_universe 最新有效快照標的
+                    rows = con.execute("""
+                        SELECT normalized_symbol, local_symbol, name_local, 0.0 as total_turnover
+                        FROM market_universe
+                        WHERE market = 'TW' 
+                          AND listing_status = 'ACTIVE' 
+                          AND security_type = 'EQUITY'
+                          AND snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE market = 'TW')
+                        ORDER BY normalized_symbol
+                        LIMIT ?
+                    """, [limit]).fetchall()
+                else:
+                    query = """
+                    SELECT 
+                        u.normalized_symbol as ticker,
+                        u.local_symbol,
+                        u.name_local,
+                        COALESCE(SUM(b.trade_value), 0.0) as total_turnover
+                    FROM market_universe u
+                    LEFT JOIN tw_daily_bars b ON u.normalized_symbol = b.ticker
+                    WHERE u.market = 'TW'
+                      AND u.listing_status = 'ACTIVE'
+                      AND u.security_type = 'EQUITY'
+                      AND u.snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE market = 'TW')
+                      AND (b.date IS NULL OR b.date >= (SELECT strftime('%Y-%m-%d', CAST(MAX(date) AS DATE) - INTERVAL '30 days') FROM tw_daily_bars))
+                    GROUP BY u.normalized_symbol, u.local_symbol, u.name_local
+                    HAVING total_turnover > 0
+                    ORDER BY total_turnover DESC
+                    LIMIT ?
+                    """
+                    rows = con.execute(query, [limit]).fetchall()
+
+                return [
+                    {
+                        "ticker": r[0],
+                        "local_symbol": r[1],
+                        "name_local": r[2],
+                        "total_turnover": float(r[3]),
+                    }
+                    for r in rows
+                ]
+        except Exception as e:
+            logger.warning(f"查詢台股活躍清冊失敗: {e}")
+            return []
+
+    def get_tw_symbol_map(self) -> Dict[str, str]:
+        """獲取台股代號至標準化代號對照 (local_symbol -> normalized_symbol，如 3017 -> 3017.TW, 3324 -> 3324.TWO)"""
+        if not self.enabled:
+            return {}
+        try:
+            with self._get_connection() as con:
+                tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
+                if "market_universe" not in tables:
+                    return {}
+                rows = con.execute(
+                    "SELECT local_symbol, normalized_symbol FROM market_universe WHERE market = 'TW' AND snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE market = 'TW')"
+                ).fetchall()
+                return {r[0]: r[1] for r in rows if r[0] and r[1]}
+        except Exception as e:
+            logger.debug(f"讀取台股代號對照表失敗: {e}")
+            return {}
+
+    def get_tw_name_map(self) -> Dict[str, str]:
+        """獲取台股代號與中文名稱對照表 (自 market_universe 最新快照提取)"""
+        if not self.enabled:
+            return {}
+        try:
+            with self._get_connection() as con:
+                tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
+                if "market_universe" not in tables:
+                    return {}
+                rows = con.execute(
+                    "SELECT DISTINCT normalized_symbol, name_local FROM market_universe WHERE market = 'TW' AND snapshot_date = (SELECT MAX(snapshot_date) FROM market_universe WHERE market = 'TW')"
+                ).fetchall()
+                return {r[0]: r[1] for r in rows if r[0] and r[1]}
+        except Exception as e:
+            logger.debug(f"讀取台股名稱對照表失敗: {e}")
+            return {}
+
     def save_universe_sync_run(
         self,
         source_id: str,

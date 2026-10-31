@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-10-31 (v2.4.51)
+
+### Enhanced & Scaling (1,500 Stock Dynamic Quant Universe & Navigation Hierarchy Optimization)
+- **📈 台股預測池全面擴展至 1,000 檔 (`StockFetcher.get_tw_universe`, `get_tw1000_stocks`, `get_tw_active_stocks`)**：
+  - **核心指數必選**：保障台灣50 (50 檔)、台灣中型100 (100 檔) 與 AI/科技價值鏈圖譜重點節點 (88 檔) 100% 納入。
+  - **高流動性動態排序**：透過 DuckDB 結合 `market_universe` 最新官方快照與 `tw_daily_bars` 近期 30 天累積成交金額 (`total_turnover > 0`) 由大至小排序遞補，精準捕捉上市 (TWSE) 與上櫃 (TPEx) 真正具備成交量能的潛力飆股與成長中樞。
+  - **上市櫃與下市櫃動態生命週期管理**：
+    - **新掛牌 IPO 自動感應**：每日清晨與盤後 TWSE/TPEx OpenAPI 自動寫入 `market_universe` 與 `tw_daily_bars`，IPO 掛牌首日即受納入，高成交金額標的自然進入 Top 1000 預測池。
+    - **下市/下櫃/停止交易自動剔除**：最新快照過濾 `listing_status = 'ACTIVE'` 搭配 30 日成交金額驗證，歷史下市標的或無量殭屍股自動被排除，絕不浪費模型算力。
+- **🇺🇸 美股預測池解除限制至 500+ 檔 (`StockFetcher.get_sp500_stocks`)**：
+  - 移除過去 `limit=110` 預設上限，完整釋放 S&P 500 全數 503 檔成分股。
+  - 強制加入高純度太空概念與 AI 前沿純度標的 (`SPCX`, `DXYZ`, `ASTS`, `RKLB`, `CRWV`, `FN`, `CLS`)，總量達 510+ 檔。
+- **🛡️ 批次安全分塊下載引擎 (`StockFetcher.get_stock_data_batch`)**：
+  - 引入 `chunk_size=200` 自動分塊機制，避免單一 yfinance 批次逾千檔觸發 Socket 連線耗盡或連線阻斷，搭配 DuckDB 本地日 K 備援保證 100% 數據完整度。
+- **⚙️ 管線分層與零重複計算 (`PipelineOrchestrator.run_all_indices`)**：
+  - `--market tw` 自動切分為：`台灣50` (50)、`台灣中型100` (100)、`台股活躍精選` (850)，三者嚴格互斥，避免重複運算與 Telegram 訊息稀釋。
+  - 支援 `--index 台股1000` / `TW1000` 單一巨集執行。
+  - `--market us` 完整支援全量 500+ 檔美股時序大模型零樣本推論。
+- **🧭 導航與介面層級邏輯優化 (`api/templates/partials/header.html`, `tab_dashboard.html`)**：
+  - **邏輯聚焦歸類**：依據量化研究心智模型，將「前沿發現」與「產業圖譜」並列歸類為前瞻產業架構區塊。
+  - **導航順序統一優化**：全站桌面版與行動版導航欄位順序統一調整為：
+    1. 操盤看板 ➔ 2. 法人籌碼 ➔ 3. 個股歷史 ➔ **4. 產業圖譜 ➔ 5. 前沿發現** ➔ **6. Podcast 雷達**。
+  - 看板市場篩選下拉選單新增 `台股活躍精選 (TW-Active 850)` 與 `台股全市場1000 (TW1000)`。
+- **🏷️ 版本升級至 v2.4.51 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.50)
 
 ### Enhanced & Core (Comprehensive Industry Value Chain Supply Graph Expansion - 158 Edges & Zero Isolated Nodes)

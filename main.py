@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument(
         "--index", "-i",
         nargs="+",
-        help="指定單一或多個指數 (例如: 台灣50 SP500)"
+        help="指定單一或多個指數 (例如: 台灣50 SP500 台股活躍精選 台股1000)"
     )
     parser.add_argument(
         "--period", "-p",

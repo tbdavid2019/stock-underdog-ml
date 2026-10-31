@@ -204,7 +204,7 @@ graph TD
 | **`tw_institutional_daily`**<br>(DuckDB) | 證交所 T86<br>官方結算表 | • 外資買/賣/淨買超<br>• 投信買/賣/淨買超<br>• 自營商買/賣/淨買超<br>• 三大法人合計淨買超 | 累積 510,000+ 筆歷史純籌碼，支援投信連買與土洋合買分析 |
 | **`tw_broker_trades`**<br>(DuckDB) | 券商分點進出明細 | • 分點代號與名稱<br>• 買進張數 / 賣出張數<br>• 累計買賣超與佔比 | 追蹤高盛、大摩、富邦、元大等主力分點連續加減倉水庫曲線 |
 | **`macro_regimes`**<br>(DuckDB) | 全球宏觀指數 | • S&P 500 (`SPY`)<br>• VIX 恐慌指數 (`^VIX`)<br>• 費城半導體 (`^SOX`)<br>• MA60 季線水位與建議曝險 | 判定全球系統性風險，自動啟動科技股倉位上限風控 |
-| **`data/cache/`**<br>(Parquet / Pickle) | 標的成分股序列 | • 台灣50 (`TW0050`)<br>• 台灣中型100 (`TW0051`)<br>• S&P 500 (`SP500`)<br>完整 6 個月 OHLCV 日 K 線 | 本地零延遲時序快取，加速特徵工程與策略回測 |
+| **`data/cache/`**<br>(Parquet / Pickle) | 標的成分股序列 | • 台灣50 (`TW0050`)<br>• 台灣中型100 (`TW0051`)<br>• 台股活躍精選 (`TW_ACTIVE` 850)<br>• S&P 500 (`SP500` 500+)<br>完整 6 個月 OHLCV 日 K 線 | 本地零延遲時序快取，加速特徵工程與策略回測 |
 
 **🌍 全球證券清冊與最後成功快照：**
 
@@ -403,9 +403,10 @@ pip install -r requirements.txt
 
 # 1. 執行開盤前多維量化分析指南
 python main.py                     # 智慧判定 (預設 auto: 白天 05:00~13:30 跑台股；夜間 13:30~05:00 跑美股)
-python main.py --market tw         # 🇹🇼 台股開盤前指南 (08:00 執行，台灣50 + 台灣中型100)
-python main.py --market us         # 🇺🇸 美股開盤前指南 (20:30 執行，S&P 500)
-python main.py --market all        # 🌐 全市場手動指定 (台灣50 + 台灣中型100 + S&P 500)
+python main.py --market tw         # 🇹🇼 台股開盤前指南 (08:00 執行，涵蓋 台灣50 + 台灣中型100 + 台股活躍精選，共 1,000 檔標的)
+python main.py --market us         # 🇺🇸 美股開盤前指南 (20:30 執行，S&P 500 全量 503 檔 + 太空/AI 前沿純度股，共 510+ 檔)
+python main.py --index 台股1000    # 🇹🇼 單一巨集執行台股 1,000 檔流動性活躍預測池
+python main.py --market all        # 🌐 全市場手動指定 (台股 1,000 檔 + 美股 500+ 檔)
 python main.py --dry-run           # 乾跑模式 (不寫入 DB 且不發送推播)
 
 # 2. 啟動 FastAPI REST 服務 (Port 8088)

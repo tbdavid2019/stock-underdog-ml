@@ -272,12 +272,17 @@ class PipelineOrchestrator:
                         indices["台灣中型100"] = StockFetcher.get_tw0051_stocks()
                     elif norm_name in ("SP500", "S&P500", "sp500"):
                         indices["SP500"] = StockFetcher.get_sp500_stocks()
+                    elif norm_name in ("台股活躍精選", "TW_ACTIVE", "ACTIVE850"):
+                        indices["台股活躍精選"] = StockFetcher.get_tw_active_stocks(limit=850, exclude_indices=True)
+                    elif norm_name in ("台股1000", "TW1000", "台股全市場1000"):
+                        indices["台股1000"] = StockFetcher.get_tw1000_stocks()
                     else:
                         logger.warning(f"⚠️ 未知指數名稱: {norm_name}，略過")
             elif market.lower() in ("tw", "taiwan"):
                 indices = {
                     "台灣50": StockFetcher.get_tw0050_stocks(),
-                    "台灣中型100": StockFetcher.get_tw0051_stocks()
+                    "台灣中型100": StockFetcher.get_tw0051_stocks(),
+                    "台股活躍精選": StockFetcher.get_tw_active_stocks(limit=850, exclude_indices=True)
                 }
             elif market.lower() in ("us", "usa", "sp500"):
                 indices = {
@@ -287,11 +292,12 @@ class PipelineOrchestrator:
                 indices = {
                     "台灣50": StockFetcher.get_tw0050_stocks(),
                     "台灣中型100": StockFetcher.get_tw0051_stocks(),
+                    "台股活躍精選": StockFetcher.get_tw_active_stocks(limit=850, exclude_indices=True),
                     "SP500": StockFetcher.get_sp500_stocks()
                 }
 
         # ============= Pre-flight Stage: Market Regime Gates =============
-        tw_indices_present = any(name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") for name in indices.keys())
+        tw_indices_present = any(name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000", "台股全市場1000") for name in indices.keys())
         us_indices_present = any(name in ("SP500", "S&P500", "sp500") for name in indices.keys())
 
         macro_states_map = {}
@@ -314,9 +320,9 @@ class PipelineOrchestrator:
             if not stock_list:
                 logger.warning(f"⚠️ 指數 {index_name} 成分股為空，跳過")
                 continue
-            is_tw = index_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051")
+            is_tw = index_name in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000", "台股全市場1000")
 
-            # 若為中型100，二次確保排除與台灣50重疊成分股（避免重複運算與寫入）
+            # 若為中型100或活躍精選，二次確保排除重疊成分股（避免重複運算與寫入）
             if index_name in ("台灣中型100", "TW0051", "0051"):
                 tw50_stocks = set(indices.get("台灣50", []) or indices.get("TW0050", []) or indices.get("0050", []))
                 if tw50_stocks:
@@ -324,6 +330,15 @@ class PipelineOrchestrator:
                     stock_list = [s for s in stock_list if s not in tw50_stocks]
                     if len(stock_list) < orig_len:
                         logger.info(f"🛡️ 已過濾中型100中與台灣50重疊的 {orig_len - len(stock_list)} 檔成分股")
+            elif index_name == "台股活躍精選":
+                tw50_stocks = set(indices.get("台灣50", []) or indices.get("TW0050", []))
+                tw51_stocks = set(indices.get("台灣中型100", []) or indices.get("TW0051", []))
+                overlap_to_drop = tw50_stocks.union(tw51_stocks)
+                if overlap_to_drop:
+                    orig_len = len(stock_list)
+                    stock_list = [s for s in stock_list if s not in overlap_to_drop]
+                    if len(stock_list) < orig_len:
+                        logger.info(f"🛡️ 已過濾台股活躍精選中與前兩層重疊的 {orig_len - len(stock_list)} 檔成分股")
 
             target_macro = macro_states_map.get("TW" if is_tw else "US") or MacroRegimeAnalyzer.evaluate_market(index_name, period=period)
             rep = self.run_index_analysis(

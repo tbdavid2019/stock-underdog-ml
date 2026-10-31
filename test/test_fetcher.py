@@ -27,8 +27,9 @@ class TestStockFetcher(unittest.TestCase):
         self.assertIn("rsi14", result_df.columns)
         self.assertFalse(result_df["ma60"].isna().all())
 
+    @patch("data.fetcher.CacheManager.set_index_cache")
     @patch("requests.get")
-    def test_fetch_index_upstream_success(self, mock_get):
+    def test_fetch_index_upstream_success(self, mock_get, mock_set_cache):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {

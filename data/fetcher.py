@@ -117,14 +117,97 @@ class StockFetcher:
         return stocks
 
     @classmethod
-    def get_sp500_stocks(cls, limit: int = 110) -> List[str]:
+    def get_tw_universe(cls, limit: int = 1000) -> List[str]:
+        """
+        動態獲取台股全市場核心與高流動性活躍標的 (預設 1,000 檔)。
+        保障核心指數 (台灣50、台灣中型100、AI 題材供應鏈圖譜節點) 必選，
+        其餘依據 DuckDB 全球主檔 (market_universe) 與日 K (tw_daily_bars) 之近期成交金額自動遞補，
+        嚴格過濾非 ACTIVE、下市櫃與零成交殭屍股。
+        """
+        seen = set()
+        selected: List[str] = []
+
+        # 1. 優先加入核心指數 (台灣50、中型100)
+        core_tw50 = cls.get_tw0050_stocks()
+        for s in core_tw50:
+            if s and s not in seen:
+                seen.add(s)
+                selected.append(s)
+
+        core_tw51 = cls.get_tw0051_stocks(exclude_tw0050=False)
+        for s in core_tw51:
+            if s and s not in seen:
+                seen.add(s)
+                selected.append(s)
+
+        # 2. 優先加入產業價值鏈圖譜重點節點
+        try:
+            from data.industry_chain_fetcher import EMBEDDED_NODES
+            from data.duckdb_manager import DuckDBManager
+            db_mgr = DuckDBManager()
+            symbol_map = db_mgr.get_tw_symbol_map() if db_mgr.enabled else {}
+            for node in EMBEDDED_NODES:
+                raw_ticker = str(node.get("ticker", "")).strip()
+                market_type = node.get("market", "")
+                if market_type == "TW" and raw_ticker:
+                    norm_ticker = symbol_map.get(raw_ticker, f"{raw_ticker}.TW")
+                    if norm_ticker not in seen:
+                        seen.add(norm_ticker)
+                        selected.append(norm_ticker)
+        except Exception as e:
+            logger.debug(f"載入產業節點補充池略過: {e}")
+
+        # 3. 透過 DuckDB 依近期成交金額由大至小動態遞補
+        try:
+            from data.duckdb_manager import DuckDBManager
+            db_mgr = DuckDBManager()
+            if db_mgr.enabled:
+                ranked = db_mgr.get_tw_ranked_active_stocks(limit=limit + 300)
+                for item in ranked:
+                    tk = item.get("ticker")
+                    if tk and tk not in seen:
+                        seen.add(tk)
+                        selected.append(tk)
+                        if len(selected) >= limit:
+                            break
+        except Exception as e:
+            logger.warning(f"自 DuckDB 遞補台股活躍標的失敗: {e}")
+
+        logger.info(f"🇹🇼 成功構建台股量化宇宙清冊: 共 {len(selected[:limit])} 檔有效標的 (目標: {limit} 檔)")
+        return selected[:limit]
+
+    @classmethod
+    def get_tw1000_stocks(cls) -> List[str]:
+        """獲取台股 1,000 檔高流動性預測池"""
+        return cls.get_tw_universe(limit=1000)
+
+    @classmethod
+    def get_tw_active_stocks(cls, limit: int = 850, exclude_indices: bool = True) -> List[str]:
+        """
+        獲取台股活躍中小型與櫃買成長股精選 (排除台灣50與中型100重疊標的，確保三層不重複)。
+        """
+        full_pool = cls.get_tw_universe(limit=limit + 250)
+        if not exclude_indices:
+            return full_pool[:limit]
+
+        tw50_set = set(cls.get_tw0050_stocks())
+        tw51_set = set(cls.get_tw0051_stocks(exclude_tw0050=False))
+        excluded = tw50_set.union(tw51_set)
+
+        active = [s for s in full_pool if s not in excluded]
+        return active[:limit]
+
+    @classmethod
+    def get_sp500_stocks(cls, limit: Optional[int] = None) -> List[str]:
         stocks, _ = cls._fetch_index_with_cache_fallback("SP500", config.api.SP500_URL, "SP500", limit=limit)
         stocks = [s.replace("BRK.B", "BRK-B") for s in stocks]
-        # 強制加入 SpaceX 與太空概念股 (SPCX, DXYZ, ASTS, RKLB)
-        extra_space_stocks = ["SPCX", "DXYZ", "ASTS", "RKLB"]
+        # 強制加入太空概念與美股 AI/算力前沿純度標的 (SPCX, DXYZ, ASTS, RKLB, CRWV, FN, CLS)
+        extra_space_stocks = ["SPCX", "DXYZ", "ASTS", "RKLB", "CRWV", "FN", "CLS"]
         for st in extra_space_stocks:
             if st not in stocks:
                 stocks.append(st)
+        if limit is not None and len(stocks) > limit:
+            return stocks[:limit]
         return stocks
 
     @classmethod
@@ -160,10 +243,27 @@ class StockFetcher:
                 name_map.setdefault("DXYZ", "Destiny Tech100 / SpaceX (DXYZ)")
                 name_map.setdefault("ASTS", "AST SpaceMobile (ASTS)")
                 name_map.setdefault("RKLB", "Rocket Lab (RKLB)")
+                name_map.setdefault("CRWV", "CoreWeave (CRWV)")
+                name_map.setdefault("FN", "Fabrinet (FN)")
+                name_map.setdefault("CLS", "Celestica (CLS)")
             elif index_name in ("台灣中型100", "TW0051", "0051"):
                 tw50_stocks = set(cls.get_tw0050_stocks())
                 name_map = {k: v for k, v in name_map.items() if k not in tw50_stocks}
             return name_map
+
+        if index_name in ("台股活躍精選", "台股1000", "TW1000", "台股全市場1000"):
+            merged_map = {}
+            merged_map.update(cls.get_index_name_map("台灣50"))
+            merged_map.update(cls.get_index_name_map("台灣中型100"))
+            try:
+                from data.duckdb_manager import DuckDBManager
+                db_names = DuckDBManager().get_tw_name_map()
+                if db_names:
+                    merged_map.update(db_names)
+            except Exception as e:
+                logger.debug(f"DuckDB 台股名稱提取失敗: {e}")
+            return merged_map
+
         return {}
 
     @classmethod
@@ -171,6 +271,10 @@ class StockFetcher:
         mapping = {
             "台灣50": cls.get_tw0050_stocks,
             "台灣中型100": cls.get_tw0051_stocks,
+            "台股活躍精選": lambda: cls.get_tw_active_stocks(limit=850, exclude_indices=True),
+            "台股1000": cls.get_tw1000_stocks,
+            "TW1000": cls.get_tw1000_stocks,
+            "台股全市場1000": cls.get_tw1000_stocks,
             "SP500": cls.get_sp500_stocks,
             "NASDAQ": cls.get_nasdaq_stocks,
             "費城半導體": cls.get_sox_stocks,
@@ -246,11 +350,13 @@ class StockFetcher:
         cls, 
         tickers: List[str], 
         period: str = "6mo", 
-        use_cache: bool = True
+        use_cache: bool = True,
+        chunk_size: int = 200
     ) -> Dict[str, pd.DataFrame]:
         """
         Retrieve historical price data for a batch of tickers.
-        Uses native yfinance batch download to prevent concurrency crumb race conditions.
+        Uses chunked yfinance batch download (default chunk_size=200) to prevent socket overload,
+        crumb race conditions, and upstream rate limits.
         """
         results: Dict[str, pd.DataFrame] = {}
         pending_tickers: List[str] = []
@@ -267,51 +373,53 @@ class StockFetcher:
         if not pending_tickers:
             return results
 
-        logger.info(f"🌐 正在批次下載 {len(pending_tickers)} 支股票之行情數據 ({period})...")
+        logger.info(f"🌐 正在批次下載 {len(pending_tickers)} 支股票之行情數據 ({period}，分塊大小: {chunk_size})...")
 
-        try:
-            import yfinance as yf
-            
-            # Native yfinance batch download handles internal threading safely
-            batch_data = yf.download(
-                pending_tickers,
-                period=period,
-                group_by="ticker",
-                auto_adjust=True,
-                threads=True,
-                progress=False
-            )
+        # Split into chunks of chunk_size
+        chunks = [pending_tickers[i:i + chunk_size] for i in range(0, len(pending_tickers), chunk_size)]
 
-            if not batch_data.empty:
-                if len(pending_tickers) == 1:
-                    # Single ticker batch returns 1D or 2D dataframe
-                    tk = pending_tickers[0]
-                    df = batch_data.copy()
-                    if isinstance(df.columns, pd.MultiIndex):
-                        df.columns = df.columns.get_level_values(0)
-                    df = df.dropna(how="all")
-                    if not df.empty:
-                        if use_cache:
-                            CacheManager.set_stock_data(tk, period, df)
-                        results[tk] = add_base_indicators(df)
-                else:
-                    # Multi-ticker batch
-                    for tk in pending_tickers:
-                        try:
-                            if tk in batch_data.columns:
-                                sub_df = batch_data[tk].dropna(how="all").copy()
-                                if not sub_df.empty:
-                                    for col in ["Open", "High", "Low", "Close", "Volume"]:
-                                        if col not in sub_df.columns:
-                                            sub_df[col] = 0.0
-                                    if use_cache:
-                                        CacheManager.set_stock_data(tk, period, sub_df)
-                                    results[tk] = add_base_indicators(sub_df)
-                        except Exception as e:
-                            logger.debug(f"處理批次股票 {tk} 時出錯: {e}")
+        for chunk_idx, chunk in enumerate(chunks, 1):
+            if len(chunks) > 1:
+                logger.info(f"   ▶ 下載分塊 [{chunk_idx}/{len(chunks)}]: 共 {len(chunk)} 支標的...")
+            try:
+                import yfinance as yf
+                batch_data = yf.download(
+                    chunk,
+                    period=period,
+                    group_by="ticker",
+                    auto_adjust=True,
+                    threads=True,
+                    progress=False
+                )
 
-        except Exception as e:
-            logger.warning(f"⚠️ yfinance 批次下載失敗: {e}，切換為單支回退下載")
+                if not batch_data.empty:
+                    if len(chunk) == 1:
+                        tk = chunk[0]
+                        df = batch_data.copy()
+                        if isinstance(df.columns, pd.MultiIndex):
+                            df.columns = df.columns.get_level_values(0)
+                        df = df.dropna(how="all")
+                        if not df.empty:
+                            if use_cache:
+                                CacheManager.set_stock_data(tk, period, df)
+                            results[tk] = add_base_indicators(df)
+                    else:
+                        for tk in chunk:
+                            try:
+                                if tk in batch_data.columns:
+                                    sub_df = batch_data[tk].dropna(how="all").copy()
+                                    if not sub_df.empty:
+                                        for col in ["Open", "High", "Low", "Close", "Volume"]:
+                                            if col not in sub_df.columns:
+                                                sub_df[col] = 0.0
+                                        if use_cache:
+                                            CacheManager.set_stock_data(tk, period, sub_df)
+                                        results[tk] = add_base_indicators(sub_df)
+                            except Exception as e:
+                                logger.debug(f"處理批次股票 {tk} 時出錯: {e}")
+
+            except Exception as e:
+                logger.warning(f"⚠️ yfinance 批次分塊 [{chunk_idx}/{len(chunks)}] 下載失敗: {e}")
 
         # 2. Fallback for any missing tickers in batch
         missing = [tk for tk in pending_tickers if tk not in results or results[tk].empty]
