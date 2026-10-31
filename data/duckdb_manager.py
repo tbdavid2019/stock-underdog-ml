@@ -1495,6 +1495,34 @@ class DuckDBManager:
         if self.enabled:
             try:
                 with self._get_connection() as con:
+                    # 1. 優先查 market_universe 全球股票庫 (TW, US, JP, HK 等)
+                    try:
+                        univ_row = con.execute(
+                            """
+                            SELECT normalized_symbol, COALESCE(name_local, name_en)
+                            FROM market_universe
+                            WHERE lower(trim(normalized_symbol)) = lower(trim(?))
+                               OR lower(trim(symbol)) = lower(trim(?))
+                               OR lower(trim(normalized_symbol)) = lower(trim(?))
+                               OR lower(trim(raw_code)) = lower(trim(?))
+                               OR lower(trim(name_local)) = lower(trim(?))
+                               OR lower(trim(name_en)) = lower(trim(?))
+                            ORDER BY date DESC NULLS LAST
+                            LIMIT 1
+                            """,
+                            [query, query, normalized, query, query, query],
+                        ).fetchone()
+                        if univ_row and univ_row[0]:
+                            return _cache_and_return({
+                                "query": query,
+                                "ticker": str(univ_row[0]).upper(),
+                                "name": univ_row[1],
+                                "matched_by": "database"
+                            })
+                    except Exception as e_univ:
+                        logger.debug("market_universe 查詢略過: %s", e_univ)
+
+                    # 2. 查台股歷史行情與籌碼表
                     row = con.execute(
                         """
                         SELECT ticker, name
@@ -1522,7 +1550,12 @@ class DuckDBManager:
 
         # Ticker-shaped input is accepted, but its history endpoint still
         # requires actual records before returning any quantitative data.
-        if re.fullmatch(r"[A-Z][A-Z0-9.-]{0,9}", normalized) or re.fullmatch(r"\d{4,6}\.(TW|TWO)", normalized):
+        if (
+            re.fullmatch(r"[A-Z][A-Z0-9.-]{0,9}", normalized)
+            or re.fullmatch(r"\d{4,6}\.(TW|TWO)", normalized)
+            or re.fullmatch(r"\d{4,5}[A-Z]?\.T", normalized)
+            or re.fullmatch(r"\d{4,5}\.HK", normalized)
+        ):
             return _cache_and_return({"query": query, "ticker": normalized, "name": None, "matched_by": "ticker"})
         return _cache_and_return(None)
 

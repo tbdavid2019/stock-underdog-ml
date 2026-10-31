@@ -28,24 +28,39 @@ class TestNikkei225Pipeline(unittest.TestCase):
         for ks in key_stocks:
             self.assertIn(ks, FALLBACK_NIKKEI225_STOCKS, f"{ks} must be present in Nikkei 225 list")
 
+    @patch("data.fetcher.requests.get")
     @patch("data.fetcher.CacheManager.get_index_cache")
-    def test_get_nikkei225_stocks_from_cache(self, mock_get_cache):
-        """Test that get_nikkei225_stocks retrieves from cache if available."""
+    def test_get_nikkei225_stocks_from_cache(self, mock_get_cache, mock_req_get):
+        """Test that get_nikkei225_stocks retrieves from cache if API is unavailable."""
+        mock_req_get.side_effect = Exception("API down")
         mock_get_cache.return_value = {"stocks": ["8035.T"] * 225}
         stocks = StockFetcher.get_nikkei225_stocks()
         self.assertEqual(len(stocks), 225)
         self.assertEqual(stocks[0], "8035.T")
 
+    @patch("data.fetcher.requests.get")
     @patch("data.fetcher.CacheManager.get_index_cache", return_value=None)
     @patch("data.fetcher.CacheManager.set_index_cache")
     @patch("urllib.request.urlopen")
-    def test_get_nikkei225_stocks_fallback_on_network_error(self, mock_urlopen, mock_set_cache, mock_get_cache):
-        """Test fallback to embedded 225 constituents if Wikipedia scrape fails."""
+    def test_get_nikkei225_stocks_fallback_on_network_error(self, mock_urlopen, mock_set_cache, mock_get_cache, mock_req_get):
+        """Test fallback to embedded 225 constituents if API and Wikipedia scrape fails."""
+        mock_req_get.side_effect = Exception("API down")
         mock_urlopen.side_effect = Exception("Network timeout")
         stocks = StockFetcher.get_nikkei225_stocks()
         self.assertEqual(len(stocks), 225)
         self.assertIn("8035.T", stocks)
         self.assertIn("9984.T", stocks)
+
+    @patch("data.fetcher.requests.get")
+    def test_get_nikkei225_stocks_from_api(self, mock_req_get):
+        """Test that get_nikkei225_stocks retrieves from DataAPI when available."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"NIKKEI225": {f"{i:04d}.T": f"Stock {i}" for i in range(225)}}
+        mock_req_get.return_value = mock_resp
+        stocks = StockFetcher.get_nikkei225_stocks()
+        self.assertEqual(len(stocks), 225)
+        self.assertEqual(stocks[0], "0000.T")
 
     def test_get_stocks_by_index_jp(self):
         """Test that get_stocks_by_index resolves '日經225' and synonyms."""

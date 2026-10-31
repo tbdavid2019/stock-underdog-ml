@@ -235,9 +235,7 @@ def get_ticker_history(
         raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{ticker}")
 
     records = db.get_ticker_history(ticker=resolved["ticker"], limit=limit)
-    if not records:
-        raise HTTPException(status_code=404, detail=f"查無標的 {resolved['ticker']} 之歷史預測記錄")
-    return PredictionResponse(count=len(records), data=records)
+    return PredictionResponse(count=len(records), data=records or [])
 
 
 @router.get("/resolve/{query}", response_model=TickerResolutionResponse, summary="解析股票代號或公司名稱")

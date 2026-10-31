@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-10-31 (v2.4.54)
+
+### Fixed & Enhancements (Stock Resolution & History Trajectory Resilience)
+- **🇯🇵 日股與跨市場個股代碼解析修復 (`data/duckdb_manager.py`, `data/ticker_resolver.py`)**：
+  - 修復 `resolve_ticker` 正則驗證與查表邊界條件：新增支援日股代碼格式（如 `9984.T`, `8035.T`, `\d{4,5}[A-Z]?\.T`）與港股代碼格式（`\d{4,5}\.HK`），解決過去僅支援英文字母開頭（`[A-Z]...`）導致 `9984.T` 解析失敗報 404「找不到」的問題。
+  - 新增 `market_universe` 全球股票底層庫（33,073 檔）優先查詢機制，支援中英日文公司名稱與代碼快速檢索。
+  - 於 `COMPANY_ALIASES` 納入日股代表性公司（軟銀 `9984.T`、東京威力科創 `8035.T`、愛德萬測試 `6857.T`、迪思科 `6146.T`、信越化學 `4063.T`、雷泰光電 `6920.T`、任天堂 `7974.T`、索尼 `6758.T`、豐田 `7203.T`、迅銷優衣庫 `9983.T`）。
+- **個股歷史軌跡端點平滑降級 (`api/routes/predictions.py`)**：
+  - `GET /api/v1/predictions/history/{ticker}` 在標的經驗證為有效、但尚未生成時序模型預測記錄時，自適應回傳 `count: 0, data: []` 替代 404 報錯。
+  - 保障前端進入 `?tab=history&ticker=9984.T` 時能順暢載入基本面簡介、即時新聞、市值與決策裁判，而不會中斷顯示錯誤資訊。
+
 ## 2026-10-31 (v2.4.53)
 
 ### Features & Multi-Market Expansion (Nikkei 225 Japanese Equities Quant Integration)
