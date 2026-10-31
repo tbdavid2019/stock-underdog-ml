@@ -690,23 +690,23 @@
                 </p>
             </div>
 
-            <!-- Interactive Legend Toggles -->
+            <!-- Interactive Legend Toggles (WCAG 2.1 AA/AAA 高對比度與色弱友善配色) -->
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs num-font">
-                <!-- 真實股價 -->
+                <!-- 真實股價 (海軍藍/天藍) -->
                 <button type="button" @click="togglePriceChartSeries('price')"
                         title="點擊切換顯示真實股價"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.price ? (isDark ? 'bg-sky-500/15 border-sky-500/50 text-sky-400' : 'bg-sky-50 border-sky-300 text-sky-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#38BDF8] inline-block shadow-sm"></span>
+                        :class="priceChartVisibility.price ? (isDark ? 'bg-blue-500/20 border-blue-500/60 text-blue-300' : 'bg-blue-50 border-blue-400 text-blue-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#1D4ED8] dark:bg-[#60A5FA] inline-block shadow-sm"></span>
                     <span>真實股價</span>
                 </button>
 
-                <!-- Timestral 目標價 -->
+                <!-- Timestral 目標價 (濃郁琥珀橙) -->
                 <button type="button" @click="togglePriceChartSeries('timestral')"
                         title="點擊切換顯示 Mistral Timestral 預測目標價 (P50)"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.timestral ? (isDark ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300' : 'bg-cyan-50 border-cyan-300 text-cyan-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 rounded-sm bg-[#06B6D4] inline-block shadow-sm"></span>
+                        :class="priceChartVisibility.timestral ? (isDark ? 'bg-amber-500/20 border-amber-500/60 text-amber-300' : 'bg-amber-50 border-amber-400 text-amber-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block shadow-sm"></span>
                     <span>Timestral 目標價</span>
                 </button>
 
@@ -714,37 +714,58 @@
                 <button type="button" @click="togglePriceChartSeries('timestralBands')"
                         title="點擊切換顯示 Timestral P10~P90 蒙地卡羅風控分位數區間"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.timestralBands ? (isDark ? 'bg-cyan-500/20 border-cyan-400/60 text-cyan-200' : 'bg-cyan-100 border-cyan-400 text-cyan-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 rounded-sm bg-[#06B6D4]/40 border border-[#06B6D4] inline-block"></span>
+                        :class="priceChartVisibility.timestralBands ? (isDark ? 'bg-amber-500/20 border-amber-400/60 text-amber-200' : 'bg-amber-100 border-amber-400 text-amber-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#D97706]/30 dark:bg-[#F59E0B]/30 border border-[#D97706] dark:border-[#F59E0B] inline-block"></span>
                     <span>P10~P90 區間</span>
                 </button>
 
-                <!-- TimesFM 目標價 -->
+                <!-- TimesFM 目標價 (皇家深紫) -->
                 <button type="button" @click="togglePriceChartSeries('timesfm')"
                         title="點擊切換顯示 TimesFM 預測目標價"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.timesfm ? (isDark ? 'bg-purple-500/15 border-purple-500/50 text-purple-300' : 'bg-purple-50 border-purple-300 text-purple-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 rounded-sm bg-[#A855F7] inline-block shadow-sm transform rotate-45"></span>
+                        :class="priceChartVisibility.timesfm ? (isDark ? 'bg-purple-500/20 border-purple-500/60 text-purple-300' : 'bg-purple-50 border-purple-400 text-purple-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block shadow-sm transform rotate-45"></span>
                     <span>TimesFM 目標價</span>
                 </button>
 
-                <!-- 雙模型平均目標價 -->
+                <!-- 雙模型平均目標價 (深松石綠) -->
                 <button type="button" @click="togglePriceChartSeries('resonance')"
                         title="點擊切換顯示雙模型平均目標價 (TimesFM & Timestral 均值)"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.resonance ? (isDark ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-emerald-50 border-emerald-300 text-emerald-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-2.5 bg-[#10B981] inline-block shadow-sm transform rotate-45"></span>
+                        :class="priceChartVisibility.resonance ? (isDark ? 'bg-teal-500/20 border-teal-500/60 text-teal-300' : 'bg-teal-50 border-teal-400 text-teal-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-2.5 bg-[#0F766E] dark:bg-[#2DD4BF] inline-block shadow-sm transform rotate-45"></span>
                     <span>雙模型平均</span>
                 </button>
 
-                <!-- MA60 季線 -->
+                <!-- MA60 季線 (深石板灰) -->
                 <button type="button" @click="togglePriceChartSeries('ma60')"
                         title="點擊切換顯示 MA60 季線"
                         class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
-                        :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
-                    <span class="w-2.5 h-0.5 bg-slate-400 inline-block"></span>
+                        :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-400 text-slate-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
+                    <span class="w-2.5 h-0.5 bg-[#475569] dark:bg-[#94A3B8] inline-block"></span>
                     <span>MA60 季線</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- 標點圖例說明 (WCAG 色弱與標點辨識指引) -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs pt-1 border-t"
+             :class="isDark ? 'border-[#262626] text-slate-300' : 'border-slate-200 text-slate-600'">
+            <div class="flex items-center space-x-1 font-bold" :class="isDark ? 'text-amber-400' : 'text-amber-800'">
+                <span class="material-symbols-outlined text-[16px] leading-none">accessibility_new</span>
+                <span>標點指引 (WCAG 色弱友善)：</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-sm bg-slate-500 inline-block"></span>
+                <span>實心幾何 = <b>方向命中</b></span>
+            </div>
+            <div class="flex items-center space-x-1.5 font-bold" :class="isDark ? 'text-rose-400' : 'text-rose-700'">
+                <span class="text-sm font-black leading-none">✕</span>
+                <span>叉號標點 = <b>方向相反 / 偏離</b>（如預測漲但隔日大跌）</span>
+            </div>
+            <div class="flex items-center space-x-1.5 font-bold" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
+                <span class="text-sm font-black leading-none">★</span>
+                <span>星號標點 = <b>隔日預估</b>（T+1 待下個交易日開獎）</span>
             </div>
         </div>
 
@@ -936,15 +957,16 @@
             <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
-                     modelScorecard.timesfm.isLeader ? (isDark ? 'ring-1 ring-purple-500/50' : 'ring-2 ring-purple-400') : ''
+                     modelScorecard.timesfm.isLeader ? (isDark ? 'ring-1 ring-purple-500/50' : 'ring-2 ring-purple-500') : ''
                  ]">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-sm bg-[#A855F7] inline-block shadow-sm transform rotate-45"></span>
+                        <span class="w-3 h-3 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block shadow-sm transform rotate-45"></span>
                         <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Google TimesFM (200M)</span>
                     </div>
                     <span v-if="modelScorecard.timesfm.isLeader"
-                          class="px-2 py-0.5 rounded-md text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                          class="px-2 py-0.5 rounded-md text-xs font-black"
+                          :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-purple-100 text-purple-900 border border-purple-300'">
                         🏆 該股表現較佳
                     </span>
                     <span v-else-if="modelScorecard.timesfm.lowHitWarning"
@@ -960,7 +982,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 {{ modelScorecard.timesfm.hitRate !== '-' ? modelScorecard.timesfm.hitRate + '%' : '—' }}
                             </div>
                         </div>
@@ -973,7 +995,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 {{ modelScorecard.timesfm.mape !== '-' ? '±' + modelScorecard.timesfm.mape + '%' : '—' }}
                             </div>
                         </div>
@@ -986,7 +1008,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">雙模型同場對決</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-purple-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timesfm.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
                             </div>
                         </div>
@@ -1001,15 +1023,16 @@
             <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
-                     modelScorecard.timestral.isLeader ? (isDark ? 'ring-1 ring-cyan-500/50' : 'ring-2 ring-cyan-400') : ''
+                     modelScorecard.timestral.isLeader ? (isDark ? 'ring-1 ring-amber-500/50' : 'ring-2 ring-amber-500') : ''
                  ]">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-sm bg-[#06B6D4] inline-block shadow-sm"></span>
+                        <span class="w-3 h-3 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block shadow-sm"></span>
                         <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Mistral Timestral (209M)</span>
                     </div>
                     <span v-if="modelScorecard.timestral.isLeader"
-                          class="px-2 py-0.5 rounded-md text-xs font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                          class="px-2 py-0.5 rounded-md text-xs font-black"
+                          :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                         🏆 該股表現較佳
                     </span>
                     <span v-else-if="modelScorecard.timestral.lowHitWarning"
@@ -1025,7 +1048,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                                 {{ modelScorecard.timestral.hitRate !== '-' ? modelScorecard.timestral.hitRate + '%' : '—' }}
                             </div>
                         </div>
@@ -1038,7 +1061,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                                 {{ modelScorecard.timestral.mape !== '-' ? '±' + modelScorecard.timestral.mape + '%' : '—' }}
                             </div>
                         </div>
@@ -1051,7 +1074,7 @@
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">雙模型同場對決</span>
                             </div>
-                            <div class="text-base sm:text-lg font-black num-font text-cyan-400 mt-0.5">
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                                 {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timestral.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
                             </div>
                         </div>
@@ -1113,7 +1136,7 @@
                             <span class="font-black">${{ Number(row.nextActualPrice).toFixed(2) }}</span>
                             <span v-if="row.actualReturnPct !== null"
                                   class="ml-1 text-xs font-black"
-                                  :class="row.actualReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-500'">
+                                  :class="row.actualReturnPct >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (isDark ? 'text-rose-400' : 'text-rose-700')">
                                 ({{ row.actualReturnPct >= 0 ? '+' : '' }}{{ row.actualReturnPct.toFixed(2) }}%)
                             </span>
                         </div>
@@ -1125,14 +1148,14 @@
                     <!-- TimesFM 隔日目標價 (誤差) -->
                     <td class="p-3 whitespace-nowrap">
                         <div v-if="row.timesfmPred !== null">
-                            <div class="font-black num-font text-purple-400">
+                            <div class="font-black num-font" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 ${{ Number(row.timesfmPred).toFixed(2) }}
                                 <span v-if="row.timesfmPot !== null" class="text-xs font-bold">
                                     ({{ row.timesfmPot >= 0 ? '+' : '' }}{{ row.timesfmPot.toFixed(2) }}%)
                                 </span>
                             </div>
                             <div v-if="row.timesfmErrorPct !== null" class="text-xs mt-0.5 flex items-center space-x-1">
-                                <span :class="row.timesfmHit ? 'text-emerald-400' : 'text-rose-400'" class="font-bold">
+                                <span :class="row.timesfmHit ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-black')">
                                     {{ row.timesfmHit ? '✓ 方向命中' : '✗ 方向偏離' }}
                                 </span>
                                 <span :class="isDark ? 'text-slate-400' : 'text-slate-500'">· 誤差 {{ row.timesfmErrorPct.toFixed(2) }}%</span>
@@ -1144,14 +1167,14 @@
                     <!-- Timestral 隔日目標價 (誤差) -->
                     <td class="p-3 whitespace-nowrap">
                         <div v-if="row.timestralPred !== null">
-                            <div class="font-black num-font text-cyan-400">
+                            <div class="font-black num-font" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                                 ${{ Number(row.timestralPred).toFixed(2) }}
                                 <span v-if="row.timestralPot !== null" class="text-xs font-bold">
                                     ({{ row.timestralPot >= 0 ? '+' : '' }}{{ row.timestralPot.toFixed(2) }}%)
                                 </span>
                             </div>
                             <div v-if="row.timestralErrorPct !== null" class="text-xs mt-0.5 flex items-center space-x-1">
-                                <span :class="row.timestralHit ? 'text-emerald-400' : 'text-rose-400'" class="font-bold">
+                                <span :class="row.timestralHit ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-black')">
                                     {{ row.timestralHit ? '✓ 方向命中' : '✗ 方向偏離' }}
                                 </span>
                                 <span :class="isDark ? 'text-slate-400' : 'text-slate-500'">· 誤差 {{ row.timestralErrorPct.toFixed(2) }}%</span>
@@ -1163,19 +1186,23 @@
                     <!-- 當日勝出模型 -->
                     <td class="p-3 text-center whitespace-nowrap">
                         <span v-if="row.winner === 'TimesFM 勝'"
-                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-purple-100 text-purple-900 border border-purple-300'">
                             TimesFM 勝
                         </span>
                         <span v-else-if="row.winner === 'Timestral 勝'"
-                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                             Timestral 勝
                         </span>
                         <span v-else-if="row.winner === 'TimesFM'"
-                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/25">
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-purple-500/10 text-purple-300 border border-purple-500/25' : 'bg-purple-50 text-purple-800 border border-purple-200'">
                             TimesFM (單模型)
                         </span>
                         <span v-else-if="row.winner === 'Timestral'"
-                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-amber-500/10 text-amber-300 border border-amber-500/25' : 'bg-amber-50 text-amber-800 border border-amber-200'">
                             Timestral (單模型)
                         </span>
                         <span v-else-if="row.winner === '平手'"
@@ -1224,19 +1251,23 @@
                     </div>
                     <div class="shrink-0">
                         <span v-if="row.winner === 'TimesFM 勝'"
-                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-purple-100 text-purple-900 border border-purple-300'">
                             TimesFM 較準
                         </span>
                         <span v-else-if="row.winner === 'Timestral 勝'"
-                              class="px-2 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                             Timestral 較準
                         </span>
                         <span v-else-if="row.winner === 'TimesFM'"
-                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/25">
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-purple-500/10 text-purple-300 border border-purple-500/25' : 'bg-purple-50 text-purple-800 border border-purple-200'">
                             TimesFM 單模型
                         </span>
                         <span v-else-if="row.winner === 'Timestral'"
-                              class="px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-amber-500/10 text-amber-300 border border-amber-500/25' : 'bg-amber-50 text-amber-800 border border-amber-200'">
                             Timestral 單模型
                         </span>
                         <span v-else-if="row.winner === '平手'"
@@ -1263,7 +1294,7 @@
                             {{ formatPrice(row.nextActualPrice, searchTicker) }}
                             <span v-if="row.actualReturnPct !== null"
                                   class="ml-1"
-                                  :class="row.actualReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-500'">
+                                  :class="row.actualReturnPct >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-bold') : (isDark ? 'text-rose-400' : 'text-rose-700 font-bold')">
                                 ({{ row.actualReturnPct >= 0 ? '+' : '' }}{{ row.actualReturnPct.toFixed(2) }}%)
                             </span>
                         </span>
@@ -1276,20 +1307,22 @@
                     <!-- TimesFM Box -->
                     <div class="p-2.5 rounded-xl border space-y-1"
                          :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="flex items-center justify-between text-xs font-bold text-purple-400">
+                        <div class="flex items-center justify-between text-xs font-bold"
+                             :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                             <span class="flex items-center space-x-1">
-                                <span class="w-2 h-2 rounded-sm bg-purple-500 inline-block rotate-45"></span>
+                                <span class="w-2 h-2 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block rotate-45"></span>
                                 <span>TimesFM (Google)</span>
                             </span>
                             <span v-if="row.timesfmHit !== null"
-                                  :class="row.timesfmHit ? 'text-emerald-400' : 'text-rose-400'"
+                                  :class="row.timesfmHit ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400' : 'text-rose-700 font-black')"
                                   class="font-black text-[12px]">
                                 {{ row.timesfmHit ? '✓ 命中' : '✗ 失準' }}
                             </span>
                         </div>
                         <div class="font-black num-font text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
                             {{ row.timesfmPred !== null ? formatPrice(row.timesfmPred, searchTicker) : '—' }}
-                            <span v-if="row.timesfmPot !== null" class="text-xs font-semibold text-purple-300">
+                            <span v-if="row.timesfmPot !== null" class="text-xs font-semibold"
+                                  :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 ({{ row.timesfmPot >= 0 ? '+' : '' }}{{ row.timesfmPot.toFixed(2) }}%)
                             </span>
                         </div>
@@ -1301,20 +1334,22 @@
                     <!-- Timestral Box -->
                     <div class="p-2.5 rounded-xl border space-y-1"
                          :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                        <div class="flex items-center justify-between text-xs font-bold text-cyan-400">
+                        <div class="flex items-center justify-between text-xs font-bold"
+                             :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                             <span class="flex items-center space-x-1">
-                                <span class="w-2 h-2 rounded-sm bg-cyan-500 inline-block"></span>
+                                <span class="w-2 h-2 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block"></span>
                                 <span>Timestral (888)</span>
                             </span>
                             <span v-if="row.timestralHit !== null"
-                                  :class="row.timestralHit ? 'text-emerald-400' : 'text-rose-400'"
+                                  :class="row.timestralHit ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400' : 'text-rose-700 font-black')"
                                   class="font-black text-[12px]">
                                 {{ row.timestralHit ? '✓ 命中' : '✗ 失準' }}
                             </span>
                         </div>
                         <div class="font-black num-font text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
                             {{ row.timestralPred !== null ? formatPrice(row.timestralPred, searchTicker) : '—' }}
-                            <span v-if="row.timestralPot !== null" class="text-xs font-semibold text-cyan-300">
+                            <span v-if="row.timestralPot !== null" class="text-xs font-semibold"
+                                  :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                                 ({{ row.timestralPot >= 0 ? '+' : '' }}{{ row.timestralPot.toFixed(2) }}%)
                             </span>
                         </div>
@@ -1354,22 +1389,22 @@
                 </p>
             </div>
 
-            <!-- Chart Legends -->
+            <!-- Chart Legends (WCAG 友善與雙模式高對比) -->
             <div class="flex flex-wrap items-center gap-3 text-xs num-font">
-                <span class="inline-flex items-center space-x-1 font-bold text-sky-400">
-                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span>
+                <span class="inline-flex items-center space-x-1 font-bold" :class="isDark ? 'text-sky-300' : 'text-blue-700'">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#1D4ED8] dark:bg-[#60A5FA] inline-block"></span>
                     <span>外資累計</span>
                 </span>
-                <span class="inline-flex items-center space-x-1 font-bold text-rose-400">
-                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                <span class="inline-flex items-center space-x-1 font-bold" :class="isDark ? 'text-rose-300' : 'text-rose-700'">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#E11D48] dark:bg-[#FB7185] inline-block"></span>
                     <span>投信累計</span>
                 </span>
-                <span class="inline-flex items-center space-x-1 font-bold text-amber-400">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                <span class="inline-flex items-center space-x-1 font-bold" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#D97706] dark:bg-[#F59E0B] inline-block"></span>
                     <span>自營商累計</span>
                 </span>
-                <span class="inline-flex items-center space-x-1 font-black text-emerald-400">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                <span class="inline-flex items-center space-x-1 font-black" :class="isDark ? 'text-emerald-300' : 'text-emerald-800'">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#059669] dark:bg-[#34D399] inline-block"></span>
                     <span>三大法人合計</span>
                 </span>
             </div>

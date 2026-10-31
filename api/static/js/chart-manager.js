@@ -11,12 +11,12 @@ export class ChartManager {
 
     getThemeTokens(isDark) {
         return {
-            gridColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(101, 90, 67, 0.15)',
-            textColor: isDark ? '#9CA3AF' : '#4A3F2B',
-            tooltipBg: isDark ? '#0D0E11' : '#FFF9E8',
-            tooltipTitle: isDark ? '#F9FAFB' : '#2B251A',
-            tooltipBody: isDark ? '#E5E7EB' : '#2B251A',
-            tooltipBorder: isDark ? '#262626' : '#6B5B38'
+            gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+            textColor: isDark ? '#9CA3AF' : '#334155',
+            tooltipBg: isDark ? '#0D0E11' : '#FFFFFF',
+            tooltipTitle: isDark ? '#F9FAFB' : '#0F172A',
+            tooltipBody: isDark ? '#E5E7EB' : '#1E293B',
+            tooltipBorder: isDark ? '#374151' : '#CBD5E1'
         };
     }
 
@@ -86,9 +86,9 @@ export class ChartManager {
                     {
                         label: '三大法人合計',
                         data: dataTotal,
-                        borderColor: '#10B981',
-                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.05)',
-                        borderWidth: 2.5,
+                        borderColor: isDark ? '#34D399' : '#059669',
+                        backgroundColor: isDark ? 'rgba(52, 211, 153, 0.08)' : 'rgba(5, 150, 105, 0.06)',
+                        borderWidth: 2.8,
                         tension: 0.3,
                         pointRadius: labels.length > 40 ? 0 : 2,
                         pointHoverRadius: 5,
@@ -97,8 +97,9 @@ export class ChartManager {
                     {
                         label: '外資累計',
                         data: dataForeign,
-                        borderColor: '#38BDF8',
-                        borderWidth: 2,
+                        borderColor: isDark ? '#60A5FA' : '#1D4ED8',
+                        borderDash: [5, 4],
+                        borderWidth: 2.2,
                         tension: 0.3,
                         pointRadius: labels.length > 40 ? 0 : 2,
                         pointHoverRadius: 5
@@ -106,8 +107,9 @@ export class ChartManager {
                     {
                         label: '投信累計',
                         data: dataTrust,
-                        borderColor: '#F43F5E',
-                        borderWidth: 2,
+                        borderColor: isDark ? '#FB7185' : '#E11D48',
+                        borderDash: [2, 3],
+                        borderWidth: 2.2,
                         tension: 0.3,
                         pointRadius: labels.length > 40 ? 0 : 2,
                         pointHoverRadius: 5
@@ -115,9 +117,9 @@ export class ChartManager {
                     {
                         label: '自營商累計',
                         data: dataDealer,
-                        borderColor: '#F59E0B',
-                        borderWidth: 1.5,
-                        borderDash: [3, 3],
+                        borderColor: isDark ? '#F59E0B' : '#D97706',
+                        borderWidth: 1.8,
+                        borderDash: [6, 3, 2, 3],
                         tension: 0.3,
                         pointRadius: labels.length > 40 ? 0 : 1,
                         pointHoverRadius: 4
@@ -330,6 +332,123 @@ export class ChartManager {
             dataLstm.push(item.lstm);
         }
 
+        // WCAG 2.1 Level AA & AAA Accessible Color System for Color Vision Deficiency (CVD):
+        // 1. Real Price: High contrast Deep Navy Blue (#1D4ED8 light) / Sky Cobalt (#60A5FA dark) - Solid line, circle markers
+        // 2. Timestral: Deep Warm Amber/Orange (#D97706 light / #F59E0B dark) - Dashed line, square markers
+        // 3. TimesFM: Deep Royal Purple (#7C3AED light / #C084FC dark) - Dotted line, diamond markers
+        // 4. Resonance: Deep Teal (#0F766E light / #2DD4BF dark) - Dash-Dot line, triangle markers
+        // 5. MA60: Slate (#475569 light / #94A3B8 dark) - Long dashed line, no points
+        // 6. Miss/Opposite direction: Vivid Rose/Crimson (#E11D48 light / #FB7185 dark) - 'crossRot' (✕) markers
+        const colorPrice = isDark ? '#60A5FA' : '#1D4ED8';
+        const colorTimestral = isDark ? '#F59E0B' : '#D97706';
+        const colorTimestralBands = isDark ? 'rgba(245, 158, 11, 0.5)' : 'rgba(217, 119, 6, 0.45)';
+        const colorTimestralFill = isDark ? 'rgba(245, 158, 11, 0.16)' : 'rgba(217, 119, 6, 0.12)';
+        const colorTimesfm = isDark ? '#C084FC' : '#7C3AED';
+        const colorResonance = isDark ? '#2DD4BF' : '#0F766E';
+        const colorMa60 = isDark ? '#94A3B8' : '#475569';
+        const colorLstm = isDark ? '#FB923C' : '#EA580C';
+        const colorOpposite = isDark ? '#FB7185' : '#E11D48';
+
+        /**
+         * Dynamic Point Marker Generator for Prediction Datasets:
+         * - 方向命中 (Hit): 實心幾何形狀 (Square / Diamond / Triangle)
+         * - 方向相反 / 偏離 (Miss/Opposite): ✕ 叉號警示標點 ('crossRot')，標記預測漲但實際跌或預測跌但實際漲
+         * - 隔日預估 (T+1 Pending): ★ 星號標點 ('star')，醒目標示最新尚未開獎之預估點
+         */
+        const computeMarkerStyles = (predArray, defaultStyle, modelColor) => {
+            const pointStyles = [];
+            const pointRadii = [];
+            const pointHoverRadii = [];
+            const pointBgColors = [];
+            const pointBorderColors = [];
+            const pointBorderWidths = [];
+
+            const isDense = labels.length > 40;
+            const baseHitRadius = isDense ? 2.5 : 4.5;
+            const baseMissRadius = isDense ? 4.5 : 6.5;
+            const baseT1Radius = isDense ? 5.5 : 7.5;
+
+            for (let idx = 0; idx <= n; idx++) {
+                const val = predArray[idx];
+                if (val === null || val === undefined || isNaN(val)) {
+                    pointStyles.push(defaultStyle);
+                    pointRadii.push(0);
+                    pointHoverRadii.push(0);
+                    pointBgColors.push('transparent');
+                    pointBorderColors.push('transparent');
+                    pointBorderWidths.push(0);
+                    continue;
+                }
+
+                // T+1 Upcoming target anchor (idx === n)
+                if (idx === n) {
+                    pointStyles.push('star');
+                    pointRadii.push(baseT1Radius);
+                    pointHoverRadii.push(baseT1Radius + 2.5);
+                    pointBgColors.push(modelColor);
+                    pointBorderColors.push(isDark ? '#FFFFFF' : '#0F172A');
+                    pointBorderWidths.push(2);
+                    continue;
+                }
+
+                // Historical realized prediction point (idx > 0 && idx < n)
+                if (idx > 0) {
+                    const targetDate = dates[idx];
+                    const srcDate = dates[idx - 1];
+                    const basePrice = srcDate ? dateMap.get(srcDate)?.price : null;
+                    const actualPrice = targetDate ? dateMap.get(targetDate)?.price : null;
+
+                    if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
+                        const predDiff = val - basePrice;
+                        const actDiff = actualPrice - basePrice;
+                        // Direction hit if both positive/flat or both negative/flat
+                        const isHit = (predDiff >= 0 && actDiff >= 0) || (predDiff <= 0 && actDiff <= 0);
+
+                        if (isHit) {
+                            // 方向命中 (Hit): 實心幾何形狀
+                            pointStyles.push(defaultStyle);
+                            pointRadii.push(baseHitRadius);
+                            pointHoverRadii.push(baseHitRadius + 2.5);
+                            pointBgColors.push(modelColor);
+                            pointBorderColors.push(isDark ? '#0D0E11' : '#FFFFFF');
+                            pointBorderWidths.push(1.5);
+                        } else {
+                            // 方向相反 / 偏離 (Miss / Opposite direction): ✕ 叉號標點
+                            pointStyles.push('crossRot');
+                            pointRadii.push(baseMissRadius);
+                            pointHoverRadii.push(baseMissRadius + 3);
+                            pointBgColors.push(colorOpposite);
+                            pointBorderColors.push(colorOpposite);
+                            pointBorderWidths.push(2.5);
+                        }
+                        continue;
+                    }
+                }
+
+                // Fallback for missing baseline/actual price
+                pointStyles.push(defaultStyle);
+                pointRadii.push(baseHitRadius);
+                pointHoverRadii.push(baseHitRadius + 2);
+                pointBgColors.push(modelColor);
+                pointBorderColors.push(isDark ? '#0D0E11' : '#FFFFFF');
+                pointBorderWidths.push(1.5);
+            }
+
+            return {
+                pointStyle: pointStyles,
+                pointRadius: pointRadii,
+                pointHoverRadius: pointHoverRadii,
+                pointBackgroundColor: pointBgColors,
+                pointBorderColor: pointBorderColors,
+                pointBorderWidth: pointBorderWidths
+            };
+        };
+
+        const timestralMarkers = computeMarkerStyles(dataTimestral, 'rect', colorTimestral);
+        const timesfmMarkers = computeMarkerStyles(dataTimesfm, 'rectRot', colorTimesfm);
+        const resonanceMarkers = computeMarkerStyles(dataResonance, 'triangle', colorResonance);
+        const lstmMarkers = computeMarkerStyles(dataLstm, 'circle', colorLstm);
+
         const chart = new Chart(el, {
             type: 'line',
             data: {
@@ -339,13 +458,16 @@ export class ChartManager {
                         key: 'price',
                         label: '真實股價',
                         data: dataPrice,
-                        borderColor: '#38BDF8',
-                        backgroundColor: isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.05)',
+                        borderColor: colorPrice,
+                        backgroundColor: isDark ? 'rgba(96, 165, 250, 0.08)' : 'rgba(29, 78, 216, 0.05)',
                         borderWidth: 2.8,
                         tension: 0.25,
                         pointRadius: labels.length > 40 ? 1.5 : 3.5,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#38BDF8',
+                        pointBackgroundColor: colorPrice,
+                        pointBorderColor: isDark ? '#0D0E11' : '#FFFFFF',
+                        pointBorderWidth: 1.5,
+                        pointStyle: 'circle',
                         fill: true,
                         spanGaps: true,
                         hidden: visibility.price === false
@@ -354,15 +476,12 @@ export class ChartManager {
                         key: 'timestral',
                         label: 'Timestral 目標價 (P50)',
                         data: dataTimestral,
-                        borderColor: '#06B6D4',
+                        borderColor: colorTimestral,
                         backgroundColor: 'transparent',
-                        borderDash: [4, 3],
-                        borderWidth: 2.2,
+                        borderDash: [5, 4],
+                        borderWidth: 2.4,
                         tension: 0.25,
-                        pointRadius: labels.length > 40 ? 2 : 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#06B6D4',
-                        pointStyle: 'rect',
+                        ...timestralMarkers,
                         spanGaps: true,
                         hidden: visibility.timestral === false
                     },
@@ -370,9 +489,9 @@ export class ChartManager {
                         key: 'timestralBandsUpper',
                         label: 'Timestral P90 (樂觀上限)',
                         data: dataTimestralP90,
-                        borderColor: 'rgba(6, 182, 212, 0.4)',
-                        backgroundColor: isDark ? 'rgba(6, 182, 212, 0.12)' : 'rgba(6, 182, 212, 0.08)',
-                        borderWidth: 1,
+                        borderColor: colorTimestralBands,
+                        backgroundColor: colorTimestralFill,
+                        borderWidth: 1.2,
                         borderDash: [2, 2],
                         tension: 0.25,
                         pointRadius: 0,
@@ -385,9 +504,9 @@ export class ChartManager {
                         key: 'timestralBandsLower',
                         label: 'Timestral P10 (悲觀下限)',
                         data: dataTimestralP10,
-                        borderColor: 'rgba(6, 182, 212, 0.4)',
+                        borderColor: colorTimestralBands,
                         backgroundColor: 'transparent',
-                        borderWidth: 1,
+                        borderWidth: 1.2,
                         borderDash: [2, 2],
                         tension: 0.25,
                         pointRadius: 0,
@@ -400,15 +519,12 @@ export class ChartManager {
                         key: 'timesfm',
                         label: 'TimesFM 目標價',
                         data: dataTimesfm,
-                        borderColor: '#A855F7',
+                        borderColor: colorTimesfm,
                         backgroundColor: 'transparent',
-                        borderDash: [3, 3],
-                        borderWidth: 2.2,
+                        borderDash: [2, 3],
+                        borderWidth: 2.4,
                         tension: 0.25,
-                        pointRadius: labels.length > 40 ? 2.5 : 4.5,
-                        pointHoverRadius: 6.5,
-                        pointBackgroundColor: '#A855F7',
-                        pointStyle: 'rectRot',
+                        ...timesfmMarkers,
                         spanGaps: true,
                         hidden: visibility.timesfm === false
                     },
@@ -416,14 +532,12 @@ export class ChartManager {
                         key: 'resonance',
                         label: '雙模型平均目標價',
                         data: dataResonance,
-                        borderColor: '#10B981',
+                        borderColor: colorResonance,
                         backgroundColor: 'transparent',
+                        borderDash: [6, 3, 2, 3],
                         borderWidth: 2.4,
                         tension: 0.25,
-                        pointRadius: labels.length > 40 ? 3 : 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: '#10B981',
-                        pointStyle: 'triangle',
+                        ...resonanceMarkers,
                         spanGaps: true,
                         hidden: visibility.resonance !== true
                     },
@@ -431,14 +545,14 @@ export class ChartManager {
                         key: 'ma60',
                         label: 'MA60 季線',
                         data: dataMa60,
-                        borderColor: isDark ? '#94A3B8' : '#64748B',
+                        borderColor: colorMa60,
                         backgroundColor: 'transparent',
-                        borderDash: [2, 4],
-                        borderWidth: 1.6,
+                        borderDash: [8, 4],
+                        borderWidth: 1.8,
                         tension: 0.2,
                         pointRadius: 0,
                         pointHoverRadius: 4,
-                        pointBackgroundColor: isDark ? '#94A3B8' : '#64748B',
+                        pointBackgroundColor: colorMa60,
                         spanGaps: true,
                         hidden: visibility.ma60 !== true
                     },
@@ -446,15 +560,12 @@ export class ChartManager {
                         key: 'lstm',
                         label: 'LSTM 目標價 (舊版)',
                         data: dataLstm,
-                        borderColor: '#F59E0B',
+                        borderColor: colorLstm,
                         backgroundColor: 'transparent',
-                        borderDash: [5, 4],
+                        borderDash: [4, 4],
                         borderWidth: 1.8,
                         tension: 0.25,
-                        pointRadius: labels.length > 40 ? 1.5 : 3.5,
-                        pointHoverRadius: 5,
-                        pointBackgroundColor: '#F59E0B',
-                        pointStyle: 'circle',
+                        ...lstmMarkers,
                         spanGaps: true,
                         hidden: visibility.lstm !== true
                     }
@@ -495,7 +606,17 @@ export class ChartManager {
                                 const idx = ctx.dataIndex;
 
                                 if (ctx.dataset.key === 'price') {
-                                    return ` ${label}: ${formatted} (當日收盤)`;
+                                    let diffStr = '';
+                                    if (idx > 0 && idx < n) {
+                                        const prevPrice = dateMap.get(dates[idx - 1])?.price;
+                                        if (prevPrice && prevPrice > 0) {
+                                            const ret = ((val - prevPrice) / prevPrice) * 100;
+                                            const sign = ret >= 0 ? '+' : '';
+                                            const arrow = ret >= 0 ? '↑' : '↓';
+                                            diffStr = ` (${sign}${ret.toFixed(2)}% ${arrow})`;
+                                        }
+                                    }
+                                    return ` ${label}: ${formatted} (當日收盤${diffStr})`;
                                 }
 
                                 if (ctx.dataset.key === 'ma60') {
@@ -523,31 +644,62 @@ export class ChartManager {
                                         if (basePrice && basePrice > 0) {
                                             const expDiff = ((val - basePrice) / basePrice) * 100;
                                             const expSign = expDiff >= 0 ? '+' : '';
-                                            return ` ${label} (${shortDate}預測): ${formatted} (預期 ${expSign}${expDiff.toFixed(2)}% vs ${shortDate}現價)`;
+                                            const expArrow = expDiff >= 0 ? '↑' : '↓';
+                                            return [
+                                                ` ${label} (${shortDate}預測): ${formatted}`,
+                                                `   ↳ 預期${expDiff >= 0 ? '漲' : '跌'} ${expSign}${expDiff.toFixed(2)}% ${expArrow} (基準: ${shortDate}收盤 $${basePrice.toFixed(2)})`,
+                                                `   ↳ 狀態: ⏳ 待下個交易日收盤開獎驗證`
+                                            ];
                                         }
-                                        return ` ${label} (${shortDate}預測): ${formatted}`;
+                                        return [
+                                            ` ${label} (${shortDate}預測): ${formatted}`,
+                                            `   ↳ 狀態: ⏳ 待下個交易日收盤開獎驗證`
+                                        ];
                                     }
 
-                                    let expStr = '';
+                                    let predStr = '';
+                                    let predDiff = 0;
                                     if (basePrice && basePrice > 0) {
-                                        const expDiff = ((val - basePrice) / basePrice) * 100;
-                                        const expSign = expDiff >= 0 ? '+' : '';
-                                        expStr = `預期 ${expSign}${expDiff.toFixed(2)}%`;
+                                        predDiff = ((val - basePrice) / basePrice) * 100;
+                                        const expSign = predDiff >= 0 ? '+' : '';
+                                        const expArrow = predDiff >= 0 ? '↑' : '↓';
+                                        predStr = `預期 ${expSign}${predDiff.toFixed(2)}% ${expArrow}`;
+                                    }
+
+                                    let actStr = '';
+                                    let actDiff = 0;
+                                    if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
+                                        actDiff = ((actualPrice - basePrice) / basePrice) * 100;
+                                        const actSign = actDiff >= 0 ? '+' : '';
+                                        const actArrow = actDiff >= 0 ? '↑' : '↓';
+                                        actStr = `實際 ${actSign}${actDiff.toFixed(2)}% ${actArrow}`;
                                     }
 
                                     let errStr = '';
                                     if (actualPrice && actualPrice > 0) {
-                                        const errDiff = ((val - actualPrice) / actualPrice) * 100;
-                                        const errSign = errDiff >= 0 ? '+' : '';
-                                        errStr = `實際誤差 ${errSign}${errDiff.toFixed(2)}%`;
+                                        const errDiff = Math.abs(val - actualPrice) / actualPrice * 100;
+                                        errStr = `誤差 ${errDiff.toFixed(2)}%`;
                                     }
 
-                                    if (expStr && errStr) {
-                                        return ` ${label} (${shortDate}預測): ${formatted} (${expStr} ｜ ${errStr})`;
-                                    } else if (expStr) {
-                                        return ` ${label} (${shortDate}預測): ${formatted} (${expStr})`;
+                                    if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
+                                        const isHit = (predDiff >= 0 && actDiff >= 0) || (predDiff <= 0 && actDiff <= 0);
+                                        let outcomeLine = '';
+                                        if (isHit) {
+                                            outcomeLine = `   ↳ 🎯 方向命中 (${predStr} · ${actStr} ｜ ${errStr})`;
+                                        } else {
+                                            const predDir = predDiff >= 0 ? '預測漲' : '預測跌';
+                                            const actDir = actDiff >= 0 ? '實際跌' : '實際漲';
+                                            outcomeLine = `   ↳ ❌ 方向相反 (${predDir}但${actDir} · ${predStr} vs ${actStr} ｜ ${errStr})`;
+                                        }
+                                        return [
+                                            ` ${label} (${shortDate}預測): ${formatted}`,
+                                            outcomeLine
+                                        ];
                                     } else if (errStr) {
-                                        return ` ${label} (${shortDate}預測): ${formatted} (${errStr})`;
+                                        return [
+                                            ` ${label} (${shortDate}預測): ${formatted}`,
+                                            `   ↳ 誤差: ${errStr}`
+                                        ];
                                     }
                                     return ` ${label} (${shortDate}預測): ${formatted}`;
                                 }

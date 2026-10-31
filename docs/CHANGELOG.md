@@ -4,6 +4,20 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+## 2026-10-31 (v2.4.44)
+
+### Accessibility & UI (WCAG 2.1 Color-Blind Safe Palette & Direction Hit/Miss Visual Marker Overhaul)
+- **♿ 預測趨勢折線圖標點動態辨識升級 (`api/static/js/chart-manager.js`)**：
+  - **方向偏離/相反標點醒目標示**：當模型在 T 日預測 T+1 上漲（或下跌）而隔日實際收盤方向相反時，標點動態切換為高對比度的「✕」叉號警示標點 (`pointStyle: 'crossRot'`, 半徑增大至 4.5~6.5px, 邊框加粗至 2.5px, 採用高亮玫瑰緋紅 `#E11D48` / `#FB7185`)，徹底解決原圖表均為單一實心形狀、無法即時判斷漲跌方向是否相反的核心痛點。
+  - **方向命中標點**：維持該模型專屬實心幾何形狀（方形/菱形/三角），並以對比邊框強化辨識度。
+  - **隔日預估標點 (T+1 待開獎)**：切換為星號標點 (`pointStyle: 'star'`)，明確標記為待開獎之隔日目標錨點。
+  - **Tooltip 提示診斷全面擴充**：hover 任何標點時，除顯示當日收盤與預期漲跌幅外，自動比對預測與隔日實際漲跌，直接輸出「🎯 方向命中 (預期 +X% ↑ · 實際 +Y% ↑ ｜ 誤差 Z%)」或「❌ 方向相反 (預測漲但實際跌 · 預期 +X% ↑ vs 實際 -Y% ↓ ｜ 誤差 Z%)」，並在 T+1 標記「⏳ 待下個交易日開獎驗證」。
+- **🎨 WCAG 2.1 AA/AAA 色弱友善調色盤 (Color Vision Deficiency Safe Palette)**：
+  - **真實股價 vs Timestral 色差徹底分離**：修正原真實股價 (`#38BDF8` 天藍) 與 Timestral (`#06B6D4` 青綠) 色相接近且在淺色背景對比度不足 (< 2.8:1) 之問題；將真實股價改為深海軍藍 `#1D4ED8`（淺色）/ 鈷藍 `#60A5FA`（深色），Timestral 全面改為高飽和溫暖琥珀橙 `#D97706`（淺色）/ `#F59E0B`（深色），對比度均達 4.5:1~7:1。
+  - **多維度幾何冗餘特徵**：每條數據線同時具備專屬線條樣式與點形狀（真實股價：實線+圓形；Timestral：長虛線+方形；TimesFM：點線+菱形；雙模型平均：點劃線+三角形；MA60：長虛線+無點），即使色弱或黑白模式亦能 100% 辨別。
+  - **圖表上方標點指引**：在折線圖上方新增「無障礙 / 色弱標點辨識指引」（實心幾何=方向命中、✕ 叉號=方向相反、★ 星號=隔日預估）。
+  - **全歷史對決表與卡片對比度提升 (`tab_history.html`)**：全面修復淺色模式下 `text-cyan-400`、`text-purple-400`、`text-emerald-400`、`text-rose-400` 泛白難讀之問題，依照淺色/深色主題動態分流為高對比度文字（`text-amber-700`、`text-purple-700`、`text-emerald-700`、`text-rose-700`），符合 WCAG 1.4.3 AA 級標準。
+
 ## 2026-10-30 (v2.4.43)
 
 ### Added & Quant (AI Tech Radar & Discovery Engine: Academic Frontiers to Supply Chain Mapping)
