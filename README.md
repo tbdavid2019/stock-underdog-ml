@@ -173,6 +173,9 @@ graph TD
 * **即時量化預測與法人籌碼動態注入**：
   - 每個產業鏈節點在查詢時由 DuckDB 時序引擎即時融合：最新收盤價、今日真實漲跌幅、Mistral Timestral-209M 與 Google TimesFM 隔日目標價預測，以及三大法人/投信連買天數標籤。
 * **流暢互動導航**：點擊任一標的卡片即時高亮其上下游關聯供應鏈網絡（無關節點淡化），支援滾輪縮放、平移、隱藏未連線節點與一鍵直達個股技術 K 線歷史。
+* **📘 完整架構、趨勢演進與維護手冊 (SOP)**：
+  - 詳細說明未來時代趨勢演進時的「80/20 核心與前沿分流哲學」、3 大前瞻感知訊號（arXiv 論文突破、巨頭法說會 Capex 詞彙共振、SEC 10-K 大客戶披露），以及**新增主題、調整上中下游節點、從前沿挖掘機升格標的、下架過期主題之完整 SOP**。
+  - 詳情請參閱：[`docs/INDUSTRY_VALUE_CHAIN_GUIDE.md`](docs/INDUSTRY_VALUE_CHAIN_GUIDE.md)。
 
 ### 14. 📱 行動端 RWD 雙層響應式架構 (Adaptive Mobile Hybrid Architecture)
 * **智慧裝置自適應**：手機直向螢幕（`< 768px`）自動預設為單欄式高密度情報卡片（`Card View`），觸控人體工學友善，手動切換狀態自動同步至 `localStorage`。
@@ -554,6 +557,7 @@ stock-underdog-ml/
 遵循本專案開發鐵律（`AGENTS.md`）：
 - 每次功能或行為變更均同步記錄於 [`CHANGELOG.md`](CHANGELOG.md)。
 - Docker 詳細指南請參閱 [`docs/DOCKER.md`](docs/DOCKER.md)。
+- 跨市場產業價值鏈架構與維護指南請參閱 [`docs/INDUSTRY_VALUE_CHAIN_GUIDE.md`](docs/INDUSTRY_VALUE_CHAIN_GUIDE.md)。
 - OpenSpec 變更與規格請參閱 [`openspec/specs/`](openspec/specs/)。
 
 ---

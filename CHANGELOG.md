@@ -8,6 +8,13 @@
 
 ## 2026-10-31 (v2.4.49)
 
+### Documentation & Governance (Industry Value Chain Architectural & Maintenance Guide)
+- **📘 新增跨市場產業價值鏈架構與維護指南 (`docs/INDUSTRY_VALUE_CHAIN_GUIDE.md`)**：
+  - **80/20 動態升格哲學**：闡明核心圖譜聚焦 6～8 個由全球巨頭 Capex 實質支撐的技術瓶頸主題，並由「前沿挖掘機 (`tab=discovery`)」擔任前哨雷達沙盒，防止無關傳統產業引入連線雜訊災難。
+  - **3 大前瞻感知信號**：確立以 arXiv 前沿論文高頻詞、巨頭法說會 Capex 詞彙共振、SEC 10-K 大客戶實體披露作為主題增修的觸發基準。
+  - **4 大 Step-by-Step SOP**：詳細撰寫新增主題、調整節點層級與關聯邊、自前沿雷達升格核心標的、以及下架退潮主題的零程式碼/輕量配置維護流程。
+  - **同步更新 `README.md`**：於第 13 節核心特性與開發規範段落建立正式導引與索引連結。
+
 ### Fixed & UI Stability (Frontend Industry Chain Template Render Error)
 - **🐛 修復前端產業圖譜畫面因缺失 `formatNumber` 函數導致 Vue 模板渲染崩潰 (白畫面 / `TypeError: formatNumber is not a function`) 的重大 Bug**：
   - 在 `api/static/js/app.js` Vue 實例之 `methods`、`app.config.globalProperties` 與 `window` 統一補齊 `formatNumber` 數字格式化工具，支援千分位分割與小數點動態修約。
