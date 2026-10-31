@@ -4,6 +4,32 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)。
 
+---
+
+## 2026-10-31 (v2.4.47)
+
+### Added & Core (Production-Grade Market Trading Calendar & Holiday Guard Engine)
+- **📅 跨市場交易行事曆核心模組 (`core/market_calendar.py`, `core/__init__.py`)**：
+  - **台美市場代號智慧解析 (`resolve_market`)**：依股票代號自動辨識所屬市場（含 `.TW`、`.TWO`、`^\d{4,6}(\.TW|\.TWO)?$` 或 TWSE/TPEX 歸入台股 `TW`；其餘如 `AAPL`、`CAT` 歸入美股 `US`）。
+  - **台股 TWSE OpenAPI 串接與 3 層容錯防禦**：直連臺灣證券交易所官方 OpenAPI (`https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule`)，支援本機 30 天磁碟快取 (`data/cache/market_calendar/twse_holidays_{year}.json`) 與記憶體快取；精確解析民國年 (`1150101` -> `2026-01-01`) 與「最後交易/開始交易/市場無交易/放假補假」語意分類；內嵌 2024~2027 年台股重要休市與封關交割日離線備援資料庫。
+  - **美股 NYSE/NASDAQ 官方標準 10 大法定假日與復活節演算法**：以 Meeus/Jones/Butcher 公曆演算法精確計算復活節好禮拜五 (Good Friday)；支援新設立之六月節 (Juneteenth)；嚴格遵循美股官方放假補假規則 (Observation Rule：週六提前至週五、週日延後至週一、跨年元旦週六於 12/31 提前休市)。
+  - **前後交易日與籌碼出表防護**：提供 `is_trading_day()`、`get_trading_day_status()` (回傳 T+1 與 T-1 日期及休市原因)、`get_next_trading_day()`、`get_previous_trading_day()`、`get_recent_trading_days()` (台股嚴格遵守 15:30 盤後出表門檻，美股遵守 16:00 門檻) 與 `get_holiday_list()`。
+- **🛡️ 每日全市場日 K 同步腳本休市守衛 (`scripts/sync_twse_market.py`)**：
+  - 支援 `--force` CLI 命令列參數（預設 `False`）。
+  - 啟動時自動透過 `MarketCalendar.is_trading_day(market_or_ticker="TW")` 檢測；若為週末或國定休市日則優雅印出日誌跳過作業，杜絕假日對證交所上游無效請求與 DuckDB 空寫入。
+- **📈 三大法人籌碼回溯交易日精確排假 (`data/institutional.py`)**：
+  - 重構 `InstitutionalProvider.get_recent_trading_days()`，全面接入 `MarketCalendar.get_recent_trading_days(..., market_or_ticker="TW")`。
+  - 將過往僅排除週末升級為嚴格排除台股國定假日（如中秋節、教師節、國慶日、農曆春節封關交割日等），徹底根除假日向證交所索取不存在之 T86 報表問題，並保持午夜換日與 08:00 盤前邊界相容性。
+- **🌐 REST API 行事曆查詢端點與 Pydantic 資料模型 (`api/schemas.py`, `api/routes/market.py`)**：
+  - 新增 `MarketHolidayItem` 與 `TradingDayStatusResponse` 資料結構。
+  - 新增 `GET /api/v1/market/calendar/status`：支援 `market`、`ticker` 與 `date` 參數，秒級查詢交易日狀態、休市原因及前後交易日。
+  - 新增 `GET /api/v1/market/calendar/holidays`：支援 `market` 與 `year` 參數，取得全年度休市清冊與假日說明。
+- **🧪 完整單元測試覆蓋 (`test/test_market_calendar.py`)**：
+  - 100% 測試覆蓋台美股週末休市、TWSE 重大假日與封關交割日、US 10 大法定假日與復活節、T+1/T-1 跨假計算、15:30 門檻回溯、Ticker 解析與 FastAPI 端點，全量 309 檔既有單元測試零迴歸全數通過。
+- **🏷️ 版本升級至 v2.4.47 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.46)
 
 ### Added & Interactive UI (Stock K-Chart Style Interactive Zoom, Pan & Timeframe Range Control)

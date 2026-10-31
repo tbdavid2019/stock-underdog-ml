@@ -6,6 +6,8 @@ from typing import Optional, List, Dict, Any, Tuple
 from fastapi import APIRouter, Query, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from data.duckdb_manager import DuckDBManager
+from core.market_calendar import MarketCalendar
+from api.schemas import TradingDayStatusResponse, MarketHolidayItem
 
 import threading
 
@@ -678,4 +680,51 @@ def get_company_profiles_batch_endpoint(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批次取得公司資訊失敗: {e}")
+
+
+@router.get("/calendar/status", response_model=TradingDayStatusResponse, summary="查詢市場或個股交易日狀態")
+def get_market_calendar_status(
+    market: Optional[str] = Query("TW", description="市場代碼 (TW 或 US)"),
+    ticker: Optional[str] = Query(None, description="股票代號 (選填，若提供則優先依代號判斷市場)"),
+    date: Optional[str] = Query(None, description="查詢日期 (YYYY-MM-DD，選填，預設為今日)"),
+):
+    """
+    查詢指定市場或股票代碼於特定日期是否為交易日、休市原因、下一開盤日與前一開盤日。
+    """
+    try:
+        resolved_market = MarketCalendar.resolve_market(ticker if ticker else market)
+        status = MarketCalendar.get_trading_day_status(date_val=date, market_or_ticker=resolved_market)
+        return TradingDayStatusResponse(
+            success=True,
+            is_trading_day=status["is_trading_day"],
+            market=status["market"],
+            ticker=ticker,
+            date=status["date"],
+            reason=status["reason"],
+            next_trading_day=status["next_trading_day"],
+            previous_trading_day=status["previous_trading_day"],
+        )
+    except Exception as e:
+        logger.error(f"❌ 查詢市場交易日狀態失敗: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"查詢市場交易日狀態失敗: {str(e)}")
+
+
+@router.get("/calendar/holidays", response_model=List[MarketHolidayItem], summary="查詢全年度休市清冊")
+def get_market_calendar_holidays(
+    market: Optional[str] = Query("TW", description="市場代碼 (TW 或 US)"),
+    year: Optional[int] = Query(None, description="年份 (西元，選填，預設為當前年份)"),
+):
+    """
+    查詢指定市場與年份之全年度休市清冊與假日行事曆。
+    """
+    try:
+        resolved_market = MarketCalendar.resolve_market(market or "TW")
+        if year is None:
+            year = datetime.date.today().year
+        holidays = MarketCalendar.get_holiday_list(year=year, market=resolved_market)
+        return [MarketHolidayItem(**item) for item in holidays]
+    except Exception as e:
+        logger.error(f"❌ 查詢全年度休市清冊失敗: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"查詢全年度休市清冊失敗: {str(e)}")
+
 

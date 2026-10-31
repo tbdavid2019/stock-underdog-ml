@@ -367,3 +367,22 @@ class DiscoveryStatusResponse(BaseModel):
     success: bool = True
     data: DiscoveryStatus = Field(..., description="Discovery 管線健康度與新鮮度資訊")
 
+
+class MarketHolidayItem(BaseModel):
+    date: str = Field(..., description="休市日期 (YYYY-MM-DD)")
+    name: str = Field(..., description="節日或休市名稱")
+    market: str = Field(..., description="所屬市場 (TW 或 US)")
+    description: Optional[str] = Field(None, description="休市原因或備註說明")
+
+
+class TradingDayStatusResponse(BaseModel):
+    success: bool = True
+    is_trading_day: bool = Field(..., description="是否為交易日")
+    market: str = Field(..., description="所屬市場 (TW 或 US)")
+    ticker: Optional[str] = Field(None, description="若以代號查詢則回傳股票代號")
+    date: str = Field(..., description="查詢日期 (YYYY-MM-DD)")
+    reason: str = Field(..., description="交易狀態說明 (如 正常交易日, 週末休市, 國慶日等)")
+    next_trading_day: Optional[str] = Field(None, description="下一開盤交易日 (YYYY-MM-DD)")
+    previous_trading_day: Optional[str] = Field(None, description="前一開盤交易日 (YYYY-MM-DD)")
+
+

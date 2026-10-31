@@ -13,10 +13,12 @@ import sys
 import os
 import logging
 import datetime
+import argparse
 
 # 加入專案根目錄至 sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from core.market_calendar import MarketCalendar
 from data.duckdb_manager import DuckDBManager
 from data.market_universe import MarketUniverseSync
 from data.universe_providers import TwseTpexProvider
@@ -28,7 +30,18 @@ logging.basicConfig(
 logger = logging.getLogger("tw_market_sync")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="每日台股全市場日 K 棒自動同步腳本 (Daily TWSE/TPEX Bulk Market Sync)")
+    parser.add_argument("--force", action="store_true", default=False, help="強制執行同步作業，即使今日為休市日或週末")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    if not args.force and not MarketCalendar.is_trading_day(market_or_ticker="TW"):
+        logger.info("📅 今日為台股休市日，自動跳過全市場行情同步作業。如需強制執行請加上 --force")
+        sys.exit(0)
+
     logger.info("🚀 開始執行台股全市場日 K 棒排程同步作業...")
     start_time = datetime.datetime.now()
 
