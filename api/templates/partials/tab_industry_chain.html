@@ -114,12 +114,24 @@
 
                 <!-- Canvas View Controls -->
                 <div class="flex items-center gap-2">
+                    <!-- Focus Mode Toggle (Visible only when node selected) -->
+                    <button v-if="selectedNodeTicker"
+                            @click="toggleFocusConnectedOnly()"
+                            class="px-2.5 py-1 rounded-lg text-xs font-extrabold border transition-all flex items-center gap-1 shadow-sm"
+                            :class="focusConnectedOnly
+                                ? (isDark ? 'bg-amber-500/20 text-amber-300 border-amber-400' : 'bg-amber-100 text-amber-950 border-amber-400')
+                                : (isDark ? 'bg-[#16181D] text-slate-400 border-[#262626]' : 'bg-[#FFFDF7] text-slate-600 border-[#DDC58B]')">
+                        <span class="material-symbols-outlined text-[15px]">{{ focusConnectedOnly ? 'unfold_less' : 'unfold_more' }}</span>
+                        <span>{{ focusConnectedOnly ? '精簡聚焦' : '全圖展開' }}</span>
+                    </button>
+
                     <!-- Clear Selection Button (Visible only when node selected) -->
                     <button v-if="selectedNodeTicker"
                             @click="clearNodeSelection()"
-                            class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 bg-amber-500/20 text-amber-500 border-amber-500 hover:bg-amber-500/30 animate-pulse">
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1"
+                            :class="isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200'">
                         <span class="material-symbols-outlined text-[15px]">filter_alt_off</span>
-                        <span>重設聚焦 ({{ selectedNodeTicker }})</span>
+                        <span>重設聚焦</span>
                     </button>
 
                     <!-- Hide Unconnected Nodes Toggle -->
@@ -164,6 +176,45 @@
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B]'">
             <div class="h-6 w-32 rounded bg-slate-700/30"></div>
             <div v-for="card in 4" :key="card" class="h-24 rounded-xl bg-slate-700/20"></div>
+        </div>
+    </div>
+
+    <!-- 3.5 Focus Mode Status Banner (Visible when selectedNodeTicker is active) -->
+    <div v-if="selectedNodeTicker && !industryLoading"
+         class="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border text-xs transition-all shadow-sm"
+         :class="isDark ? 'bg-amber-500/10 border-amber-500/40 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-950'">
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="material-symbols-outlined text-[20px] text-amber-600 dark:text-amber-400">filter_center_focus</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-extrabold text-sm">
+                    已聚焦 {{ selectedNodeTicker }}
+                    <span v-if="getSelectedNodeCompany()">({{ getSelectedNodeCompany() }})</span>
+                </span>
+                <span class="px-2 py-0.5 rounded-full font-extrabold text-[11px]"
+                      :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-200 text-amber-950 border border-amber-300'">
+                    直連鏈路共 {{ highlightedNodes.length }} 檔
+                </span>
+            </div>
+            <span class="opacity-80 font-medium">
+                {{ focusConnectedOnly ? '（⚡ 精簡模式：已自動收合無關節點，免去上下滑動）' : '（🌐 全景模式：顯示全部節點）' }}
+            </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button @click="toggleFocusConnectedOnly()"
+                    class="px-3 py-1.5 rounded-lg font-bold border transition-all flex items-center gap-1.5 shadow-sm"
+                    :class="focusConnectedOnly
+                        ? (isDark ? 'bg-[#16181D] hover:bg-[#262626] border-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800')
+                        : (isDark ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' : 'bg-amber-600 text-white border-amber-600 font-black')">
+                <span class="material-symbols-outlined text-[16px]">{{ focusConnectedOnly ? 'unfold_more' : 'unfold_less' }}</span>
+                <span>{{ focusConnectedOnly ? '展開全圖節點' : '精簡只看關聯節點' }}</span>
+            </button>
+            <button @click="clearNodeSelection()"
+                    class="px-2.5 py-1.5 rounded-lg font-bold border transition-all flex items-center gap-1 shadow-sm"
+                    :class="isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200'">
+                <span class="material-symbols-outlined text-[16px]">close</span>
+                <span>退出聚焦</span>
+            </button>
         </div>
     </div>
 
@@ -216,16 +267,25 @@
                     </div>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black font-mono"
                           :class="isDark ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'bg-sky-100 text-sky-800 border border-sky-300'">
-                        {{ industryGraphData.upstream_nodes ? industryGraphData.upstream_nodes.length : 0 }} 檔
+                        {{ selectedNodeTicker && focusConnectedOnly ? (visibleCount(industryGraphData.upstream_nodes) + ' / ' + (industryGraphData.upstream_nodes ? industryGraphData.upstream_nodes.length : 0)) : (industryGraphData.upstream_nodes ? industryGraphData.upstream_nodes.length : 0) }} 檔
                     </span>
                 </div>
 
                 <!-- Stock Cards List -->
                 <div class="space-y-3">
+                    <!-- Empty State in Focused / Filtered Mode -->
+                    <div v-if="visibleCount(industryGraphData.upstream_nodes) === 0"
+                         class="p-6 rounded-xl border border-dashed text-center text-xs transition-all space-y-1.5"
+                         :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
+                        <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
+                        <div class="font-bold">{{ selectedNodeTicker ? '上游無直連供應商' : '暫無符合條件之節點' }}</div>
+                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                    </div>
+
                     <div v-for="node in industryGraphData.upstream_nodes" :key="node.ticker"
                          :id="'ind-card-' + node.ticker"
                          :data-ticker="node.ticker"
-                         v-show="!hideUnconnectedNodes || hasNodeConnections(node.ticker)"
+                         v-show="isNodeVisible(node.ticker)"
                          @click.stop="selectNode(node.ticker)"
                          class="group relative rounded-xl border p-4 cursor-pointer transition-all duration-200 select-none hover:-translate-y-0.5"
                          :class="getNodeCardClasses(node.ticker)">
@@ -335,16 +395,25 @@
                     </div>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black font-mono"
                           :class="isDark ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
-                        {{ industryGraphData.midstream_nodes ? industryGraphData.midstream_nodes.length : 0 }} 檔
+                        {{ selectedNodeTicker && focusConnectedOnly ? (visibleCount(industryGraphData.midstream_nodes) + ' / ' + (industryGraphData.midstream_nodes ? industryGraphData.midstream_nodes.length : 0)) : (industryGraphData.midstream_nodes ? industryGraphData.midstream_nodes.length : 0) }} 檔
                     </span>
                 </div>
 
                 <!-- Stock Cards List -->
                 <div class="space-y-3">
+                    <!-- Empty State in Focused / Filtered Mode -->
+                    <div v-if="visibleCount(industryGraphData.midstream_nodes) === 0"
+                         class="p-6 rounded-xl border border-dashed text-center text-xs transition-all space-y-1.5"
+                         :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
+                        <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
+                        <div class="font-bold">{{ selectedNodeTicker ? '中游無直連夥伴' : '暫無符合條件之節點' }}</div>
+                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                    </div>
+
                     <div v-for="node in industryGraphData.midstream_nodes" :key="node.ticker"
                          :id="'ind-card-' + node.ticker"
                          :data-ticker="node.ticker"
-                         v-show="!hideUnconnectedNodes || hasNodeConnections(node.ticker)"
+                         v-show="isNodeVisible(node.ticker)"
                          @click.stop="selectNode(node.ticker)"
                          class="group relative rounded-xl border p-4 cursor-pointer transition-all duration-200 select-none hover:-translate-y-0.5"
                          :class="getNodeCardClasses(node.ticker)">
@@ -459,16 +528,25 @@
                     </div>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black font-mono"
                           :class="isDark ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-purple-100 text-purple-800 border border-purple-300'">
-                        {{ industryGraphData.downstream_nodes ? industryGraphData.downstream_nodes.length : 0 }} 檔
+                        {{ selectedNodeTicker && focusConnectedOnly ? (visibleCount(industryGraphData.downstream_nodes) + ' / ' + (industryGraphData.downstream_nodes ? industryGraphData.downstream_nodes.length : 0)) : (industryGraphData.downstream_nodes ? industryGraphData.downstream_nodes.length : 0) }} 檔
                     </span>
                 </div>
 
                 <!-- Stock Cards List -->
                 <div class="space-y-3">
+                    <!-- Empty State in Focused / Filtered Mode -->
+                    <div v-if="visibleCount(industryGraphData.downstream_nodes) === 0"
+                         class="p-6 rounded-xl border border-dashed text-center text-xs transition-all space-y-1.5"
+                         :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
+                        <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
+                        <div class="font-bold">{{ selectedNodeTicker ? '下游無直連客戶' : '暫無符合條件之節點' }}</div>
+                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                    </div>
+
                     <div v-for="node in industryGraphData.downstream_nodes" :key="node.ticker"
                          :id="'ind-card-' + node.ticker"
                          :data-ticker="node.ticker"
-                         v-show="!hideUnconnectedNodes || hasNodeConnections(node.ticker)"
+                         v-show="isNodeVisible(node.ticker)"
                          @click.stop="selectNode(node.ticker)"
                          class="group relative rounded-xl border p-4 cursor-pointer transition-all duration-200 select-none hover:-translate-y-0.5"
                          :class="getNodeCardClasses(node.ticker)">

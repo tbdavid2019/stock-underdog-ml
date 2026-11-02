@@ -115,6 +115,7 @@ export const app = createApp({
             industryLoading: false,
             graphZoom: 1.0,
             hideUnconnectedNodes: false,
+            focusConnectedOnly: true, // 聚焦模式時只顯示直連鏈路節點（精簡隱藏無關節點）
             bezierPaths: [],
 
             // Ticker Explorer
@@ -2404,6 +2405,9 @@ export const app = createApp({
                 return;
             }
             this.selectedNodeTicker = ticker;
+            // 點選節點時，預設啟用聚焦精簡模式，只保留關聯鏈路，免去上下滑動困擾
+            this.focusConnectedOnly = true;
+
             const connected = new Set([ticker]);
             const connEdges = [];
             const edges = this.industryGraphData.edges || [];
@@ -2419,6 +2423,13 @@ export const app = createApp({
             }
             this.highlightedNodes = Array.from(connected);
             this.highlightedEdges = connEdges;
+
+            // 平滑滾動置頂，讓聚焦卡片立即進入視野
+            const wrapperEl = document.getElementById('industry-canvas-wrapper');
+            if (wrapperEl && wrapperEl.scrollTop > 50) {
+                wrapperEl.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
             if (connEdges.length === 0) {
                 const themeObj = (this.industryThemes || []).find(t => t.id === this.selectedTheme);
                 const themeLabel = themeObj ? themeObj.name : this.selectedTheme;
@@ -2426,6 +2437,8 @@ export const app = createApp({
             }
             this.$nextTick(() => {
                 this.renderIndustryBeziers();
+                setTimeout(() => this.renderIndustryBeziers(), 60);
+                setTimeout(() => this.renderIndustryBeziers(), 200);
             });
         },
 
@@ -2436,7 +2449,51 @@ export const app = createApp({
             this.highlightedEdges = [];
             this.$nextTick(() => {
                 this.renderIndustryBeziers();
+                setTimeout(() => this.renderIndustryBeziers(), 60);
+                setTimeout(() => this.renderIndustryBeziers(), 200);
             });
+        },
+
+        toggleFocusConnectedOnly() {
+            this.focusConnectedOnly = !this.focusConnectedOnly;
+            this.$nextTick(() => {
+                this.renderIndustryBeziers();
+                setTimeout(() => this.renderIndustryBeziers(), 60);
+                setTimeout(() => this.renderIndustryBeziers(), 200);
+            });
+        },
+
+        isNodeVisible(ticker) {
+            // 1. 若處於「聚焦模式」
+            if (this.selectedNodeTicker) {
+                if (this.focusConnectedOnly) {
+                    return ticker === this.selectedNodeTicker || this.highlightedNodes.includes(ticker);
+                }
+            }
+            // 2. 若開啟「隱藏未連線節點」
+            if (this.hideUnconnectedNodes) {
+                if (this.selectedNodeTicker) {
+                    return ticker === this.selectedNodeTicker || this.highlightedNodes.includes(ticker);
+                }
+                return this.hasNodeConnections(ticker);
+            }
+            return true;
+        },
+
+        visibleCount(nodes) {
+            if (!nodes || !Array.isArray(nodes)) return 0;
+            return nodes.filter(n => this.isNodeVisible(n.ticker)).length;
+        },
+
+        getSelectedNodeCompany() {
+            if (!this.selectedNodeTicker) return '';
+            const all = [
+                ...(this.industryGraphData.upstream_nodes || []),
+                ...(this.industryGraphData.midstream_nodes || []),
+                ...(this.industryGraphData.downstream_nodes || [])
+            ];
+            const found = all.find(n => n.ticker === this.selectedNodeTicker);
+            return found ? found.company : '';
         },
 
         onCanvasBackgroundClick(event) {
