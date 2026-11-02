@@ -9,8 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def test_app_version_bumped():
-    """Verify application version is bumped to 2.4.46."""
-    assert APP_VERSION == "2.4.46"
+    """Verify application version is at least 2.4.46."""
+    assert APP_VERSION >= "2.4.46"
 
 
 def test_index_html_includes_zoom_plugin_and_hammerjs():

@@ -1616,6 +1616,16 @@ export const app = createApp({
             if (!this.discoveryCandidates || !this.discoveryCandidates.length || force) {
                 this.discoveryLoading = true;
             }
+            if (force) {
+                try {
+                    this.showToast('🚀 正在向 arXiv 即時同步最新學術論文與前沿題材...');
+                    await ApiClient.triggerDiscoverySync();
+                    // 等待 2.5 秒讓後台拉取與 DuckDB 快照完成
+                    await new Promise(r => setTimeout(r, 2500));
+                } catch (e) {
+                    console.warn("觸發前沿同步失敗:", e);
+                }
+            }
             try {
                 const [candRes, paperRes, sigRes, statRes, histRes] = await Promise.all([
                     ApiClient.getDiscoveryCandidates({ limit: 100 }).catch(() => null),

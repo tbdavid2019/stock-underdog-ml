@@ -69,7 +69,7 @@ def test_pipeline_run_and_atomic_persistence(temp_env):
     assert status["paper_count"] == 1
 
     # 驗證 DuckDB 資料庫持久化
-    candidates = db_mgr.get_discovery_candidates(as_of="2026-10-30")
+    candidates = db_mgr.get_discovery_candidates(as_of="2026-10-30", limit=200)
     assert len(candidates) > 0
     # 奇鋐 3017 或 雙鴻 3324 應存在且評分正確
     tickers = [c["ticker"] for c in candidates]

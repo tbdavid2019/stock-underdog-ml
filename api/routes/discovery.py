@@ -243,3 +243,33 @@ def get_status():
             message=db_status.get("message", "DuckDB state")
         )
     )
+
+
+import threading
+_discovery_sync_lock = threading.Lock()
+
+
+@router.post("/sync", summary="手動觸發前沿雷達管線掃描與 arXiv 即時同步")
+def trigger_sync():
+    """
+    非同步觸發 DiscoveryPipeline 爬取 arXiv 最新論文、對齊主題供應鏈並刷新 DuckDB 與快照。
+    """
+    if not _discovery_sync_lock.acquire(blocking=False):
+        return {"success": False, "message": "Discovery 管線已在執行中，請稍候..."}
+
+    def _worker():
+        try:
+            logger.info("⚡ 手動觸發 DiscoveryPipeline 背景執行開始...")
+            from pipeline.discovery_pipeline import DiscoveryPipeline
+            pipe = DiscoveryPipeline()
+            res = pipe.run()
+            logger.info(f"✅ 手動 DiscoveryPipeline 執行完成: {res}")
+        except Exception as e:
+            logger.error(f"❌ 手動 DiscoveryPipeline 執行異常: {e}", exc_info=True)
+        finally:
+            _discovery_sync_lock.release()
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    return {"success": True, "message": "前沿挖掘管線已在背景啟動，正在向 arXiv 擷取最新學術前沿..."}
+

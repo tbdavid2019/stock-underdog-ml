@@ -4,6 +4,7 @@ test/test_api_discovery.py - 測試 Discovery 前沿挖掘機 REST API 端點
 
 import os
 import json
+import datetime
 import tempfile
 import pytest
 from fastapi.testclient import TestClient
@@ -22,10 +23,11 @@ def seeded_db(monkeypatch):
     db_path = os.path.join(temp_dir, "test_api_discovery.duckdb")
     db_mgr = DuckDBManager(db_path=db_path)
 
+    today_str = datetime.date.today().isoformat()
     # 寫入測試用 Discovery 快照
     db_mgr.save_discovery_snapshot(
         run_id="test_run_123",
-        as_of="2026-10-30",
+        as_of=today_str,
         candidates=[
             {
                 "ticker": "2330",
@@ -164,7 +166,7 @@ def test_get_history_endpoint(client, seeded_db):
     data = resp.json()
     assert data["success"] is True
     assert data["total_count"] >= 1
-    assert data["data"][0]["as_of"] == "2026-10-30"
+    assert data["data"][0]["as_of"] == datetime.date.today().isoformat()
 
 
 def test_get_status_endpoint(client, seeded_db):
@@ -175,5 +177,5 @@ def test_get_status_endpoint(client, seeded_db):
     st = data["data"]
     assert st["status"] == "success"
     assert st["stale"] is False
-    assert st["as_of"] == "2026-10-30"
+    assert st["as_of"] == datetime.date.today().isoformat()
     assert st["candidate_count"] == 2

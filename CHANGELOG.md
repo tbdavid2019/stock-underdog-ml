@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-11-02 (v2.4.58)
+
+### Enhancements & Reliability (arXiv Tech Radar Automatic Sync & Multi-Frequency Cron)
+- **⚡ 前沿挖掘機 arXiv 即時排程優化與手動更新觸發機制**：
+  - **解決週末休刊時差延遲問題**：釐清 arXiv 官方排程（美東時間工作日 20:00 發布，台北時間次日 09:00 / 冬令 10:00，週末不發刊）。原本管線定於平日 06:00 執行，早於 arXiv 週一新批次發布時間，導致週末後的第一個交易日清晨抓取到的是週四批次。
+  - **升級多時段自動巡檢排程 (`docker/crontab`)**：由原本每日單次 (06:00) 升級為每日 5 次高頻自動同步（`06:00`, `10:00` [精準對齊 arXiv 發布], `14:00`, `18:00`, `22:00`），全面保障最新論文即刻入庫。
+  - **新增即時同步 API 端點 (`POST /api/v1/discovery/sync`)**：支援前端點擊「更新雷達」時即時在背景喚醒管線同步 arXiv 最新資料，告別唯讀快取限制。
+  - **前端提示優化 (`api/templates/partials/tab_discovery.html`)**：在論文雷達區塊增加 arXiv 發刊時間說明提示，避免使用者對日期更新頻率產生疑惑。
+- **🏷️ 版本升級至 v2.4.58 (`core/version.py`)**。
+
+---
+
 ## 2026-11-02 (v2.4.57)
 
 ### Enhancements & UX Optimization (Industry Chain Focused Smart Subgraph & Noise Elimination)

@@ -402,6 +402,15 @@ export const ApiClient = {
     },
 
     /**
+     * Trigger background sync of Discovery engine with arXiv
+     */
+    async triggerDiscoverySync() {
+        const res = await fetch('/api/v1/discovery/sync', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
      * Get available AI industry value chain themes
      */
     async getIndustryThemes() {

@@ -5,8 +5,8 @@ SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 PYTHONPATH=/app
 
-# 1. 前沿挖掘機 arXiv 論文與題材前瞻巡檢 (週一至週五 早上 06:00)
-0 6 * * 1-5 cd /app && python -m pipeline.discovery_pipeline >> /app/logs/cron_discovery.log 2>&1
+# 1. 前沿挖掘機 arXiv 論文與題材前瞻巡檢 (週一至週五 06:00, 10:00 [配合 arXiv 09:00 發布], 14:00, 18:00, 22:00)
+0 6,10,14,18,22 * * 1-5 cd /app && python -m pipeline.discovery_pipeline >> /app/logs/cron_discovery.log 2>&1
 
 # 2. 產業價值鏈與官方平台雙週快取巡檢同步 (每週一 早上 07:00)
 0 7 * * 1 cd /app && python -c "from data.industry_chain_fetcher import IndustryChainFetcher; print(IndustryChainFetcher().sync_to_duckdb())" >> /app/logs/cron_industry.log 2>&1
