@@ -6,6 +6,23 @@
 
 ---
 
+## 2026-11-02 (v2.4.59)
+
+### Features & UX (Industry Chain Direct URL Deep-linking & One-Click Sharing)
+- **🔗 產業價值鏈圖譜雙向網址路由直達與一鍵分享功能**：
+  - **雙向 URL 同步 (`?tab=industry_chain&ticker=3661`)**：
+    - 點選產業圖譜中任意個股（如 `3661` 世芯-KY），網址列即時透過 `window.history.pushState` 同步更新為 `?tab=industry_chain&ticker=3661`，無需重新整理頁面。
+    - 支援瀏覽器上一頁/下一頁 (`popstate`) 無縫歷史回退與前進。
+    - 取消聚焦時，網址列自動恢復至 clean 的 `?tab=industry_chain`。
+  - **精準直達與個股代碼模糊相容**：
+    - 外部訪客直接開啟 `https://stockdata.david888.com/?tab=industry_chain&ticker=3661` 或相容帶尾碼 `3661.TW`，圖譜載入後自動定位、選中該標的並開啟精簡聚焦子圖。
+    - 同步相容 URL 參數 `focus` 與 `node`。
+  - **一鍵複製直達連結 (`copyIndustryShareUrl`)**：
+    - 於聚焦麵包屑狀態列（Focus Banner）與頂部快捷操作列新增 `[ 🔗 分享直達連結 ]` 按鈕，點擊自動將當前個股專屬直達 URL 複製到剪貼簿，並彈出視覺 Toast 提示（如 `✅ 已複製「3661 (世芯-KY)」產業鏈直達連結！可直接分享給他人`）。
+- **🏷️ 版本升級至 v2.4.59 (`core/version.py`)**。
+
+---
+
 ## 2026-11-02 (v2.4.58)
 
 ### Enhancements & Reliability (arXiv Tech Radar Automatic Sync & Multi-Frequency Cron)

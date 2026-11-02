@@ -125,6 +125,16 @@
                         <span>{{ focusConnectedOnly ? '精簡聚焦' : '全圖展開' }}</span>
                     </button>
 
+                    <!-- Share Focus Link Button (Visible only when node selected) -->
+                    <button v-if="selectedNodeTicker"
+                            @click="copyIndustryShareUrl()"
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 shadow-sm"
+                            :class="isDark ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30' : 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200'"
+                            title="複製當前個股產業鏈直達連結以分享他人">
+                        <span class="material-symbols-outlined text-[15px]">share</span>
+                        <span>分享直達</span>
+                    </button>
+
                     <!-- Clear Selection Button (Visible only when node selected) -->
                     <button v-if="selectedNodeTicker"
                             @click="clearNodeSelection()"
@@ -201,6 +211,13 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <button @click="copyIndustryShareUrl()"
+                    class="px-3 py-1.5 rounded-lg font-bold border transition-all flex items-center gap-1.5 shadow-sm"
+                    :class="isDark ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30' : 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200'"
+                    title="複製當前個股產業鏈直達連結以分享他人">
+                <span class="material-symbols-outlined text-[16px]">share</span>
+                <span>分享直達連結</span>
+            </button>
             <button @click="toggleFocusConnectedOnly()"
                     class="px-3 py-1.5 rounded-lg font-bold border transition-all flex items-center gap-1.5 shadow-sm"
                     :class="focusConnectedOnly

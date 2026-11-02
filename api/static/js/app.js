@@ -1752,6 +1752,9 @@ export const app = createApp({
                     if (this.selectedRelationType && this.selectedRelationType !== 'ALL') {
                         params.set('rel', this.selectedRelationType);
                     }
+                    if (this.selectedNodeTicker) {
+                        params.set('ticker', this.selectedNodeTicker);
+                    }
                 }
                 const queryStr = params.toString();
                 const newUrl = queryStr ? `${window.location.pathname}?${queryStr}` : window.location.pathname;
@@ -1799,6 +1802,8 @@ export const app = createApp({
                 if (tab === 'industry_chain') {
                     if (params.get('theme')) this.selectedTheme = params.get('theme');
                     if (params.get('rel')) this.selectedRelationType = params.get('rel');
+                    const indTicker = params.get('ticker') || params.get('focus') || params.get('node');
+                    this.selectedNodeTicker = indTicker ? indTicker.trim().toUpperCase() : null;
                 }
             } catch (e) {
                 console.debug("Parse URL params error:", e);
@@ -1819,7 +1824,31 @@ export const app = createApp({
                     this.loadHistory();
                 }
             } else if (this.activeTab === 'industry_chain') {
-                this.loadIndustryChainData();
+                if (this.industryGraphData && this.industryGraphData.upstream_nodes && this.industryGraphData.upstream_nodes.length) {
+                    if (this.selectedNodeTicker) {
+                        const allNodes = [
+                            ...(this.industryGraphData.upstream_nodes || []),
+                            ...(this.industryGraphData.midstream_nodes || []),
+                            ...(this.industryGraphData.downstream_nodes || []),
+                        ];
+                        const targetTicker = this.selectedNodeTicker;
+                        const matched = allNodes.find(n => 
+                            n.ticker === targetTicker || 
+                            n.ticker === targetTicker.split('.')[0] ||
+                            (targetTicker.includes('.') && n.ticker.split('.')[0] === targetTicker.split('.')[0])
+                        );
+                        if (matched) {
+                            this.selectedNodeTicker = matched.ticker;
+                            this.selectNode(matched.ticker, false);
+                        } else {
+                            this.clearNodeSelection(false);
+                        }
+                    } else {
+                        this.clearNodeSelection(false);
+                    }
+                } else {
+                    this.loadIndustryChainData();
+                }
             } else if (this.activeTab === 'podcast') {
                 this.loadPodcastEpisodes();
                 this.loadPodcastChannels();
@@ -2372,12 +2401,20 @@ export const app = createApp({
                             ...(res.midstream_nodes || []),
                             ...(res.downstream_nodes || []),
                         ];
-                        const exists = allNodes.some(n => n.ticker === this.selectedNodeTicker);
-                        if (exists) {
-                            this.selectNode(this.selectedNodeTicker);
+                        const targetTicker = this.selectedNodeTicker;
+                        const matched = allNodes.find(n => 
+                            n.ticker === targetTicker || 
+                            n.ticker === targetTicker.split('.')[0] ||
+                            (targetTicker.includes('.') && n.ticker.split('.')[0] === targetTicker.split('.')[0])
+                        );
+                        if (matched) {
+                            this.selectedNodeTicker = matched.ticker;
+                            this.selectNode(matched.ticker, false);
                         } else {
-                            this.clearNodeSelection();
+                            this.clearNodeSelection(false);
                         }
+                    } else if (this.highlightedNodes && this.highlightedNodes.length) {
+                        this.clearNodeSelection(false);
                     }
                     this.$nextTick(() => {
                         this.renderIndustryBeziers();
@@ -2409,9 +2446,10 @@ export const app = createApp({
             this.updateUrl();
         },
 
-        selectNode(ticker) {
-            if (this.selectedNodeTicker === ticker) {
-                this.clearNodeSelection();
+        selectNode(ticker, shouldUpdateUrl = true) {
+            if (this.selectedNodeTicker === ticker && this.highlightedNodes && this.highlightedNodes.length > 0) {
+                // 若已經選中同一節點，再次點選切換精簡/展開模式
+                this.toggleFocusConnectedOnly();
                 return;
             }
             this.selectedNodeTicker = ticker;
@@ -2434,6 +2472,11 @@ export const app = createApp({
             this.highlightedNodes = Array.from(connected);
             this.highlightedEdges = connEdges;
 
+            // 即時同步至網址列，方便一鍵直達與分享他人
+            if (shouldUpdateUrl) {
+                this.updateUrl();
+            }
+
             // 平滑滾動置頂，讓聚焦卡片立即進入視野
             const wrapperEl = document.getElementById('industry-canvas-wrapper');
             if (wrapperEl && wrapperEl.scrollTop > 50) {
@@ -2452,16 +2495,31 @@ export const app = createApp({
             });
         },
 
-        clearNodeSelection() {
-            if (!this.selectedNodeTicker) return;
+        clearNodeSelection(shouldUpdateUrl = true) {
+            if (!this.selectedNodeTicker && (!this.highlightedNodes || !this.highlightedNodes.length)) return;
             this.selectedNodeTicker = null;
             this.highlightedNodes = [];
             this.highlightedEdges = [];
+            if (shouldUpdateUrl) {
+                this.updateUrl();
+            }
             this.$nextTick(() => {
                 this.renderIndustryBeziers();
                 setTimeout(() => this.renderIndustryBeziers(), 60);
                 setTimeout(() => this.renderIndustryBeziers(), 200);
             });
+        },
+
+        copyIndustryShareUrl() {
+            this.updateUrl(true);
+            const fullUrl = window.location.href;
+            if (!this.selectedNodeTicker) {
+                this.copyText(fullUrl, '已複製產業鏈圖譜連結！');
+                return;
+            }
+            const comp = this.getSelectedNodeCompany();
+            const label = comp ? `${this.selectedNodeTicker} (${comp})` : this.selectedNodeTicker;
+            this.copyText(fullUrl, `✅ 已複製「${label}」產業鏈直達連結！可直接分享給他人`);
         },
 
         toggleFocusConnectedOnly() {
