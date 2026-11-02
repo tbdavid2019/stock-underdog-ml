@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-11-02 (v2.4.55)
+
+### Fixed & UI Stability (Industry Value Chain RangeError & Template Rendering)
+- **🐛 修復產業圖譜因日股非整數價格觸發 `RangeError: maximumFractionDigits value is out of range` 崩潰問題**：
+  - 在 `api/static/js/app.js` 全面強化 `formatNumber` 與 `globalFormatNumber`，防禦 `minimumFractionDigits > maximumFractionDigits` 的 ECMAScript 規範邊界條件（當 `decimals = 0` 且 `Number.isInteger` 為 `false` 時，強制 `minDec <= maxDec`，並加入 `try...catch` 降級防禦）。
+  - 修復 `api/templates/partials/tab_industry_chain.html` 股票卡片現價格式化邏輯，日股如迪思科 (`6146.T`, 現價 `¥210.5`) 自適應顯示 1 位小數，避免強制指定 0 位小數引發格式化衝突。
+  - 對 `change_pct` 與 `timestral_potential` 補齊 `Number()` 強制型別轉換保護，杜絕屬性缺失或型別不合時造成的渲染阻斷。
+- **🏷️ 版本升級至 v2.4.55 (`core/version.py`)**。
+
+---
+
 ## 2026-10-31 (v2.4.54)
 
 ### Fixed & Enhancements (Stock Resolution & History Trajectory Resilience)

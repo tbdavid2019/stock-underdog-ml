@@ -270,12 +270,12 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"
                                       :class="node.change_pct >= 0 ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800') : (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-800')">
-                                    {{ (node.change_pct >= 0 ? '+' : '') + node.change_pct.toFixed(2) }}%
+                                    {{ (Number(node.change_pct) >= 0 ? '+' : '') + Number(node.change_pct).toFixed(2) }}%
                                 </span>
                             </div>
 
@@ -284,8 +284,8 @@
                                 <span v-if="node.timestral_potential !== null && node.timestral_potential !== undefined"
                                       class="px-1.5 py-0.5 rounded text-[10px] font-black"
                                       :class="node.timestral_potential >= 0 ? 'bg-sky-500/20 text-sky-400' : 'bg-rose-500/20 text-rose-400'"
-                                      :title="'Timestral 隔日目標漲跌幅: ' + node.timestral_potential.toFixed(1) + '%'">
-                                    T {{ (node.timestral_potential >= 0 ? '+' : '') + node.timestral_potential.toFixed(1) }}%
+                                      :title="'Timestral 隔日目標漲跌幅: ' + Number(node.timestral_potential).toFixed(1) + '%'">
+                                    T {{ (Number(node.timestral_potential) >= 0 ? '+' : '') + Number(node.timestral_potential).toFixed(1) }}%
                                 </span>
                                 <span v-if="node.institutional_streak"
                                       class="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-500 border border-amber-500/30">
@@ -370,7 +370,7 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"
@@ -475,12 +475,12 @@
                             <div class="flex items-center gap-1.5">
                                 <span class="font-bold text-sm"
                                       :class="isDark ? 'text-white' : 'text-[#2B251A]'">
-                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? 0 : 2)) : '—' }}
+                                    {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
                                       class="font-black px-1.5 py-0.2 rounded text-[11px]"
                                       :class="node.change_pct >= 0 ? (isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-800') : (isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-800')">
-                                    {{ (node.change_pct >= 0 ? '+' : '') + node.change_pct.toFixed(2) }}%
+                                    {{ (Number(node.change_pct) >= 0 ? '+' : '') + Number(node.change_pct).toFixed(2) }}%
                                 </span>
                             </div>
 
@@ -489,8 +489,8 @@
                                 <span v-if="node.timestral_potential !== null && node.timestral_potential !== undefined"
                                       class="px-1.5 py-0.5 rounded text-[10px] font-black"
                                       :class="node.timestral_potential >= 0 ? 'bg-sky-500/20 text-sky-400' : 'bg-rose-500/20 text-rose-400'"
-                                      :title="'Timestral 隔日目標漲跌幅: ' + node.timestral_potential.toFixed(1) + '%'">
-                                    T {{ (node.timestral_potential >= 0 ? '+' : '') + node.timestral_potential.toFixed(1) }}%
+                                      :title="'Timestral 隔日目標漲跌幅: ' + Number(node.timestral_potential).toFixed(1) + '%'">
+                                    T {{ (Number(node.timestral_potential) >= 0 ? '+' : '') + Number(node.timestral_potential).toFixed(1) }}%
                                 </span>
                                 <span v-if="node.institutional_streak"
                                       class="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-500 border border-amber-500/30">

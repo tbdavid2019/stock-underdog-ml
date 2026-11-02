@@ -1439,11 +1439,17 @@ export const app = createApp({
         formatNumber(val, decimals = 2) {
             if (val === null || val === undefined || val === '') return '—';
             const num = Number(val);
-            if (isNaN(num)) return String(val);
-            return num.toLocaleString('en-US', {
-                minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
-                maximumFractionDigits: decimals,
-            });
+            if (isNaN(num) || !isFinite(num)) return String(val);
+            const maxDec = Math.max(0, Math.min(20, Math.floor(Number(decimals) || 0)));
+            const minDec = Math.min(Number.isInteger(num) ? 0 : 2, maxDec);
+            try {
+                return num.toLocaleString('en-US', {
+                    minimumFractionDigits: minDec,
+                    maximumFractionDigits: maxDec,
+                });
+            } catch (e) {
+                return num.toFixed(maxDec);
+            }
         },
         selectChannelAndFilter(channelId) {
             this.podcastSelectedChannel = channelId;
@@ -2708,11 +2714,17 @@ window.formatPrice = globalFormatPrice;
 const globalFormatNumber = (val, decimals = 2) => {
     if (val === null || val === undefined || val === '') return '—';
     const num = Number(val);
-    if (isNaN(num)) return String(val);
-    return num.toLocaleString('en-US', {
-        minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
-        maximumFractionDigits: decimals,
-    });
+    if (isNaN(num) || !isFinite(num)) return String(val);
+    const maxDec = Math.max(0, Math.min(20, Math.floor(Number(decimals) || 0)));
+    const minDec = Math.min(Number.isInteger(num) ? 0 : 2, maxDec);
+    try {
+        return num.toLocaleString('en-US', {
+            minimumFractionDigits: minDec,
+            maximumFractionDigits: maxDec,
+        });
+    } catch (e) {
+        return num.toFixed(maxDec);
+    }
 };
 app.config.globalProperties.formatNumber = globalFormatNumber;
 window.formatNumber = globalFormatNumber;

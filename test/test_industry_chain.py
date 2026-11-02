@@ -293,6 +293,18 @@ class TestIndustryChainAPI(unittest.TestCase):
         for edge in data["edges"]:
             self.assertEqual(edge["relation_type"], "大客戶依賴")
 
+    def test_jp_nodes_in_graph_have_valid_structure(self):
+        """驗證日股節點 (如 6146.T, 6857.T, 8035.T) 在產業圖譜中結構完整"""
+        resp = self.client.get("/api/v1/industry-chain/graph?theme=ALL")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        all_nodes = data["upstream_nodes"] + data["midstream_nodes"] + data["downstream_nodes"]
+        jp_nodes = [n for n in all_nodes if n.get("market") == "JP"]
+        self.assertGreater(len(jp_nodes), 0, "應至少包含日股半導體/先進封裝節點")
+        disco_node = next((n for n in jp_nodes if "6146" in n["ticker"]), None)
+        self.assertIsNotNone(disco_node, "應包含 6146.T 迪思科 (DISCO)")
+        self.assertEqual(disco_node["layer"], "upstream")
+
 
 if __name__ == "__main__":
     unittest.main()
