@@ -2460,17 +2460,17 @@ export const app = createApp({
             }
 
             if (ticker === this.selectedNodeTicker) {
-                return (isDark ? 'bg-[#16181D] ' : 'bg-[#FFFDF7] ') +
-                    'ring-2 ring-amber-400 border-amber-400 shadow-xl shadow-amber-500/20 scale-[1.02] z-30';
+                return (isDark ? 'bg-[#16181D] ' : 'bg-white ') +
+                    'ring-3 ring-amber-500 border-amber-500 shadow-xl shadow-amber-500/25 scale-[1.02] z-30';
             }
 
             if (this.highlightedNodes.includes(ticker)) {
-                return (isDark ? 'bg-[#16181D] ' : 'bg-[#FFFDF7] ') +
-                    'ring-1 ring-sky-400 border-sky-400 shadow-md shadow-sky-500/10 opacity-100 z-20';
+                return (isDark ? 'bg-[#16181D] ' : 'bg-white ') +
+                    'ring-2 ring-sky-600 border-sky-600 shadow-md shadow-sky-600/20 opacity-100 z-20';
             }
 
-            return (isDark ? 'bg-[#0D0E11] border-[#262626] ' : 'bg-[#FFF9E8] border-[#DDC58B] ') +
-                'opacity-20 grayscale-[70%]';
+            return (isDark ? 'bg-[#0D0E11] border-[#262626] ' : 'bg-[#FFF9E8]/90 border-[#E5D7B7] ') +
+                'opacity-65 grayscale-[30%] hover:opacity-100 hover:grayscale-0 transition-opacity';
         },
 
         zoomIn() {
@@ -2534,29 +2534,39 @@ export const app = createApp({
                 const cy2 = y2;
                 const d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${cx1.toFixed(1)} ${cy1.toFixed(1)}, ${cx2.toFixed(1)} ${cy2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
 
-                let color = '#38BDF8'; // 產業鏈 (Sky blue)
-                if (edge.relation_type === '資本開支') color = '#34D399'; // Emerald
-                else if (edge.relation_type === '大客戶依賴') color = '#F59E0B'; // Amber
-                else if (edge.relation_type === '主題關聯') color = '#A855F7'; // Purple
+                // WCAG 2.2 AA / AAA 色弱友善高對比雙重編碼配色 (高對比色彩 + 拓撲線型 Pattern)
+                const isDark = this.isDark;
+                let color = isDark ? '#38BDF8' : '#0284C7'; // 產業鏈: Deep Sky Blue
+                let dashArray = 'none'; // 實線 (Solid)
+                let strokeWidth = 2.4;
 
-                let opacity = 0.45;
-                let width = 1.5;
+                if (edge.relation_type === '資本開支') {
+                    color = isDark ? '#34D399' : '#047857'; // 資本開支: Deep Forest Teal
+                    dashArray = '8 5'; // 長虛線 (Dashed)
+                    strokeWidth = 2.2;
+                } else if (edge.relation_type === '大客戶依賴') {
+                    color = isDark ? '#FBBF24' : '#B45309'; // 大客戶依賴: Deep Amber-Orange
+                    dashArray = '8 3 2 3'; // 點劃線 (Dash-Dot)
+                    strokeWidth = 2.6;
+                } else if (edge.relation_type === '主題關聯') {
+                    color = isDark ? '#C084FC' : '#7E22CE'; // 主題關聯: Deep Royal Purple
+                    dashArray = '3 3'; // 密點線 (Dotted)
+                    strokeWidth = 2.4;
+                }
+
+                let opacity = isDark ? 0.65 : 0.80;
+                let width = strokeWidth;
                 let isHighlighted = false;
-                let dashArray = 'none';
 
                 if (this.selectedNodeTicker) {
                     if (edge.source === this.selectedNodeTicker || edge.target === this.selectedNodeTicker) {
                         opacity = 1.0;
-                        width = 2.8;
+                        width = strokeWidth + 1.4; // 3.6px - 4.0px
                         isHighlighted = true;
                     } else {
-                        opacity = 0.08;
-                        width = 1.0;
+                        opacity = isDark ? 0.10 : 0.16;
+                        width = 1.2;
                     }
-                }
-
-                if (edge.relation_type === '主題關聯') {
-                    dashArray = '4 4';
                 }
 
                 paths.push({
