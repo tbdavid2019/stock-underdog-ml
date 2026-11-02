@@ -219,7 +219,7 @@
     </div>
 
     <!-- 4. Interactive 3-Column Graph Canvas with SVG Bézier Overlays -->
-    <div v-else
+    <div v-if="!industryLoading"
          id="industry-canvas-wrapper"
          class="relative rounded-2xl border p-4 sm:p-6 transition-all duration-200 overflow-x-auto min-h-[600px]"
          :class="isDark ? 'bg-[#030302] border-[#262626]' : 'bg-[#FFF0CC] border-[#DDC58B]'"
