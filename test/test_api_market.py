@@ -114,6 +114,27 @@ class TestMarketAPI(unittest.TestCase):
         data = resp.json()
         self.assertTrue(data.get("success"))
 
+    def test_foreign_stock_broker_endpoints_return_empty(self):
+        """驗證非台股代號 (如日股 6770.T) 查詢 broker/trend 與 broker/summary 回傳乾淨空資料"""
+        # 1. 測試 /broker/trend/6770.T
+        resp_trend = self.client.get("/api/v1/market/broker/trend/6770.T")
+        self.assertEqual(resp_trend.status_code, 200)
+        data_trend = resp_trend.json()
+        self.assertEqual(data_trend.get("dates"), [])
+        self.assertEqual(data_trend.get("series"), [])
+
+        # 2. 測試 /broker/summary/6770.T
+        resp_summary = self.client.get("/api/v1/market/broker/summary/6770.T")
+        self.assertEqual(resp_summary.status_code, 200)
+        data_summary = resp_summary.json()
+        self.assertEqual(data_summary.get("top_buyers"), [])
+        self.assertEqual(data_summary.get("top_sellers"), [])
+
+        # 3. 測試 /institutional/6770.T
+        resp_inst = self.client.get("/api/v1/market/institutional/6770.T")
+        self.assertEqual(resp_inst.status_code, 200)
+        self.assertEqual(resp_inst.json(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -338,6 +338,120 @@ URL Source: https://tw.stock.yahoo.com/quote/9945.TW/profile
         self.assertEqual(name, "ALPS ALPINE")
         self.assertNotEqual(name, "力積電")
 
+    def test_foreign_stock_contaminated_cache_filtered_and_refreshed(self):
+        """驗證非台股 (6770.T) 快取若遭力積電/台股污染，會被自動識別為損壞快取並重抓/清理"""
+        import time
+        contaminated_cache = {
+            "ticker": "6770.T",
+            "raw_code": "6770.T",
+            "name": "ALPS ALPINE CO LTD",
+            "industry": "電子零組件",
+            "business_summary": "力積電(6770)為台灣晶圓代工大廠，業務涵蓋記憶體代工...",
+            "chairman": "黃崇仁",
+            "market_cap": "$100B",
+            "recent_news": [
+                {
+                    "title": "力積電(6770.TW) 走勢圖 - Yahoo股市",
+                    "url": "https://tw.stock.yahoo.com/quote/6770.TW",
+                    "snippet": "最新力積電即時行情"
+                },
+                {
+                    "title": "【股市爆料同學會】力積電大漲分析",
+                    "url": "https://www.cmoney.tw/forum/stock/6770",
+                    "snippet": "同學會熱門討論"
+                }
+            ],
+            "links": {}
+        }
+
+        # 寫入磁碟快取與記憶體快取
+        CompanyProfileService._write_cache("6770.T", contaminated_cache)
+        CompanyProfileService._CACHE["6770.T"] = (time.time(), contaminated_cache)
+
+        # 模擬 yfinance 備援行為：回傳日股 Alps Alpine 的真實資料
+        with patch("yfinance.Ticker") as mock_yf:
+            mock_inst = MagicMock()
+            mock_inst.info = {
+                "shortName": "ALPS ALPINE CO LTD",
+                "longName": "ALPS ALPINE CO., LTD.",
+                "longBusinessSummary": "Alps Alpine Co., Ltd. manufactures and sells electronic components and automotive infotainment systems worldwide.",
+                "industry": "Electronic Components",
+                "sector": "Technology",
+                "marketCap": 250000000000
+            }
+            mock_yf.return_value = mock_inst
+
+            # 呼叫 get_company_profile，此時應拋棄被污染快取，並透過 yfinance 重抓
+            profile = CompanyProfileService.get_company_profile("6770.T")
+
+            # 驗證簡介絕不可包含力積電，且已被 yfinance 的正確英文簡介覆蓋
+            self.assertNotIn("力積電", profile.get("business_summary", ""))
+            self.assertIn("Alps Alpine", profile.get("business_summary", ""))
+
+            # 驗證新聞列表絕不可包含任何力積電、.TW 或台灣財經網址
+            for news in profile.get("recent_news", []):
+                self.assertNotIn("力積電", news.get("title", ""))
+                self.assertNotIn(".TW", news.get("title", ""))
+                self.assertNotIn("tw.stock.yahoo.com", news.get("url", ""))
+                self.assertNotIn("cmoney.tw", news.get("url", ""))
+
+    def test_parse_news_markdown_foreign_stock_rejects_taiwan_sources(self):
+        """驗證 _parse_news_markdown 對於非台股標的拒絕收錄台灣新聞與污染簡介"""
+        profile = {
+            "ticker": "6770.T",
+            "raw_code": "6770.T",
+            "name": "ALPS ALPINE CO LTD",
+            "business_summary": "",
+            "recent_news": []
+        }
+        text = """
+[1] Title: 力積電(6770.TW) 走勢圖 - Yahoo股市
+[1] URL Source: https://tw.stock.yahoo.com/quote/6770.TW
+[1] Description: 力積電(6770.TW) 主要從事晶圓代工業務與特殊製程提供
+
+[2] Title: ALPS ALPINE announces new sensors for automotive
+[2] URL Source: https://www.bloomberg.com/news/articles/2026-11-01/alps-alpine-sensors
+[2] Description: Alps Alpine Co Ltd unveiled new sensors designed for modern electric vehicles.
+"""
+        CompanyProfileService._parse_news_markdown(profile, text)
+
+        # 簡介不得被力積電代工業務佔據
+        self.assertNotIn("力積電", profile.get("business_summary", ""))
+
+        # 新聞列表中應只有第二則 Bloomberg 新聞，第一則台灣力積電新聞必須被丟棄
+        self.assertEqual(len(profile["recent_news"]), 1)
+        self.assertEqual(profile["recent_news"][0]["title"], "ALPS ALPINE announces new sensors for automotive")
+
+    def test_international_stock_legitimate_quote_news_not_contaminated(self):
+        """驗證國際股票 (如 AAPL) 包含 /quote/ 的合法英文新聞 (如 Yahoo Finance / Bloomberg) 絕不被判定為污染"""
+        legit_profile = {
+            "ticker": "AAPL",
+            "raw_code": "AAPL",
+            "name": "Apple Inc.",
+            "business_summary": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.",
+            "recent_news": [
+                {
+                    "title": "Apple Inc. (AAPL) Stock Price, News, Quote & History - Yahoo Finance",
+                    "url": "https://finance.yahoo.com/quote/AAPL/news/apple-earnings-preview",
+                    "snippet": "Apple reports quarterly earnings next week with Wall Street watching iPhone sales."
+                },
+                {
+                    "title": "Apple Suppliers Boost Capacity in Southeast Asia",
+                    "url": "https://www.bloomberg.com/quote/AAPL:US",
+                    "snippet": "Apple supply chain partners continue expanding operations across Vietnam and India."
+                }
+            ],
+            "links": {}
+        }
+
+        # 1. 驗證 _is_contaminated_for_foreign 對合法的 Yahoo Finance / Bloomberg quote 網址絕不誤報
+        is_contaminated = CompanyProfileService._is_contaminated_for_foreign(legit_profile)
+        self.assertFalse(is_contaminated, "國際股票合法新聞包含 finance.yahoo.com/quote/ 或 bloomberg.com/quote/ 不應被判定為污染")
+
+        # 2. 驗證 _clean_foreign_profile_if_needed 絕不誤刪該合法新聞
+        CompanyProfileService._clean_foreign_profile_if_needed("AAPL", legit_profile)
+        self.assertEqual(len(legit_profile["recent_news"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -448,7 +448,13 @@ def get_ticker_broker_trend(
     """
     計算特定標的各關鍵券商分點在歷史區間內的每日「累計買賣超 (張)」時間序列，用於繪製分點走勢圖。
     """
-    clean_code = ticker.split(".")[0]
+    t_clean = str(ticker).strip()
+    t_upper = t_clean.upper()
+    is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+    if not is_tw:
+        return {"ticker": ticker, "dates": [], "series": []}
+
+    clean_code = t_clean.split(".")[0]
     cache_key = f"trend_{ticker}_{days}_{top_n}"
     cached = _get_from_cache(_BROKER_CACHE, cache_key, _BROKER_CACHE_TTL)
     if cached is not None:

@@ -500,6 +500,97 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertIsNotNone(res_jp_lower)
         self.assertEqual(res_jp_lower["ticker"], "6770.T")
 
+    def test_foreign_stock_institutional_flow_returns_empty(self):
+        """驗證非台股代碼 (如日股 6770.T, 美股 AAPL) 絕不命中台股 (力積電 6770) 的法人時序、券商分點與摘要"""
+        # 寫入力積電 (6770.TW) 的法人籌碼、券商分點與日 K
+        inst_records = [{
+            "date": "2026-11-01",
+            "ticker": "6770.TW",
+            "raw_code": "6770",
+            "name": "力積電",
+            "foreign_net": 1200,
+            "trust_net": 500,
+            "dealer_net": 100,
+            "total_net": 1800,
+            "foreign_ratio": 15.2,
+            "total_shares": 1000000,
+            "foreign_shares": 152000,
+            "market": "TWSE",
+            "created_at": "2026-11-01 18:00:00"
+        }]
+        self.mgr.save_institutional_flows_batch(inst_records)
+
+        broker_records = [{
+            "date": "2026-11-01",
+            "ticker": "6770.TW",
+            "raw_code": "6770",
+            "broker_name": "台灣摩根士丹利",
+            "broker_id": "1470",
+            "buy_vol": 800,
+            "sell_vol": 100,
+            "net_vol": 700,
+            "pct": 12.5,
+            "rank": 1,
+            "side": "buy",
+            "created_at": "2026-11-01 18:00:00"
+        }]
+        self.mgr.save_broker_trades_batch(broker_records)
+
+        bars_records = [{
+            "date": "2026-11-01",
+            "ticker": "6770.TW",
+            "raw_code": "6770",
+            "name": "力積電",
+            "open": 24.5,
+            "high": 25.2,
+            "low": 24.3,
+            "close": 25.0,
+            "volume": 15000000,
+            "trade_value": 375000000.0,
+            "transaction": 5000
+        }]
+        self.mgr.save_daily_bars_batch(bars_records)
+
+        # 1. 驗證台股 6770.TW 與 6770 可正常查詢
+        df_inst_tw = self.mgr.get_institutional_flow_for_ticker("6770.TW")
+        self.assertFalse(df_inst_tw.empty)
+        self.assertEqual(df_inst_tw.iloc[0]["name"], "力積電")
+
+        df_broker_tw = self.mgr.get_broker_trades_for_ticker("6770.TW")
+        self.assertFalse(df_broker_tw.empty)
+        self.assertEqual(df_broker_tw.iloc[0]["broker_name"], "台灣摩根士丹利")
+
+        summary_tw = self.mgr.get_broker_top_summary("6770.TW")
+        self.assertTrue(len(summary_tw.get("top_buyers", [])) > 0 or len(summary_tw.get("buy_top", [])) > 0)
+
+        # 2. 驗證日股 6770.T 絕不命中力積電的法人資料與券商分點
+        df_inst_jp = self.mgr.get_institutional_flow_for_ticker("6770.T")
+        self.assertTrue(df_inst_jp.empty, f"非台股 6770.T 不應返回台股法人時序，但得到: {df_inst_jp}")
+
+        df_broker_jp = self.mgr.get_broker_trades_for_ticker("6770.T")
+        self.assertTrue(df_broker_jp.empty, f"非台股 6770.T 不應返回台股券商分點，但得到: {df_broker_jp}")
+
+        summary_jp = self.mgr.get_broker_top_summary("6770.T")
+        self.assertEqual(summary_jp.get("top_buyers", []), [])
+        self.assertEqual(summary_jp.get("top_sellers", []), [])
+        self.assertEqual(summary_jp.get("buy_top", []), [])
+        self.assertEqual(summary_jp.get("sell_top", []), [])
+
+        inst_summary_jp = self.mgr.get_institutional_flow_summary("6770.T")
+        self.assertEqual(inst_summary_jp, {})
+
+        bars_jp = self.mgr.get_daily_bars_for_ticker("6770.T")
+        self.assertTrue(bars_jp.empty, f"非台股 6770.T 不應透過 raw_code 截斷比對命中 6770.TW 的日 K，但得到: {bars_jp}")
+
+        # 3. 驗證美股 AAPL 與港股 0700.HK 同樣回傳空
+        self.assertTrue(self.mgr.get_institutional_flow_for_ticker("AAPL").empty)
+        self.assertTrue(self.mgr.get_broker_trades_for_ticker("AAPL").empty)
+        self.assertEqual(self.mgr.get_broker_top_summary("AAPL")["top_buyers"], [])
+        self.assertEqual(self.mgr.get_institutional_flow_summary("AAPL"), {})
+
+        self.assertTrue(self.mgr.get_institutional_flow_for_ticker("0700.HK").empty)
+        self.assertTrue(self.mgr.get_broker_trades_for_ticker("0700.HK").empty)
+
     def test_company_tender_duckdb_alias_resolution(self):
         """驗證 DuckDB 標案情報支援 2371.TW、2371 與名稱大同交叉命中快取"""
         tender_data = {

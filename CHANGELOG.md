@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-11-03 (v2.4.63)
+
+### Critical Bug Fixes (Foreign Stock Isolation for Institutional Flow, Broker Trades & News Cache)
+- **非台股標的籌碼與分點隔離防禦 (Institutional Flow & Broker Trade Market Shield)**：
+  - **DuckDB 籌碼防禦**：在 `data/duckdb_manager.py` 的 `get_institutional_flow_for_ticker`、`get_broker_trades_for_ticker`、`get_broker_top_summary` 與 `get_institutional_flow_summary` 中，加入嚴格台股判斷 `is_tw`（限定 `.TW`、`.TWO` 或 4~6 碼純數字，涵蓋 6 碼台股 ETF/ETN）。非台股標的（如日股 `6770.T`、美股 `AAPL`、港股 `0700.HK`）直接回傳空 DataFrame 或空字典結構，嚴禁透過純代號（如 `clean_code = "6770"`）命中台灣三大法人籌碼表 `tw_institutional_daily` 或券商分點表 `tw_broker_trades` 中的力積電資料。
+  - **日 K 棒防禦與大小寫正規化**：`get_daily_bars_for_ticker` 針對非台股標的嚴格僅以 `ticker = t_upper` 進行單一精確匹配，傳入小寫（如 `6770.t`）亦能安全查詢，禁止使用 `raw_code` 或模糊 LIKE 前綴檢索，杜絕跨市場日 K 棒污染。
+  - **API 端點防禦**：在 `api/routes/market.py` 的 `get_ticker_broker_trend` 加入非台股即時攔截，非台股標的直接回傳空時序結構，避免計算分點走勢時命中台股力積電。
+- **公司簡介與新聞快取自動消毒與覆蓋 (Company Profile & News Auto-Sanitization)**：
+  - **損壞快取自動偵測與多層同步清除**：在 `data/company_profile.py` 的 `get_company_profile` 與 `get_company_profiles_batch` 中，加入 `_is_contaminated_for_foreign` 檢驗機制。若非台股標的之 L1 記憶體、L2 DuckDB 或 L3 磁碟快取含有「力積電」、`tw.stock.yahoo.com`、`cmoney.tw` 或台灣財經特徵，立即視為損壞快取，同步實體刪除磁碟快取檔案並清除記憶體，觸發重新抓取。
+  - **消除誤殺並保留國際財經新聞**：移除原先廣義的 `"/quote/"` 比對，修正為精確台灣網址特徵，完整保留國際版 Yahoo Finance（`finance.yahoo.com/quote/...`）與 Bloomberg（`bloomberg.com/quote/...`）等合法新聞與快取。
+  - **官方簡介強制覆蓋與消除重疊請求**：非台股標的優先使用 yfinance 官方英文/日文 `longBusinessSummary` 覆蓋，避免 2MD 搜尋結果誤抓台灣力積電簡介；優化線程池調度避免同一標的重複請求 yfinance。
+  - **2MD 搜尋結果台灣財經網址與新聞清洗**：在 `_parse_news_markdown` 與 `_clean_foreign_profile_if_needed` 中，非台股標的嚴格丟棄含有 `tw.stock.yahoo.com`、`cmoney.tw`、`wantgoo`、`goodinfo`、`pchome` 等網址，以及標題含有「力積電」、「.TW」、「台股」之新聞項目，亦禁止從新聞摘要提取業務簡介。
+- **單元測試全數覆蓋**：
+  - 在 `test/test_duckdb.py` 新增 `test_foreign_stock_institutional_flow_returns_empty`，驗證 `6770.T` 呼叫三大法人時序、券商分點與日 K 查詢時絕不命中力積電。
+  - 在 `test/test_company_profile.py` 新增 `test_foreign_stock_contaminated_cache_filtered_and_refreshed`、`test_parse_news_markdown_foreign_stock_rejects_taiwan_sources` 及 `test_international_stock_legitimate_quote_news_not_contaminated`，驗證污染快取自動丟棄、yfinance 官方覆蓋、非台股新聞過濾與國際新聞保留無誤殺。
+  - 在 `test/test_api_market.py` 新增 `test_foreign_stock_broker_endpoints_return_empty`，驗證端點級非台股查詢安全回傳空結構。
+
+---
+
 ## 2026-11-03 (v2.4.62)
 
 ### Bug Fixes & UX Optimization (Cross-Market Stock Name Isolation & Table Drawer Overflow Fix)

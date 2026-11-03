@@ -1869,7 +1869,37 @@ class DuckDBManager:
         if not self.enabled:
             return pd.DataFrame()
 
-        clean_code = ticker.split(".")[0]
+        t_clean = str(ticker).strip()
+        t_upper = t_clean.upper()
+        is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+
+        if not is_tw:
+            sql = """
+            SELECT 
+                date AS Date,
+                open AS Open,
+                high AS High,
+                low AS Low,
+                close AS Close,
+                volume AS Volume
+            FROM tw_daily_bars
+            WHERE ticker = ?
+              AND close > 0
+            ORDER BY date ASC
+            LIMIT ?;
+            """
+            try:
+                with self._get_connection() as con:
+                    df = con.execute(sql, [t_upper, limit]).df()
+                    if not df.empty:
+                        df["Date"] = pd.to_datetime(df["Date"])
+                        df.set_index("Date", inplace=True)
+                    return df
+            except Exception as e:
+                logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 日 K 失敗: {e}")
+                return pd.DataFrame()
+
+        clean_code = t_clean.split(".")[0]
         sql = """
         SELECT 
             date AS Date,
@@ -1943,12 +1973,18 @@ class DuckDBManager:
 
     def get_institutional_flow_for_ticker(self, ticker: str, limit: int = 60) -> pd.DataFrame:
         """
-        取得特定標的之歷史法人籌碼進出時序
+        取得特定標的之歷史法人籌碼進出時序 (非台股標的直接回傳空 DataFrame)
         """
         if not self.enabled:
             return pd.DataFrame()
 
-        clean_code = ticker.split(".")[0]
+        t_clean = str(ticker).strip()
+        t_upper = t_clean.upper()
+        is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+        if not is_tw:
+            return pd.DataFrame()
+
+        clean_code = t_clean.split(".")[0]
         sql = """
         SELECT 
             date,
@@ -1971,6 +2007,15 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 讀取 {ticker} 法人時序失敗: {e}")
             return pd.DataFrame()
+
+    def get_institutional_flow_summary(self, ticker: str, *args, **kwargs) -> Dict[str, Any]:
+        """相容性方法：取得三大法人進出摘要 (若非台股直接回傳空字典)"""
+        t_clean = str(ticker).strip()
+        t_upper = t_clean.upper()
+        is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+        if not is_tw:
+            return {}
+        return {}
 
     def save_broker_trades_batch(self, records: Union[List[Dict[str, Any]], pd.DataFrame]) -> int:
         """批次寫入券商分點進出資料 (tw_broker_trades)"""
@@ -2012,12 +2057,18 @@ class DuckDBManager:
 
     def get_broker_trades_for_ticker(self, ticker: str, limit: int = 100) -> pd.DataFrame:
         """
-        取得特定標的最近的券商分點進出明細
+        取得特定標的最近的券商分點進出明細 (非台股標的直接回傳空 DataFrame)
         """
         if not self.enabled:
             return pd.DataFrame()
 
-        clean_code = ticker.split(".")[0]
+        t_clean = str(ticker).strip()
+        t_upper = t_clean.upper()
+        is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+        if not is_tw:
+            return pd.DataFrame()
+
+        clean_code = t_clean.split(".")[0]
         sql = """
         SELECT 
             date,
@@ -2046,12 +2097,19 @@ class DuckDBManager:
 
     def get_broker_top_summary(self, ticker: str, limit_days: int = 20) -> Dict[str, Any]:
         """
-        取得特定標的在過去 N 個交易日中，累計買超與賣超最多的券商分點摘要
+        取得特定標的在過去 N 個交易日中，累計買超與賣超最多的券商分點摘要 (非台股標的直接回傳空結構)
         """
+        empty_res = {"top_buyers": [], "top_sellers": [], "buy_top": [], "sell_top": []}
         if not self.enabled:
-            return {"top_buyers": [], "top_sellers": []}
+            return empty_res
 
-        clean_code = ticker.split(".")[0]
+        t_clean = str(ticker).strip()
+        t_upper = t_clean.upper()
+        is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO") or (t_upper.isdigit() and len(t_upper) in (4, 5, 6))
+        if not is_tw:
+            return empty_res
+
+        clean_code = t_clean.split(".")[0]
         try:
             with self._get_connection() as con:
                 # 取得可用日期清單
@@ -2064,7 +2122,7 @@ class DuckDBManager:
                 """, [ticker, clean_code, f"{clean_code}.%", limit_days]).df()
                 
                 if dates_df.empty:
-                    return {"top_buyers": [], "top_sellers": []}
+                    return empty_res
 
                 min_date = dates_df["date"].min()
 
@@ -2084,7 +2142,7 @@ class DuckDBManager:
                 """
                 df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", min_date]).df()
                 if df.empty:
-                    return {"top_buyers": [], "top_sellers": []}
+                    return empty_res
 
                 top_buyers = df[df["total_net"] > 0].head(15).to_dict(orient="records")
                 top_sellers = df[df["total_net"] < 0].sort_values("total_net", ascending=True).head(15).to_dict(orient="records")
@@ -2095,11 +2153,13 @@ class DuckDBManager:
                     "start_date": str(min_date),
                     "end_date": str(dates_df["date"].max()),
                     "top_buyers": top_buyers,
-                    "top_sellers": top_sellers
+                    "top_sellers": top_sellers,
+                    "buy_top": top_buyers,
+                    "sell_top": top_sellers
                 }
         except Exception as e:
             logger.warning(f"⚠️ 從 DuckDB 統計 {ticker} 券商主力摘要失敗: {e}")
-            return {"top_buyers": [], "top_sellers": []}
+            return empty_res
 
     def save_earnings_calls_batch(self, records: List[Dict[str, Any]]) -> int:
         """批次儲存或更新法說會 (Earnings Calls) 紀錄 (Upsert by id)"""

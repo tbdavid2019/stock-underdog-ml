@@ -132,28 +132,128 @@ class CompanyProfileService:
             logger.warning(f"寫入公司磁碟快取失敗 {ticker}: {e}")
 
     @classmethod
+    def _is_taiwan_ticker(cls, ticker: str) -> bool:
+        t = str(ticker).strip().upper()
+        return t.endswith(".TW") or t.endswith(".TWO") or (t.isdigit() and len(t) in (4, 5, 6))
+
+    @classmethod
+    def _is_contaminated_for_foreign(cls, profile: Dict[str, Any]) -> bool:
+        """檢查非台股標的之資料是否包含台股/力積電污染"""
+        if not profile or not isinstance(profile, dict):
+            return False
+
+        name = str(profile.get("name") or "")
+        summary = str(profile.get("business_summary") or "")
+
+        # 標題或簡介包含力積電
+        if "力積電" in name or "力積電" in summary:
+            return True
+
+        # 簡介包含明顯台灣特徵或台灣財經網站
+        bad_summary_keywords = ("tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "pchome", "股市爆料同學會", "玩股網")
+        if any(k in summary for k in bad_summary_keywords):
+            return True
+
+        # 檢查新聞是否包含台灣財經網址或力積電/台股關鍵字
+        bad_news_keywords = ("力積電", ".TW", ".TWO", "台股", "股市爆料同學會", "玩股網")
+        bad_domains = ("tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "pchome", "cnyes")
+
+        for item in profile.get("recent_news") or []:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "")
+            url = str(item.get("url") or "").lower()
+            if any(k in title for k in bad_news_keywords):
+                return True
+            if any(d in url for d in bad_domains):
+                return True
+            if any(k.lower() in url for k in ("力積電", ".tw/", "tw.stock.yahoo.com/quote/")):
+                return True
+
+        return False
+
+    @classmethod
+    def _clean_foreign_profile_if_needed(cls, ticker: str, profile: Dict[str, Any]):
+        """針對非台股標的，強制清理任何可能混入的台股簡介與污染新聞"""
+        if cls._is_taiwan_ticker(ticker):
+            return
+
+        # 0. 名稱校驗：若名稱含有力積電，重設為 raw_code 或 ticker
+        name = str(profile.get("name") or "")
+        if "力積電" in name:
+            profile["name"] = profile.get("raw_code") or ticker
+
+        # 1. 簡介校驗：若簡介含有力積電或台灣特徵，清空它
+        summary = str(profile.get("business_summary") or "")
+        bad_summary_keywords = ("力積電", "tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "股市爆料同學會", "玩股網", ".TW", ".TWO")
+        if any(k in summary for k in bad_summary_keywords):
+            profile["business_summary"] = ""
+
+        # 2. 新聞校驗：丟棄台灣新聞
+        if profile.get("recent_news"):
+            bad_news_keywords = ("力積電", ".TW", ".TWO", "台股", "股市爆料同學會", "玩股網")
+            bad_domains = ("tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "pchome", "cnyes")
+            cleaned_news = []
+            for item in profile["recent_news"]:
+                if not isinstance(item, dict):
+                    continue
+                title = str(item.get("title") or "")
+                url = str(item.get("url") or "").lower()
+                if any(k in title for k in bad_news_keywords):
+                    continue
+                if any(d in url for d in bad_domains):
+                    continue
+                if any(k.lower() in url for k in ("力積電", ".tw/", "tw.stock.yahoo.com/quote/")):
+                    continue
+                cleaned_news.append(item)
+            profile["recent_news"] = cleaned_news
+
+    @classmethod
     def get_company_profile(cls, ticker_raw: str, db: Optional[Any] = None, force_refresh: bool = False) -> Dict[str, Any]:
         """
         取得公司名稱、簡介、主要業務與最新新聞 (單一標的，支援 L1 記憶體 -> L2 DuckDB -> L3 磁碟)
         """
         ticker = normalize_ticker(ticker_raw).upper()
         now = time.time()
+        is_tw = cls._is_taiwan_ticker(ticker)
 
         # 1. 檢查 L1 記憶體快取
         if not force_refresh and ticker in cls._CACHE:
             cached_at, mem_profile = cls._CACHE[ticker]
             if now - cached_at < cls.CACHE_TTL:
-                cls._enrich_network_if_needed(ticker, mem_profile, db=db)
-                return mem_profile
+                if not is_tw and cls._is_contaminated_for_foreign(mem_profile):
+                    logger.warning(f"⚠️ 偵測到非台股標的 {ticker} 記憶體快取含有台股/力積電污染，清除並強制重新抓取")
+                    cls._CACHE.pop(ticker, None)
+                    cache_file = cls._get_cache_filepath(ticker)
+                    if os.path.exists(cache_file):
+                        try:
+                            os.remove(cache_file)
+                        except Exception:
+                            pass
+                    force_refresh = True
+                else:
+                    cls._enrich_network_if_needed(ticker, mem_profile, db=db)
+                    return mem_profile
 
         # 2. 檢查 L2 DuckDB 快取 (跨使用者共享)
         if not force_refresh and db is not None and hasattr(db, "get_company_profile"):
             try:
                 db_profile = db.get_company_profile(ticker, max_age_seconds=cls.CACHE_TTL)
                 if db_profile and db_profile.get("business_summary"):
-                    cls._CACHE[ticker] = (now, db_profile)
-                    cls._enrich_network_if_needed(ticker, db_profile, db=db)
-                    return db_profile
+                    if not is_tw and cls._is_contaminated_for_foreign(db_profile):
+                        logger.warning(f"⚠️ 偵測到非台股標的 {ticker} DuckDB 快取含有台股/力積電污染，捨棄並重新抓取")
+                        cls._CACHE.pop(ticker, None)
+                        cache_file = cls._get_cache_filepath(ticker)
+                        if os.path.exists(cache_file):
+                            try:
+                                os.remove(cache_file)
+                            except Exception:
+                                pass
+                        force_refresh = True
+                    else:
+                        cls._CACHE[ticker] = (now, db_profile)
+                        cls._enrich_network_if_needed(ticker, db_profile, db=db)
+                        return db_profile
             except Exception as e:
                 logger.debug(f"DuckDB 讀取公司快取失敗 ({ticker}): {e}")
 
@@ -161,18 +261,27 @@ class CompanyProfileService:
         if not force_refresh:
             cached = cls._read_cache(ticker)
             if cached:
-                # 自動回填至 L2 DuckDB
-                if db is not None and hasattr(db, "save_company_profile"):
-                    try:
-                        db.save_company_profile(ticker, cached)
-                    except Exception:
-                        pass
-                cls._enrich_network_if_needed(ticker, cached, db=db)
-                return cached
+                if not is_tw and cls._is_contaminated_for_foreign(cached):
+                    logger.warning(f"⚠️ 偵測到非台股標的 {ticker} 磁碟快取含有台股/力積電污染，予以刪除並重新抓取")
+                    cache_file = cls._get_cache_filepath(ticker)
+                    if os.path.exists(cache_file):
+                        try:
+                            os.remove(cache_file)
+                        except Exception:
+                            pass
+                    force_refresh = True
+                else:
+                    # 自動回填至 L2 DuckDB
+                    if db is not None and hasattr(db, "save_company_profile"):
+                        try:
+                            db.save_company_profile(ticker, cached)
+                        except Exception:
+                            pass
+                    cls._enrich_network_if_needed(ticker, cached, db=db)
+                    return cached
 
         # 2. 解析公司基本名稱
         stock_name = cls._resolve_stock_name(ticker, db)
-        is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
         raw_code = ticker.split(".")[0] if is_tw else ticker
 
         profile_data = {
@@ -238,8 +347,12 @@ class CompanyProfileService:
                 except Exception as e:
                     logger.debug(f"Company network task ended: {e}")
 
-        # 4. 若未取得足夠簡介，使用 yfinance 終極快速備援
-        if not profile_data.get("business_summary"):
+        # 4. 若未取得足夠簡介，或為非台股標的，強制執行 yfinance 覆蓋校正
+        if not is_tw:
+            if not profile_data.get("business_summary"):
+                cls._fallback_yfinance(profile_data, ticker)
+            cls._clean_foreign_profile_if_needed(ticker, profile_data)
+        elif not profile_data.get("business_summary"):
             cls._fallback_yfinance(profile_data, ticker)
 
         # 5. 寫入三層快取 (L1 記憶體 + L2 DuckDB + L3 磁碟持久化 20 天)
@@ -447,16 +560,35 @@ class CompanyProfileService:
         if not text:
             return
 
+        ticker = str(profile.get("ticker") or "")
+        is_tw = cls._is_taiwan_ticker(ticker)
+
         pattern = re.compile(r"\[(\d+)\] Title:\s*(.+?)\n\[\1\] URL Source:\s*(.+?)\n\[\1\] Description:\s*(.+?)(?=\n\[\d+\] Title|\Z)", re.DOTALL)
         matches = pattern.findall(text)
         news_items = []
+
+        bad_news_keywords = ("力積電", ".TW", ".TWO", "台股", "股市爆料同學會", "玩股網")
+        bad_domains = ("tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "pchome", "cnyes")
+
         for m in matches:
             title = m[1].strip()
             url = m[2].strip()
             desc = m[3].strip()
             if not title or len(title) < 4:
                 continue
-            if not profile.get("business_summary") and ("業務" in desc or "營運" in desc or "從事" in desc or "提供" in desc):
+
+            # 若為非台股，嚴格過濾台灣財經網站與台股標題
+            if not is_tw:
+                url_lower = url.lower()
+                if any(k in title for k in bad_news_keywords):
+                    continue
+                if any(d in url_lower for d in bad_domains):
+                    continue
+                if any(k.lower() in url_lower for k in ("力積電", ".tw/", "tw.stock.yahoo.com/quote/")):
+                    continue
+
+            # 只有台股才允許從新聞 Description 中汲取業務簡介！非台股一律使用 yfinance 官方簡介
+            if is_tw and not profile.get("business_summary") and ("業務" in desc or "營運" in desc or "從事" in desc or "提供" in desc):
                 profile["business_summary"] = desc[:200]
 
             news_items.append({
@@ -523,7 +655,7 @@ class CompanyProfileService:
             import yfinance as yf
             t = yf.Ticker(ticker)
             info = t.info or {}
-            is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
+            is_tw = cls._is_taiwan_ticker(ticker)
             yf_name = info.get("shortName") or info.get("longName")
             if not profile.get("name") or profile["name"] == profile.get("raw_code"):
                 profile["name"] = yf_name or profile.get("raw_code", ticker)
@@ -539,14 +671,44 @@ class CompanyProfileService:
                     profile["name"] = yf_name
             if profile.get("industry") == "綜合產業" and (info.get("industry") or info.get("sector")):
                 profile["industry"] = info.get("industry") or info.get("sector")
-            if not profile.get("business_summary") and info.get("longBusinessSummary"):
-                profile["business_summary"] = info.get("longBusinessSummary")[:300]
+
+            # 簡介處理：非台股標的優先強制使用 yfinance 的 longBusinessSummary 覆蓋
+            yf_summary = info.get("longBusinessSummary") or info.get("description")
+            if not is_tw:
+                if yf_summary:
+                    profile["business_summary"] = yf_summary[:500]
+                elif "力積電" in str(profile.get("business_summary") or ""):
+                    profile["business_summary"] = ""
+            else:
+                if not profile.get("business_summary") and yf_summary:
+                    profile["business_summary"] = yf_summary[:300]
+
             if not profile.get("market_cap") and info.get("marketCap"):
                 mc = info["marketCap"]
                 if mc >= 1_000_000_000:
                     profile["market_cap"] = f"${mc/1_000_000_000:.1f}B"
                 elif mc > 0:
                     profile["market_cap"] = f"${mc/1_000_000:.0f}M"
+
+            # 清理 recent_news (非台股)
+            if not is_tw and profile.get("recent_news"):
+                bad_news_keywords = ("力積電", ".TW", ".TWO", "台股", "股市爆料同學會", "玩股網")
+                bad_domains = ("tw.stock.yahoo.com", "cmoney.tw", "wantgoo", "goodinfo", "pchome", "cnyes")
+                cleaned_news = []
+                for item in profile["recent_news"]:
+                    if not isinstance(item, dict):
+                        continue
+                    title = str(item.get("title") or "")
+                    url = str(item.get("url") or "").lower()
+                    if any(k in title for k in bad_news_keywords):
+                        continue
+                    if any(d in url for d in bad_domains):
+                        continue
+                    if any(k.lower() in url for k in ("力積電", ".tw/", "tw.stock.yahoo.com/quote/")):
+                        continue
+                    cleaned_news.append(item)
+                profile["recent_news"] = cleaned_news
+
         except Exception as e:
             logger.debug(f"yfinance profile fallback failed: {e}")
 
@@ -584,33 +746,61 @@ class CompanyProfileService:
         now = time.time()
         for t in unique_tickers:
             norm = normalize_ticker(t).upper()
+            is_tw = cls._is_taiwan_ticker(norm)
             # 檢查 L1 記憶體快取
             if norm in cls._CACHE:
                 cached_at, mem_prof = cls._CACHE[norm]
                 if now - cached_at < cls.CACHE_TTL:
-                    results[norm] = mem_prof
-                    continue
+                    if not is_tw and cls._is_contaminated_for_foreign(mem_prof):
+                        cls._CACHE.pop(norm, None)
+                        cache_file = cls._get_cache_filepath(norm)
+                        if os.path.exists(cache_file):
+                            try:
+                                os.remove(cache_file)
+                            except Exception:
+                                pass
+                    else:
+                        results[norm] = mem_prof
+                        continue
 
             # 檢查 L2 DuckDB
             if db is not None and hasattr(db, "get_company_profile"):
                 try:
                     db_prof = db.get_company_profile(norm, max_age_seconds=cls.CACHE_TTL)
                     if db_prof and db_prof.get("business_summary"):
-                        cls._CACHE[norm] = (now, db_prof)
-                        results[norm] = db_prof
-                        continue
+                        if not is_tw and cls._is_contaminated_for_foreign(db_prof):
+                            cls._CACHE.pop(norm, None)
+                            cache_file = cls._get_cache_filepath(norm)
+                            if os.path.exists(cache_file):
+                                try:
+                                    os.remove(cache_file)
+                                except Exception:
+                                    pass
+                        else:
+                            cls._CACHE[norm] = (now, db_prof)
+                            results[norm] = db_prof
+                            continue
                 except Exception:
                     pass
 
             # 檢查 L3 磁碟
             cached = cls._read_cache(norm)
             if cached:
-                results[norm] = cached
-                if db is not None and hasattr(db, "save_company_profile"):
-                    try:
-                        db.save_company_profile(norm, cached)
-                    except Exception:
-                        pass
+                if not is_tw and cls._is_contaminated_for_foreign(cached):
+                    cache_file = cls._get_cache_filepath(norm)
+                    if os.path.exists(cache_file):
+                        try:
+                            os.remove(cache_file)
+                        except Exception:
+                            pass
+                    missing.append(norm)
+                else:
+                    results[norm] = cached
+                    if db is not None and hasattr(db, "save_company_profile"):
+                        try:
+                            db.save_company_profile(norm, cached)
+                        except Exception:
+                            pass
             else:
                 missing.append(norm)
 
@@ -621,7 +811,7 @@ class CompanyProfileService:
         profiles_to_fetch = {}
         for norm in missing:
             stock_name = cls._resolve_stock_name(norm, db)
-            is_tw = norm.endswith(".TW") or norm.endswith(".TWO")
+            is_tw = cls._is_taiwan_ticker(norm)
             raw_code = norm.split(".")[0] if is_tw else norm
             profiles_to_fetch[norm] = {
                 "ticker": norm,
@@ -664,8 +854,11 @@ class CompanyProfileService:
         # 4. 補齊未取得業務簡介者 (使用 yfinance 作為快速補底)
         for norm in missing:
             prof = profiles_to_fetch[norm]
-            if not prof.get("business_summary"):
+            is_tw = cls._is_taiwan_ticker(norm)
+            if not is_tw or not prof.get("business_summary"):
                 cls._fallback_yfinance(prof, norm)
+            if not is_tw:
+                cls._clean_foreign_profile_if_needed(norm, prof)
             # 寫入三層快取 (L1 記憶體 + L2 DuckDB + L3 磁碟持久化 20 天) 與回傳結果
             cls._write_cache(norm, prof, db=db)
             results[norm] = prof
