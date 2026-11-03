@@ -69,7 +69,7 @@ class TestAINarrativeEngine(unittest.TestCase):
 
         # 1. 驗證 prompt 中是否注入 TimesFM 指標與雙ML共振提示
         prompt = engine._build_context_prompt("台灣50", macro, sample_report)
-        self.assertIn("Google TimesFM (200M) 預測完成: 2 支", prompt)
+        self.assertIn("TimesFM 預測完成: 2 支", prompt)
         self.assertIn("TimesFM +5.80%(盈虧比2.60x)", prompt)
         self.assertIn("🔮雙ML共振", prompt)
 
@@ -106,8 +106,8 @@ class TestAINarrativeEngine(unittest.TestCase):
 
         # 1. 驗證 prompt 中是否注入 TimesFM 與 Timestral 雙模型共振提示
         prompt = engine._build_context_prompt("台灣50", macro, sample_report)
-        self.assertIn("Google TimesFM (200M) 預測完成: 1 支", prompt)
-        self.assertIn("Mistral Timestral (209M) 預測完成: 1 支", prompt)
+        self.assertIn("TimesFM 預測完成: 1 支", prompt)
+        self.assertIn("Timestral 預測完成: 1 支", prompt)
         self.assertIn("Timestral +6.20%[980.0~1050.0]", prompt)
         self.assertIn("🏆雙模型共振", prompt)
 

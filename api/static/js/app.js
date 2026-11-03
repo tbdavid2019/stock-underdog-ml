@@ -31,9 +31,9 @@ export const app = createApp({
             strategyOptions: [
                 {
                     id: 'resonance',
-                    label: '綜合優選 (雙模型看漲)',
+                    label: '綜合優選',
                     icon: 'military_tech',
-                    description: '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。'
+                    description: '【綜合優選】同時符合 TimesFM 與 Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。'
                 },
                 {
                     id: 'timestral_bullish',
@@ -2141,7 +2141,10 @@ export const app = createApp({
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
             return list.map(rawTag => {
-                let cleanLabel = this.stripEmojis(rawTag).replace(/\(本地規則\)/g, '').trim();
+                let cleanLabel = this.stripEmojis(rawTag)
+                    .replace(/\((?:Google|Mistral|Salesforce|888|本地規則)\)/gi, '')
+                    .replace(/Google\s+|Mistral\s+|Salesforce\s+/gi, '')
+                    .trim();
                 cleanLabel = cleanLabel.replace(/^[🤖\s]+/, '').trim();
                 if (cleanLabel.startsWith('AI強買')) cleanLabel = cleanLabel.replace(/^AI強買/, '強勢買進');
                 else if (cleanLabel.startsWith('AI看好')) cleanLabel = cleanLabel.replace(/^AI看好/, '偏多看好');
@@ -2167,11 +2170,11 @@ export const app = createApp({
                 if (cleanLabel.includes('綜合優選')) {
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
-                    tooltip = '【綜合優選】同時符合 Google TimesFM 與 Mistral Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。';
+                    tooltip = '【綜合優選】同時符合 TimesFM 與 Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。';
                 } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                    tooltip = '【雙模型看漲】Google TimesFM 與 Mistral Timestral 雙時序大模型同步預測隔日看漲。';
+                    tooltip = '【雙模型看漲】TimesFM 與 Timestral 雙時序大模型同步預測隔日看漲。';
                 } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
@@ -2191,11 +2194,15 @@ export const app = createApp({
                 } else if (cleanLabel.includes('Timestral')) {
                     icon = 'smart_toy';
                     badgeType = 'ai_timestral';
-                    tooltip = '【Timestral看漲】Mistral 209M 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
+                    tooltip = '【Timestral看漲】Timestral 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
-                    tooltip = '【TimesFM看漲】Google Research 200M 時序基礎模型 Zero-Shot 預測隔日 (T+1) 目標價位顯著看漲。';
+                    tooltip = '【TimesFM看漲】TimesFM 時序大模型 Zero-Shot 預測隔日 (T+1) 目標價位顯著看漲。';
+                } else if (cleanLabel.includes('MOIRAI')) {
+                    icon = 'insights';
+                    badgeType = 'ai_moirai';
+                    tooltip = '【MOIRAI-2看漲】MOIRAI-2 多變量時序模型預測隔日 (T+1) 具備看漲潛力。';
                 } else if (cleanLabel.includes('高盈虧比') || cleanLabel.includes('高風報比')) {
                     icon = 'balance';
                     badgeType = 'risk_reward';
@@ -2245,6 +2252,8 @@ export const app = createApp({
                         return 'bg-cyan-950/40 text-cyan-300 border-cyan-800/40 font-medium';
                     case 'ai_timesfm':
                         return 'bg-purple-950/40 text-purple-300 border-purple-800/40 font-medium';
+                    case 'ai_moirai':
+                        return 'bg-sky-950/40 text-sky-300 border-sky-800/40 font-medium';
                     case 'ai_lstm':
                         return 'bg-blue-950/30 text-blue-300 border-blue-800/30 font-medium';
                     case 'risk_reward':
@@ -2273,6 +2282,8 @@ export const app = createApp({
                         return 'bg-cyan-50 text-cyan-800 border-cyan-200 font-medium';
                     case 'ai_timesfm':
                         return 'bg-purple-50 text-purple-800 border-purple-200 font-medium';
+                    case 'ai_moirai':
+                        return 'bg-sky-50 text-sky-800 border-sky-200 font-medium';
                     case 'ai_lstm':
                         return 'bg-blue-50 text-blue-800 border-blue-200 font-medium';
                     case 'risk_reward':
@@ -2335,7 +2346,7 @@ export const app = createApp({
 
                 await modelCtx.registerTool({
                     name: 'get_timestral_top_predictions',
-                    description: '取得 Mistral Timestral-209M 時序大模型 5 日預測漲跌幅排行與蒙地卡羅區間。',
+                    description: '取得 Timestral 時序大模型 5 日預測漲跌幅排行與蒙地卡羅區間。',
                     inputSchema: {
                         type: 'object',
                         properties: {
@@ -2350,7 +2361,7 @@ export const app = createApp({
 
                 await modelCtx.registerTool({
                     name: 'get_timesfm_top_predictions',
-                    description: '取得 Google Research TimesFM 時序大模型 5 日預測漲跌幅排行榜與盈虧比。',
+                    description: '取得 TimesFM 時序大模型 5 日預測漲跌幅排行榜與盈虧比。',
                     inputSchema: {
                         type: 'object',
                         properties: {

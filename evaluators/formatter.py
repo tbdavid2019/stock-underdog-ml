@@ -840,7 +840,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     # ====== 軌道 2: Timestral-209M / LSTM ======
     if timestral_results:
-        logger.info("🔮 【時序大模型】Mistral Timestral-209M (隔日 T+1) - 預測漲幅排行與風控分位數")
+        logger.info("🔮 【時序大模型】Timestral (隔日 T+1) - 預測漲幅排行與風控分位數")
         logger.info(f"   預測完成: {len(timestral_results)} 支\n")
         logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
         logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")

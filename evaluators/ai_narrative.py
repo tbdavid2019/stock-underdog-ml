@@ -255,8 +255,8 @@ class AINarrativeEngine:
 
 【量化數據概況】
 - 技術買點 (季線支撐符合): {xuantie_hits} 支
-- Google TimesFM (200M) 預測完成: {timesfm_predictions} 支
-- Mistral Timestral (209M) 預測完成: {timestral_predictions} 支{fm_top_str}
+- TimesFM 預測完成: {timesfm_predictions} 支
+- Timestral 預測完成: {timestral_predictions} 支{fm_top_str}
 - ⭐ 綜合優選 / 雙AI看漲 重點推薦標的:
 {chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙模型共振股票，建議維持防禦觀望'}
 
