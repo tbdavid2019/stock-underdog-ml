@@ -388,12 +388,16 @@ export const app = createApp({
                         closePrice: null,
                         timesfmPred: null,
                         timestralPred: null,
+                        moiraiPred: null,
                         timesfmActual: null,
                         timestralActual: null,
+                        moiraiActual: null,
                         timesfmTarget: null,
                         timestralTarget: null,
+                        moiraiTarget: null,
                         timesfmIssued: '',
                         timestralIssued: '',
+                        moiraiIssued: '',
                         ma60: null,
                         pe: null,
                         pb: null,
@@ -440,6 +444,11 @@ export const app = createApp({
                         item.timestralIssued = issued;
                         item.timestralActual = verified ? Number(r.actual_price) : null;
                         item.timestralTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
+                    } else if (strat.includes('moirai') && issued >= item.moiraiIssued) {
+                        item.moiraiPred = predP;
+                        item.moiraiIssued = issued;
+                        item.moiraiActual = verified ? Number(r.actual_price) : null;
+                        item.moiraiTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
                     }
                 }
             }
@@ -491,21 +500,37 @@ export const app = createApp({
                     }
                 }
 
-                // Daily winner
+                // MOIRAI-2 metrics
+                let moiraiPot = null;
+                let moiraiHit = null;
+                let moiraiErrorPct = null;
+                if (item.moiraiPred !== null && closePrice !== null && closePrice > 0) {
+                    moiraiPot = ((item.moiraiPred - closePrice) / closePrice) * 100;
+                }
+                if (item.moiraiActual !== null && item.moiraiPred !== null) {
+                    moiraiErrorPct = Math.abs(item.moiraiPred - item.moiraiActual) / item.moiraiActual * 100;
+                    if (closePrice !== null && moiraiPot !== null) {
+                        moiraiHit = Math.sign(item.moiraiPred - closePrice) === Math.sign(item.moiraiActual - closePrice);
+                    }
+                }
+
+                // Daily winner among active predictions
                 let winner = null;
                 if (nextActualPrice !== null && sameTarget) {
-                    if (timesfmErrorPct !== null && timestralErrorPct !== null) {
-                        if (Math.abs(timesfmErrorPct - timestralErrorPct) < 0.05) {
+                    const validErrors = [];
+                    if (timesfmErrorPct !== null) validErrors.push({ name: 'TimesFM', err: timesfmErrorPct });
+                    if (timestralErrorPct !== null) validErrors.push({ name: 'Timestral', err: timestralErrorPct });
+                    if (moiraiErrorPct !== null) validErrors.push({ name: 'MOIRAI-2', err: moiraiErrorPct });
+
+                    if (validErrors.length > 1) {
+                        validErrors.sort((a, b) => a.err - b.err);
+                        if (Math.abs(validErrors[0].err - validErrors[1].err) < 0.05) {
                             winner = '平手';
-                        } else if (timesfmErrorPct < timestralErrorPct) {
-                            winner = 'TimesFM 勝';
                         } else {
-                            winner = 'Timestral 勝';
+                            winner = validErrors[0].name + ' 勝';
                         }
-                    } else if (timesfmErrorPct !== null) {
-                        winner = 'TimesFM';
-                    } else if (timestralErrorPct !== null) {
-                        winner = 'Timestral';
+                    } else if (validErrors.length === 1) {
+                        winner = validErrors[0].name;
                     }
                 }
 
@@ -523,6 +548,10 @@ export const app = createApp({
                     timestralPot,
                     timestralHit,
                     timestralErrorPct,
+                    moiraiPred: item.moiraiPred,
+                    moiraiPot,
+                    moiraiHit,
+                    moiraiErrorPct,
                     winner,
                     ma60: item.ma60,
                     pullback_type: item.pullback_type,
@@ -542,7 +571,8 @@ export const app = createApp({
 
             let tfCount = 0, tfHitCount = 0, tfErrorSum = 0;
             let tmCount = 0, tmHitCount = 0, tmErrorSum = 0;
-            let headToHeadCount = 0, tfWins = 0, tmWins = 0, ties = 0;
+            let mrCount = 0, mrHitCount = 0, mrErrorSum = 0;
+            let headToHeadCount = 0, tfWins = 0, tmWins = 0, mrWins = 0, ties = 0;
 
             for (const r of rows) {
                 if (r.nextActualPrice === null) continue;
@@ -559,15 +589,25 @@ export const app = createApp({
                     if (r.timestralHit === true) tmHitCount++;
                 }
 
-                if (r.timesfmErrorPct !== null && r.timestralErrorPct !== null) {
+                if (r.moiraiErrorPct !== null) {
+                    mrCount++;
+                    mrErrorSum += r.moiraiErrorPct;
+                    if (r.moiraiHit === true) mrHitCount++;
+                }
+
+                const activeInDay = (r.timesfmErrorPct !== null ? 1 : 0) +
+                                    (r.timestralErrorPct !== null ? 1 : 0) +
+                                    (r.moiraiErrorPct !== null ? 1 : 0);
+                if (activeInDay >= 2) {
                     headToHeadCount++;
                     if (r.winner === 'TimesFM 勝') tfWins++;
                     else if (r.winner === 'Timestral 勝') tmWins++;
+                    else if (r.winner === 'MOIRAI-2 勝') mrWins++;
                     else if (r.winner === '平手') ties++;
                 }
             }
 
-            if (tfCount === 0 && tmCount === 0) return null;
+            if (tfCount === 0 && tmCount === 0 && mrCount === 0) return null;
 
             const tfHitRate = tfCount > 0 ? (tfHitCount / tfCount) * 100 : null;
             const tfMape = tfCount > 0 ? (tfErrorSum / tfCount) : null;
@@ -575,66 +615,45 @@ export const app = createApp({
             const tmHitRate = tmCount > 0 ? (tmHitCount / tmCount) * 100 : null;
             const tmMape = tmCount > 0 ? (tmErrorSum / tmCount) : null;
 
-            // Rule 1: A model is ONLY eligible for isLeader (🏆 該股領先 / 表現較佳) if hitRate >= 50.0 AND count >= 2
-            const tfEligible = tfCount >= 2 && tfHitRate !== null && tfHitRate >= 50.0;
-            const tmEligible = tmCount >= 2 && tmHitRate !== null && tmHitRate >= 50.0;
+            const mrHitRate = mrCount > 0 ? (mrHitCount / mrCount) * 100 : null;
+            const mrMape = mrCount > 0 ? (mrErrorSum / mrCount) : null;
 
-            let overallWinner = '雙模型表現均衡';
+            const candidates = [
+                { name: 'TimesFM', count: tfCount, hitRate: tfHitRate, mape: tfMape, wins: tfWins },
+                { name: 'Timestral', count: tmCount, hitRate: tmHitRate, mape: tmMape, wins: tmWins },
+                { name: 'MOIRAI-2', count: mrCount, hitRate: mrHitRate, mape: mrMape, wins: mrWins }
+            ];
+
+            const eligible = candidates.filter(c => c.count >= 2 && c.hitRate !== null && c.hitRate >= 50.0);
+
+            let overallWinner = '模型表現均衡';
             let winningModel = null;
 
-            if (!tfEligible && !tmEligible) {
+            if (eligible.length === 0) {
                 winningModel = null;
-                const tfLow = tfCount >= 2 && tfHitRate !== null && tfHitRate < 50.0;
-                const tmLow = tmCount >= 2 && tmHitRate !== null && tmHitRate < 50.0;
-                if (tfLow && tmLow) {
-                    overallWinner = '⚠️ 兩模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主';
-                } else if (tfLow || tmLow) {
-                    overallWinner = '⚠️ 該股目前模型方向勝率低於 50%，建議以均線支撐與籌碼為主';
+                const active = candidates.filter(c => c.count >= 2 && c.hitRate !== null);
+                if (active.length > 0 && active.every(c => c.hitRate < 50.0)) {
+                    overallWinner = '⚠️ 各模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主';
                 } else {
                     overallWinner = '⏳ 驗證樣本累積中（需至少 2 日開獎紀錄且方向勝率 ≥ 50%）';
                 }
-            } else if (tfEligible && !tmEligible) {
-                winningModel = 'TimesFM';
-                if (tmCount >= 2 && tmHitRate !== null) {
-                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% vs ${tmHitRate.toFixed(1)}%，平均誤差 ±${tfMape.toFixed(2)}%）`;
-                } else {
-                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
-                }
-            } else if (!tfEligible && tmEligible) {
-                winningModel = 'Timestral';
-                if (tfCount >= 2 && tfHitRate !== null) {
-                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% vs ${tfHitRate.toFixed(1)}%，平均誤差 ±${tmMape.toFixed(2)}%）`;
-                } else {
-                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
-                }
             } else {
-                // Both tfEligible && tmEligible
-                if (tfHitRate >= tmHitRate + 5.0) {
-                    winningModel = 'TimesFM';
-                    overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
-                } else if (tmHitRate >= tfHitRate + 5.0) {
-                    winningModel = 'Timestral';
-                    overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
-                } else {
-                    // Close hit rates (< 5% difference): compare head-to-head wins, then MAPE
-                    if (tfWins > tmWins) {
-                        winningModel = 'TimesFM';
-                        overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
-                    } else if (tmWins > tfWins) {
-                        winningModel = 'Timestral';
-                        overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
-                    } else if (tfMape !== null && tmMape !== null) {
-                        if (tfMape < tmMape) {
-                            winningModel = 'TimesFM';
-                            overallWinner = `🏆 該股表現較佳：TimesFM（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
-                        } else if (tmMape < tfMape) {
-                            winningModel = 'Timestral';
-                            overallWinner = `🏆 該股表現較佳：Timestral（方向勝率 ${tmHitRate.toFixed(1)}% · 平均誤差 ±${tmMape.toFixed(2)}%）`;
-                        } else {
-                            winningModel = null;
-                            overallWinner = `⚖️ 該股歷史表現：雙模型實力相當（方向勝率 ${tfHitRate.toFixed(1)}% · 平均誤差 ±${tfMape.toFixed(2)}%）`;
-                        }
+                eligible.sort((a, b) => {
+                    if (Math.abs(a.hitRate - b.hitRate) >= 5.0) {
+                        return b.hitRate - a.hitRate;
                     }
+                    if (a.wins !== b.wins) {
+                        return b.wins - a.wins;
+                    }
+                    return (a.mape || 999) - (b.mape || 999);
+                });
+
+                if (eligible.length > 1 && Math.abs(eligible[0].hitRate - eligible[1].hitRate) < 5.0 && eligible[0].wins === eligible[1].wins && eligible[0].mape === eligible[1].mape) {
+                    winningModel = null;
+                    overallWinner = `⚖️ 該股歷史表現：模型實力相當（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
+                } else {
+                    winningModel = eligible[0].name;
+                    overallWinner = `🏆 該股表現較佳：${winningModel}（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
                 }
             }
 
@@ -658,6 +677,15 @@ export const app = createApp({
                     wins: tmWins,
                     isLeader: winningModel === 'Timestral',
                     lowHitWarning: tmCount >= 2 && tmHitRate !== null && tmHitRate < 50
+                },
+                moirai: {
+                    count: mrCount,
+                    hitCount: mrHitCount,
+                    hitRate: mrHitRate !== null ? mrHitRate.toFixed(1) : '-',
+                    mape: mrMape !== null ? mrMape.toFixed(2) : '-',
+                    wins: mrWins,
+                    isLeader: winningModel === 'MOIRAI-2',
+                    lowHitWarning: mrCount >= 2 && mrHitRate !== null && mrHitRate < 50
                 },
                 overallWinner
             };

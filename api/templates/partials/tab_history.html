@@ -1169,8 +1169,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Card 1: Google TimesFM -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Card 1: TimesFM -->
             <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
@@ -1179,7 +1179,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span class="w-3 h-3 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block shadow-sm transform rotate-45"></span>
-                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Google TimesFM (200M)</span>
+                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">TimesFM</span>
                     </div>
                     <span v-if="modelScorecard.timesfm.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black"
@@ -1223,7 +1223,7 @@
                     <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
                         <div>
                             <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">雙模型同場對決</span>
+                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
                             </div>
                             <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                                 {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timesfm.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
@@ -1236,7 +1236,7 @@
                 </div>
             </div>
 
-            <!-- Card 2: Mistral Timestral -->
+            <!-- Card 2: Timestral -->
             <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
@@ -1245,7 +1245,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span class="w-3 h-3 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block shadow-sm"></span>
-                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Mistral Timestral (209M)</span>
+                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">Timestral</span>
                     </div>
                     <span v-if="modelScorecard.timestral.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black"
@@ -1258,6 +1258,115 @@
                         方向勝率 &lt; 50%
                     </span>
                 </div>
+
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 text-center">
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
+                                {{ modelScorecard.timestral.hitRate !== '-' ? modelScorecard.timestral.hitRate + '%' : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            {{ modelScorecard.timestral.count }} 天中猜對 {{ modelScorecard.timestral.hitCount }} 天
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
+                                {{ modelScorecard.timestral.mape !== '-' ? '±' + modelScorecard.timestral.mape + '%' : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            越接近 0% 越準
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
+                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timestral.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: MOIRAI-2 -->
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+                 :class="[
+                     isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
+                     modelScorecard.moirai.isLeader ? (isDark ? 'ring-1 ring-sky-500/50' : 'ring-2 ring-sky-500') : ''
+                 ]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-[#0284C7] dark:bg-[#38BDF8] inline-block shadow-sm"></span>
+                        <span class="font-black text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">MOIRAI-2</span>
+                    </div>
+                    <span v-if="modelScorecard.moirai.isLeader"
+                          class="px-2 py-0.5 rounded-md text-xs font-black"
+                          :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-sky-100 text-sky-900 border border-sky-300'">
+                        🏆 該股表現較佳
+                    </span>
+                    <span v-else-if="modelScorecard.moirai.lowHitWarning"
+                          class="px-2 py-0.5 rounded-md text-xs font-semibold"
+                          :class="isDark ? 'bg-amber-500/10 text-amber-300/90 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'">
+                        方向勝率 &lt; 50%
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 text-center">
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">漲跌勝率</span><span class="hidden sm:inline">漲跌方向勝率</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                {{ modelScorecard.moirai.hitRate !== '-' ? modelScorecard.moirai.hitRate + '%' : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            {{ modelScorecard.moirai.count }} 天中猜對 {{ modelScorecard.moirai.hitCount }} 天
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">平均誤差</span><span class="hidden sm:inline">目標價平均誤差</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                {{ modelScorecard.moirai.mape !== '-' ? '±' + modelScorecard.moirai.mape + '%' : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            越接近 0% 越準
+                        </div>
+                    </div>
+                    <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div>
+                            <div class="text-xs font-semibold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
+                            </div>
+                            <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.moirai.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                            </div>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
+                        </div>
+                    </div>
+                </div>
+            </div>
 
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 text-center">
                     <div class="p-2 sm:p-2.5 rounded-lg border flex flex-col justify-between" :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
@@ -1330,6 +1439,7 @@
                     <th class="p-3 font-bold num-font whitespace-nowrap">隔日真實收盤 (實際漲跌)</th>
                     <th class="p-3 font-bold whitespace-nowrap">TimesFM 隔日目標價 (誤差)</th>
                     <th class="p-3 font-bold whitespace-nowrap">Timestral 隔日目標價 (誤差)</th>
+                    <th class="p-3 font-bold whitespace-nowrap">MOIRAI-2 隔日目標價 (誤差)</th>
                     <th class="p-3 font-bold text-center whitespace-nowrap">當日勝出模型</th>
                     <th class="p-3 font-bold whitespace-nowrap">均線 / 估值 / 籌碼</th>
                 </tr>
@@ -1401,6 +1511,25 @@
                         <span v-else :class="isDark ? 'text-slate-600' : 'text-slate-400'">-</span>
                     </td>
 
+                    <!-- MOIRAI-2 隔日目標價 (誤差) -->
+                    <td class="p-3 whitespace-nowrap">
+                        <div v-if="row.moiraiPred !== null">
+                            <div class="font-black num-font" :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                ${{ Number(row.moiraiPred).toFixed(2) }}
+                                <span v-if="row.moiraiPot !== null" class="text-xs font-bold">
+                                    ({{ row.moiraiPot >= 0 ? '+' : '' }}{{ row.moiraiPot.toFixed(2) }}%)
+                                </span>
+                            </div>
+                            <div v-if="row.moiraiErrorPct !== null" class="text-xs mt-0.5 flex items-center space-x-1">
+                                <span :class="row.moiraiHit ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-black')">
+                                    {{ row.moiraiHit ? '✓ 方向命中' : '✗ 方向偏離' }}
+                                </span>
+                                <span :class="isDark ? 'text-slate-400' : 'text-slate-500'">· 誤差 {{ row.moiraiErrorPct.toFixed(2) }}%</span>
+                            </div>
+                        </div>
+                        <span v-else :class="isDark ? 'text-slate-600' : 'text-slate-400'">-</span>
+                    </td>
+
                     <!-- 當日勝出模型 -->
                     <td class="p-3 text-center whitespace-nowrap">
                         <span v-if="row.winner === 'TimesFM 勝'"
@@ -1413,6 +1542,11 @@
                               :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                             Timestral 勝
                         </span>
+                        <span v-else-if="row.winner === 'MOIRAI-2 勝'"
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-sky-100 text-sky-900 border border-sky-300'">
+                            MOIRAI-2 勝
+                        </span>
                         <span v-else-if="row.winner === 'TimesFM'"
                               class="px-2 py-0.5 rounded-md text-xs font-medium"
                               :class="isDark ? 'bg-purple-500/10 text-purple-300 border border-purple-500/25' : 'bg-purple-50 text-purple-800 border border-purple-200'">
@@ -1422,6 +1556,11 @@
                               class="px-2 py-0.5 rounded-md text-xs font-medium"
                               :class="isDark ? 'bg-amber-500/10 text-amber-300 border border-amber-500/25' : 'bg-amber-50 text-amber-800 border border-amber-200'">
                             Timestral (單模型)
+                        </span>
+                        <span v-else-if="row.winner === 'MOIRAI-2'"
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-sky-500/10 text-sky-300 border border-sky-500/25' : 'bg-sky-50 text-sky-800 border border-sky-200'">
+                            MOIRAI-2 (單模型)
                         </span>
                         <span v-else-if="row.winner === '平手'"
                               class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-500/20 text-slate-300 border border-slate-500/30">
@@ -1478,15 +1617,25 @@
                               :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
                             Timestral 較準
                         </span>
+                        <span v-else-if="row.winner === 'MOIRAI-2 勝'"
+                              class="px-2 py-0.5 rounded-md text-xs font-bold"
+                              :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-sky-100 text-sky-900 border border-sky-300'">
+                            MOIRAI-2 較準
+                        </span>
                         <span v-else-if="row.winner === 'TimesFM'"
                               class="px-2 py-0.5 rounded-md text-xs font-medium"
                               :class="isDark ? 'bg-purple-500/10 text-purple-300 border border-purple-500/25' : 'bg-purple-50 text-purple-800 border border-purple-200'">
-                            TimesFM 單模型
+                            TimesFM
                         </span>
                         <span v-else-if="row.winner === 'Timestral'"
                               class="px-2 py-0.5 rounded-md text-xs font-medium"
                               :class="isDark ? 'bg-amber-500/10 text-amber-300 border border-amber-500/25' : 'bg-amber-50 text-amber-800 border border-amber-200'">
-                            Timestral 單模型
+                            Timestral
+                        </span>
+                        <span v-else-if="row.winner === 'MOIRAI-2'"
+                              class="px-2 py-0.5 rounded-md text-xs font-medium"
+                              :class="isDark ? 'bg-sky-500/10 text-sky-300 border border-sky-500/25' : 'bg-sky-50 text-sky-800 border border-sky-200'">
+                            MOIRAI-2
                         </span>
                         <span v-else-if="row.winner === '平手'"
                               class="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-500/20 text-slate-300 border border-slate-500/30">
@@ -1520,8 +1669,8 @@
                     </div>
                 </div>
 
-                <!-- Bottom 2-Column Grid: TimesFM vs Timestral Predictions -->
-                <div class="grid grid-cols-2 gap-2 text-xs">
+                <!-- Bottom 3-Column Grid: TimesFM vs Timestral vs MOIRAI-2 Predictions -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                     <!-- TimesFM Box -->
                     <div class="p-2.5 rounded-xl border space-y-1"
                          :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
@@ -1529,7 +1678,7 @@
                              :class="isDark ? 'text-purple-300' : 'text-purple-700'">
                             <span class="flex items-center space-x-1">
                                 <span class="w-2 h-2 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block rotate-45"></span>
-                                <span>TimesFM (Google)</span>
+                                <span>TimesFM</span>
                             </span>
                             <span v-if="row.timesfmHit !== null"
                                   :class="row.timesfmHit ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400' : 'text-rose-700 font-black')"
@@ -1556,7 +1705,7 @@
                              :class="isDark ? 'text-amber-300' : 'text-amber-700'">
                             <span class="flex items-center space-x-1">
                                 <span class="w-2 h-2 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block"></span>
-                                <span>Timestral (888)</span>
+                                <span>Timestral</span>
                             </span>
                             <span v-if="row.timestralHit !== null"
                                   :class="row.timestralHit ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400' : 'text-rose-700 font-black')"
@@ -1573,6 +1722,33 @@
                         </div>
                         <div class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                             {{ row.timestralErrorPct !== null ? '誤差 ' + row.timestralErrorPct.toFixed(2) + '%' : '—' }}
+                        </div>
+                    </div>
+
+                    <!-- MOIRAI-2 Box -->
+                    <div class="p-2.5 rounded-xl border space-y-1"
+                         :class="isDark ? 'bg-[#16181D]/60 border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                        <div class="flex items-center justify-between text-xs font-bold"
+                             :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                            <span class="flex items-center space-x-1">
+                                <span class="w-2 h-2 rounded-sm bg-[#0284C7] dark:bg-[#38BDF8] inline-block rounded-full"></span>
+                                <span>MOIRAI-2</span>
+                            </span>
+                            <span v-if="row.moiraiHit !== null"
+                                  :class="row.moiraiHit ? (isDark ? 'text-emerald-400' : 'text-emerald-700 font-black') : (isDark ? 'text-rose-400' : 'text-rose-700 font-black')"
+                                  class="font-black text-[12px]">
+                                {{ row.moiraiHit ? '✓ 命中' : '✗ 失準' }}
+                            </span>
+                        </div>
+                        <div class="font-black num-font text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
+                            {{ row.moiraiPred !== null ? formatPrice(row.moiraiPred, searchTicker) : '—' }}
+                            <span v-if="row.moiraiPot !== null" class="text-xs font-semibold"
+                                  :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                ({{ row.moiraiPot >= 0 ? '+' : '' }}{{ row.moiraiPot.toFixed(2) }}%)
+                            </span>
+                        </div>
+                        <div class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            {{ row.moiraiErrorPct !== null ? '誤差 ' + row.moiraiErrorPct.toFixed(2) + '%' : '—' }}
                         </div>
                     </div>
                 </div>

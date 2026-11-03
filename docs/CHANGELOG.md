@@ -21,6 +21,9 @@
   - **管線保護與容錯健全性**：`orchestrator.py` 在協變量構建失敗時維持 `features_unavailable` 狀態遵循 Fail-Closed 原則；記錄推論開始之 `decision_time` 防止跨盤後時間戳誤判。
   - **雙審攔截修復**：修正 Dockerfile PyTorch 跨架構安裝、掛載 `/api/v1/models/health` 路由、支援模擬交易 0 成交委託紀錄、健全 TWSE T86 破音字元防禦。
 - **🏷️ 版本升級至 v2.4.60 (`core/version.py`)**。
+- **🎨 UI 介面與模型歷史對決升級**：
+  - **移除模型品牌括號贅字**：全面移除 `(Google)`、`(888)`、`(Salesforce)` 等標記，統一為乾淨簡潔的 `TimesFM`、`Timestral`、`MOIRAI-2`。
+  - **歷史對決全面升級為 3 模型並列**：歷史勝率卡片（Scorecard）、桌機對決表格與手機版卡片全面支援 3 模型並列比較，納入 MOIRAI-2 預測、誤差、命中率與同場 PK 統計。
 
 ---
 
