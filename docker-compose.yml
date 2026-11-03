@@ -20,6 +20,7 @@ x-stock-service: &default-service
     - ./models:/app/models
     - ./strategies:/app/strategies
     - ./pipeline:/app/pipeline
+    - ./backtest:/app/backtest
     - ./docker:/app/docker
     - ./scripts:/app/scripts
     - ./run_daily.sh:/app/run_daily.sh
