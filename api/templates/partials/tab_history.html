@@ -1147,7 +1147,7 @@
             </tbody>
         </table></div>
     </section>
-    <div v-if="false && !historyLoading && modelScorecard"
+    <div v-if="!historyLoading && modelScorecard"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-5 rounded-2xl border space-y-4">
         
@@ -1156,10 +1156,10 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">military_tech</span>
-                    <span>雙模型隔日 (T+1) 預測準確率 PK 成績單</span>
+                    <span>時序模型隔日 (T+1) 預測準確率 PK 成績單</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    統計該股歷史所有已開獎交易日中，雙大模型針對「隔日收盤」之方向命中率、平均價格絕對誤差 (MAPE) 與對決勝出統計
+                    統計該股歷史所有已開獎交易日中，各模型（TimesFM / Timestral / MOIRAI-2）針對「隔日收盤」之方向命中率、平均價格絕對誤差 (MAPE) 與對決勝出統計
                 </p>
             </div>
             <!-- Overall Winner Badge -->
