@@ -80,7 +80,7 @@
             <div>
                 <div class="flex items-center space-x-2">
                     <span class="text-lg font-black num-font text-amber-500">
-                        {{ hoverData.ticker }}
+                        {{ formatTicker(hoverData.ticker) }}
                     </span>
                     <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
                         {{ hoverData.name }}

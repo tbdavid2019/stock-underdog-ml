@@ -169,7 +169,7 @@
                             <div class="flex items-center space-x-2">
                                 <button @click="searchTickerHistory(item.ticker)"
                                         class="font-black num-font hover:underline transition-colors text-amber-500">
-                                    {{ item.ticker }}
+                                    {{ formatTicker(item.ticker) }}
                                 </button>
                                 <span class="font-bold text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ item.name }}</span>
                             </div>
@@ -229,7 +229,7 @@
                                 {{ idx + 1 }}
                             </span>
                             <span class="font-black num-font text-amber-500 text-sm">
-                                {{ item.ticker }}
+                                {{ formatTicker(item.ticker) }}
                             </span>
                             <span class="font-bold text-xs" :class="isDark ? 'text-white' : 'text-slate-900'">
                                 {{ item.name }}

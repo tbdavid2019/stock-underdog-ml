@@ -1,5 +1,5 @@
 <!-- ================= TAB: AI 產業鏈與供應鏈傳導圖譜 (INDUSTRY VALUE CHAIN GRAPH) ================= -->
-<div v-show="activeTab === 'industry_chain'" class="space-y-6">
+<div v-if="activeTab === 'industry_chain'" class="space-y-6">
 
     <!-- 1. Header Banner & Dynamic Quant Overview -->
     <div class="rounded-2xl border p-5 sm:p-6 transition-all duration-200"
@@ -197,7 +197,7 @@
             <span class="material-symbols-outlined text-[20px] text-amber-600 dark:text-amber-400">filter_center_focus</span>
             <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="font-extrabold text-sm">
-                    已聚焦 {{ selectedNodeTicker }}
+                    已聚焦 {{ formatTicker(selectedNodeTicker) }}
                     <span v-if="getSelectedNodeCompany()">({{ getSelectedNodeCompany() }})</span>
                 </span>
                 <span class="px-2 py-0.5 rounded-full font-extrabold text-[11px]"
@@ -320,7 +320,7 @@
                                 </span>
                                 <span class="font-mono font-black text-base"
                                       :class="isDark ? 'text-white' : 'text-[#121212]'">
-                                    {{ node.ticker }}
+                                    {{ formatTicker(node.ticker) }}
                                 </span>
                                 <span class="font-bold text-sm tracking-tight"
                                       :class="isDark ? 'text-slate-100' : 'text-[#1B1813]'">
@@ -448,7 +448,7 @@
                                 </span>
                                 <span class="font-mono font-black text-base"
                                       :class="isDark ? 'text-white' : 'text-[#121212]'">
-                                    {{ node.ticker }}
+                                    {{ formatTicker(node.ticker) }}
                                 </span>
                                 <span class="font-bold text-sm tracking-tight"
                                       :class="isDark ? 'text-slate-100' : 'text-[#1B1813]'">
@@ -581,7 +581,7 @@
                                 </span>
                                 <span class="font-mono font-black text-base"
                                       :class="isDark ? 'text-white' : 'text-[#121212]'">
-                                    {{ node.ticker }}
+                                    {{ formatTicker(node.ticker) }}
                                 </span>
                                 <span class="font-bold text-sm tracking-tight"
                                       :class="isDark ? 'text-slate-100' : 'text-[#1B1813]'">

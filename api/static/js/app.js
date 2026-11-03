@@ -131,7 +131,8 @@ export const app = createApp({
             performanceModels: null,
             historyPerformance: null,
             historyPerformanceError: '',
-            searchTicker: '2330.TW',
+            showPerformanceLeaderboard: false,
+            searchTicker: '2330',
             historyRecords: [],
             historyLoading: false,
             priceChartVisibility: {
@@ -946,7 +947,7 @@ export const app = createApp({
                 if (requestId !== this.historyRequestId) return;
                 this.resolvedTicker = resolution.ticker;
                 this.resolvedName = resolution.name || '';
-                this.searchTicker = resolution.ticker;
+                this.searchTicker = this.formatTicker(resolution.ticker);
                 this.updateUrl(true);
                 this.loadHistoryPerformance(resolution.ticker, requestId);
 
@@ -1449,7 +1450,7 @@ export const app = createApp({
             }
         },
         searchTickerHistory(ticker) {
-            this.searchTicker = ticker;
+            this.searchTicker = this.formatTicker(ticker);
             this.activeTab = 'history';
             this.updateUrl();
             this.loadHistory();
@@ -1867,7 +1868,7 @@ export const app = createApp({
                     }
                 } else if (this.activeTab === 'history') {
                     if (this.searchTicker) {
-                        params.set('ticker', this.searchTicker);
+                        params.set('ticker', this.formatTicker(this.searchTicker));
                     }
                 } else if (this.activeTab === 'podcast') {
                     if (this.podcastSelectedTopic) {
@@ -2127,6 +2128,10 @@ export const app = createApp({
                         .catch(e => console.debug("Prefetch batch skipped:", e));
                 }, (i / chunkSize) * 300);
             }
+        },
+        formatTicker(ticker) {
+            if (!ticker) return '';
+            return String(ticker).replace(/\.(TW|TWO)$/i, '');
         },
         isTwStock(ticker) {
             if (!ticker) return false;
@@ -2922,6 +2927,13 @@ export const app = createApp({
 });
 
 // Global helper registration to prevent any template rendering exceptions
+const globalFormatTicker = (ticker) => {
+    if (!ticker) return '';
+    return String(ticker).replace(/\.(TW|TWO)$/i, '');
+};
+app.config.globalProperties.formatTicker = globalFormatTicker;
+window.formatTicker = globalFormatTicker;
+
 const globalStripEmojis = (str) => {
     if (!str) return '';
     return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();

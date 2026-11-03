@@ -60,7 +60,7 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">timeline</span>
-                    <span><span class="num-font text-amber-500">{{ brokerSearchTicker.toUpperCase() }}</span> TOP 8 目標券商累計買賣超走勢</span>
+                    <span><span class="num-font text-amber-500">{{ formatTicker(brokerSearchTicker) }}</span> TOP 8 目標券商累計買賣超走勢</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     統計區間: {{ brokerSummary.start_date }} ~ {{ brokerSummary.end_date }} (共 {{ brokerSummary.days }} 個交易日)
@@ -147,7 +147,7 @@
              :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
             <span class="material-symbols-outlined text-[28px]">search</span>
         </div>
-        <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ brokerSearchTicker }}</strong> 的券商分點主力時序資料</div>
+        <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ formatTicker(brokerSearchTicker) }}</strong> 的券商分點主力時序資料</div>
     </div>
 
 </div>

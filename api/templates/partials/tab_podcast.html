@@ -369,7 +369,7 @@
                             :title="quote.as_of ? '資料時間: ' + quote.as_of : '目前沒有可用行情資料'"
                             class="px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-2 group shadow-sm hover:scale-105"
                             :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md ring-2 ring-amber-400/50' : (isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500 text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] hover:border-amber-400 text-slate-900')">
-                        <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ quote.ticker }}</span>
+                        <span class="font-black num-font" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black' : 'text-amber-500'">{{ formatTicker(quote.ticker) }}</span>
                         <span class="text-xs sm:text-sm" :class="podcastExpandedEpisodeId === ep.id && podcastExpandedTicker === quote.ticker ? 'text-black/90 font-bold' : (isDark ? 'text-slate-300' : 'text-slate-700')">{{ quote.name || '' }}</span>
                         
                         <!-- AI Sentiment Stance Badge -->
@@ -406,10 +406,10 @@
                          :class="isDark ? 'border-[#262626]' : 'border-amber-200'">
                         <div class="flex items-center space-x-2.5">
                             <span class="px-2.5 py-1 rounded-lg font-black num-font text-sm bg-amber-500 text-black">
-                                {{ podcastExpandedTicker }}
+                                {{ formatTicker(podcastExpandedTicker) }}
                             </span>
                             <span class="font-bold text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
-                                {{ podcastDrawerData ? (podcastDrawerData.name || podcastDrawerData.ticker) : podcastExpandedTicker }}
+                                {{ podcastDrawerData ? (podcastDrawerData.name || formatTicker(podcastDrawerData.ticker)) : formatTicker(podcastExpandedTicker) }}
                             </span>
                             <span v-if="podcastDrawerData && podcastDrawerData.industry"
                                   class="text-xs sm:text-sm px-2 py-0.5 rounded-md font-medium"

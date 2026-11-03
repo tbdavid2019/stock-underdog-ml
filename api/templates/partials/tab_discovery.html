@@ -217,11 +217,11 @@
                                   :class="isDark ? 'text-white' : 'text-[#2B251A]'"
                                   @click="searchTickerHistory(cand.ticker)"
                                   @keydown.enter="searchTickerHistory(cand.ticker)">
-                                {{ cand.name || cand.ticker }}
+                                {{ cand.name || formatTicker(cand.ticker) }}
                             </span>
                             <span class="text-xs font-bold num-font px-1.5 py-0.5 rounded"
                                   :class="isDark ? 'bg-[#16181D] text-amber-400' : 'bg-[#FFF0CC] text-[#9A3412]'">
-                                {{ cand.ticker }}
+                                {{ formatTicker(cand.ticker) }}
                             </span>
                             <span class="text-xs font-black px-1.5 py-0.5 rounded uppercase"
                                   :class="cand.market === 'TW' ? (isDark ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30' : 'bg-sky-100 text-sky-900 border border-sky-300') : (isDark ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-900 border border-purple-300')">
@@ -349,11 +349,11 @@
                                   :class="isDark ? 'text-white' : 'text-[#2B251A]'"
                                   @click="searchTickerHistory(cand.ticker)"
                                   @keydown.enter="searchTickerHistory(cand.ticker)">
-                                {{ cand.name || cand.ticker }}
+                                {{ cand.name || formatTicker(cand.ticker) }}
                             </span>
                             <span class="text-xs font-bold num-font px-1.5 py-0.5 rounded"
                                   :class="isDark ? 'bg-[#16181D] text-emerald-400' : 'bg-[#E6F4EA] text-[#065F46]'">
-                                {{ cand.ticker }}
+                                {{ formatTicker(cand.ticker) }}
                             </span>
                             <span class="text-xs font-black px-1.5 py-0.5 rounded uppercase"
                                   :class="cand.market === 'TW' ? (isDark ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30' : 'bg-sky-100 text-sky-900 border border-sky-300') : (isDark ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-900 border border-purple-300')">
@@ -567,7 +567,7 @@
                           role="button" tabindex="0"
                           @click="searchTickerHistory(sig.ticker)"
                           @keydown.enter="searchTickerHistory(sig.ticker)">
-                        {{ sig.ticker }}
+                        {{ formatTicker(sig.ticker) }}
                     </span>
                 </div>
             </div>

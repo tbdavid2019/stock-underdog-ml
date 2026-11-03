@@ -342,8 +342,8 @@
                                     </span>
                                     <button @click.stop="searchTickerHistory(call.ticker)"
                                             class="font-black num-font text-xs sm:text-sm text-amber-500 hover:underline"
-                                            :title="'速查 ' + call.ticker + ' 歷史走勢'">
-                                        {{ call.ticker }}
+                                            :title="'速查 ' + formatTicker(call.ticker) + ' 歷史走勢'">
+                                        {{ formatTicker(call.ticker) }}
                                     </button>
                                     <span class="text-xs sm:text-sm font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                         {{ call.name }}
@@ -404,7 +404,7 @@
                         <div class="space-y-0.5 truncate mr-2">
                             <div class="flex items-center space-x-1.5">
                                 <span class="font-black num-font text-xs sm:text-sm text-amber-500">
-                                    {{ earn.ticker }}
+                                    {{ formatTicker(earn.ticker) }}
                                 </span>
                                 <span class="text-xs font-medium truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                     {{ earn.name }}
@@ -664,7 +664,7 @@
                             <div class="flex items-center space-x-2">
                                 <button @click.stop="searchTickerHistory(item.ticker)"
                                         class="font-black num-font hover:underline text-amber-500 text-base sm:text-lg">
-                                    {{ item.ticker }}
+                                    {{ formatTicker(item.ticker) }}
                                 </button>
                                 <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                     {{ item.name || companyProfileCache[item.ticker]?.name }}
@@ -985,8 +985,8 @@
                                 <div class="flex items-center space-x-1.5">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
                                             class="font-black num-font hover:underline transition-colors text-amber-500 text-sm shrink-0"
-                                            :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
-                                        {{ item.ticker }}
+                                            :title="'點擊速查 ' + formatTicker(item.ticker) + ' 歷史走勢'">
+                                        {{ formatTicker(item.ticker) }}
                                     </button>
                                     <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-xs truncate max-w-[80px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name || companyProfileCache[item.ticker]?.name">
                                         {{ item.name || companyProfileCache[item.ticker]?.name }}
@@ -1118,9 +1118,9 @@
                                 <div v-if="drawerActiveSubTab === 'profile'" class="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div class="space-y-2 max-w-3xl">
                                         <div class="flex items-center flex-wrap gap-2">
-                                            <span class="text-xl font-black num-font text-amber-500">{{ item.ticker }}</span>
+                                            <span class="text-xl font-black num-font text-amber-500">{{ formatTicker(item.ticker) }}</span>
                                             <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
-                                                {{ expandedDrawerData?.name || item.name || item.ticker }}
+                                                {{ expandedDrawerData?.name || item.name || formatTicker(item.ticker) }}
                                             </span>
                                             <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md border"
                                                   :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
@@ -1734,8 +1734,8 @@
                                   @mouseenter="showCompanyHover($event, item.ticker)"
                                   @mouseleave="hideCompanyHover()"
                                   @click="searchTickerHistory(item.ticker)"
-                                  :title="'滑鼠停留查看 ' + item.ticker + ' 公司介紹與即時新聞'">
-                                {{ item.ticker }}
+                                  :title="'滑鼠停留查看 ' + formatTicker(item.ticker) + ' 公司介紹與即時新聞'">
+                                {{ formatTicker(item.ticker) }}
                             </span>
                             <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="text-sm sm:text-base font-bold truncate max-w-[130px]"
                                   :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="item.name || companyProfileCache[item.ticker]?.name">
@@ -1939,7 +1939,7 @@
                         <!-- Company Meta Chips -->
                         <div class="flex items-center flex-wrap gap-1.5 pb-1">
                             <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
-                                {{ expandedDrawerData?.name || item.name || item.ticker }}
+                                {{ expandedDrawerData?.name || item.name || formatTicker(item.ticker) }}
                             </span>
                             <span class="px-2 py-0.5 text-xs font-semibold rounded-md border"
                                   :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
@@ -2643,8 +2643,8 @@
                                             </span>
                                             <button @click.stop="searchTickerHistory(call.ticker); closeEarningsCalendar();"
                                                     class="font-black num-font text-xs sm:text-sm text-amber-500 hover:underline"
-                                                    :title="'點擊速查 ' + call.ticker + ' 歷史走勢'">
-                                                {{ call.ticker }}
+                                                    :title="'點擊速查 ' + formatTicker(call.ticker) + ' 歷史走勢'">
+                                                {{ formatTicker(call.ticker) }}
                                             </button>
                                             <span class="text-xs sm:text-sm font-bold truncate" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                                 {{ call.name }}
