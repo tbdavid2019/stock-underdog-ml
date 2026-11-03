@@ -33,31 +33,31 @@ export const app = createApp({
                     id: 'resonance',
                     label: '綜合優選',
                     icon: 'military_tech',
-                    description: '【綜合優選】同時符合 TimesFM 與 Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。'
+                    description: '多模型同步看漲，且具備季線支撐或法人籌碼。'
                 },
                 {
                     id: 'timestral_bullish',
                     label: 'Timestral 看漲排行',
                     icon: 'smart_toy',
-                    description: '【Timestral 預測】依 Timestral 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
+                    description: 'Timestral 預測隔日漲幅排行。'
                 },
                 {
                     id: 'timesfm_bullish',
                     label: 'TimesFM 看漲排行',
                     icon: 'auto_awesome',
-                    description: '【TimesFM 預測】依 TimesFM 模型預測隔日 (T+1) 潛在漲幅與風報比由高至低排序。'
+                    description: 'TimesFM 預測隔日漲幅排行。'
                 },
                 {
                     id: 'xuantie',
                     label: '季線支撐買點',
                     icon: 'show_chart',
-                    description: '【技術面支撐】處於季線 (MA60) 多頭趨勢，且股價剛好回測季線或半年線 (MA120) 支撐區間 (±5%) 之波段買點。'
+                    description: '股價回測季線或半年線支撐。'
                 },
                 {
                     id: 'timestral_bearish',
                     label: '看跌避險排行',
                     icon: 'shield',
-                    description: '【短線避險】時序模型預測隔日跌幅較大或下行風險偏高之標的，供減碼或防守參考。'
+                    description: '模型預測隔日跌幅排行，注意避險防守。'
                 },
                 {
                     id: 'latest',
@@ -2170,55 +2170,55 @@ export const app = createApp({
                 if (cleanLabel.includes('綜合優選')) {
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
-                    tooltip = '【綜合優選】同時符合 TimesFM 與 Timestral 隔日看漲共識，且具備季線支撐或法人買超之高勝率標的。';
+                    tooltip = '多模型同步看漲 · 具備支撐或籌碼優勢';
                 } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                    tooltip = '【雙模型看漲】TimesFM 與 Timestral 雙時序大模型同步預測隔日看漲。';
+                    tooltip = '模型同步看漲';
                 } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
-                    tooltip = '【土洋合買】臺灣外資法人與境內投信法人同步站在買方加持。';
+                    tooltip = '外資投信同步買超';
                 } else if (cleanLabel.includes('連買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
-                    tooltip = '【投信連買】投信法人連續買超 3 天以上，主力籌碼鎖碼強度高。';
+                    tooltip = '投信連續買超';
                 } else if (cleanLabel.includes('買超') || cleanLabel.includes('鎖碼')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
-                    tooltip = '【法人買超】三大法人資金近期呈現顯著淨流入。';
+                    tooltip = '法人買超';
                 } else if (cleanLabel.includes('季線支撐') || cleanLabel.includes('均線') || cleanLabel.includes('MA60') || cleanLabel.includes('MA120') || cleanLabel.includes('MA20')) {
                     icon = 'show_chart';
                     badgeType = 'technical';
-                    tooltip = '【季線支撐】「順大勢、逆小勢」，股價處於多頭波段並回測 MA60 季線或 MA120 半年線支撐位。';
+                    tooltip = '均線支撐買點';
                 } else if (cleanLabel.includes('Timestral')) {
                     icon = 'smart_toy';
                     badgeType = 'ai_timestral';
-                    tooltip = '【Timestral看漲】Timestral 時序大模型預測隔日 (T+1) 具有正向報酬潛力與良好盈虧比。';
+                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'Timestral 看跌' : 'Timestral 看漲';
                 } else if (cleanLabel.includes('TimesFM')) {
                     icon = 'auto_awesome';
                     badgeType = 'ai_timesfm';
-                    tooltip = '【TimesFM看漲】TimesFM 時序大模型 Zero-Shot 預測隔日 (T+1) 目標價位顯著看漲。';
+                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'TimesFM 看跌' : 'TimesFM 看漲';
                 } else if (cleanLabel.includes('MOIRAI')) {
                     icon = 'insights';
                     badgeType = 'ai_moirai';
-                    tooltip = '【MOIRAI-2看漲】MOIRAI-2 多變量時序模型預測隔日 (T+1) 具備看漲潛力。';
+                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'MOIRAI-2 看跌' : 'MOIRAI-2 看漲';
                 } else if (cleanLabel.includes('高盈虧比') || cleanLabel.includes('高風報比')) {
                     icon = 'balance';
                     badgeType = 'risk_reward';
-                    tooltip = '【高盈虧比】時序大模型 P50 中位獲利空間大於 P10 悲觀防守空間。';
+                    tooltip = '高盈虧比';
                 } else if (cleanLabel.includes('低PE') || cleanLabel.includes('低PB')) {
                     icon = 'equalizer';
                     badgeType = 'fundamental';
-                    tooltip = '【基本面估值】本益比 (PE) 或股價淨值比 (PB) 處於歷史相對合理/低估區間。';
+                    tooltip = '低估值';
                 } else if (cleanLabel.includes('防守') || cleanLabel.includes('避險')) {
                     icon = 'shield';
                     badgeType = 'defense';
-                    tooltip = '【防守/避險】預測破底風險高或盈虧比過低，不宜追高，建議保持防守觀望。';
+                    tooltip = '避險防守';
                 } else if (cleanLabel.includes('主流板塊')) {
                     icon = 'hub';
                     badgeType = 'technical';
-                    tooltip = '【主流板塊】屬於近期全市場資金輪動動量排名前三之強勢產業。';
+                    tooltip = '強勢主流板塊';
                 }
 
                 return {

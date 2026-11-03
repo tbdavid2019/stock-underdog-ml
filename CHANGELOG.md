@@ -28,7 +28,7 @@
     - **API 契約與端點掛載**：補充掛載 `/api/v1/models/health` 與 `/api/v1/performance/health` 路由；健全 TWSE T86 破音字元防禦與模擬交易 0 成交委託紀錄支援。
 - **🏷️ 版本升級至 v2.4.60 (`core/version.py`)**。
 - **🎨 UI 介面與模型歷史對決升級**：
-  - **移除模型品牌括號贅字與策略標籤淨化**：全面移除 `(Google)`、`(888)`、`(Salesforce)`、`Mistral` 等標記；操盤看板策略選單、橫幅說明、標籤提示（Tooltip）與 AI 總評 Prompt 全面淨化，統一為簡潔專業的 `TimesFM`、`Timestral`、`MOIRAI-2`，並將「綜合優選 (雙模型看漲)」精簡為「綜合優選」。
+  - **移除模型品牌括號贅字與策略標籤淨化**：全面移除 `(Google)`、`(888)`、`(Salesforce)`、`Mistral` 等標記與學術冗詞；策略標籤與 Tooltip 全面精簡為直截了當的極簡風格（如 `TimesFM 看漲`、`Timestral 看跌`、`MOIRAI-2 看漲`、`模型同步看漲`），不再出現長篇贅述。
   - **歷史對決全面升級為 3 模型並列**：歷史勝率卡片（Scorecard）、桌機對決表格與手機版卡片全面支援 3 模型並列比較，納入 MOIRAI-2 預測、誤差、命中率與同場 PK 統計。
 
 ---
