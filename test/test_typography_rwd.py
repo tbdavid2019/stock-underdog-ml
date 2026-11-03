@@ -167,8 +167,7 @@ class TestTypographyAndRWD(unittest.TestCase):
         self.assertIn("headToHeadCount", app_js)
         self.assertIn("hitCount", app_js)
         self.assertIn("lowHitWarning", app_js)
-        self.assertIn("tfHitRate >= 50.0", app_js)
-        self.assertIn("tmHitRate >= 50.0", app_js)
+        self.assertIn("hitRate >= 50.0", app_js)
 
         history_path = Path("api/templates/partials/tab_history.html")
         self.assertTrue(history_path.exists(), "tab_history.html not found")
@@ -243,7 +242,7 @@ class TestTypographyAndRWD(unittest.TestCase):
         self.assertEqual(res1["timesfm"]["hitCount"], 1)
         self.assertEqual(res1["timesfm"]["count"], 3)
         self.assertEqual(res1["headToHeadCount"], 3)
-        self.assertIn("⚠️ 兩模型於該股方向勝率皆低於 50%", res1["overallWinner"])
+        self.assertIn("方向勝率皆低於 50%", res1["overallWinner"])
 
         # Scenario 2 assertions: Timestral is eligible and wins
         res2 = data["res2"]

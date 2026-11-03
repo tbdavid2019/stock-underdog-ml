@@ -300,6 +300,44 @@ URL Source: https://tw.stock.yahoo.com/quote/9945.TW/profile
         self.assertEqual(res2["business_summary"], "家電與重電設備 (來自 DuckDB)")
         self.assertEqual(mock_profile.call_count, 1)  # 抓取次數依然為 1，未重抓！
 
+    def test_foreign_stock_ticker_collision_prevented(self):
+        """驗證日股 6770.T 絕不與台股 6770 (力積電) 代號碰撞"""
+        mock_db = MagicMock()
+        mock_conn = MagicMock()
+        mock_db._get_connection.return_value.__enter__.return_value = mock_conn
+
+        # 模擬 market_universe 查得 ALPS ALPINE CO.,LTD.
+        mock_conn.execute.return_value.fetchone.return_value = ("ALPS ALPINE CO.,LTD.",)
+
+        name = CompanyProfileService._resolve_stock_name("6770.T", db=mock_db)
+        self.assertEqual(name, "ALPS ALPINE CO.,LTD.")
+        self.assertNotEqual(name, "力積電")
+
+    def test_non_tw_stock_does_not_query_tw_raw_code(self):
+        """驗證非台股代碼在查 company_profiles 時僅用 ticker 匹配，不用 raw_code 截斷比對"""
+        mock_db = MagicMock()
+        mock_conn = MagicMock()
+        mock_db._get_connection.return_value.__enter__.return_value = mock_conn
+
+        # market_universe 查無資料
+        def fake_execute(query, params=None):
+            m = MagicMock()
+            if "market_universe" in query:
+                m.fetchone.return_value = None
+            elif "company_profiles" in query:
+                # 確保查詢條件中不含有 raw_code
+                self.assertNotIn("raw_code", query)
+                m.fetchone.return_value = ("ALPS ALPINE",)
+            else:
+                m.fetchone.return_value = None
+            return m
+
+        mock_conn.execute.side_effect = fake_execute
+
+        name = CompanyProfileService._resolve_stock_name("6770.T", db=mock_db)
+        self.assertEqual(name, "ALPS ALPINE")
+        self.assertNotEqual(name, "力積電")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -456,6 +456,50 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertIsNotNone(res3)
         self.assertEqual(res3["ticker"], "2371.TW")
 
+    def test_cross_market_company_profile_isolation(self):
+        """驗證實體 DuckDB 在跨市場代碼相同 (6770.TW vs 6770.T) 時完全隔離不互相污染"""
+        tw_profile = {
+            "ticker": "6770.TW",
+            "raw_code": "6770",
+            "name": "力積電",
+            "industry": "半導體業",
+            "chairman": "黃崇仁",
+            "source": "tw_test"
+        }
+        jp_profile = {
+            "ticker": "6770.T",
+            "raw_code": "6770.T",
+            "name": "ALPS ALPINE CO LTD",
+            "industry": "Electronic Components",
+            "chairman": "Hideo Izumi",
+            "source": "jp_test"
+        }
+
+        self.mgr.save_company_profile("6770.TW", tw_profile)
+        self.mgr.save_company_profile("6770.T", jp_profile)
+
+        # 1. 查 6770 (純代號) 必須且僅能命中台股力積電
+        res_pure = self.mgr.get_company_profile("6770")
+        self.assertIsNotNone(res_pure)
+        self.assertEqual(res_pure["name"], "力積電")
+        self.assertEqual(res_pure["ticker"], "6770.TW")
+
+        # 2. 查 6770.TW 必須命中文力積電
+        res_tw = self.mgr.get_company_profile("6770.TW")
+        self.assertIsNotNone(res_tw)
+        self.assertEqual(res_tw["name"], "力積電")
+
+        # 3. 查 6770.T 必須命中日股 ALPS ALPINE，絕不可返回力積電
+        res_jp = self.mgr.get_company_profile("6770.T")
+        self.assertIsNotNone(res_jp)
+        self.assertEqual(res_jp["name"], "ALPS ALPINE CO LTD")
+        self.assertNotEqual(res_jp["name"], "力積電")
+
+        # 4. 查大小寫不同的 alps alpine 亦可正常命中日股
+        res_jp_lower = self.mgr.get_company_profile("alps alpine co ltd")
+        self.assertIsNotNone(res_jp_lower)
+        self.assertEqual(res_jp_lower["ticker"], "6770.T")
+
     def test_company_tender_duckdb_alias_resolution(self):
         """驗證 DuckDB 標案情報支援 2371.TW、2371 與名稱大同交叉命中快取"""
         tender_data = {

@@ -278,10 +278,11 @@ class CompanyProfileService:
 
     @classmethod
     def _resolve_stock_name(cls, ticker: str, db: Optional[Any] = None) -> Optional[str]:
-        """從 DuckDB 或別名表解析繁體中文股票名稱"""
+        """從 DuckDB 或別名表解析股票名稱 (嚴格區隔台股與國際市場標的以防碰撞)"""
+        norm_ticker = normalize_ticker(ticker).strip().upper()
         # 1. 別名表反查
         for alias, t in COMPANY_ALIASES.items():
-            if t.upper() == ticker.upper():
+            if t.upper() == norm_ticker:
                 return alias
 
         # 2. DuckDB 查詢 (安全容錯)
@@ -293,15 +294,33 @@ class CompanyProfileService:
         try:
             if hasattr(manager, "_get_connection"):
                 with manager._get_connection() as con:
-                    row = con.execute("SELECT name FROM tw_daily_bars WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
-                    if row and row[0] and isinstance(row[0], str):
-                        return str(row[0]).strip()
-                    row_inst = con.execute("SELECT name FROM tw_institutional_daily WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [ticker]).fetchone()
-                    if row_inst and row_inst[0] and isinstance(row_inst[0], str):
-                        return str(row_inst[0]).strip()
-                    row_p = con.execute("SELECT name FROM company_profiles WHERE ticker = ? OR raw_code = ? LIMIT 1", [ticker, ticker.split(".")[0]]).fetchone()
-                    if row_p and row_p[0] and isinstance(row_p[0], str):
-                        return str(row_p[0]).strip()
+                    # 先查 market_universe 完整 Symbol
+                    try:
+                        row_u = con.execute(
+                            "SELECT COALESCE(name_local, name_en) FROM market_universe WHERE upper(trim(normalized_symbol)) = ? AND COALESCE(name_local, name_en) IS NOT NULL AND COALESCE(name_local, name_en) != '' LIMIT 1",
+                            [norm_ticker]
+                        ).fetchone()
+                        if row_u and row_u[0] and isinstance(row_u[0], str):
+                            return str(row_u[0]).strip()
+                    except Exception:
+                        pass
+
+                    is_tw = norm_ticker.endswith(".TW") or norm_ticker.endswith(".TWO")
+                    if is_tw:
+                        row = con.execute("SELECT name FROM tw_daily_bars WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [norm_ticker]).fetchone()
+                        if row and row[0] and isinstance(row[0], str):
+                            return str(row[0]).strip()
+                        row_inst = con.execute("SELECT name FROM tw_institutional_daily WHERE ticker = ? AND name IS NOT NULL AND name != '' LIMIT 1", [norm_ticker]).fetchone()
+                        if row_inst and row_inst[0] and isinstance(row_inst[0], str):
+                            return str(row_inst[0]).strip()
+                        row_p = con.execute("SELECT name FROM company_profiles WHERE ticker = ? OR raw_code = ? LIMIT 1", [norm_ticker, norm_ticker.split(".")[0]]).fetchone()
+                        if row_p and row_p[0] and isinstance(row_p[0], str):
+                            return str(row_p[0]).strip()
+                    else:
+                        # 國際股票 (美股、日股、港股)：嚴格僅比對完整 ticker，禁止使用 raw_code 截斷比對避免碰撞 (如 6770.T 碰撞 6770 力積電)
+                        row_p = con.execute("SELECT name FROM company_profiles WHERE upper(trim(ticker)) = ? LIMIT 1", [norm_ticker]).fetchone()
+                        if row_p and row_p[0] and isinstance(row_p[0], str):
+                            return str(row_p[0]).strip()
         except Exception as e:
             logger.debug(f"DuckDB stock name lookup failed: {e}")
 
@@ -504,8 +523,20 @@ class CompanyProfileService:
             import yfinance as yf
             t = yf.Ticker(ticker)
             info = t.info or {}
-            if not profile.get("name") or profile["name"] == profile["raw_code"]:
-                profile["name"] = info.get("shortName") or info.get("longName") or profile["raw_code"]
+            is_tw = ticker.endswith(".TW") or ticker.endswith(".TWO")
+            yf_name = info.get("shortName") or info.get("longName")
+            if not profile.get("name") or profile["name"] == profile.get("raw_code"):
+                profile["name"] = yf_name or profile.get("raw_code", ticker)
+            elif not is_tw and yf_name and profile.get("name") != yf_name:
+                # 若為非台股但先前名稱被誤設為中文或其他代號，僅在非港股且非合法別名時校正為官方 yfinance 英文名
+                is_hk = ticker.upper().endswith(".HK")
+                try:
+                    from data.ticker_resolver import COMPANY_ALIASES
+                    is_valid_alias = any(alias == profile.get("name") for alias, t in COMPANY_ALIASES.items() if t.upper() == ticker.upper())
+                except Exception:
+                    is_valid_alias = False
+                if not is_hk and not is_valid_alias:
+                    profile["name"] = yf_name
             if profile.get("industry") == "綜合產業" and (info.get("industry") or info.get("sector")):
                 profile["industry"] = info.get("industry") or info.get("sector")
             if not profile.get("business_summary") and info.get("longBusinessSummary"):

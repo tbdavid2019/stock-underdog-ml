@@ -1501,16 +1501,17 @@ class DuckDBManager:
                             """
                             SELECT normalized_symbol, COALESCE(name_local, name_en)
                             FROM market_universe
-                            WHERE lower(trim(normalized_symbol)) = lower(trim(?))
-                               OR lower(trim(symbol)) = lower(trim(?))
-                               OR lower(trim(normalized_symbol)) = lower(trim(?))
-                               OR lower(trim(raw_code)) = lower(trim(?))
+                            WHERE lower(trim(normalized_symbol)) IN (lower(trim(?)), lower(trim(?)))
+                               OR lower(trim(local_symbol)) = lower(trim(?))
                                OR lower(trim(name_local)) = lower(trim(?))
                                OR lower(trim(name_en)) = lower(trim(?))
-                            ORDER BY date DESC NULLS LAST
+                            ORDER BY 
+                               CASE WHEN lower(trim(normalized_symbol)) IN (lower(trim(?)), lower(trim(?))) THEN 0 ELSE 1 END,
+                               CASE WHEN normalized_symbol LIKE '%.TW%' THEN 1 ELSE 2 END,
+                               snapshot_date DESC NULLS LAST
                             LIMIT 1
                             """,
-                            [query, query, normalized, query, query, query],
+                            [query, normalized, query, query, query, query, normalized],
                         ).fetchone()
                         if univ_row and univ_row[0]:
                             return _cache_and_return({
@@ -2448,8 +2449,7 @@ class DuckDBManager:
             recent_news_json = json.dumps(data.get("recent_news") or [], ensure_ascii=False)
             source = str(data.get("source") or "2md")
 
-            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
-            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
+            is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO")
 
             with self._WRITE_LOCK:
                 with self._get_connection() as con:
@@ -2460,8 +2460,8 @@ class DuckDBManager:
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                     """, [ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, now_str])
 
-                    # 若傳入為 2371.TW，亦同步寫入 2371 供純代碼快速檢索；反之亦然
-                    if raw_code and raw_code != ticker:
+                    # 僅限台股 (如 2371.TW) 同步寫入 2371 供純代碼檢索；非台股 (如 6770.T) 嚴禁寫入純數字以免污染
+                    if is_tw and raw_code and raw_code != ticker and raw_code.isdigit():
                         con.execute("""
                         INSERT OR REPLACE INTO company_profiles 
                         (ticker, raw_code, name, registered_name, unified_id, capital, industry, chairman, market_cap, established, business_summary, recent_news_json, data_json, source, updated_at)
@@ -2479,16 +2479,26 @@ class DuckDBManager:
         try:
             t_clean = str(ticker).strip()
             t_upper = t_clean.upper()
-            raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
-            canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
-            canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
+            is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO")
+            is_digit = t_upper.isdigit()
 
             with self._get_connection() as con:
-                row = con.execute("""
-                SELECT data_json, updated_at FROM company_profiles 
-                WHERE ticker IN (?, ?, ?, ?, ?) OR raw_code = ? OR name = ? OR registered_name = ? OR unified_id = ?
-                ORDER BY updated_at DESC LIMIT 1;
-                """, [t_clean, t_upper, raw_code, canon_tw, canon_two, raw_code, t_clean, t_clean, t_clean]).fetchone()
+                if is_tw or is_digit:
+                    raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
+                    canon_tw = f"{raw_code}.TW"
+                    canon_two = f"{raw_code}.TWO"
+                    row = con.execute("""
+                    SELECT data_json, updated_at FROM company_profiles 
+                    WHERE ticker IN (?, ?, ?, ?, ?) OR raw_code = ? OR name = ? OR registered_name = ? OR unified_id = ?
+                    ORDER BY updated_at DESC LIMIT 1;
+                    """, [t_clean, t_upper, raw_code, canon_tw, canon_two, raw_code, t_clean, t_clean, t_clean]).fetchone()
+                else:
+                    # 國際市場標的 (如 6770.T, AAPL, 7203.T)：嚴格依完整 ticker 或公司名檢索，絕不可使用 raw_code 截斷比對
+                    row = con.execute("""
+                    SELECT data_json, updated_at FROM company_profiles 
+                    WHERE ticker IN (?, ?) OR lower(name) = lower(?) OR lower(registered_name) = lower(?)
+                    ORDER BY updated_at DESC LIMIT 1;
+                    """, [t_clean, t_upper, t_clean, t_clean]).fetchone()
                 if not row:
                     return None
                 data_json, updated_at = row

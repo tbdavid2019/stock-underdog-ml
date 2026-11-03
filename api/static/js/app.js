@@ -2133,6 +2133,17 @@ export const app = createApp({
             if (!ticker) return '';
             return String(ticker).replace(/\.(TW|TWO)$/i, '');
         },
+        getMarketLabel(ticker) {
+            if (!ticker) return '';
+            const t = String(ticker).toUpperCase();
+            if (t === '^TWII' || t === 'WTX') return '台股大盤指數';
+            if (t === '^N225') return '日經指數';
+            if (t.startsWith('^')) return '美股大盤指數';
+            if (t.endsWith('.T') || t.endsWith('.JP')) return '日經225 / 日股';
+            if (t.endsWith('.TW') || t.endsWith('.TWO') || /^\d{4,5}$/.test(t)) return '台股';
+            if (t.endsWith('.HK')) return '港股';
+            return '美股';
+        },
         isTwStock(ticker) {
             if (!ticker) return false;
             const t = String(ticker).toUpperCase();
@@ -2933,6 +2944,20 @@ const globalFormatTicker = (ticker) => {
 };
 app.config.globalProperties.formatTicker = globalFormatTicker;
 window.formatTicker = globalFormatTicker;
+
+const globalGetMarketLabel = (ticker) => {
+    if (!ticker) return '';
+    const t = String(ticker).toUpperCase();
+    if (t === '^TWII' || t === 'WTX') return '台股大盤指數';
+    if (t === '^N225') return '日經指數';
+    if (t.startsWith('^')) return '美股大盤指數';
+    if (t.endsWith('.T') || t.endsWith('.JP')) return '日經225 / 日股';
+    if (t.endsWith('.TW') || t.endsWith('.TWO') || /^\d{4,5}$/.test(t)) return '台股';
+    if (t.endsWith('.HK')) return '港股';
+    return '美股';
+};
+app.config.globalProperties.getMarketLabel = globalGetMarketLabel;
+window.getMarketLabel = globalGetMarketLabel;
 
 const globalStripEmojis = (str) => {
     if (!str) return '';

@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-11-03 (v2.4.62)
+
+### Bug Fixes & UX Optimization (Cross-Market Stock Name Isolation & Table Drawer Overflow Fix)
+- **跨市場股票名稱與代碼完全隔離 (Fix 6770.T Japanese Stock Name Collision)**：
+  - **修復 DuckDB `resolve_ticker` 欄位錯誤**：修正 `market_universe` 查詢時不存在的欄位名稱（將 `symbol`, `raw_code`, `ORDER BY date DESC` 修正為 `local_symbol`, `normalized_symbol`, `ORDER BY snapshot_date DESC`），消除因 `BinderException` 導致之全球股票檢索略過缺陷。
+  - **台日跨市場代碼衝突防禦**：在 `data/company_profile.py` 及 `data/duckdb_manager.py` 中，限定只有台股（`.TW` / `.TWO` 或純台股代號）才允許透過純數字 `raw_code` 模糊檢索，日股（`.T`）與美股等國際標的嚴格僅以標準 Symbol 匹配，徹底根絕日股 `6770.T` (ALPS ALPINE) 因純數字 `6770` 命中台股力積電之代碼碰撞與快取污染。
+  - **個股歷史新增清晰市場徽章**：在 `tab_history.html` 個股資訊區新增 `getMarketLabel()` 市場標籤（`日經225 / 日股`、`台股`、`美股`、`港股`），標的所屬市場一目了然，再無台日市場混淆。
+- **操盤看板桌機表格與抽屜排版遮斷修復 (Sticky Action Column & Responsive Drawer Layout)**：
+  - **操作欄位右側黏性釘選 (`sticky right-0`)**：看板桌機表格「操作」欄位（`詳情`、`時序歷史`）設定 `sticky right-0 z-10`，在各螢幕解析度或標籤過長時始終釘選於視窗右緣，徹底解決按鈕被切除看不見的問題。
+  - **抽屜內容安全釘選與溢出防護**：抽屜列以 `sticky left-0 max-w-[calc(100vw-3.5rem)] xl:max-w-none` 釘選，保證展開之抽屜內容在表格滾動時始終維持在可視範圍內。
+  - **消除極端右推與連結按鈕截斷**：移除抽屜「基本面與新聞」中導致按鈕被推向不可見死角的 `justify-between`，改為響應式 `flex-col lg:flex-row gap-6`，並為所有外部連結按鈕加入 `whitespace-nowrap`，按鈕緊鄰文字且永不被卡片邊界截斷。
+- **OpenSpec 變更完整歸檔 (OpenSpec Archive)**：
+  - 成功執行 `openspec archive --yes "forecast-trust-and-trading-validation"`，將 37 項規格完整同步更新至 `openspec/specs/` 主規格庫，並將任務歸檔至 `openspec/changes/archive/2026-11-03-forecast-trust-and-trading-validation`。
+
+---
+
 ## 2026-11-03 (v2.4.61)
 
 ### UI & UX Refinement (Clean Ticker Suffixes, Pure Headers & History Alignment)

@@ -47,9 +47,15 @@
             <div class="flex items-center flex-wrap gap-2.5">
                 <span class="material-symbols-outlined text-[24px] text-amber-500 leading-none">business</span>
                 <h3 class="text-lg sm:text-2xl font-black tracking-tight flex items-center space-x-1.5" :class="isDark ? 'text-white' : 'text-slate-900'">
-                    <span>{{ historyCompanyData?.name || resolvedName || formatTicker(resolvedTicker) }}</span>
+                    <span>{{ (historyCompanyData?.ticker === resolvedTicker && historyCompanyData?.name && historyCompanyData.name !== historyCompanyData.raw_code) ? historyCompanyData.name : (resolvedName || formatTicker(resolvedTicker)) }}</span>
                     <span class="num-font text-amber-500 ml-1.5">{{ formatTicker(resolvedTicker) }}</span>
                 </h3>
+
+                <!-- Market Badge -->
+                <span class="px-2.5 py-0.5 text-xs font-bold rounded-md border font-sans"
+                      :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-slate-100 border-[#E5E7EB] text-slate-700'">
+                    {{ getMarketLabel(resolvedTicker) }}
+                </span>
 
                 <!-- Industry Badge -->
                 <span v-if="historyCompanyData?.industry" class="px-3 py-1 text-xs sm:text-sm font-bold rounded-lg border"
@@ -1853,7 +1859,7 @@
             <!-- Table or Clean Status Box -->
             <div aria-live="polite" class="text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                 <div v-if="performanceLoading" class="py-8 text-center text-amber-500 font-bold flex items-center justify-center space-x-2">
-                    <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                    <span class="material-symbols-outlined text-[18px] animate-spin">sync</span>
                     <span>正在整理已驗證預測數據...</span>
                 </div>
                 <div v-else-if="performanceError" class="py-6 text-center space-y-2">
