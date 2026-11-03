@@ -987,7 +987,7 @@
                     <span>⚡ 綜合操作建議</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    綜合雙模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率
+                    綜合時序模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率
                 </p>
             </div>
             <!-- Refresh Button -->
@@ -1135,11 +1135,11 @@
         <p class="text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-600'">使用與排行榜相同的後端開獎結果；{{ performanceWindow }} 個交易日，T+{{ performanceHorizon }}。</p>
         <p v-if="historyPerformanceError" class="text-sm">{{ historyPerformanceError }}</p>
         <p v-else-if="!historyPerformance" class="text-sm">正在讀取模型成績…</p>
-        <p v-else-if="!historyPerformance.data.length && !historyPerformance.observations.length" class="text-sm">該股目前沒有可比較的已驗證樣本。</p>
+        <p v-else-if="!(historyPerformance.data && historyPerformance.data.length) && !(historyPerformance.observations && historyPerformance.observations.length)" class="text-sm">該股目前沒有可比較的已驗證樣本。</p>
         <div v-else class="overflow-x-auto"><table class="w-full min-w-[500px] text-left text-sm">
             <thead><tr><th class="py-2 pr-3">模型／版本</th><th class="px-3">方向命中</th><th class="px-3">平均誤差</th><th class="px-3">樣本</th><th class="pl-3">狀態</th></tr></thead>
             <tbody class="divide-y" :class="isDark ? 'divide-slate-800' : 'divide-slate-100'">
-                <tr v-for="row in [...historyPerformance.data, ...historyPerformance.observations]" :key="[row.model_name, row.model_revision, row.config_hash].join(':')">
+                <tr v-for="row in [...(historyPerformance.data || []), ...(historyPerformance.observations || [])]" :key="[row.model_name, row.model_revision, row.config_hash].join(':')">
                     <td class="py-3 pr-3 font-bold">{{ row.model_name }}<span class="block text-xs font-normal">{{ row.model_revision || '版本未提供' }}</span></td>
                     <td class="px-3 num-font">{{ formatPerformancePercent(row.direction_accuracy) }}</td><td class="px-3 num-font">{{ formatPerformancePercent(row.mape, 2) }}</td>
                     <td class="px-3 num-font">{{ row.sample_count }} 筆</td><td class="pl-3">{{ row.status === 'eligible' ? '樣本已達門檻' : '樣本累積中' }}<span v-if="row.role === 'shadow'"> · 研究觀察</span></td>
@@ -1226,11 +1226,11 @@
                                 <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
                             </div>
                             <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-purple-300' : 'text-purple-700'">
-                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timesfm.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                                {{ modelScorecard.timesfm.h2hCount > 0 ? modelScorecard.timesfm.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
                             </div>
                         </div>
                         <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
+                            共 {{ modelScorecard.timesfm.h2hCount }} 天同場比準度
                         </div>
                     </div>
                 </div>
@@ -1292,11 +1292,11 @@
                                 <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
                             </div>
                             <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-amber-300' : 'text-amber-700'">
-                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.timestral.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                                {{ modelScorecard.timestral.h2hCount > 0 ? modelScorecard.timestral.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
                             </div>
                         </div>
                         <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
+                            共 {{ modelScorecard.timestral.h2hCount }} 天同場比準度
                         </div>
                     </div>
                 </div>
@@ -1358,11 +1358,11 @@
                                 <span class="sm:hidden">同場 PK</span><span class="hidden sm:inline">模型同場對決</span>
                             </div>
                             <div class="text-base sm:text-lg font-black num-font mt-0.5" :class="isDark ? 'text-sky-300' : 'text-sky-700'">
-                                {{ modelScorecard.headToHeadCount > 0 ? modelScorecard.moirai.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
+                                {{ modelScorecard.moirai.h2hCount > 0 ? modelScorecard.moirai.wins + ' 勝' + (modelScorecard.ties > 0 ? ' · ' + modelScorecard.ties + ' 平' : '') : '—' }}
                             </div>
                         </div>
                         <div class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                            共 {{ modelScorecard.headToHeadCount }} 天同場比準度
+                            共 {{ modelScorecard.moirai.h2hCount }} 天同場比準度
                         </div>
                     </div>
                 </div>

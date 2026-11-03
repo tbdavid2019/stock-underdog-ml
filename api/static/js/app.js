@@ -462,11 +462,13 @@ export const app = createApp({
                 const date = sortedDates[i];
                 const item = dateMap.get(date);
                 const closePrice = item.closePrice;
-                const matchedActuals = item.timesfmActual !== null && item.timestralActual !== null;
-                const sameTarget = (!item.timesfmTarget || !item.timestralTarget || item.timesfmTarget === item.timestralTarget) &&
-                    (!matchedActuals || item.timesfmActual === item.timestralActual);
-                const nextDate = sameTarget ? (item.timesfmTarget || item.timestralTarget) : null;
-                const nextActualPrice = sameTarget ? (item.timesfmActual ?? item.timestralActual) : null;
+                const targets = [item.timesfmTarget, item.timestralTarget, item.moiraiTarget].filter(Boolean);
+                const actuals = [item.timesfmActual, item.timestralActual, item.moiraiActual].filter(v => v !== null && v !== undefined);
+                const allTargetsMatch = targets.length <= 1 || targets.every(t => t === targets[0]);
+                const allActualsMatch = actuals.length <= 1 || actuals.every(a => Math.abs(a - actuals[0]) < 1e-4);
+                const sameTarget = allTargetsMatch && allActualsMatch;
+                const nextDate = sameTarget && targets.length > 0 ? targets[0] : null;
+                const nextActualPrice = sameTarget && actuals.length > 0 ? actuals[0] : null;
 
                 const actualReturnPct = (nextActualPrice !== null && nextActualPrice > 0 && closePrice !== null && closePrice > 0)
                     ? ((nextActualPrice - closePrice) / closePrice) * 100
@@ -569,37 +571,43 @@ export const app = createApp({
             const rows = this.dailyHistoryRows;
             if (!rows || !rows.length) return null;
 
-            let tfCount = 0, tfHitCount = 0, tfErrorSum = 0;
-            let tmCount = 0, tmHitCount = 0, tmErrorSum = 0;
-            let mrCount = 0, mrHitCount = 0, mrErrorSum = 0;
+            let tfCount = 0, tfHitCount = 0, tfErrorSum = 0, tfH2HCount = 0;
+            let tmCount = 0, tmHitCount = 0, tmErrorSum = 0, tmH2HCount = 0;
+            let mrCount = 0, mrHitCount = 0, mrErrorSum = 0, mrH2HCount = 0;
             let headToHeadCount = 0, tfWins = 0, tmWins = 0, mrWins = 0, ties = 0;
 
             for (const r of rows) {
                 if (r.nextActualPrice === null) continue;
 
-                if (r.timesfmErrorPct !== null) {
+                const hasTf = r.timesfmErrorPct !== null;
+                const hasTm = r.timestralErrorPct !== null;
+                const hasMr = r.moiraiErrorPct !== null;
+
+                if (hasTf) {
                     tfCount++;
                     tfErrorSum += r.timesfmErrorPct;
                     if (r.timesfmHit === true) tfHitCount++;
                 }
 
-                if (r.timestralErrorPct !== null) {
+                if (hasTm) {
                     tmCount++;
                     tmErrorSum += r.timestralErrorPct;
                     if (r.timestralHit === true) tmHitCount++;
                 }
 
-                if (r.moiraiErrorPct !== null) {
+                if (hasMr) {
                     mrCount++;
                     mrErrorSum += r.moiraiErrorPct;
                     if (r.moiraiHit === true) mrHitCount++;
                 }
 
-                const activeInDay = (r.timesfmErrorPct !== null ? 1 : 0) +
-                                    (r.timestralErrorPct !== null ? 1 : 0) +
-                                    (r.moiraiErrorPct !== null ? 1 : 0);
+                const activeInDay = (hasTf ? 1 : 0) + (hasTm ? 1 : 0) + (hasMr ? 1 : 0);
                 if (activeInDay >= 2) {
                     headToHeadCount++;
+                    if (hasTf) tfH2HCount++;
+                    if (hasTm) tmH2HCount++;
+                    if (hasMr) mrH2HCount++;
+
                     if (r.winner === 'TimesFM 勝') tfWins++;
                     else if (r.winner === 'Timestral 勝') tmWins++;
                     else if (r.winner === 'MOIRAI-2 勝') mrWins++;
@@ -648,7 +656,7 @@ export const app = createApp({
                     return (a.mape || 999) - (b.mape || 999);
                 });
 
-                if (eligible.length > 1 && Math.abs(eligible[0].hitRate - eligible[1].hitRate) < 5.0 && eligible[0].wins === eligible[1].wins && eligible[0].mape === eligible[1].mape) {
+                if (eligible.length > 1 && Math.abs(eligible[0].hitRate - eligible[1].hitRate) < 5.0 && eligible[0].wins === eligible[1].wins && Math.abs((eligible[0].mape || 0) - (eligible[1].mape || 0)) < 0.01) {
                     winningModel = null;
                     overallWinner = `⚖️ 該股歷史表現：模型實力相當（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
                 } else {
@@ -666,6 +674,7 @@ export const app = createApp({
                     hitRate: tfHitRate !== null ? tfHitRate.toFixed(1) : '-',
                     mape: tfMape !== null ? tfMape.toFixed(2) : '-',
                     wins: tfWins,
+                    h2hCount: tfH2HCount,
                     isLeader: winningModel === 'TimesFM',
                     lowHitWarning: tfCount >= 2 && tfHitRate !== null && tfHitRate < 50
                 },
@@ -675,6 +684,7 @@ export const app = createApp({
                     hitRate: tmHitRate !== null ? tmHitRate.toFixed(1) : '-',
                     mape: tmMape !== null ? tmMape.toFixed(2) : '-',
                     wins: tmWins,
+                    h2hCount: tmH2HCount,
                     isLeader: winningModel === 'Timestral',
                     lowHitWarning: tmCount >= 2 && tmHitRate !== null && tmHitRate < 50
                 },
@@ -684,6 +694,7 @@ export const app = createApp({
                     hitRate: mrHitRate !== null ? mrHitRate.toFixed(1) : '-',
                     mape: mrMape !== null ? mrMape.toFixed(2) : '-',
                     wins: mrWins,
+                    h2hCount: mrH2HCount,
                     isLeader: winningModel === 'MOIRAI-2',
                     lowHitWarning: mrCount >= 2 && mrHitRate !== null && mrHitRate < 50
                 },

@@ -24,6 +24,12 @@
 - **🎨 UI 介面與模型歷史對決升級**：
   - **修復 HTML 標籤提早閉合導致之 DOM 溢出重大缺陷**：修復 `tab_history.html` 中三模型戰績卡後面殘留重複區塊多餘閉合 `</div>`，導致 `<div id="app">` 與 `<main>` 提前閉合、後續 `tab_industry_chain` 溢出根節點並在畫面上裸露未編譯 Vue 變數之問題。標籤層級結構驗證 100% 完整平衡。
   - **歷史對決全面升級為 3 模型並列**：歷史勝率卡片（Scorecard）、桌機對決表格與手機版卡片全面支援 3 模型並列比較，納入 MOIRAI-2 預測、誤差、命中率與同場 PK 統計。
+  - **OpenCode Review 缺陷修正 (P1 & P2 & P3)**：
+    - 修復 `dailyHistoryRows` 忽略 MOIRAI-2 目標日與開獎實際收盤價問題，動態聚合所有模型的 targets 與 actuals 判定開獎一致性。
+    - 修復 Scorecard 同場 PK 天數使用全域計數導致新模型累積天數失真問題，改為模型專屬參與對決天數（`h2hCount`）。
+    - 修復 Scorecard 實力相當平手判定浮點數精度問題。
+    - 修復 `tab_history.html` 模型成績展開未定義物件之潛在崩潰防護。
+    - 策略標籤與 UI 文案極簡化：移除品牌冗長標註與括號，統整為直觀極簡之「TimesFM 看漲」、「Timestral 看跌」、「MOIRAI-2 看漲」。
 
 ---
 
