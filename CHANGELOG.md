@@ -28,7 +28,7 @@
     - **API 契約與端點掛載**：補充掛載 `/api/v1/models/health` 與 `/api/v1/performance/health` 路由；健全 TWSE T86 破音字元防禦與模擬交易 0 成交委託紀錄支援。
 - **🏷️ 版本升級至 v2.4.60 (`core/version.py`)**。
 - **🎨 UI 介面與模型歷史對決升級**：
-  - **移除模型品牌括號贅字與策略標籤淨化**：全面移除 `(Google)`、`(888)`、`(Salesforce)`、`Mistral` 等標記與學術冗詞；策略標籤與 Tooltip 全面精簡為直截了當的極簡風格（如 `TimesFM 看漲`、`Timestral 看跌`、`MOIRAI-2 看漲`、`模型同步看漲`），不再出現長篇贅述。
+  - **修復 HTML 標籤提早閉合導致之 DOM 溢出重大缺陷**：修復 `tab_history.html` 中三模型戰績卡後面殘留重複區塊多餘閉合 `</div>`，導致 `<div id="app">` 與 `<main>` 提前閉合、後續 `tab_industry_chain` 溢出根節點並在畫面上裸露未編譯 Vue 變數之問題。標籤層級結構驗證 100% 完整平衡。
   - **歷史對決全面升級為 3 模型並列**：歷史勝率卡片（Scorecard）、桌機對決表格與手機版卡片全面支援 3 模型並列比較，納入 MOIRAI-2 預測、誤差、命中率與同場 PK 統計。
 
 ---
