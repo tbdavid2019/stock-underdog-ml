@@ -35,11 +35,12 @@ export function buildVerifiedPriceChartData(historyRecords) {
         else if (name.includes('lstm')) key = 'lstm';
         const prediction = positive(row.predicted_price);
         if (!key || prediction === null || Number(row.horizon || 1) !== 1) continue;
-        if (!validDate(row.target_date)) {
+        let target = validDate(row.target_date) ? String(row.target_date).slice(0, 10) : null;
+        if (!target) {
+            // 向下相容歷史資料：無 target_date 時，預測值直接錨定在發布日 source 上，確保走勢圖完整呈現歷史預測軌跡
+            target = source;
             legacyCount += 1;
-            continue;
         }
-        const target = String(row.target_date).slice(0, 10);
         const point = ensure(target);
         point[key] = prediction;
         const actual = row.verification_status === 'settled' ? positive(row.actual_price) : null;

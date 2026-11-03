@@ -666,8 +666,8 @@
                                         class="font-black num-font hover:underline text-amber-500 text-base sm:text-lg">
                                     {{ item.ticker }}
                                 </button>
-                                <span v-if="item.name" class="font-bold text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-                                    {{ item.name }}
+                                <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                    {{ item.name || companyProfileCache[item.ticker]?.name }}
                                 </span>
                             </div>
                             <div class="flex items-center space-x-1.5 mt-0.5">
@@ -988,8 +988,8 @@
                                             :title="'點擊速查 ' + item.ticker + ' 歷史走勢'">
                                         {{ item.ticker }}
                                     </button>
-                                    <span v-if="item.name" class="font-bold text-xs truncate max-w-[80px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name">
-                                        {{ item.name }}
+                                    <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-xs truncate max-w-[80px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name || companyProfileCache[item.ticker]?.name">
+                                        {{ item.name || companyProfileCache[item.ticker]?.name }}
                                     </span>
                                 </div>
                             </td>
@@ -1737,9 +1737,9 @@
                                   :title="'滑鼠停留查看 ' + item.ticker + ' 公司介紹與即時新聞'">
                                 {{ item.ticker }}
                             </span>
-                            <span v-if="item.name" class="text-sm sm:text-base font-bold truncate max-w-[130px]"
-                                  :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="item.name">
-                                {{ item.name }}
+                            <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="text-sm sm:text-base font-bold truncate max-w-[130px]"
+                                  :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="item.name || companyProfileCache[item.ticker]?.name">
+                                {{ item.name || companyProfileCache[item.ticker]?.name }}
                             </span>
                             <span class="px-2 py-0.5 text-xs font-semibold rounded-lg border font-sans"
                                   :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">

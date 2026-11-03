@@ -34,7 +34,52 @@ def _set_in_cache(key: str, value: PredictionResponse, max_size: int = _MAX_CACH
         _PRED_CACHE[key] = (now, value)
 
 
-def _build_prediction_response(records: List[Dict[str, Any]]) -> PredictionResponse:
+def _enrich_records_with_name(records: List[Dict[str, Any]], db: Optional[DuckDBManager] = None) -> List[Dict[str, Any]]:
+    if not records or not db or not getattr(db, "enabled", False):
+        return records
+    missing = [r.get("ticker") for r in records if r.get("ticker") and not r.get("name")]
+    if not missing:
+        return records
+    unique_missing = list(set(missing))
+    try:
+        name_map = {}
+        with db._get_connection() as con:
+            placeholders = ",".join(["?"] * len(unique_missing))
+            try:
+                rows = con.execute(f"""
+                    SELECT normalized_symbol, COALESCE(name_local, name_en)
+                    FROM market_universe
+                    WHERE normalized_symbol IN ({placeholders})
+                """, unique_missing).fetchall()
+                for sym, n in rows:
+                    if sym and n:
+                        name_map[sym] = n
+            except Exception:
+                pass
+            still_missing = [t for t in unique_missing if t not in name_map]
+            if still_missing:
+                try:
+                    p_placeholders = ",".join(["?"] * len(still_missing))
+                    p_rows = con.execute(f"""
+                        SELECT ticker, name FROM company_profiles WHERE ticker IN ({p_placeholders})
+                    """, still_missing).fetchall()
+                    for t, n in p_rows:
+                        if t and n:
+                            name_map[t] = n
+                except Exception:
+                    pass
+        for r in records:
+            t = r.get("ticker")
+            if t and not r.get("name") and t in name_map:
+                r["name"] = name_map[t]
+    except Exception:
+        pass
+    return records
+
+
+def _build_prediction_response(records: List[Dict[str, Any]], db: Optional[DuckDBManager] = None) -> PredictionResponse:
+    if db:
+        records = _enrich_records_with_name(records, db)
     latest_ts = None
     if records:
         timestamps = [
@@ -81,7 +126,7 @@ def get_latest_predictions(
         offset=offset, 
         batch_only=batch_only
     )
-    records = res.get("records", [])
+    records = _enrich_records_with_name(res.get("records", []), db)
     response_obj = PredictionResponse(
         count=len(records),
         batch_date=res.get("batch_date"),
@@ -109,7 +154,7 @@ def get_resonance_candidates(
         return cached
 
     records = db.get_resonance_candidates(index_name=index_name, limit=limit)
-    response_obj = _build_prediction_response(records)
+    response_obj = _build_prediction_response(records, db)
     _set_in_cache(cache_key, response_obj)
     return response_obj
 
@@ -130,7 +175,7 @@ def get_xuantie_candidates(
         return cached
 
     records = db.get_xuantie_candidates(index_name=index_name, pullback_type=pullback_type, limit=limit)
-    response_obj = _build_prediction_response(records)
+    response_obj = _build_prediction_response(records, db)
     _set_in_cache(cache_key, response_obj)
     return response_obj
 
@@ -145,7 +190,7 @@ def get_timestral_top_bullish(
     依據 Mistral Timestral-209M 時序大模型輸出之潛在漲幅百分比（P50 Potential %）由高到低排序，取得看漲排行。
     """
     records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/timestral/top-bearish", response_model=PredictionResponse, summary="查詢 Mistral Timestral-209M 預測跌幅 TOP N 避險股")
@@ -158,7 +203,7 @@ def get_timestral_top_bearish(
     依據 Mistral Timestral-209M 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
     records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/lstm/top-bullish", response_model=PredictionResponse, summary="[Deprecated] 查詢 LSTM 預測漲幅 TOP N 潛力股 (已由 Timestral 替代)")
@@ -176,7 +221,7 @@ def get_top_bullish(
     records = db.get_top_bullish(index_name=index_name, limit=limit)
     if not records:
         records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/lstm/top-bearish", response_model=PredictionResponse, summary="[Deprecated] 查詢 LSTM 預測跌幅 TOP N 避險股 (已由 Timestral 替代)")
@@ -194,7 +239,7 @@ def get_top_bearish(
     records = db.get_top_bearish(index_name=index_name, limit=limit)
     if not records:
         records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/timesfm/top-bullish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測漲幅 TOP N 潛力股")
@@ -207,7 +252,7 @@ def get_timesfm_top_bullish(
     依據 Google TimesFM 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
     """
     records = db.get_timesfm_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/timesfm/top-bearish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測跌幅 TOP N 避險股")
@@ -220,7 +265,7 @@ def get_timesfm_top_bearish(
     依據 Google TimesFM 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
     records = db.get_timesfm_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records)
+    return _build_prediction_response(records, db)
 
 
 @router.get("/history/{ticker}", response_model=PredictionResponse, summary="查詢單一標的歷史預測軌跡")
@@ -236,7 +281,8 @@ def get_ticker_history(
     if not resolved:
         raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{ticker}")
 
-    records = [{**r, "verification_status": "legacy_unverified"} for r in
+    stock_name = resolved.get("name")
+    records = [{**r, "verification_status": "legacy_unverified", "name": stock_name} for r in
                (db.get_ticker_history(ticker=resolved["ticker"], limit=limit) or [])]
     try:
         store = ForecastStore(db.db_path, read_only=True)
@@ -256,7 +302,7 @@ def get_ticker_history(
         status = entry.get("status") or "unverified"
         if status == "settled" and str(actual.get("target_date")) != str(forecast.get("target_date")):
             status = "invalid"
-        item = {"ticker": forecast["ticker"], "forecast_id": forecast_id,
+        item = {"ticker": forecast["ticker"], "name": stock_name, "forecast_id": forecast_id,
             "model_name": forecast.get("model_name"), "model_revision": forecast.get("model_revision"),
             "forecast_session": forecast.get("last_complete_bar"), "target_date": forecast.get("target_date"),
             "timestamp": forecast.get("issued_at"), "current_price": forecast.get("current_price"),

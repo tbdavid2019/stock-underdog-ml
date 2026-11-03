@@ -12,6 +12,7 @@ class StockPredictionItem(BaseModel):
     model_name: Optional[str] = Field(None, description="模型/策略名稱 (玄鐵重劍, LSTM, 多維共振)")
     strategy_type: Optional[str] = Field(None, description="策略類別")
     ticker: str = Field(..., description="股票代號 (如 2330.TW, AAPL)")
+    name: Optional[str] = Field(None, description="公司/股票名稱 (如 台積電, 智邦)")
     current_price: Optional[float] = Field(None, description="當前/最新收盤價")
     predicted_price: Optional[float] = Field(None, description="預測明日目標價")
     potential: Optional[float] = Field(None, description="預期漲跌幅百分比 (%)")

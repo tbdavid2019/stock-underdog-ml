@@ -467,8 +467,18 @@ export const app = createApp({
                 const allTargetsMatch = targets.length <= 1 || targets.every(t => t === targets[0]);
                 const allActualsMatch = actuals.length <= 1 || actuals.every(a => Math.abs(a - actuals[0]) < 1e-4);
                 const sameTarget = allTargetsMatch && allActualsMatch;
-                const nextDate = sameTarget && targets.length > 0 ? targets[0] : null;
-                const nextActualPrice = sameTarget && actuals.length > 0 ? actuals[0] : null;
+                let nextDate = sameTarget && targets.length > 0 ? targets[0] : null;
+                let nextActualPrice = sameTarget && actuals.length > 0 ? actuals[0] : null;
+
+                // 🌟 向下相容歷史資料：若無新版 verification 結算資料，則 fallback 使用連續交易日次日真實收盤開獎
+                if (nextActualPrice === null && i < n - 1) {
+                    const fallbackNextDate = sortedDates[i + 1];
+                    const nextItem = dateMap.get(fallbackNextDate);
+                    if (nextItem && nextItem.closePrice !== null && nextItem.closePrice > 0) {
+                        nextDate = fallbackNextDate;
+                        nextActualPrice = nextItem.closePrice;
+                    }
+                }
 
                 const actualReturnPct = (nextActualPrice !== null && nextActualPrice > 0 && closePrice !== null && closePrice > 0)
                     ? ((nextActualPrice - closePrice) / closePrice) * 100
@@ -481,10 +491,11 @@ export const app = createApp({
                 if (item.timesfmPred !== null && closePrice !== null && closePrice > 0) {
                     timesfmPot = ((item.timesfmPred - closePrice) / closePrice) * 100;
                 }
-                if (item.timesfmActual !== null && item.timesfmPred !== null) {
-                    timesfmErrorPct = Math.abs(item.timesfmPred - item.timesfmActual) / item.timesfmActual * 100;
+                const tfActual = item.timesfmActual !== null ? item.timesfmActual : nextActualPrice;
+                if (tfActual !== null && item.timesfmPred !== null && tfActual > 0) {
+                    timesfmErrorPct = Math.abs(item.timesfmPred - tfActual) / tfActual * 100;
                     if (closePrice !== null && timesfmPot !== null) {
-                        timesfmHit = Math.sign(item.timesfmPred - closePrice) === Math.sign(item.timesfmActual - closePrice);
+                        timesfmHit = Math.sign(item.timesfmPred - closePrice) === Math.sign(tfActual - closePrice);
                     }
                 }
 
@@ -495,10 +506,11 @@ export const app = createApp({
                 if (item.timestralPred !== null && closePrice !== null && closePrice > 0) {
                     timestralPot = ((item.timestralPred - closePrice) / closePrice) * 100;
                 }
-                if (item.timestralActual !== null && item.timestralPred !== null) {
-                    timestralErrorPct = Math.abs(item.timestralPred - item.timestralActual) / item.timestralActual * 100;
+                const tmActual = item.timestralActual !== null ? item.timestralActual : nextActualPrice;
+                if (tmActual !== null && item.timestralPred !== null && tmActual > 0) {
+                    timestralErrorPct = Math.abs(item.timestralPred - tmActual) / tmActual * 100;
                     if (closePrice !== null && timestralPot !== null) {
-                        timestralHit = Math.sign(item.timestralPred - closePrice) === Math.sign(item.timestralActual - closePrice);
+                        timestralHit = Math.sign(item.timestralPred - closePrice) === Math.sign(tmActual - closePrice);
                     }
                 }
 
@@ -509,16 +521,17 @@ export const app = createApp({
                 if (item.moiraiPred !== null && closePrice !== null && closePrice > 0) {
                     moiraiPot = ((item.moiraiPred - closePrice) / closePrice) * 100;
                 }
-                if (item.moiraiActual !== null && item.moiraiPred !== null) {
-                    moiraiErrorPct = Math.abs(item.moiraiPred - item.moiraiActual) / item.moiraiActual * 100;
+                const mrActual = item.moiraiActual !== null ? item.moiraiActual : nextActualPrice;
+                if (mrActual !== null && item.moiraiPred !== null && mrActual > 0) {
+                    moiraiErrorPct = Math.abs(item.moiraiPred - mrActual) / mrActual * 100;
                     if (closePrice !== null && moiraiPot !== null) {
-                        moiraiHit = Math.sign(item.moiraiPred - closePrice) === Math.sign(item.moiraiActual - closePrice);
+                        moiraiHit = Math.sign(item.moiraiPred - closePrice) === Math.sign(mrActual - closePrice);
                     }
                 }
 
                 // Daily winner among active predictions
                 let winner = null;
-                if (nextActualPrice !== null && sameTarget) {
+                if (nextActualPrice !== null) {
                     const validErrors = [];
                     if (timesfmErrorPct !== null) validErrors.push({ name: 'TimesFM', err: timesfmErrorPct });
                     if (timestralErrorPct !== null) validErrors.push({ name: 'Timestral', err: timestralErrorPct });
@@ -2094,6 +2107,16 @@ export const app = createApp({
                             if (res && res.success && res.data) {
                                 Object.entries(res.data).forEach(([ticker, prof]) => {
                                     this.companyProfileCache[ticker] = prof;
+                                    if (prof && prof.name) {
+                                        this.records.forEach(r => {
+                                            if (r.ticker === ticker && !r.name) r.name = prof.name;
+                                        });
+                                        if (this.institutionalFlows) {
+                                            this.institutionalFlows.forEach(item => {
+                                                if (item.ticker === ticker && !item.name) item.name = prof.name;
+                                            });
+                                        }
+                                    }
                                     if (this.hoverVisible && this.hoverData?.ticker === ticker) {
                                         this.hoverData = prof;
                                         this.hoverLoading = false;

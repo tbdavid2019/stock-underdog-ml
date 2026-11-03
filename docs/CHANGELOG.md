@@ -30,6 +30,10 @@
     - 修復 Scorecard 實力相當平手判定浮點數精度問題。
     - 修復 `tab_history.html` 模型成績展開未定義物件之潛在崩潰防護。
     - 策略標籤與 UI 文案極簡化：移除品牌冗長標註與括號，統整為直觀極簡之「TimesFM 看漲」、「Timestral 看跌」、「MOIRAI-2 看漲」。
+  - **修復台股歷史數據空白與標的物名稱缺失 (Legacy Fallback & Stock Name Hydration)**：
+    - 修復 `chart-manager.js` 中 `buildVerifiedPriceChartData` 強制要求 `target_date` 導致 157 天歷史舊預測全數被丟棄、K 線走勢圖無預測線問題；對無 `target_date` 舊資料向下相容錨定在發布日，完整保留歷史預測曲線。
+    - 修復 `app.js` 中 `dailyHistoryRows` 結算實際價格缺失問題；當無新版 verification 結算資料時，fallback 自動以連續交易日次日收盤價開獎，全數復原 157 天方向勝率、誤差與 PK 戰績。
+    - 補全台股名稱顯示：後端 `predictions` 路由加入 `_enrich_records_with_name` 自動透過 `market_universe` 與 `company_profiles` 回填中文股票名稱；前端儀表板全面加入 `companyProfileCache` 備援與非同步回填，確保智邦、志聖、世界、台光電等標的中文名稱 100% 正確呈現。
 
 ---
 
