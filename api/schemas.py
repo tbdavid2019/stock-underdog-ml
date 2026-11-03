@@ -44,6 +44,15 @@ class StockPredictionItem(BaseModel):
     timestral_p90: Optional[float] = Field(None, description="Mistral Timestral 90% 樂觀分位數")
     dual_model_consensus: Optional[bool] = Field(None, description="TimesFM 與 Timestral 雙時序大模型是否同時看漲共振")
     lstm_potential: Optional[float] = Field(None, description="[Deprecated] 舊版 LSTM 預期漲跌幅 (請改用 timestral_potential 或 potential)")
+    forecast_id: Optional[str] = None
+    forecast_session: Optional[str] = None
+    target_date: Optional[str] = None
+    actual_price: Optional[float] = None
+    verification_status: Optional[str] = None
+    model_revision: Optional[str] = None
+    evidence_type: Optional[str] = None
+    role: Optional[str] = None
+    horizon: Optional[int] = None
 
 
 class PredictionResponse(BaseModel):

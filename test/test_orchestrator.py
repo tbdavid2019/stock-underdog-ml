@@ -4,11 +4,43 @@ Unit tests for pipeline.orchestrator
 import unittest
 from unittest.mock import patch, MagicMock
 import pandas as pd
+import numpy as np
+import datetime
+from types import SimpleNamespace
 from pipeline.orchestrator import PipelineOrchestrator
 from strategies.base import StrategyResult
 
 
 class TestPipelineOrchestrator(unittest.TestCase):
+
+    @patch("pipeline.orchestrator.persist_forecast_results")
+    @patch("pipeline.orchestrator.ForecastStore")
+    @patch("pipeline.orchestrator.build_market_features")
+    @patch("pipeline.orchestrator.FundamentalProvider.get_fundamentals_batch", return_value={})
+    @patch("pipeline.orchestrator.StockFetcher.get_stock_data_batch")
+    def test_pipeline_attaches_features_before_model_and_saves_shadow(self, fetch, funds, build, store, persist):
+        from data.macro import MacroState
+        idx = pd.date_range("2026-01-05", periods=3, freq="B")
+        fetch.return_value = {"AAPL": pd.DataFrame({"Close": [100., 101., 102.]}, index=idx)}
+        build.return_value = {"AAPL": SimpleNamespace(dates=list(idx.date), past_covariates=np.ones((2, 3)),
+            status="full_features", metadata={"snapshot_id": "snap", "profile_id": "US-v1"})}
+        db = MagicMock(enabled=True, db_path="/tmp/test-forecast.duckdb")
+        orchestrator = PipelineOrchestrator(enabled_strategies=["xuantie"], db_manager=db, duckdb_manager=db)
+        strategy = MagicMock(name="strategy")
+        strategy.name, strategy.category = "MOIRAI-2", "ml"
+        strategy.evaluate_batch.return_value = []
+        orchestrator.strategies = [strategy]
+        with patch.object(orchestrator.ai_narrative_engine, "generate_narrative", return_value=""), \
+             patch("pipeline.orchestrator.print_evaluation_report"), \
+             patch("pipeline.orchestrator.datetime") as clock, \
+             patch("pipeline.orchestrator.config.pipeline.FORECAST_FEATURE_PROFILE", "full_features"):
+            clock.datetime.now.return_value = datetime.datetime(2026, 1, 8, 22, tzinfo=datetime.timezone.utc)
+            clock.timezone = datetime.timezone
+            orchestrator.run_index_analysis("SP500", ["AAPL"], macro_state=MacroState(), persist_db=True, send_notify=False)
+        contexts = strategy.evaluate_batch.call_args.args[0]
+        self.assertEqual(contexts["AAPL"].metadata["feature_status"], "ready")
+        np.testing.assert_array_equal(contexts["AAPL"].metadata["past_covariates"], np.ones((2, 3)))
+        self.assertIn("moirai", persist.call_args.args[2])
 
     @patch("pipeline.orchestrator.MacroRegimeAnalyzer.evaluate_market")
     @patch("pipeline.orchestrator.StockFetcher.get_stock_data_batch")
@@ -42,6 +74,12 @@ class TestPipelineOrchestrator(unittest.TestCase):
             self.assertEqual(report.index_name, "台灣50")
             self.assertIn("xuantie", report.strategy_results)
             mock_notify.assert_called_once()
+
+    @patch("pipeline.orchestrator.StockFetcher.get_stock_data_batch", return_value={})
+    @patch("pipeline.orchestrator.FundamentalProvider.get_fundamentals_batch", return_value={})
+    def test_forecast_feature_profile_defaults_to_full_features(self, *_):
+        from core.config import config
+        self.assertEqual(config.pipeline.FORECAST_FEATURE_PROFILE, "full_features")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-11-03 (v2.4.60)
+
+### Features & Architecture (Cross-Market Full Features Covariate Pipeline & Foundation Model Validation)
+- **🚀 全面解鎖跨市場全功能協變量管線 (`full_features`)**：
+  - **破除教條主義標記**：解除 `INDUSTRY_TW`, `INDUSTRY_JP`, `INDUSTRY_US` 的 blocked 狀態，將其標記為 `verified`，支援台美日三市場特徵提取。
+  - **導入全球 Sector Proxy ETF 與個股產業映射機制 (`get_ticker_industry_series`)**：
+    - 美股對應 S&P 11 大 GICS 板塊 ETF（`XLK`, `XLF`, `XLV`, `XLY`, `XLP`, `XLE`, `XLI`, `XLB`, `XLU`, `XLRE`, `XLC`），常用標的精準對應，未知標的預設映射科技板塊 `XLK`。
+    - 台股對應富邦科技 ETF (`0052.TW`)、元大金融 (`0055.TW`)、台灣50 (`0050.TW`)，科技權值股精準對應，未知標的預設映射 `0052.TW`。
+    - 日股對應 NEXT FUNDS 系列（電氣精密 `1625.T`、自動車 `1622.T`、商社 `1629.T`、銀行 `1630.T` 等），日股標的精準對應，未知標的預設映射 `1625.T`。
+  - **升級 `LiveSourceProvider` 與歷史向前填充（Forward-fill）**：Yahoo Finance 數據抓取支援標準 User-Agent 與指數退避重試機制，歷史行情標註 `vintage_verified: True`，在符合 session-age 限制下進行 forward-fill，確保產出之 `FeatureMatrix` 達到 `full_features` / `ready` 狀態。
+  - **多層級 Profile 配置**：新增 Profile `market_features`（大盤+總經+匯率+美債，不含產業/籌碼），並將 `core/config.py` 中的 `FORECAST_FEATURE_PROFILE` 預設配置切換為 `"full_features"`。
+  - **模型適配器升級**：TimesFM 3.0 與 MOIRAI-2 完整對接分市場 past-only 協變量輸入矩陣，保留原生分位數，並建立防禦性分位數單調排序；修正 TimesFM P90 樂觀分位數索引取值。
+  - **管線保護與容錯健全性**：`orchestrator.py` 在協變量構建失敗時維持 `features_unavailable` 狀態遵循 Fail-Closed 原則；記錄推論開始之 `decision_time` 防止跨盤後時間戳誤判。
+  - **雙審攔截修復**：修正 Dockerfile PyTorch 跨架構安裝、掛載 `/api/v1/models/health` 路由、支援模擬交易 0 成交委託紀錄、健全 TWSE T86 破音字元防禦。
+- **🏷️ 版本升級至 v2.4.60 (`core/version.py`)**。
+
+---
+
+---
+
 ## 2026-11-02 (v2.4.59)
 
 ### Features & UX (Industry Chain Direct URL Deep-linking & One-Click Sharing)

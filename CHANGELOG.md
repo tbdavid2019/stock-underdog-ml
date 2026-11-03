@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-11-03 (v2.4.60)
+
+### Quant & Features (Cross-Market Full Features Covariates Pipeline & Industry ETF Sector Proxies)
+- **🚀 全面解鎖跨市場全功能協變量管線 (`full_features`)**：
+  - **解除產業指數 Blocked 限制**：移除先前將 `INDUSTRY_TW`, `INDUSTRY_JP`, `INDUSTRY_US` 標記為 blocked 的教條式限制，將其狀態正式設為 `verified`，支援台美日三市場之完整特徵提取。
+  - **導入全球 Sector Proxy ETF 與個股產業映射機制 (`get_ticker_industry_series`)**：
+    - **美股 (US)**：完整註冊 S&P 11 大 GICS 板塊 ETF（`XLK` 科技、`XLF` 金融、`XLV` 醫療、`XLY` 非必需消費、`XLP` 必需消費、`XLE` 能源、`XLI` 工業、`XLB` 原料、`XLU` 公用事業、`XLRE` 房地產、`XLC` 通訊服務）；常用標的精準對應（如 NVDA, AAPL, MSFT, TSLA, AMZN, GOOG, META 等），未知標的預設映射 `XLK`。
+    - **台股 (TW)**：科技電子對應富邦科技 ETF (`0052.TW`)、金融保險對應元大金融 (`0055.TW`)、傳產航運對應台灣50 (`0050.TW`)；高科技個股（如 2330, 2454, 2317, 3661 等）精準對應，未知標的預設映射 `0052.TW`。
+    - **日股 (JP)**：電氣精密半導體對應 NEXT FUNDS 電氣精密 ETF (`1625.T`)、自動車機械對應 `1622.T`、商社對應 `1629.T`、金融銀行對應 `1630.T`；重點個股（如 7203.T, 8035.T, 9984.T, 6146.T 等）精準對應，未知標的預設映射 `1625.T`。
+  - **升級 `LiveSourceProvider` 與歷史前向填充（Forward-fill）**：
+    - Yahoo Finance 數據抓取支援帶標準 User-Agent 與 3 次重試機制，歷史數據自動標記 `vintage_verified: True`。
+    - 支援向前填充（forward-fill，符合 session-age 限制），解決開盤日交錯與歷史短暫缺漏，確保產出之 `FeatureMatrix` 達到 `full_features` / `ready` 狀態。
+  - **新增與強化 Profile 配置**：
+    - 新增 `market_features` Profile（涵蓋大盤、總經、匯率、美債，不含產業/籌碼）。
+    - 強化 `full_features` Profile，並將 `core/config.py` 中的 `FORECAST_FEATURE_PROFILE` 預設配置從 `price_only` 切換為 `full_features`。
+  - **雙審代碼審查與系統強健性修正 (Dual Code Review Fixes)**：
+    - **Dockerfile 跨架構安裝修復**：修正 PyTorch CPU 安裝指令，支援 ARM64 Linux / Apple Silicon 多架構映像檔構建。
+    - **時序模型分位數與單調防護**：修正 TimesFM 3.0 P90 樂觀分位數索引取值；MOIRAI-2 批次分流提前處理；為 TimesFM 與 MOIRAI-2 加入分位數單調排序防禦（防範極端波動倒掛）。
+    - **管線保護與容錯健全性**：`orchestrator.py` 在協變量構建失敗時維持 `features_unavailable` 狀態遵循 Fail-Closed 原則；記錄推論開始之 `decision_time` 防止跨盤後時間戳誤判。
+    - **API 契約與端點掛載**：補充掛載 `/api/v1/models/health` 與 `/api/v1/performance/health` 路由；健全 TWSE T86 破音字元防禦與模擬交易 0 成交委託紀錄支援。
+- **🏷️ 版本升級至 v2.4.60 (`core/version.py`)**。
+
+---
+
 ## 2026-11-02 (v2.4.59)
 
 ### Features & UX (Industry Chain Direct URL Deep-linking & One-Click Sharing)

@@ -1,6 +1,87 @@
 <!-- ================= TAB 2: 個股歷史查詢 (FIGMA FACELIFT V.1) ================= -->
 <div v-if="activeTab === 'history'" class="space-y-6">
 
+    <section class="rounded-2xl border p-5 sm:p-6 space-y-5"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
+             aria-labelledby="performance-heading">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div class="space-y-1 max-w-2xl">
+                <h2 id="performance-heading" class="text-xl font-black" :class="isDark ? 'text-white' : 'text-slate-900'">預測可信度排行榜</h2>
+                <p class="text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-600'">依已開獎紀錄比較方向與誤差。股票榜顯示哪些標的較容易預測；模型榜使用共同樣本比較。</p>
+            </div>
+            <div class="flex flex-wrap items-end gap-2">
+                <label class="text-xs font-semibold flex flex-col gap-1" :class="isDark ? 'text-slate-300' : 'text-slate-700'">市場
+                    <select v-model="performanceMarket" @change="loadPerformance" aria-label="排行榜市場"
+                            class="rounded-lg border px-3 py-2 text-sm" :class="isDark ? 'bg-[#16181D] border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'">
+                        <option value="TW">台股</option><option value="US">美股</option><option value="JP">日股</option>
+                    </select>
+                </label>
+                <label class="text-xs font-semibold flex flex-col gap-1" :class="isDark ? 'text-slate-300' : 'text-slate-700'">期間
+                    <select v-model.number="performanceWindow" @change="loadPerformance" aria-label="排行榜期間"
+                            class="rounded-lg border px-3 py-2 text-sm" :class="isDark ? 'bg-[#16181D] border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'">
+                        <option :value="20">20 交易日</option><option :value="60">60 交易日</option><option :value="120">120 交易日</option>
+                    </select>
+                </label>
+                <label class="text-xs font-semibold flex flex-col gap-1" :class="isDark ? 'text-slate-300' : 'text-slate-700'">預測步長
+                    <select v-model.number="performanceHorizon" @change="loadPerformance" aria-label="排行榜預測步長"
+                            class="rounded-lg border px-3 py-2 text-sm" :class="isDark ? 'bg-[#16181D] border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'">
+                        <option :value="1">T+1</option><option :value="5">T+5</option>
+                    </select>
+                </label>
+                <label class="text-xs font-semibold flex flex-col gap-1" :class="isDark ? 'text-slate-300' : 'text-slate-700'">模型版本
+                    <input v-model.trim="performanceRevision" @keyup.enter="loadPerformance" @change="loadPerformance" aria-label="模型版本篩選"
+                           placeholder="全部版本" class="w-28 rounded-lg border px-3 py-2 text-sm num-font"
+                           :class="isDark ? 'bg-[#16181D] border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'">
+                </label>
+                <button @click="loadPerformance" :disabled="performanceLoading" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">更新</button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 border-b pb-2" :class="isDark ? 'border-slate-700' : 'border-slate-200'" role="group" aria-label="選擇排行榜">
+            <button @click="performanceView = 'stocks'" :aria-pressed="performanceView === 'stocks'" class="px-3 py-2 rounded-lg text-sm font-bold"
+                    :class="performanceView === 'stocks' ? 'bg-amber-500 text-slate-950' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100')">股票可信榜</button>
+            <button @click="performanceView = 'models'" :aria-pressed="performanceView === 'models'" class="px-3 py-2 rounded-lg text-sm font-bold"
+                    :class="performanceView === 'models' ? 'bg-amber-500 text-slate-950' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100')">模型戰績榜</button>
+        </div>
+
+        <div aria-live="polite" class="text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+            <p v-if="performanceLoading">正在整理已驗證預測…</p>
+            <div v-else-if="performanceError" class="flex flex-wrap items-center gap-3"><span>{{ performanceError }}</span><button @click="loadPerformance" class="font-bold underline underline-offset-2">重試</button></div>
+            <template v-else>
+                <p v-if="performanceView === 'stocks'" class="mb-3">{{ performanceStocks?.as_of ? '統計截至 ' + performanceStocks.as_of : '等待統計資料' }} · 至少 {{ performanceStocks?.minimum_samples || 30 }} 筆開獎才能進入正式排名。20 日期間可先觀察樣本累積。</p>
+                <p v-else class="mb-3">{{ performanceModels?.as_of ? '統計截至 ' + performanceModels.as_of : '等待統計資料' }} · 同場 {{ performanceModels?.common_sample_count ?? 0 }} 筆；樣本不足時先列為觀察中。</p>
+                <div class="overflow-x-auto" v-if="(performanceView === 'stocks' ? [...(performanceStocks?.data || []), ...(performanceStocks?.observations || [])] : [...(performanceModels?.data || []), ...(performanceModels?.observations || [])]).length">
+                    <table class="w-full min-w-[710px] text-left text-sm border-collapse">
+                        <caption class="sr-only">{{ performanceView === 'stocks' ? '股票預測可信度' : '模型共同樣本戰績' }}</caption>
+                        <thead :class="isDark ? 'text-slate-300 border-b border-slate-700' : 'text-slate-700 border-b border-slate-200'"><tr>
+                            <th scope="col" class="py-2 pr-3">{{ performanceView === 'stocks' ? '股票／模型' : '模型／版本' }}</th>
+                            <th scope="col" class="py-2 px-3">方向命中</th><th scope="col" class="py-2 px-3">可信下界</th>
+                            <th scope="col" class="py-2 px-3">平均誤差</th><th scope="col" class="py-2 px-3">較持平基準</th>
+                            <th scope="col" class="py-2 pl-3">樣本／覆蓋</th>
+                        </tr></thead>
+                        <tbody class="divide-y" :class="isDark ? 'divide-slate-800' : 'divide-slate-100'">
+                            <tr v-for="row in (performanceView === 'stocks' ? [...(performanceStocks?.data || []), ...(performanceStocks?.observations || [])] : [...(performanceModels?.data || []), ...(performanceModels?.observations || [])]).slice(0, 100)"
+                                :key="[row.market, row.ticker, row.model_name, row.model_revision, row.config_hash].join(':')">
+                                <td class="py-3 pr-3"><button v-if="performanceView === 'stocks'" @click="searchTickerHistory(row.ticker)" class="font-bold num-font text-amber-600 dark:text-amber-400 underline underline-offset-2">{{ row.ticker }}</button><span v-else class="font-bold">{{ row.model_name }}</span>
+                                    <span class="block text-xs mt-1" :class="isDark ? 'text-slate-400' : 'text-slate-600'">{{ performanceView === 'stocks' ? row.model_name + ' · ' : '' }}{{ row.model_revision || '版本未提供' }}<span v-if="row.role === 'shadow'"> · 研究觀察</span><span v-if="row.status !== 'eligible'"> · 樣本累積中</span></span></td>
+                                <td class="py-3 px-3 num-font font-bold">{{ formatPerformancePercent(row.direction_accuracy) }}</td>
+                                <td class="py-3 px-3 num-font">{{ formatPerformancePercent(row.wilson_95_lower) }}</td>
+                                <td class="py-3 px-3 num-font">{{ formatPerformancePercent(row.mape, 2) }}</td>
+                                <td class="py-3 px-3 num-font">{{ formatPerformancePercent(row.baseline_improvement) }}</td>
+                                <td class="py-3 pl-3 num-font">{{ row.sample_count }} 筆 <span class="block text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">{{ row.coverage === null || row.coverage === undefined ? '覆蓋率待提供' : '覆蓋 ' + formatPerformancePercent(row.coverage) }}</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p v-else class="py-5">目前正式排名的樣本不足。每日預測完成驗證後，成績會逐步累積。</p>
+                <p v-if="(performanceView === 'stocks' ? (performanceStocks?.observations || []) : (performanceModels?.observations || [])).length" class="mt-3 text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                    {{ (performanceView === 'stocks' ? performanceStocks.observations : performanceModels.observations).length }} 組資料仍在累積，尚未列入正式排名。
+                </p>
+                <p class="mt-3 text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-600'">可信下界為方向命中率的 95% 信賴區間下界；較持平基準為價格誤差改善比例。覆蓋率尚未提供時顯示「待提供」。</p>
+            </template>
+        </div>
+    </section>
+
     <!-- 1. Search Box Card -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-6 rounded-2xl border space-y-4">
@@ -686,7 +767,7 @@
                     <span><span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 股價與隔日預測目標價趨勢折線圖</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    比對每日真實收盤/現價走勢與 Timestral、TimesFM、雙模型平均等量化模型之目標價預測軌跡（點擊圖例可切換顯示）
+                    目標價依紀錄中的目標交易日顯示；缺少目標日期的舊預測保留在歷史清單，不推算圖表日期。點擊圖例可切換模型。
                 </p>
             </div>
 
@@ -726,6 +807,14 @@
                         :class="priceChartVisibility.timesfm ? (isDark ? 'bg-purple-500/20 border-purple-500/60 text-purple-300' : 'bg-purple-50 border-purple-400 text-purple-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block shadow-sm transform rotate-45"></span>
                     <span>TimesFM 目標價</span>
+                </button>
+
+                <button type="button" @click="togglePriceChartSeries('moirai')" :aria-pressed="priceChartVisibility.moirai"
+                        title="點擊切換顯示 MOIRAI-2 預測目標價"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        :class="priceChartVisibility.moirai ? (isDark ? 'bg-teal-500/20 border-teal-500/60 text-teal-300' : 'bg-teal-50 border-teal-400 text-teal-900') : (isDark ? 'border-slate-700 text-slate-400' : 'border-slate-300 text-slate-600')">
+                    <span class="w-2.5 h-2.5 rounded-full bg-teal-600 dark:bg-teal-400 inline-block"></span>
+                    <span>MOIRAI-2 目標價</span>
                 </button>
 
                 <!-- 雙模型平均目標價 (深松石綠) -->
@@ -1039,7 +1128,26 @@
     </div>
 
     <!-- ================= 4. AI MODEL ACCURACY SCORECARD (PK 成績單) ================= -->
-    <div v-if="!historyLoading && modelScorecard"
+    <section v-if="resolvedTicker && !historyLoading" class="rounded-2xl border p-5 space-y-3"
+             :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200' : 'bg-white border-[#E5E7EB] text-slate-800'"
+             aria-labelledby="verified-scorecard-heading">
+        <h3 id="verified-scorecard-heading" class="font-black text-base">{{ resolvedTicker }} 模型成績</h3>
+        <p class="text-sm" :class="isDark ? 'text-slate-300' : 'text-slate-600'">使用與排行榜相同的後端開獎結果；{{ performanceWindow }} 個交易日，T+{{ performanceHorizon }}。</p>
+        <p v-if="historyPerformanceError" class="text-sm">{{ historyPerformanceError }}</p>
+        <p v-else-if="!historyPerformance" class="text-sm">正在讀取模型成績…</p>
+        <p v-else-if="!historyPerformance.data.length && !historyPerformance.observations.length" class="text-sm">該股目前沒有可比較的已驗證樣本。</p>
+        <div v-else class="overflow-x-auto"><table class="w-full min-w-[500px] text-left text-sm">
+            <thead><tr><th class="py-2 pr-3">模型／版本</th><th class="px-3">方向命中</th><th class="px-3">平均誤差</th><th class="px-3">樣本</th><th class="pl-3">狀態</th></tr></thead>
+            <tbody class="divide-y" :class="isDark ? 'divide-slate-800' : 'divide-slate-100'">
+                <tr v-for="row in [...historyPerformance.data, ...historyPerformance.observations]" :key="[row.model_name, row.model_revision, row.config_hash].join(':')">
+                    <td class="py-3 pr-3 font-bold">{{ row.model_name }}<span class="block text-xs font-normal">{{ row.model_revision || '版本未提供' }}</span></td>
+                    <td class="px-3 num-font">{{ formatPerformancePercent(row.direction_accuracy) }}</td><td class="px-3 num-font">{{ formatPerformancePercent(row.mape, 2) }}</td>
+                    <td class="px-3 num-font">{{ row.sample_count }} 筆</td><td class="pl-3">{{ row.status === 'eligible' ? '樣本已達門檻' : '樣本累積中' }}<span v-if="row.role === 'shadow'"> · 研究觀察</span></td>
+                </tr>
+            </tbody>
+        </table></div>
+    </section>
+    <div v-if="false && !historyLoading && modelScorecard"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-5 rounded-2xl border space-y-4">
         
@@ -1208,7 +1316,7 @@
                     <span v-if="resolvedName">{{ resolvedName }} · </span><span class="num-font text-amber-500">{{ resolvedTicker || searchTicker.toUpperCase() }}</span> 每日預測 vs 隔日真實收盤對決表 (共 {{ dailyHistoryRows.length }} 個交易日)
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
-                    嚴格依每日收盤時預測之「隔日目標價 (T+1)」與次日真實收盤對比驗證，每日一列清晰開獎
+                    依每筆預測的目標交易日與驗證結果比較；舊資料若缺少驗證依據，顯示待驗證。
                 </p>
             </div>
         </div>
@@ -1243,6 +1351,7 @@
                     <td class="p-3 font-bold num-font whitespace-nowrap">
                         <div v-if="row.nextActualPrice !== null">
                             <span class="font-black">${{ Number(row.nextActualPrice).toFixed(2) }}</span>
+                            <span v-if="row.nextDate" class="block text-xs font-normal">目標日 {{ row.nextDate }}</span>
                             <span v-if="row.actualReturnPct !== null"
                                   class="ml-1 text-xs font-black"
                                   :class="row.actualReturnPct >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (isDark ? 'text-rose-400' : 'text-rose-700')">
@@ -1250,7 +1359,7 @@
                             </span>
                         </div>
                         <div v-else class="text-xs font-bold text-amber-500 flex items-center space-x-1">
-                            <span>⏳ 待下個交易日開獎</span>
+                            <span>{{ row.nextDate ? '⏳ ' + row.nextDate + ' 待驗證' : '舊資料／待驗證' }}</span>
                         </div>
                     </td>
 

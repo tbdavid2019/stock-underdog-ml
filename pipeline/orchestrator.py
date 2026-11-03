@@ -6,6 +6,7 @@ AI narrative commentary synthesis, and sinks routing (database persistence & not
 import logging
 from typing import Dict, List, Optional, Any
 import datetime
+import uuid
 import pandas as pd
 
 from core.config import config
@@ -28,6 +29,10 @@ try:
 except Exception:
     pass
 try:
+    import strategies.moirai
+except Exception:
+    pass
+try:
     import strategies.lstm
 except Exception:
     pass
@@ -37,6 +42,9 @@ from evaluators.ai_narrative import AINarrativeEngine
 from evaluators.formatter import print_evaluation_report
 from database import SupabaseManager
 from data.duckdb_manager import DuckDBManager
+from data.forecast_store import ForecastStore
+from data.covariates import build_market_features
+from pipeline.forecast_integration import attach_market_features, persist_forecast_results, retain_complete_bars
 from data.clef_client import ClefDecisionClient
 from notifier_dual import send_dual_strategy_results
 
@@ -113,6 +121,30 @@ class PipelineOrchestrator:
                     metadata={"index_name": index_name}
                 )
 
+        model_names = {"timesfm", "timestral", "moirai", "moirai-2"}
+        uses_forecasts = any(any(name in strat.name.lower() for name in model_names) for strat in self.strategies)
+        decision_time = datetime.datetime.now(datetime.timezone.utc)
+        run_id = str(uuid.uuid4())
+        if uses_forecasts and contexts:
+            retain_complete_bars(contexts, decision_time)
+            contexts = {ticker: ctx for ticker, ctx in contexts.items() if not ctx.df.empty}
+            try:
+                profile = getattr(config.pipeline, "FORECAST_FEATURE_PROFILE", "price_only")
+                matrices = (build_market_features(list(contexts), decision_time, lookback=128, profile=profile)
+                            if profile != "price_only" else {})
+            except Exception:
+                logger.exception("市場協變量準備失敗，模型將回報資料不足")
+                matrices = {}
+            if matrices:
+                attach_market_features(contexts, matrices)
+            elif profile != "price_only":
+                for ctx in contexts.values():
+                    ctx.metadata.update(feature_profile=profile, feature_status="features_unavailable",
+                                        feature_reason="covariate_pipeline_failure")
+            else:
+                for ctx in contexts.values():
+                    ctx.metadata.update(feature_profile="price_only", feature_status="price_only")
+
         logger.info(f"✅ 成功載入 {len(contexts)}/{len(stock_list)} 支股票數據\n")
 
         # ============= Stage 2: Strategy Execution =============
@@ -128,6 +160,8 @@ class PipelineOrchestrator:
                 strat_key = "timestral"
             elif "timesfm" in strat.name.lower():
                 strat_key = "timesfm"
+            elif "moirai" in strat.name.lower():
+                strat_key = "moirai"
             elif "lstm" in strat.name.lower():
                 strat_key = "lstm"
             elif "板塊" in strat.name or strat.name == "sector_rotation":
@@ -142,6 +176,13 @@ class PipelineOrchestrator:
             logger.info(f"   ✓ {strat.name} 計算完成 (符合條件: {len(hits)} 支)")
 
         logger.info("")
+
+        if persist_db and uses_forecasts and self.duckdb_manager and self.duckdb_manager.enabled:
+            try:
+                store = ForecastStore(self.duckdb_manager.db_path)
+                persist_forecast_results(store, contexts, strategy_outputs, issued_at=decision_time, run_id=run_id)
+            except Exception:
+                logger.exception("預測驗證紀錄寫入失敗")
 
         # ============= Stage 3: Composite Evaluation & AI Narrative =============
         logger.info("⭐ [Stage 3/4] 進行多策略綜合評分與交集分析...")

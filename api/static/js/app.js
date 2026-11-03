@@ -119,6 +119,18 @@ export const app = createApp({
             bezierPaths: [],
 
             // Ticker Explorer
+            performanceMarket: 'TW',
+            performanceWindow: 60,
+            performanceHorizon: 1,
+            performanceRevision: '',
+            performanceView: 'stocks',
+            performanceLoading: false,
+            performanceError: '',
+            performanceRequestId: 0,
+            performanceStocks: null,
+            performanceModels: null,
+            historyPerformance: null,
+            historyPerformanceError: '',
             searchTicker: '2330.TW',
             historyRecords: [],
             historyLoading: false,
@@ -127,6 +139,7 @@ export const app = createApp({
                 timestral: true,
                 timestralBands: true,
                 timesfm: true,
+                moirai: true,
                 resonance: false,
                 ma60: false
             },
@@ -366,7 +379,7 @@ export const app = createApp({
             // 1. Group records by Date (YYYY-MM-DD)
             const dateMap = new Map();
             for (const r of this.historyRecords) {
-                const rawTs = String(r.timestamp || '').trim();
+                const rawTs = String(r.forecast_session || r.timestamp || '').trim();
                 if (rawTs.length < 10) continue;
                 const dateKey = rawTs.slice(0, 10);
                 if (!dateMap.has(dateKey)) {
@@ -375,6 +388,12 @@ export const app = createApp({
                         closePrice: null,
                         timesfmPred: null,
                         timestralPred: null,
+                        timesfmActual: null,
+                        timestralActual: null,
+                        timesfmTarget: null,
+                        timestralTarget: null,
+                        timesfmIssued: '',
+                        timestralIssued: '',
                         ma60: null,
                         pe: null,
                         pb: null,
@@ -395,27 +414,37 @@ export const app = createApp({
                 if (r.trust_net_5d !== null && r.trust_net_5d !== undefined && Number.isFinite(Number(r.trust_net_5d))) item.trust_net_5d = Number(r.trust_net_5d);
                 if (r.foreign_net_5d !== null && r.foreign_net_5d !== undefined && Number.isFinite(Number(r.foreign_net_5d))) item.foreign_net_5d = Number(r.foreign_net_5d);
 
-                if (r.timesfm_predicted_price) {
+                if (r.timesfm_predicted_price && !item.timesfmIssued) {
                     const tfp = Number(r.timesfm_predicted_price);
                     if (!isNaN(tfp) && tfp > 0) item.timesfmPred = tfp;
                 }
-                if (r.timestral_predicted_price) {
+                if (r.timestral_predicted_price && !item.timestralIssued) {
                     const tmp = Number(r.timestral_predicted_price);
                     if (!isNaN(tmp) && tmp > 0) item.timestralPred = tmp;
                 }
 
                 const predP = Number(r.predicted_price);
-                if (!isNaN(predP) && predP > 0) {
+                const verified = r.verification_status === 'settled' &&
+                    /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) &&
+                    Number.isFinite(Number(r.actual_price)) && Number(r.actual_price) > 0;
+                if (!isNaN(predP) && predP > 0 && Number(r.horizon || 1) === 1) {
                     const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
-                    if (strat.includes('timesfm')) {
+                    const issued = String(r.timestamp || '').trim();
+                    if (strat.includes('timesfm') && issued >= item.timesfmIssued) {
                         item.timesfmPred = predP;
-                    } else if (strat.includes('timestral')) {
+                        item.timesfmIssued = issued;
+                        item.timesfmActual = verified ? Number(r.actual_price) : null;
+                        item.timesfmTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
+                    } else if (strat.includes('timestral') && issued >= item.timestralIssued) {
                         item.timestralPred = predP;
+                        item.timestralIssued = issued;
+                        item.timestralActual = verified ? Number(r.actual_price) : null;
+                        item.timestralTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
                     }
                 }
             }
 
-            // 2. Sort dates chronologically ascending (earliest to latest) to pair T+1 actual price
+            // Actuals only come from the corresponding verified forecast record.
             const sortedDates = Array.from(dateMap.keys()).sort();
             const n = sortedDates.length;
             const rows = [];
@@ -424,8 +453,11 @@ export const app = createApp({
                 const date = sortedDates[i];
                 const item = dateMap.get(date);
                 const closePrice = item.closePrice;
-                const nextDate = (i < n - 1) ? sortedDates[i + 1] : null;
-                const nextActualPrice = (nextDate && dateMap.get(nextDate)) ? dateMap.get(nextDate).closePrice : null;
+                const matchedActuals = item.timesfmActual !== null && item.timestralActual !== null;
+                const sameTarget = (!item.timesfmTarget || !item.timestralTarget || item.timesfmTarget === item.timestralTarget) &&
+                    (!matchedActuals || item.timesfmActual === item.timestralActual);
+                const nextDate = sameTarget ? (item.timesfmTarget || item.timestralTarget) : null;
+                const nextActualPrice = sameTarget ? (item.timesfmActual ?? item.timestralActual) : null;
 
                 const actualReturnPct = (nextActualPrice !== null && nextActualPrice > 0 && closePrice !== null && closePrice > 0)
                     ? ((nextActualPrice - closePrice) / closePrice) * 100
@@ -438,10 +470,10 @@ export const app = createApp({
                 if (item.timesfmPred !== null && closePrice !== null && closePrice > 0) {
                     timesfmPot = ((item.timesfmPred - closePrice) / closePrice) * 100;
                 }
-                if (nextActualPrice !== null && item.timesfmPred !== null && nextActualPrice > 0) {
-                    timesfmErrorPct = Math.abs(item.timesfmPred - nextActualPrice) / nextActualPrice * 100;
-                    if (actualReturnPct !== null && timesfmPot !== null) {
-                        timesfmHit = (timesfmPot >= 0 && actualReturnPct >= 0) || (timesfmPot < 0 && actualReturnPct < 0);
+                if (item.timesfmActual !== null && item.timesfmPred !== null) {
+                    timesfmErrorPct = Math.abs(item.timesfmPred - item.timesfmActual) / item.timesfmActual * 100;
+                    if (closePrice !== null && timesfmPot !== null) {
+                        timesfmHit = Math.sign(item.timesfmPred - closePrice) === Math.sign(item.timesfmActual - closePrice);
                     }
                 }
 
@@ -452,16 +484,16 @@ export const app = createApp({
                 if (item.timestralPred !== null && closePrice !== null && closePrice > 0) {
                     timestralPot = ((item.timestralPred - closePrice) / closePrice) * 100;
                 }
-                if (nextActualPrice !== null && item.timestralPred !== null && nextActualPrice > 0) {
-                    timestralErrorPct = Math.abs(item.timestralPred - nextActualPrice) / nextActualPrice * 100;
-                    if (actualReturnPct !== null && timestralPot !== null) {
-                        timestralHit = (timestralPot >= 0 && actualReturnPct >= 0) || (timestralPot < 0 && actualReturnPct < 0);
+                if (item.timestralActual !== null && item.timestralPred !== null) {
+                    timestralErrorPct = Math.abs(item.timestralPred - item.timestralActual) / item.timestralActual * 100;
+                    if (closePrice !== null && timestralPot !== null) {
+                        timestralHit = Math.sign(item.timestralPred - closePrice) === Math.sign(item.timestralActual - closePrice);
                     }
                 }
 
                 // Daily winner
                 let winner = null;
-                if (nextActualPrice !== null) {
+                if (nextActualPrice !== null && sameTarget) {
                     if (timesfmErrorPct !== null && timestralErrorPct !== null) {
                         if (Math.abs(timesfmErrorPct - timestralErrorPct) < 0.05) {
                             winner = '平手';
@@ -632,6 +664,56 @@ export const app = createApp({
         }
     },
     methods: {
+        formatPerformancePercent(value, digits = 1) {
+            const number = Number(value);
+            return value === null || value === undefined || !Number.isFinite(number)
+                ? '—' : `${(number * 100).toFixed(digits)}%`;
+        },
+        performanceParams(market = this.performanceMarket) {
+            const params = new URLSearchParams({ market, window: String(this.performanceWindow),
+                horizon: String(this.performanceHorizon), target_type: 'price', limit: '100' });
+            if (this.performanceRevision.trim()) params.set('model_revision', this.performanceRevision.trim());
+            return params;
+        },
+        async loadPerformance() {
+            const requestId = ++this.performanceRequestId;
+            this.performanceLoading = true;
+            this.performanceError = '';
+            const params = this.performanceParams().toString();
+            try {
+                const [stocks, models] = await Promise.all([
+                    fetch(`/api/v1/performance/stocks?${params}`),
+                    fetch(`/api/v1/performance/models?${params}`)
+                ]);
+                if (!stocks.ok || !models.ok) throw new Error('目前無法讀取已驗證的預測資料');
+                const [stockData, modelData] = await Promise.all([stocks.json(), models.json()]);
+                if (requestId !== this.performanceRequestId) return;
+                this.performanceStocks = stockData;
+                this.performanceModels = modelData;
+                if (this.resolvedTicker) this.loadHistoryPerformance(this.resolvedTicker, this.historyRequestId);
+            } catch (error) {
+                if (requestId !== this.performanceRequestId) return;
+                this.performanceStocks = null;
+                this.performanceModels = null;
+                this.performanceError = '目前無法取得預測成績，請稍後重試。';
+            } finally {
+                if (requestId === this.performanceRequestId) this.performanceLoading = false;
+            }
+        },
+        async loadHistoryPerformance(ticker, requestId) {
+            this.historyPerformance = null;
+            this.historyPerformanceError = '';
+            const market = /\.(TW|TWO)$/i.test(ticker) || /^\d+$/.test(ticker) ? 'TW'
+                : (/\.T$/i.test(ticker) ? 'JP' : 'US');
+            try {
+                const response = await fetch(`/api/v1/performance/tickers/${encodeURIComponent(ticker)}?${this.performanceParams(market)}`);
+                if (!response.ok) throw new Error('performance unavailable');
+                const data = await response.json();
+                if (requestId === this.historyRequestId) this.historyPerformance = data;
+            } catch (error) {
+                if (requestId === this.historyRequestId) this.historyPerformanceError = '成績暫時無法取得，請稍後重試。';
+            }
+        },
         toggleTheme() {
             this.isDark = !this.isDark;
             const themeStr = this.isDark ? 'dark' : 'light';
@@ -793,6 +875,8 @@ export const app = createApp({
             this.hasSearched = true;
             this.historyError = '';
             this.historyRecords = [];
+            this.historyPerformance = null;
+            this.historyPerformanceError = '';
             this.tickerInstHistory = [];
             chartManager.destroy('pricePredictChart');
             chartManager.destroy('instChart');
@@ -812,6 +896,7 @@ export const app = createApp({
                 this.resolvedName = resolution.name || '';
                 this.searchTicker = resolution.ticker;
                 this.updateUrl(true);
+                this.loadHistoryPerformance(resolution.ticker, requestId);
 
                 // 若非台股標的且當前子頁籤為標案或股權網絡，自動重設為基本面與新聞
                 if (!this.isTwStock(resolution.ticker) && (this.historyDetailSubTab === 'tender' || this.historyDetailSubTab === 'network')) {
@@ -1334,6 +1419,7 @@ export const app = createApp({
             } else if (tab === 'dashboard') {
                 this.loadData();
             } else if (tab === 'history') {
+                this.loadPerformance();
                 if (this.searchTicker && !this.historyRecords.length) {
                     this.loadHistory();
                 } else {
@@ -2723,6 +2809,7 @@ export const app = createApp({
                 this.loadBrokerTrend();
             }
         } else if (this.activeTab === 'history') {
+            this.loadPerformance();
             if (this.searchTicker) {
                 this.loadHistory();
             }

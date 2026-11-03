@@ -14,6 +14,7 @@ from strategies.base import BaseStrategy, StockContext, StrategyResult
 from strategies.registry import register_strategy
 from models.timesfm_model import get_timesfm_model
 from core.config import config
+from core.config import usage_eligibility
 
 logger = logging.getLogger("stock_app.strategies.timesfm")
 
@@ -74,6 +75,7 @@ class TimesFMStrategy(BaseStrategy):
         """
         results: List[StrategyResult] = []
         series_dict: Dict[str, np.ndarray] = {}
+        past_covariates: Dict[str, np.ndarray] = {}
         valid_contexts: Dict[str, StockContext] = {}
 
         # 1. Pre-filter and collect time series
@@ -94,6 +96,29 @@ class TimesFMStrategy(BaseStrategy):
                 continue
 
             close_series = df["Close"].dropna().values
+            raw_covariates = ctx.metadata.get("past_covariates")
+            if ctx.metadata.get("feature_profile") == "full_features" and (
+                    raw_covariates is None or ctx.metadata.get("feature_status") not in (None, "ready", "full_features")):
+                results.append(StrategyResult(ticker, self.name, False, current_price=float(close_series[-1]),
+                    signals={"reason": "features_unavailable"}, metadata={
+                        "model": "timesfm", "role": config.pipeline.MODEL_ROLES.get("timesfm", "research"),
+                        "status": "features_unavailable", "profile": "full_features", "feature_profile": "full_features",
+                        "feature_status": ctx.metadata.get("feature_status"),
+                        "feature_snapshot": ctx.metadata.get("feature_snapshot")}))
+                continue
+            covariates = raw_covariates
+            if covariates is not None:
+                covariates = np.asarray(covariates, dtype=np.float32)
+                if covariates.ndim != 2 or covariates.shape[1] != len(close_series) or not np.isfinite(covariates).all():
+                    results.append(StrategyResult(ticker, self.name, False, current_price=float(close_series[-1]),
+                        signals={"reason": "features_unavailable"}, metadata={
+                            "model": "timesfm", "role": config.pipeline.MODEL_ROLES.get("timesfm", "research"),
+                            "status": "features_unavailable", "profile": ctx.metadata.get("feature_profile"),
+                            "feature_profile": ctx.metadata.get("feature_profile"),
+                            "feature_status": ctx.metadata.get("feature_status"),
+                            "feature_snapshot": ctx.metadata.get("feature_snapshot")}))
+                    continue
+                past_covariates[ticker] = covariates
             series_dict[ticker] = close_series
             valid_contexts[ticker] = ctx
 
@@ -102,7 +127,15 @@ class TimesFMStrategy(BaseStrategy):
 
         # 2. Batch forecast with TimesFM Foundation Model
         model = self._get_model()
-        forecasts = model.forecast_batch(series_dict, horizon=self.horizon)
+        eligibility = usage_eligibility("timesfm")
+        if not eligibility["eligible"]:
+            for ticker, ctx in valid_contexts.items():
+                results.append(StrategyResult(ticker, self.name, False, current_price=float(ctx.df["Close"].iloc[-1]),
+                    signals={"reason": eligibility["reason"]}, metadata={"model": "timesfm", "role": "research",
+                    "status": "disabled", "eligibility": eligibility}))
+            return results
+        forecasts = model.forecast_batch(series_dict, horizon=self.horizon,
+                                         past_covariates=past_covariates or None)
 
         # 3. Assemble StrategyResults with probabilistic risk/reward
         for ticker, ctx in valid_contexts.items():
@@ -117,7 +150,13 @@ class TimesFMStrategy(BaseStrategy):
                         is_hit=False,
                         score=0.0,
                         current_price=curr_price,
-                        signals={"reason": "TimesFM 推論未產出有效結果"}
+                        signals={"reason": "TimesFM 推論未產出有效結果"},
+                        metadata={"model": "timesfm", "role": config.pipeline.MODEL_ROLES.get("timesfm", "research"),
+                                    "profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "status": getattr(model, "last_status", "inference_failed"),
+                                    "feature_profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "feature_status": ctx.metadata.get("feature_status", "ready" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "feature_snapshot": ctx.metadata.get("feature_snapshot")}
                     )
                 )
                 continue
@@ -187,6 +226,16 @@ class TimesFMStrategy(BaseStrategy):
                     potential=round(potential, 2),
                     signals=signals,
                     metrics=metrics,
+                    metadata={"model": "timesfm", "model_version": f.get("model_version"),
+                              "model_id": f.get("model_id", self.model_id),
+                              "checkpoint_revision": f.get("checkpoint_revision"),
+                              "package_revision": f.get("package_revision"),
+                              "role": config.pipeline.MODEL_ROLES.get("timesfm", "research"),
+                              "profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_status": ctx.metadata.get("feature_status", "ready" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_snapshot": ctx.metadata.get("feature_snapshot"),
+                              "quantile_source": f.get("quantile_source", "native"), "status": "ready"},
                     tags=tags
                 )
             )

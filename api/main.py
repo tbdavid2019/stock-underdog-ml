@@ -7,7 +7,7 @@ import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -57,6 +57,8 @@ except Exception:
 
 # 掛載業務路由
 app.include_router(predictions.router, prefix="/api/v1")
+app.include_router(performance.router, prefix="/api/v1")
+app.include_router(performance.models_router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")

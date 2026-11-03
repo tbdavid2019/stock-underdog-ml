@@ -4,6 +4,13 @@
 
 ## ADDED Requirements
 
+### Requirement: Explicit universe and coverage denominator
+系統 SHALL 以版本化官方證券清冊定義台美日各市場普通股母體，另保存當時設定股票池與預測合格條件；覆蓋率分母須包含母體內未產生預測的股票，揭露未納入、停牌、新上市與失敗原因。歷史成員須保留下市紀錄，缺歷史清冊時須標示限制。
+
+#### Scenario: Pipeline predicts a subset of listed stocks
+- **WHEN** 母體有1800檔而管線僅對1000檔產生預測
+- **THEN** 顯示母體1800、預測1000、正式排名合格數及其餘800檔狀態，不將1000檔視為全市場覆蓋；其他市場明示尚未支援評估
+
 ### Requirement: Stock reliability ranking
 系統 SHALL 提供依市場、模型版本、步長、as_of 與 20/60/120 個交易日視窗篩選的股票可信度榜，輸出方向命中率、95% Wilson 下界、MAPE、相對持平價格基準改善率、有效樣本與覆蓋率。
 
@@ -28,3 +35,14 @@
 #### Scenario: Best model selection without future leakage
 - **WHEN** 使用者查詢某股票當時最佳模型或歷史日期榜單
 - **THEN** 選擇僅使用該時點前已開獎樣本，輸出評分版本、排序依據與無合格模型狀態
+
+### Requirement: Distinct financial prediction objectives
+系統 SHALL 分開呈現方向命中率、價格／報酬誤差與波動率研究結果，R²須標示目標、分母基準與樣本；負R²僅表示平方誤差劣於指定基準。波動率預測須有獨立標籤與持平、歷史波動及HAR基準，價格分位數寬度不得直接當作已驗證波動率。
+
+#### Scenario: Negative return R squared with positive direction accuracy
+- **WHEN** 模型報酬R²為負但方向命中率高於50%
+- **THEN** 分列兩項結果、各自樣本與不確定性，不以R²宣稱方向低於隨機
+
+#### Scenario: Covariates and fine tuning experiment
+- **WHEN** 比較純歷史價格、協變量或微調版本
+- **THEN** 分列設定版本與樣本外結果，協變量採當時發布時間，禁止將未公布財報、修訂後總經或未來情緒值用於歷史預測

@@ -4,6 +4,63 @@
  * Features an internal instances map to avoid canvas memory leaks and ensure proper teardown.
  */
 
+/** Build chart points from recorded forecast and target sessions, without inferred dates. */
+export function buildVerifiedPriceChartData(historyRecords) {
+    const points = new Map();
+    let legacyCount = 0;
+    const empty = date => ({date, price: null, ma60: null, timesfm: null, timestral: null, moirai: null,
+        timestralP10: null, timestralP90: null, resonance: null, lstm: null, meta: {}});
+    const ensure = date => {
+        if (!points.has(date)) points.set(date, empty(date));
+        return points.get(date);
+    };
+    const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').slice(0, 10));
+    const positive = value => value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) > 0
+        ? Number(value) : null;
+    const sorted = [...(historyRecords || [])].sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+    for (const row of sorted) {
+        const source = String(row.forecast_session || row.timestamp || '').slice(0, 10);
+        if (!validDate(source)) continue;
+        const sourcePoint = ensure(source);
+        const base = positive(row.current_price);
+        if (base !== null) sourcePoint.price = base;
+        const ma60 = positive(row.ma60);
+        if (ma60 !== null) sourcePoint.ma60 = ma60;
+        const name = `${row.strategy_type || ''} ${row.model_name || ''}`.toLowerCase();
+        let key = null;
+        if (name.includes('共振') || name.includes('resonance')) key = 'resonance';
+        else if (name.includes('timestral')) key = 'timestral';
+        else if (name.includes('timesfm')) key = 'timesfm';
+        else if (name.includes('moirai')) key = 'moirai';
+        else if (name.includes('lstm')) key = 'lstm';
+        const prediction = positive(row.predicted_price);
+        if (!key || prediction === null || Number(row.horizon || 1) !== 1) continue;
+        if (!validDate(row.target_date)) {
+            legacyCount += 1;
+            continue;
+        }
+        const target = String(row.target_date).slice(0, 10);
+        const point = ensure(target);
+        point[key] = prediction;
+        const actual = row.verification_status === 'settled' ? positive(row.actual_price) : null;
+        point.meta[key] = {source, target, base, actual, status: row.verification_status || 'pending',
+            revision: row.model_revision || null};
+        if (actual !== null) point.price = actual;
+        if (key === 'timestral') {
+            point.timestralP10 = positive(row.p10 ?? row.timestral_p10);
+            point.timestralP90 = positive(row.p90 ?? row.timestral_p90);
+        }
+    }
+    const dates = [...points.keys()].sort();
+    const values = key => dates.map(date => points.get(date)[key]);
+    const meta = key => dates.map(date => points.get(date).meta[key] || null);
+    return { dates, price: values('price'), ma60: values('ma60'), timesfm: values('timesfm'), moirai: values('moirai'),
+        timestral: values('timestral'), timestralP10: values('timestralP10'),
+        timestralP90: values('timestralP90'), resonance: values('resonance'), lstm: values('lstm'),
+        meta: {timesfm: meta('timesfm'), timestral: meta('timestral'), moirai: meta('moirai'), resonance: meta('resonance'), lstm: meta('lstm')},
+        legacy_count: legacyCount };
+}
+
 export class ChartManager {
     constructor() {
         this.instances = {};
@@ -319,73 +376,13 @@ export class ChartManager {
         const chartKey = 'pricePredictChart';
         this.destroy(chartKey);
 
-        // Sort chronologically (earliest to latest)
-        const sorted = [...historyRecords].sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
-
-        // Group by Date (YYYY-MM-DD)
-        const dateMap = new Map();
-        for (const r of sorted) {
-            const rawTs = String(r.timestamp || '').trim();
-            if (rawTs.length < 10) continue;
-            const dateKey = rawTs.slice(0, 10);
-            if (!dateMap.has(dateKey)) {
-                dateMap.set(dateKey, {
-                    date: dateKey,
-                    price: null,
-                    ma60: null,
-                    lstm: null,
-                    timesfm: null,
-                    timestral: null,
-                    timestralP10: null,
-                    timestralP90: null,
-                    resonance: null
-                });
-            }
-            const item = dateMap.get(dateKey);
-            const curPrice = Number(r.current_price);
-            if (!isNaN(curPrice) && curPrice > 0) item.price = curPrice;
-            const ma60 = Number(r.ma60);
-            if (!isNaN(ma60) && ma60 > 0) item.ma60 = ma60;
-
-            if (r.timestral_predicted_price) {
-                const tp = Number(r.timestral_predicted_price);
-                if (!isNaN(tp) && tp > 0) item.timestral = tp;
-            }
-            if (r.timestral_p10) {
-                const p10 = Number(r.timestral_p10);
-                if (!isNaN(p10) && p10 > 0) item.timestralP10 = p10;
-            }
-            if (r.timestral_p90) {
-                const p90 = Number(r.timestral_p90);
-                if (!isNaN(p90) && p90 > 0) item.timestralP90 = p90;
-            }
-            if (r.timesfm_predicted_price) {
-                const tfp = Number(r.timesfm_predicted_price);
-                if (!isNaN(tfp) && tfp > 0) item.timesfm = tfp;
-            }
-
-            const predPrice = Number(r.predicted_price);
-            if (!isNaN(predPrice) && predPrice > 0) {
-                const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
-                // Check resonance first to prevent Resonance from being misclassified
-                if (strat.includes('共振') || strat.includes('resonance')) {
-                    item.resonance = predPrice;
-                } else if (strat.includes('timestral')) {
-                    item.timestral = predPrice;
-                } else if (strat.includes('timesfm')) {
-                    item.timesfm = predPrice;
-                } else if (strat.includes('lstm')) {
-                    item.lstm = predPrice;
-                }
-            }
-        }
-
-        const dates = Array.from(dateMap.keys());
+        const series = buildVerifiedPriceChartData(historyRecords);
+        const dates = series.dates;
         if (!dates.length) return null;
         const n = dates.length;
 
-        // Future anchor point label for T+1 prediction target day
-        const labels = [...dates, '隔日預估 (T+1)'];
+        // Each prediction stays on its recorded target date, including missing sessions.
+        const labels = [...dates];
         const totalPoints = labels.length;
         let xMin = undefined;
         let xMax = undefined;
@@ -396,33 +393,15 @@ export class ChartManager {
 
         const theme = this.getThemeTokens(isDark);
 
-        // Actual price and MA60: valid on 0 ... n-1, null at n (T+1 anchor)
-        const dataPrice = [...dates.map(d => dateMap.get(d).price), null];
-        const dataMa60 = [...dates.map(d => dateMap.get(d).ma60), null];
-
-        // AI predictions shifted by +1 (Target realization alignment):
-        // Index 0: null (no prediction from day -1)
-        // Index i + 1 (1 ... n): prediction made on day i (dates[i]) targeting day i + 1
-        const dataTimestral = [null];
-        const dataTimestralP10 = [null];
-        const dataTimestralP90 = [null];
-        const dataTimesfm = [null];
-        const dataResonance = [null];
-        const dataLstm = [null];
-
-        for (let i = 0; i < n; i++) {
-            const item = dateMap.get(dates[i]);
-            dataTimestral.push(item.timestral);
-            dataTimestralP10.push(item.timestralP10);
-            dataTimestralP90.push(item.timestralP90);
-            dataTimesfm.push(item.timesfm);
-            let resVal = item.resonance;
-            if (!resVal && item.timesfm && item.timestral) {
-                resVal = Number(((item.timesfm + item.timestral) / 2).toFixed(2));
-            }
-            dataResonance.push(resVal);
-            dataLstm.push(item.lstm);
-        }
+        const dataPrice = series.price;
+        const dataMa60 = series.ma60;
+        const dataTimestral = series.timestral;
+        const dataTimestralP10 = series.timestralP10;
+        const dataTimestralP90 = series.timestralP90;
+        const dataTimesfm = series.timesfm;
+        const dataMoirai = series.moirai;
+        const dataResonance = series.resonance;
+        const dataLstm = series.lstm;
 
         // WCAG 2.1 Level AA & AAA Accessible Color System for Color Vision Deficiency (CVD):
         // 1. Real Price: High contrast Deep Navy Blue (#1D4ED8 light) / Sky Cobalt (#60A5FA dark) - Solid line, circle markers
@@ -436,6 +415,7 @@ export class ChartManager {
         const colorTimestralBands = isDark ? 'rgba(245, 158, 11, 0.5)' : 'rgba(217, 119, 6, 0.45)';
         const colorTimestralFill = isDark ? 'rgba(245, 158, 11, 0.16)' : 'rgba(217, 119, 6, 0.12)';
         const colorTimesfm = isDark ? '#C084FC' : '#7C3AED';
+        const colorMoirai = isDark ? '#2DD4BF' : '#0F766E';
         const colorResonance = isDark ? '#2DD4BF' : '#0F766E';
         const colorMa60 = isDark ? '#94A3B8' : '#475569';
         const colorLstm = isDark ? '#FB923C' : '#EA580C';
@@ -447,7 +427,7 @@ export class ChartManager {
          * - 方向相反 / 偏離 (Miss/Opposite): ✕ 叉號警示標點 ('crossRot')，標記預測漲但實際跌或預測跌但實際漲
          * - 隔日預估 (T+1 Pending): ★ 星號標點 ('star')，醒目標示最新尚未開獎之預估點
          */
-        const computeMarkerStyles = (predArray, defaultStyle, modelColor) => {
+        const computeMarkerStyles = (predArray, defaultStyle, modelColor, modelKey) => {
             const pointStyles = [];
             const denseRadii = [];
             const relaxedRadii = [];
@@ -460,7 +440,7 @@ export class ChartManager {
             const denseMiss = 4.5, relaxedMiss = 6.5;
             const denseT1 = 5.5, relaxedT1 = 7.5;
 
-            for (let idx = 0; idx <= n; idx++) {
+            for (let idx = 0; idx < n; idx++) {
                 const val = predArray[idx];
                 if (val === null || val === undefined || isNaN(val)) {
                     pointStyles.push(defaultStyle);
@@ -473,8 +453,8 @@ export class ChartManager {
                     continue;
                 }
 
-                // T+1 Upcoming target anchor (idx === n)
-                if (idx === n) {
+                const evidence = series.meta[modelKey]?.[idx];
+                if (evidence && evidence.actual === null) {
                     pointStyles.push('star');
                     denseRadii.push(denseT1);
                     relaxedRadii.push(relaxedT1);
@@ -485,18 +465,14 @@ export class ChartManager {
                     continue;
                 }
 
-                // Historical realized prediction point (idx > 0 && idx < n)
-                if (idx > 0) {
-                    const targetDate = dates[idx];
-                    const srcDate = dates[idx - 1];
-                    const basePrice = srcDate ? dateMap.get(srcDate)?.price : null;
-                    const actualPrice = targetDate ? dateMap.get(targetDate)?.price : null;
+                if (evidence) {
+                    const basePrice = evidence.base;
+                    const actualPrice = evidence.actual;
 
                     if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
                         const predDiff = val - basePrice;
                         const actDiff = actualPrice - basePrice;
-                        // Direction hit if both positive/flat or both negative/flat
-                        const isHit = (predDiff >= 0 && actDiff >= 0) || (predDiff <= 0 && actDiff <= 0);
+                        const isHit = Math.sign(predDiff) === Math.sign(actDiff);
 
                         if (isHit) {
                             // 方向命中 (Hit): 實心幾何形狀
@@ -544,10 +520,11 @@ export class ChartManager {
             };
         };
 
-        const timestralMarkers = computeMarkerStyles(dataTimestral, 'rect', colorTimestral);
-        const timesfmMarkers = computeMarkerStyles(dataTimesfm, 'rectRot', colorTimesfm);
-        const resonanceMarkers = computeMarkerStyles(dataResonance, 'triangle', colorResonance);
-        const lstmMarkers = computeMarkerStyles(dataLstm, 'circle', colorLstm);
+        const timestralMarkers = computeMarkerStyles(dataTimestral, 'rect', colorTimestral, 'timestral');
+        const timesfmMarkers = computeMarkerStyles(dataTimesfm, 'rectRot', colorTimesfm, 'timesfm');
+        const moiraiMarkers = computeMarkerStyles(dataMoirai, 'circle', colorMoirai, 'moirai');
+        const resonanceMarkers = computeMarkerStyles(dataResonance, 'triangle', colorResonance, 'resonance');
+        const lstmMarkers = computeMarkerStyles(dataLstm, 'circle', colorLstm, 'lstm');
 
         const chart = new Chart(el, {
             type: 'line',
@@ -571,7 +548,7 @@ export class ChartManager {
                         pointBorderWidth: 1.5,
                         pointStyle: 'circle',
                         fill: true,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.price === false
                     },
                     {
@@ -584,7 +561,7 @@ export class ChartManager {
                         borderWidth: 2.4,
                         tension: 0.25,
                         ...timestralMarkers,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.timestral === false
                     },
                     {
@@ -599,7 +576,7 @@ export class ChartManager {
                         pointRadius: 0,
                         pointHoverRadius: 0,
                         fill: '+1',
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.timestralBands === false
                     },
                     {
@@ -614,7 +591,7 @@ export class ChartManager {
                         pointRadius: 0,
                         pointHoverRadius: 0,
                         fill: false,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.timestralBands === false
                     },
                     {
@@ -627,8 +604,21 @@ export class ChartManager {
                         borderWidth: 2.4,
                         tension: 0.25,
                         ...timesfmMarkers,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.timesfm === false
+                    },
+                    {
+                        key: 'moirai',
+                        label: 'MOIRAI-2 目標價',
+                        data: dataMoirai,
+                        borderColor: colorMoirai,
+                        backgroundColor: 'transparent',
+                        borderDash: [8, 4],
+                        borderWidth: 2.4,
+                        tension: 0.25,
+                        ...moiraiMarkers,
+                        spanGaps: false,
+                        hidden: visibility.moirai === false
                     },
                     {
                         key: 'resonance',
@@ -640,7 +630,7 @@ export class ChartManager {
                         borderWidth: 2.4,
                         tension: 0.25,
                         ...resonanceMarkers,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.resonance !== true
                     },
                     {
@@ -655,7 +645,7 @@ export class ChartManager {
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         pointBackgroundColor: colorMa60,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.ma60 !== true
                     },
                     {
@@ -668,7 +658,7 @@ export class ChartManager {
                         borderWidth: 1.8,
                         tension: 0.25,
                         ...lstmMarkers,
-                        spanGaps: true,
+                        spanGaps: false,
                         hidden: visibility.lstm !== true
                     }
                 ]
@@ -721,120 +711,23 @@ export class ChartManager {
                         titleFont: { family: 'JetBrains Mono', weight: 'bold' },
                         callbacks: {
                             title(items) {
-                                if (!items || !items.length) return '';
-                                const label = items[0].label;
-                                if (label === '隔日預估 (T+1)') {
-                                    return '預測目標: 隔日預估 (T+1)';
-                                }
-                                return `交易日期: ${label}`;
+                                return items && items.length ? `交易日期: ${items[0].label}` : '';
                             },
                             label(ctx) {
                                 const val = ctx.parsed.y;
-                                if (val === null || val === undefined || isNaN(val)) return null;
+                                if (val === null || val === undefined || !Number.isFinite(Number(val))) return null;
                                 const formatted = '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
-                                const label = ctx.dataset.label;
-                                const idx = ctx.dataIndex;
-
-                                if (ctx.dataset.key === 'price') {
-                                    let diffStr = '';
-                                    if (idx > 0 && idx < n) {
-                                        const prevPrice = dateMap.get(dates[idx - 1])?.price;
-                                        if (prevPrice && prevPrice > 0) {
-                                            const ret = ((val - prevPrice) / prevPrice) * 100;
-                                            const sign = ret >= 0 ? '+' : '';
-                                            const arrow = ret >= 0 ? '↑' : '↓';
-                                            diffStr = ` (${sign}${ret.toFixed(2)}% ${arrow})`;
-                                        }
-                                    }
-                                    return ` ${label}: ${formatted} (當日收盤${diffStr})`;
-                                }
-
-                                if (ctx.dataset.key === 'ma60') {
-                                    return ` ${label}: ${formatted}`;
-                                }
-
-                                if (ctx.dataset.key === 'timestralBandsUpper' || ctx.dataset.key === 'timestralBandsLower') {
-                                    if (idx > 0 && idx <= n) {
-                                        const srcDate = dates[idx - 1];
-                                        const shortDate = srcDate && srcDate.length >= 10 ? srcDate.slice(5).replace('-', '/') : srcDate;
-                                        return ` ${label} (${shortDate}預測): ${formatted}`;
-                                    }
-                                    return ` ${label}: ${formatted}`;
-                                }
-
-                                // Prediction datasets: TimesFM, Timestral, Resonance, LSTM
-                                if (idx > 0 && idx <= n) {
-                                    const srcDate = dates[idx - 1];
-                                    const shortDate = srcDate && srcDate.length >= 10 ? srcDate.slice(5).replace('-', '/') : srcDate;
-                                    const srcItem = srcDate ? dateMap.get(srcDate) : null;
-                                    const basePrice = srcItem ? srcItem.price : null;
-                                    const actualPrice = (idx < n) ? dateMap.get(dates[idx])?.price : null;
-
-                                    if (idx === n) {
-                                        if (basePrice && basePrice > 0) {
-                                            const expDiff = ((val - basePrice) / basePrice) * 100;
-                                            const expSign = expDiff >= 0 ? '+' : '';
-                                            const expArrow = expDiff >= 0 ? '↑' : '↓';
-                                            return [
-                                                ` ${label} (${shortDate}預測): ${formatted}`,
-                                                `   ↳ 預期${expDiff >= 0 ? '漲' : '跌'} ${expSign}${expDiff.toFixed(2)}% ${expArrow} (基準: ${shortDate}收盤 $${basePrice.toFixed(2)})`,
-                                                `   ↳ 狀態: ⏳ 待下個交易日收盤開獎驗證`
-                                            ];
-                                        }
-                                        return [
-                                            ` ${label} (${shortDate}預測): ${formatted}`,
-                                            `   ↳ 狀態: ⏳ 待下個交易日收盤開獎驗證`
-                                        ];
-                                    }
-
-                                    let predStr = '';
-                                    let predDiff = 0;
-                                    if (basePrice && basePrice > 0) {
-                                        predDiff = ((val - basePrice) / basePrice) * 100;
-                                        const expSign = predDiff >= 0 ? '+' : '';
-                                        const expArrow = predDiff >= 0 ? '↑' : '↓';
-                                        predStr = `預期 ${expSign}${predDiff.toFixed(2)}% ${expArrow}`;
-                                    }
-
-                                    let actStr = '';
-                                    let actDiff = 0;
-                                    if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
-                                        actDiff = ((actualPrice - basePrice) / basePrice) * 100;
-                                        const actSign = actDiff >= 0 ? '+' : '';
-                                        const actArrow = actDiff >= 0 ? '↑' : '↓';
-                                        actStr = `實際 ${actSign}${actDiff.toFixed(2)}% ${actArrow}`;
-                                    }
-
-                                    let errStr = '';
-                                    if (actualPrice && actualPrice > 0) {
-                                        const errDiff = Math.abs(val - actualPrice) / actualPrice * 100;
-                                        errStr = `誤差 ${errDiff.toFixed(2)}%`;
-                                    }
-
-                                    if (basePrice && basePrice > 0 && actualPrice && actualPrice > 0) {
-                                        const isHit = (predDiff >= 0 && actDiff >= 0) || (predDiff <= 0 && actDiff <= 0);
-                                        let outcomeLine = '';
-                                        if (isHit) {
-                                            outcomeLine = `   ↳ 🎯 方向命中 (${predStr} · ${actStr} ｜ ${errStr})`;
-                                        } else {
-                                            const predDir = predDiff >= 0 ? '預測漲' : '預測跌';
-                                            const actDir = actDiff >= 0 ? '實際跌' : '實際漲';
-                                            outcomeLine = `   ↳ ❌ 方向相反 (${predDir}但${actDir} · ${predStr} vs ${actStr} ｜ ${errStr})`;
-                                        }
-                                        return [
-                                            ` ${label} (${shortDate}預測): ${formatted}`,
-                                            outcomeLine
-                                        ];
-                                    } else if (errStr) {
-                                        return [
-                                            ` ${label} (${shortDate}預測): ${formatted}`,
-                                            `   ↳ 誤差: ${errStr}`
-                                        ];
-                                    }
-                                    return ` ${label} (${shortDate}預測): ${formatted}`;
-                                }
-
-                                return ` ${label}: ${formatted}`;
+                                const key = ctx.dataset.key;
+                                const evidenceKey = key === 'timestralBandsUpper' || key === 'timestralBandsLower' ? 'timestral' : key;
+                                const evidence = series.meta[evidenceKey]?.[ctx.dataIndex];
+                                if (!evidence) return ` ${ctx.dataset.label}: ${formatted}`;
+                                const first = ` ${ctx.dataset.label} (${evidence.source} 預測): ${formatted}`;
+                                if (evidence.actual === null) return [first, `   目標日 ${evidence.target} · 待驗證`];
+                                if (key === 'timestralBandsUpper' || key === 'timestralBandsLower') return first;
+                                const error = Math.abs(val - evidence.actual) / evidence.actual * 100;
+                                if (!evidence.base) return [first, `   已驗證 · 誤差 ${error.toFixed(2)}%`];
+                                const hit = Math.sign(val - evidence.base) === Math.sign(evidence.actual - evidence.base);
+                                return [first, `   ${hit ? '方向命中' : '方向偏離'} · 誤差 ${error.toFixed(2)}%`];
                             }
                         }
                     }

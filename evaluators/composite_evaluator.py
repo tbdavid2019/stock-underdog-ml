@@ -160,12 +160,22 @@ class CompositeEvaluator:
             # When both Timestral and LSTM are present, deprecate LSTM weight to 0 or trace
             active_weights["lstm"] = 0.0
 
+        def eligible(name: str, result: StrategyResult) -> bool:
+            if name not in {"timesfm", "timestral", "moirai"}:
+                return True
+            meta = result.metadata or {}
+            return (meta.get("role", "active") not in {"shadow", "disabled", "suspended"}
+                    and meta.get("status", "ready") in {"ready", "active"}
+                    and meta.get("health_state") != "suspended"
+                    and meta.get("effective_weight", 1.0) > 0)
+
         # 3. Evaluate each stock across all strategies
         overlap_candidates = []
         ranked_stocks = []
 
         for ticker in all_tickers:
-            strats = ticker_strat_map[ticker]
+            original_strats = ticker_strat_map[ticker]
+            strats = {name: value for name, value in original_strats.items() if eligible(name, value)}
             fund = fundamentals_map.get(ticker, {})
 
             # Count hits and gather tags
@@ -347,8 +357,9 @@ class CompositeEvaluator:
             if is_ml_bearish:
                 composite_score = round(composite_score * 0.5, 2)
 
-            # Current price resolution
-            curr_price = next(iter(strats.values())).current_price if strats else 0.0
+            # Current price resolution with defensive empty fallback
+            curr_price = next((s.current_price for s in strats.values() if getattr(s, "current_price", None) is not None),
+                              next((s.current_price for s in original_strats.values() if getattr(s, "current_price", None) is not None), 0.0))
 
             # Target Price & Potential Defensive Synthesis:
             # Ensemble of Google TimesFM and Mistral Timestral P50
@@ -365,12 +376,12 @@ class CompositeEvaluator:
             elif lstm_res and lstm_res.predicted_price is not None and np.isfinite(lstm_res.predicted_price):
                 synthesized_target = round(float(lstm_res.predicted_price), 2)
             else:
-                synthesized_target = curr_price
+                synthesized_target = None
 
-            if curr_price > 0:
+            if curr_price > 0 and synthesized_target is not None:
                 synthesized_potential = round(((synthesized_target - curr_price) / curr_price) * 100.0, 2)
             else:
-                synthesized_potential = 0.0
+                synthesized_potential = None
 
             # Risk-reward resolution
             best_rr = None

@@ -18,6 +18,10 @@
 - **WHEN** 收盤後產生買入訊號
 - **THEN** 模擬採其後可交易開盤，報告含毛報酬、逐筆成本、淨報酬與未成交原因
 
+#### Scenario: Opening liquidity is insufficient
+- **WHEN** 開盤下單量超過決策前已知的保守開盤容量
+- **THEN** 僅按已宣告容量部分成交並取消剩餘量；缺可靠容量資料則拒單，當日全天成交量不得回填當時容量
+
 ### Requirement: Reproducible performance report
 系統 SHALL 保存不可變 run ID、設定與資料快照，輸出淨值曲線、淨報酬、最大回撤、Sharpe、成交數、勝率、換手率、曝險與同幣別基準；資料不足的統計須標示 unavailable。
 

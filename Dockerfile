@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 2. 安裝 Python 依賴
 COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
+    pip install 'torch>=2.4.0,<2.5.0' && \
     pip install -r requirements.txt
 
 # 3. 複製應用程式原始碼

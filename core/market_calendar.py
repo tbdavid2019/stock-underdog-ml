@@ -134,7 +134,7 @@ class MarketCalendar:
             return "TW"
         if val in ("JP", "JPX", "TSE", "NIKKEI", "NIKKEI225", "N225", "JP225", "JAPAN") or any(k in val for k in ("日經", "日股")):
             return "JP"
-        if val.endswith(".T") or re.match(r"^\d{4,5}\.T$", val):
+        if val.endswith((".T", ".JP")) or re.match(r"^\d{4,5}(\.T|\.JP)$", val):
             return "JP"
         if ".TW" in val or ".TWO" in val:
             return "TW"

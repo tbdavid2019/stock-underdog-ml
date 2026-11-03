@@ -7,11 +7,13 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M 時序大模型**、**Google TimesFM 200M 時序大模型**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 雙模型共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **20 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M**、**Google TimesFM 3.0**、**Salesforce MOIRAI-2 研究候選**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**👑 四重共振與 🏆 雙模型共振極選**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **20 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
 ## 📸 系統介面全景展示 (Live Platform Showcase)
+
+> 開發中：`forecast-trust-and-trading-validation` 正在加入版本化開獎、跨市場協變量、TimesFM 3.0 與 MOIRAI-2 adapter。線上服務尚待整合部署，現行畫面不代表新版已上線。資料命令與限制見 [協變量管線](docs/covariates.md)、[開獎驗證](docs/forecast_verification.md)、[模型介面](docs/model_adapters.md)。必要資料缺漏會明示 unavailable；產業指數資料權限與模型真實載入仍列未完成驗收。
 
 > 🌐 **線上即時體驗**：[https://stockdata.david888.com](https://stockdata.david888.com)  
 > 專業彭博終端風格 · 深淺雙主題適配 · 桌面旗艦寬螢幕與手機端原生底部導覽列（Fixed Bottom App Bar）+ 全分頁行動卡片 RWD 零遮擋體驗
@@ -47,13 +49,14 @@ graph TD
     subgraph S2 [Stage 2: 模組化多策略矩陣]
         Pool --> ST1[🗡️ 玄鐵重劍: MA60/120 趨勢回調買點]
         Pool --> ST2[🔮 Timestral: Mistral 時序大模型 209M]
-        Pool --> ST3[🔮 TimesFM: Google 時序大模型 200M Zero-Shot]
-        Pool --> ST4[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
-        Pool --> ST5[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
+        Pool --> ST3[🔮 TimesFM 3.0: Google 時序大模型 Zero-Shot]
+        Pool --> ST4[🔮 MOIRAI-2: Salesforce 研究 Shadow]
+        Pool --> ST5[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
+        Pool --> ST6[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
     end
 
     subgraph S3 [Stage 3: 綜合評估與 AI 研報]
-        ST1 & ST2 & ST3 & ST4 & ST5 --> Composite[⭐ 雙 Foundation Model 綜合評估引擎]
+        ST1 & ST2 & ST3 & ST4 & ST5 & ST6 --> Composite[⭐ 雙 Foundation Model 綜合評估引擎]
         Exposure -.->|宏觀折減| Composite
         Composite --> Overlap[👑 四重共振 / 🏆 雙模型共振 / 焦點標的]
         Composite --> LLM[🧠 3-Tier Fallback LLM 操盤解讀<br>Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板]
@@ -90,11 +93,11 @@ graph TD
 * **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
 * 輸出嚴格單調的分位數區間 **P10 (下行防守位)**、**P50 (中位目標價)** 與 **P90 (上行獲利位)**，並以 T+1 分位數計算有界非對稱盈虧比（Risk-Reward Ratio）。
 
-### 4. 🔮 Google Research TimesFM 時序大模型 (Time Series Foundation Model)
-* 採用 Google 預訓練之 **TimesFM 200M** 解碼器架構時序基礎模型，以 **Zero-Shot 純推論模式** 進行全市場並發評估。
+### 4. 🔮 Google Research TimesFM 3.0 時序大模型 (Time Series Foundation Model)
+* 採用 Google 預訓練之 **TimesFM 3.0** 時序基礎模型，以 **Zero-Shot 純推論模式** 進行研究環境評估；TimesFM 2.5 僅保留歷史紀錄。
 * **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
 * 同步計算隔日 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**，以 T+1 之 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
-* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM × Mistral Timestral 雙時序大模型波形共識），並晉升為 **「綜合優選」**。
+* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM 3.0 × Mistral Timestral 雙時序大模型波形共識）；MOIRAI-2 初期僅保存研究成績，不直接參與選股。
 
 ### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
 * 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
@@ -323,6 +326,9 @@ graph TD
 | `/api/v1/predictions/timesfm/top-bearish` | `GET` | 查詢 **Google TimesFM 預測跌幅 TOP N** 避險/破底防禦榜 |
 | `/api/v1/predictions/lstm/*` | `GET` | 已棄用之向後相容別名端點（自動轉譯並回傳 `X-Deprecation-Warning`） |
 | `/api/v1/predictions/history/{ticker}` | `GET` | 查詢單一標的（如 `2330.TW`、`AAPL`）之時間序列歷史軌跡 |
+| `/api/v1/performance/stocks` | `GET` | 依方向命中率、誤差、基準改善與樣本數查詢股票可信度榜 |
+| `/api/v1/performance/models` | `GET` | 依共同 ticker/session 樣本比較模型戰績 |
+| `/api/v1/performance/tickers/{ticker}` | `GET` | 查詢單一標的的後端驗證成績與模型比較 |
 | `/api/v1/predictions/resolve/{query}` | `GET` | 將股票代號、英文/中文公司名稱解析為標準代號 |
 | `/api/v1/macro/latest` | `GET` | 即時取得台美股大盤宏觀風控狀態、建議曝險、FedWatch 降息機率與總經催化劑 |
 | `/api/v1/macro/investing/summary` | `GET` | Investing.com 一站式總經數據（FedWatch、美股財報、大宗商品、行事曆） |

@@ -140,6 +140,15 @@ class TestTimestralStrategy(unittest.TestCase):
         res = wrapper.forecast_batch({"FLAT": flat_series}, horizon=5)
         self.assertEqual(res, {})  # Correctly filtered out
 
+    def test_wrapper_rejects_non_native_interval_instead_of_synthesizing_five_percent(self):
+        wrapper = TimestralWrapper()
+        wrapper._is_initialized = True
+        wrapper.model = MagicMock()
+        wrapper.model.forecast.return_value = np.array([101.0] * 5)
+        prices = np.array([100.0 + (i % 7) for i in range(70)])
+        result = wrapper.forecast_batch({"POINT_ONLY": prices}, horizon=5)
+        self.assertNotIn("POINT_ONLY", result)
+
     def test_wrapper_quantile_crossing_monotonic_clamping(self):
         wrapper = TimestralWrapper()
         wrapper._is_initialized = True

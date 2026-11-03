@@ -1,9 +1,11 @@
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Tuple, Any
 from fastapi import APIRouter, Query, HTTPException, Depends, Response
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
 from data.duckdb_manager import DuckDBManager
+from data.forecast_store import ForecastStore
 
 router = APIRouter(prefix="/predictions", tags=["Predictions & Quant Signals"])
 
@@ -234,8 +236,40 @@ def get_ticker_history(
     if not resolved:
         raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{ticker}")
 
-    records = db.get_ticker_history(ticker=resolved["ticker"], limit=limit)
-    return PredictionResponse(count=len(records), data=records or [])
+    records = [{**r, "verification_status": "legacy_unverified"} for r in
+               (db.get_ticker_history(ticker=resolved["ticker"], limit=limit) or [])]
+    try:
+        store = ForecastStore(db.db_path, read_only=True)
+        evidence = store.query_records(as_of=datetime.now(timezone.utc).isoformat())
+    except Exception:
+        # Older databases do not yet contain the verification schema.
+        evidence = []
+    by_id = {}
+    for entry in evidence:
+        forecast = entry.get("forecast") or {}
+        if forecast.get("ticker") != resolved["ticker"] or int(forecast.get("horizon", 1)) != 1:
+            continue
+        forecast_id = forecast.get("forecast_id")
+        if not forecast_id:
+            continue
+        actual = entry.get("actual") or {}
+        status = entry.get("status") or "unverified"
+        if status == "settled" and str(actual.get("target_date")) != str(forecast.get("target_date")):
+            status = "invalid"
+        item = {"ticker": forecast["ticker"], "forecast_id": forecast_id,
+            "model_name": forecast.get("model_name"), "model_revision": forecast.get("model_revision"),
+            "forecast_session": forecast.get("last_complete_bar"), "target_date": forecast.get("target_date"),
+            "timestamp": forecast.get("issued_at"), "current_price": forecast.get("current_price"),
+            "predicted_price": forecast.get("predicted_price", forecast.get("prediction")),
+            "verification_status": status, "actual_price": actual.get("actual_price", actual.get("actual")) if status == "settled" else None,
+            "evidence_type": forecast.get("evidence_type"), "role": forecast.get("role"), "horizon": 1}
+        previous = by_id.get(forecast_id)
+        if previous is None or (status == "settled" and previous["verification_status"] != "settled"):
+            by_id[forecast_id] = item
+    records.extend(by_id.values())
+    records.sort(key=lambda row: str(row.get("forecast_session") or row.get("timestamp") or ""), reverse=True)
+    records = records[:limit]
+    return PredictionResponse(count=len(records), data=records)
 
 
 @router.get("/resolve/{query}", response_model=TickerResolutionResponse, summary="解析股票代號或公司名稱")

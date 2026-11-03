@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Forecast performance read endpoints
-系統 SHALL 提供 GET `/api/v1/performance/stocks`、`/api/v1/performance/models`、`/api/v1/performance/tickers/{ticker}`、`/api/v1/models/health`，支援市場、版本、步長、視窗與 as_of 等適用篩選，回傳樣本、覆蓋、方法版本、產出時間與 stale 狀態。
+系統 SHALL 提供 GET `/api/v1/performance/stocks`、`/api/v1/performance/models`、`/api/v1/performance/tickers/{ticker}`、`/api/v1/models/health`，支援市場、版本、目標類型、步長、視窗與 as_of 等適用篩選，回傳樣本、覆蓋、方法版本、產出時間、用途資格與 stale 狀態。
 
 #### Scenario: Invalid filter or insufficient evidence
 - **WHEN** 視窗或步長無效，或有效樣本不足

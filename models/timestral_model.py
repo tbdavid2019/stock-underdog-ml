@@ -11,11 +11,12 @@ import threading
 from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
+from core.config import usage_eligibility
 
 logger = logging.getLogger("stock_app.models.timestral")
 
 # Global singleton instance cache and mutex
-_GLOBAL_TIMESTRAL_WRAPPER: Optional["TimestralWrapper"] = None
+_GLOBAL_TIMESTRAL_WRAPPERS: Dict[tuple, "TimestralWrapper"] = {}
 _MODEL_LOCK = threading.Lock()
 
 
@@ -26,6 +27,9 @@ class TimestralWrapper:
     and CPU thread bounds.
     """
 
+    PACKAGE_REVISION = "a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff"
+    MODEL_VERSION = "timestral-209m"
+
     def __init__(
         self,
         model_id: str = "mistralai/Timestral-209M",
@@ -33,19 +37,28 @@ class TimestralWrapper:
         horizon: int = 5,
         batch_size: int = 32,
         device: Optional[str] = None,
+        checkpoint_revision: str = "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
     ):
         self.model_id = model_id
         self.context_len = max(64, context_len)
         self.horizon = horizon
         self.batch_size = batch_size
         self.device = device or "cpu"
+        self.checkpoint_revision = checkpoint_revision
         self.model = None
         self._is_initialized = False
+        self.last_status = "uninitialized"
 
     def load_model(self) -> bool:
         """Lazily and thread-safely loads the Timestral pretrained model."""
         if self._is_initialized and self.model is not None:
             return True
+
+        eligibility = usage_eligibility("timestral")
+        if not eligibility["eligible"]:
+            self.last_status = "disabled"
+            logger.warning("Timestral disabled by deployment eligibility: %s", eligibility["reason"])
+            return False
 
         with _MODEL_LOCK:
             if self._is_initialized and self.model is not None:
@@ -63,17 +76,21 @@ class TimestralWrapper:
                 # Initialize TimestralForecaster
                 self.model = TimestralForecaster.from_pretrained(
                     self.model_id,
-                    device=self.device
+                    device=self.device,
+                    revision=self.checkpoint_revision,
                 )
                 self._is_initialized = True
+                self.last_status = "ready"
                 logger.info(f"✅ Mistral Timestral 模型載入成功 ({self.model_id})")
                 return True
 
             except ImportError as e:
+                self.last_status = "dependency_unavailable"
                 logger.warning(f"⚠️ timestral 套件未安裝或依賴不齊全，Timestral 策略將降級略過: {e}")
                 self.model = None
                 return False
             except Exception as e:
+                self.last_status = "load_failed"
                 logger.error(f"❌ 載入 Mistral Timestral 模型失敗 ({self.model_id}): {e}", exc_info=True)
                 self.model = None
                 return False
@@ -82,6 +99,7 @@ class TimestralWrapper:
         self,
         series_dict: Dict[str, np.ndarray],
         horizon: Optional[int] = None,
+        past_covariates: Optional[Dict[str, np.ndarray]] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """
         Execute vectorized zero-shot forecasting on a batch of stock price series.
@@ -104,11 +122,13 @@ class TimestralWrapper:
         valid_tickers = []
         collated_inputs = []
         current_prices = {}
+        collated_covariates = {}
 
         # 1. Clean, validate, and collate time series to uniform context length
         for ticker, series in series_dict.items():
-            clean_series = np.array(series, dtype=np.float64)
-            clean_series = clean_series[~np.isnan(clean_series)]
+            raw_series = np.array(series, dtype=np.float64).reshape(-1)
+            valid_mask = np.isfinite(raw_series)
+            clean_series = raw_series[valid_mask]
 
             # Guard 1: Minimum lookback required for foundation attention
             if len(clean_series) < 60:
@@ -124,6 +144,14 @@ class TimestralWrapper:
 
             # Collate tail to uniform context length
             tail_series = clean_series[-self.context_len:]
+            cov = (past_covariates or {}).get(ticker)
+            if cov is not None:
+                cov = np.asarray(cov, dtype=np.float32)
+                if cov.ndim != 2 or cov.shape[1] != raw_series.size or not np.isfinite(cov).all():
+                    logger.warning("Timestral covariates invalid for ticker %s", ticker)
+                    continue
+                aligned_cov = cov[:, valid_mask][:, -self.context_len:]
+                collated_covariates[ticker] = aligned_cov
             valid_tickers.append(ticker)
             collated_inputs.append(tail_series)
             current_prices[ticker] = curr_price
@@ -149,10 +177,16 @@ class TimestralWrapper:
 
                     # Execute forecast
                     # TimestralForecaster forecast method returns probabilistic forecast object
-                    forecast = self.model.forecast(
-                        input_seq,
-                        prediction_length=forecast_horizon
-                    )
+                    try:
+                        forecast = self.model.forecast(
+                            input_seq,
+                            prediction_length=forecast_horizon,
+                            past_covariates=(collated_covariates[ticker][None, :, :]
+                                             if ticker in collated_covariates else None),
+                        )
+                    except Exception as forecast_err:
+                        logger.warning("Timestral inference failed for ticker %s: %s", ticker, forecast_err)
+                        continue
 
                     # Extract trajectory & quantiles
                     # Forecast object provides quantile extraction or array indexing
@@ -167,22 +201,21 @@ class TimestralWrapper:
                             p50_series = np.array(forecast.get("p50", forecast.get("0.5", forecast.get("mean", []))))
                             p90_series = np.array(forecast.get("p90", forecast.get("0.9", [])))
                         else:
-                            # Direct tensor / ndarray output
-                            arr = np.array(forecast)
-                            p50_series = arr if arr.ndim == 1 else arr[-1]
-                            p10_series = p50_series * 0.95
-                            p90_series = p50_series * 1.05
+                            raise ValueError("forecast output does not expose native quantiles")
                     except Exception as parse_err:
-                        logger.warning(f"⚠️ 解析 {ticker} Timestral 分位數輸出失敗，使用點預測: {parse_err}")
-                        p50_val = float(getattr(forecast, "mean", curr_price))
-                        p50_series = np.array([p50_val] * forecast_horizon)
-                        p10_series = p50_series * 0.95
-                        p90_series = p50_series * 1.05
+                        logger.warning("Timestral native quantile output rejected for ticker %s: %s", ticker, parse_err)
+                        continue
 
                     # Ensure 1D shape and length match horizon
                     p50_series = np.atleast_1d(p50_series).flatten()
                     p10_series = np.atleast_1d(p10_series).flatten()
                     p90_series = np.atleast_1d(p90_series).flatten()
+                    if not all(np.isfinite(a).all() for a in (p10_series, p50_series, p90_series)):
+                        logger.warning("Timestral nonfinite output rejected for ticker %s", ticker)
+                        continue
+                    if min(len(p10_series), len(p50_series), len(p90_series)) < forecast_horizon:
+                        logger.warning("Timestral incomplete native quantiles rejected for ticker %s", ticker)
+                        continue
 
                     day1_pred = float(p50_series[0]) if len(p50_series) > 0 else curr_price
                     dayN_pred = float(p50_series[-1]) if len(p50_series) > 0 else curr_price
@@ -233,6 +266,11 @@ class TimestralWrapper:
                             "p50_horizon": p50_horizon,
                             "p90_horizon": p90_horizon,
                         },
+                        "quantile_source": "native",
+                        "model_version": self.MODEL_VERSION,
+                        "model_id": self.model_id,
+                        "checkpoint_revision": self.checkpoint_revision,
+                        "package_revision": self.PACKAGE_REVISION,
                         "downside_risk": float(downside_risk),
                         "upside_potential": float(upside_potential),
                         "risk_reward_ratio": risk_reward_ratio,
@@ -252,17 +290,18 @@ def get_timestral_model(
     horizon: int = 5,
     batch_size: int = 32,
     device: Optional[str] = None,
+    checkpoint_revision: str = "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
 ) -> TimestralWrapper:
     """Get or initialize the global thread-safe Timestral singleton wrapper."""
-    global _GLOBAL_TIMESTRAL_WRAPPER
-    if _GLOBAL_TIMESTRAL_WRAPPER is None:
-        with _MODEL_LOCK:
-            if _GLOBAL_TIMESTRAL_WRAPPER is None:
-                _GLOBAL_TIMESTRAL_WRAPPER = TimestralWrapper(
-                    model_id=model_id,
-                    context_len=context_len,
-                    horizon=horizon,
-                    batch_size=batch_size,
-                    device=device,
-                )
-    return _GLOBAL_TIMESTRAL_WRAPPER
+    key = (model_id, checkpoint_revision, context_len, horizon, batch_size, device)
+    with _MODEL_LOCK:
+        if key not in _GLOBAL_TIMESTRAL_WRAPPERS:
+            _GLOBAL_TIMESTRAL_WRAPPERS[key] = TimestralWrapper(
+                model_id=model_id,
+                context_len=context_len,
+                horizon=horizon,
+                batch_size=batch_size,
+                device=device,
+                checkpoint_revision=checkpoint_revision,
+            )
+        return _GLOBAL_TIMESTRAL_WRAPPERS[key]

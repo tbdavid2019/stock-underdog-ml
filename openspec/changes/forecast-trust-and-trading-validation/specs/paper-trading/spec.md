@@ -5,11 +5,15 @@
 ## ADDED Requirements
 
 ### Requirement: Idempotent simulated order lifecycle
-系統 SHALL 以帳戶、訊號與決策 session 識別模擬訂單，保存 submitted、rejected、filled、cancelled 狀態與原因；成交前執行風控，訂單與成交保持可追溯且重試冪等。
+系統 SHALL 以帳戶、訊號與決策 session 識別模擬訂單，保存 submitted、rejected、partially_filled、filled、cancelled 狀態與原因；成交前執行風控，訂單與成交保持可追溯且重試冪等。
 
 #### Scenario: Scheduler retries after fill
 - **WHEN** 同一交易批次因中斷重跑
 - **THEN** 已成交訂單保持單筆，現金、費用與持倉不重複扣加
+
+#### Scenario: Partial fill with cancelled remainder
+- **WHEN** 訂單只有部分成交且剩餘量在當session取消
+- **THEN** 最終狀態為 partially_filled，列出已成交量、取消量與剩餘量零；重跑維持同筆成交與成本
 
 ### Requirement: Reconciled cash and positions
 系統 SHALL 分市場及幣別維護多頭模擬帳戶，保存現金、股數、成本、已實現／未實現損益與每日淨值，處理拆股與配息事件並避免與還原價格重複計入。

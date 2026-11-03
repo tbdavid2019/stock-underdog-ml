@@ -11,6 +11,10 @@
 - **WHEN** 上游斷線使當日尚無新開獎
 - **THEN** 標示 stale／unavailable 並維持最後品質狀態，品質判斷不把缺資料視為猜錯
 
+#### Scenario: Correlated stocks and repeated evaluation
+- **WHEN** 同一session有多檔相關股票、重疊預測或排程重跑
+- **THEN** 各市場／版本／步長先按當日股票等權聚合，同一session僅推進一次狀態計數；缺少足夠開獎的session不推進
+
 ### Requirement: Auditable weight reduction and suspension
 系統 SHALL 支援先觀測後啟用的自動降權政策，保存每次轉換證據、門檻、有效時間、原權重與有效權重；suspended 模型對目標合成與共振資格貢獻為零，原始影子預測持續保存。
 

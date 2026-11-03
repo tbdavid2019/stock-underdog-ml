@@ -20,6 +20,12 @@ except Exception as e:
     logging.getLogger("stock_app.strategies").warning(f"⚠️ timesfm strategy import skipped: {e}")
 
 try:
+    import strategies.moirai
+except Exception as e:
+    import logging
+    logging.getLogger("stock_app.strategies").warning(f"⚠️ moirai strategy import skipped: {e}")
+
+try:
     import strategies.lstm
 except Exception as e:
     import logging

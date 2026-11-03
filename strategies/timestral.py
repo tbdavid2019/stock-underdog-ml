@@ -50,6 +50,7 @@ class TimestralStrategy(BaseStrategy):
                 model_id=self.model_id,
                 context_len=self.context_len,
                 horizon=self.horizon,
+                checkpoint_revision=config.pipeline.TIMESTRAL_CHECKPOINT_REVISION,
             )
         return self._model_wrapper
 
@@ -103,7 +104,34 @@ class TimestralStrategy(BaseStrategy):
 
         # 2. Batch forecast with Timestral Foundation Model
         model = self._get_model()
-        forecasts = model.forecast_batch(series_dict, horizon=self.horizon)
+        covariates = {}
+        for ticker, ctx in valid_contexts.items():
+            cov = ctx.metadata.get("past_covariates")
+            if ctx.metadata.get("feature_profile") == "full_features" and (
+                    cov is None or ctx.metadata.get("feature_status") not in (None, "ready", "full_features")):
+                results.append(StrategyResult(ticker, self.name, False,
+                    current_price=float(ctx.df["Close"].iloc[-1]),
+                    signals={"reason": "features_unavailable"},
+                    metadata={"model": "timestral", "status": "features_unavailable",
+                              "feature_profile": "full_features", "feature_status": ctx.metadata.get("feature_status"),
+                              "feature_snapshot": ctx.metadata.get("feature_snapshot")}))
+                series_dict.pop(ticker, None)
+                continue
+            if cov is not None:
+                cov = np.asarray(cov, dtype=np.float32)
+                if cov.ndim != 2 or cov.shape[1] != len(series_dict[ticker]) or not np.isfinite(cov).all():
+                    results.append(StrategyResult(ticker, self.name, False,
+                        current_price=float(ctx.df["Close"].iloc[-1]), signals={"reason": "features_unavailable"},
+                        metadata={"model": "timestral", "status": "features_unavailable"}))
+                    series_dict.pop(ticker, None)
+                    continue
+                covariates[ticker] = cov
+
+        if not series_dict:
+            return results
+        valid_contexts = {ticker: ctx for ticker, ctx in valid_contexts.items() if ticker in series_dict}
+        forecasts = model.forecast_batch(series_dict, horizon=self.horizon,
+                                         past_covariates=covariates or None)
 
         # 3. Assemble StrategyResults with probabilistic risk/reward
         for ticker, ctx in valid_contexts.items():
@@ -118,7 +146,13 @@ class TimestralStrategy(BaseStrategy):
                         is_hit=False,
                         score=0.0,
                         current_price=curr_price,
-                        signals={"reason": "Timestral 推論未產出有效結果"}
+                    signals={"reason": "Timestral 推論未產出有效結果"},
+                    metadata={"model": "timestral", "model_version": "timestral-209m",
+                                    "role": "active", "status": getattr(model, "last_status", "inference_failed"),
+                                    "profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "feature_profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "feature_status": ctx.metadata.get("feature_status", "ready" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                                    "feature_snapshot": ctx.metadata.get("feature_snapshot")}
                     )
                 )
                 continue
@@ -186,6 +220,15 @@ class TimestralStrategy(BaseStrategy):
                     potential=round(potential, 2),
                     signals=signals,
                     metrics=metrics,
+                    metadata={"model": "timestral", "model_version": f.get("model_version", "timestral-209m"),
+                              "model_id": f.get("model_id", self.model_id),
+                              "checkpoint_revision": f.get("checkpoint_revision"),
+                              "package_revision": f.get("package_revision"), "role": "active",
+                              "profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_profile": ctx.metadata.get("feature_profile", "market_features" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_status": ctx.metadata.get("feature_status", "ready" if ctx.metadata.get("past_covariates") is not None else "price_only"),
+                              "feature_snapshot": ctx.metadata.get("feature_snapshot"),
+                              "quantile_source": f.get("quantile_source"), "status": "ready"},
                     tags=tags
                 )
             )

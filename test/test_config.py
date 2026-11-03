@@ -17,9 +17,16 @@ class TestConfig(unittest.TestCase):
         self.assertIn("xuantie", config.pipeline.ENABLED_STRATEGIES)
         self.assertIn("timestral", config.pipeline.ENABLED_STRATEGIES)
         self.assertIn("timesfm", config.pipeline.ENABLED_STRATEGIES)
+        self.assertIn("moirai", config.pipeline.ENABLED_STRATEGIES)
         self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["xuantie"], 0.35)
         self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["timesfm"], 0.25)
         self.assertAlmostEqual(config.pipeline.STRATEGY_WEIGHTS["timestral"], 0.25)
+
+    def test_model_version_and_initial_roles(self):
+        self.assertEqual(config.pipeline.TIMESFM_MODEL_ID, "google/timesfm-3.0-pytorch")
+        self.assertEqual(config.pipeline.MOIRAI_MODEL_ID, "Salesforce/moirai-2.0-R-small")
+        self.assertEqual(config.pipeline.MODEL_ROLES["moirai"], "shadow")
+        self.assertEqual(config.pipeline.MODEL_ROLES["timesfm"], "research")
 
 
 if __name__ == "__main__":

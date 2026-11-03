@@ -5,7 +5,7 @@
 ## ADDED Requirements
 
 ### Requirement: Immutable forecast identity and provenance
-系統 SHALL 保存每筆預測的唯一識別、標的、市場、模型與權重版本、程式與設定版本、產生時間、輸入資料截止、價格基準、步長及目標交易日；同一邏輯執行重試須冪等，不同執行須可追溯。
+系統 SHALL 保存每筆預測的唯一識別、標的、市場、模型與權重版本、程式與設定版本、產生時間、輸入資料截止、價格基準、目標類型、標籤定義版本、步長及目標交易日；同一邏輯執行重試須冪等，不同執行須可追溯。
 
 #### Scenario: Retrying and upgrading forecasts
 - **WHEN** 相同批次重送，或模型改版後再次預測相同標的

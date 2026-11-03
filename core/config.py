@@ -62,7 +62,7 @@ class PipelineConfig:
     INDEX_CACHE_MAX_AGE_DAYS: int = 90
     DEFAULT_DEVICE: str = os.getenv("DEVICE", "auto")
     ENABLED_STRATEGIES: List[str] = [
-        s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,timesfm,timestral").split(",") if s.strip()
+        s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,timesfm,timestral,moirai").split(",") if s.strip()
     ]
     STRATEGY_WEIGHTS: Dict[str, float] = {
         "xuantie": 0.35,
@@ -70,8 +70,18 @@ class PipelineConfig:
         "timestral": 0.25,
         "institutional": 0.15,
     }
-    # TimesFM Model Configurations
-    TIMESFM_MODEL_ID: str = os.getenv("TIMESFM_MODEL_ID", "google/timesfm-2.5-200m-pytorch")
+    # Foundation model runtime policy. Weight revisions are independent of package commits.
+    # Fail closed: restricted research weights require explicit DEPLOYMENT_MODE=research.
+    DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "production").strip().lower()
+    MODEL_ROLES: Dict[str, str] = {"timesfm": "research", "timestral": "active", "moirai": "shadow"}
+    # Full cross-market covariates enabled by default (supports full_features, market_features, price_only).
+    FORECAST_FEATURE_PROFILE: str = os.getenv("FORECAST_FEATURE_PROFILE", "full_features").strip().lower()
+
+    # TimesFM 3.0 (the 2.5 checkpoint remains historical-only).
+    TIMESFM_MODEL_ID: str = os.getenv("TIMESFM_MODEL_ID", "google/timesfm-3.0-pytorch")
+    TIMESFM_CHECKPOINT_REVISION: str = os.getenv(
+        "TIMESFM_CHECKPOINT_REVISION", "43046b85ec22d584a13f8098c2ed39c889e129c2"
+    )
     TIMESFM_HORIZON: int = int(os.getenv("TIMESFM_HORIZON", "5"))
     TIMESFM_CONTEXT_LEN: int = int(os.getenv("TIMESFM_CONTEXT_LEN", "128"))
     TIMESFM_MIN_POTENTIAL: float = float(os.getenv("TIMESFM_MIN_POTENTIAL", "0.5"))
@@ -79,10 +89,50 @@ class PipelineConfig:
 
     # Timestral Model Configurations
     TIMESTRAL_MODEL_ID: str = os.getenv("TIMESTRAL_MODEL_ID", "mistralai/Timestral-209M")
+    TIMESTRAL_CHECKPOINT_REVISION: str = os.getenv(
+        "TIMESTRAL_CHECKPOINT_REVISION", "9874d252ab0aae16f7f7c999f98f98d6ad7d8365"
+    )
+    # Active by default; deployments subject to Mistral's revenue restriction can disable it.
+    TIMESTRAL_PRODUCTION_ELIGIBLE: bool = os.getenv("TIMESTRAL_PRODUCTION_ELIGIBLE", "true").lower() in ("true", "1", "yes")
     TIMESTRAL_HORIZON: int = int(os.getenv("TIMESTRAL_HORIZON", "5"))
     TIMESTRAL_CONTEXT_LEN: int = int(os.getenv("TIMESTRAL_CONTEXT_LEN", "128"))
     TIMESTRAL_MIN_POTENTIAL: float = float(os.getenv("TIMESTRAL_MIN_POTENTIAL", "0.5"))
     TIMESTRAL_MIN_RISK_REWARD: float = float(os.getenv("TIMESTRAL_MIN_RISK_REWARD", "1.2"))
+
+    # Salesforce MOIRAI-2 research shadow adapter.
+    MOIRAI_MODEL_ID: str = os.getenv("MOIRAI_MODEL_ID", "Salesforce/moirai-2.0-R-small")
+    MOIRAI_CHECKPOINT_REVISION: str = os.getenv(
+        "MOIRAI_CHECKPOINT_REVISION", "30f43ff08c8494f4943ae1521e9d4e94a0fbb389"
+    )
+    MOIRAI_HORIZON: int = int(os.getenv("MOIRAI_HORIZON", "5"))
+    MOIRAI_CONTEXT_LEN: int = int(os.getenv("MOIRAI_CONTEXT_LEN", "128"))
+    MOIRAI_BATCH_SIZE: int = int(os.getenv("MOIRAI_BATCH_SIZE", "4"))
+    MOIRAI_MIN_POTENTIAL: float = float(os.getenv("MOIRAI_MIN_POTENTIAL", "0.5"))
+    MOIRAI_MIN_RISK_REWARD: float = float(os.getenv("MOIRAI_MIN_RISK_REWARD", "1.0"))
+
+
+def usage_eligibility(model_key: str, deployment_mode: Optional[str] = None) -> Dict[str, object]:
+    """Return auditable weight-use eligibility, separate from measured performance."""
+    mode = (deployment_mode or PipelineConfig.DEPLOYMENT_MODE).strip().lower()
+    key = model_key.strip().lower()
+    if mode not in {"research", "production"}:
+        return {"eligible": False, "reason": f"unsupported_deployment_mode:{mode}", "deployment_mode": mode}
+    if key in {"timesfm", "moirai"} and mode == "production":
+        reason = (
+            "timesfm3_weights_restricted_to_noncommercial_nonproduction_use"
+            if key == "timesfm" else "moirai2_weights_cc_by_nc_4_0"
+        )
+        return {"eligible": False, "reason": reason, "deployment_mode": mode}
+    if key == "moirai" and mode == "research":
+        return {"eligible": True, "reason": "research_only_shadow_candidate", "deployment_mode": mode}
+    if key == "timesfm" and mode == "research":
+        return {"eligible": True, "reason": "research_weights_noncommercial_nonproduction", "deployment_mode": mode}
+    if key == "timestral":
+        if mode == "production" and not PipelineConfig.TIMESTRAL_PRODUCTION_ELIGIBLE:
+            return {"eligible": False, "reason": "timestral_modified_mit_production_rights_unconfirmed",
+                    "deployment_mode": mode}
+        return {"eligible": True, "reason": "configured_model_use", "deployment_mode": mode}
+    return {"eligible": False, "reason": "unknown_model", "deployment_mode": mode}
 
 
 class LLMConfig:

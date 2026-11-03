@@ -15,12 +15,17 @@ from models.timesfm_model import TimesFMWrapper
 class TestTimesFMStrategy(unittest.TestCase):
 
     def setUp(self):
+        self.deployment_patch = patch("core.config.PipelineConfig.DEPLOYMENT_MODE", "research")
+        self.deployment_patch.start()
         self.strategy = TimesFMStrategy(
             horizon=5,
             context_len=128,
             min_potential_hit=1.0,
             min_risk_reward_hit=1.2
         )
+
+    def tearDown(self):
+        self.deployment_patch.stop()
 
     def test_insufficient_data(self):
         df = pd.DataFrame({"Close": [100.0] * 10})
@@ -144,28 +149,26 @@ class TestTimesFMStrategy(unittest.TestCase):
         wrapper = TimesFMWrapper()
         wrapper._is_initialized = True
         wrapper.model = MagicMock()
-        wrapper.model.forecast.return_value = (
-            np.array([[101.0, 102.0, 103.0, 104.0, 110.0]]),
-            np.array([
-                [
-                    [98.0, 99.0, 100.0, 100.5, 101.0, 101.0, 102.0, 103.0, 105.0, 120.0],
-                    [98.0, 99.0, 100.0, 101.0, 102.0, 102.0, 103.0, 104.0, 106.0, 130.0],
-                    [98.0, 99.0, 100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 108.0, 140.0],
-                    [98.0, 99.0, 100.0, 101.0, 103.0, 104.0, 105.0, 106.0, 110.0, 145.0],
-                    [98.0, 98.0, 99.0, 100.0, 106.0, 108.0, 110.0, 112.0, 120.0, 150.0],
-                ]
-            ])
-        )
+        output = MagicMock()
+        output.forecast = np.array([101.0, 102.0, 103.0, 104.0, 110.0])
+        output.quantiles = np.array([
+            [98., 99., 100., 100.5, 101., 101.5, 102., 103., 105.],
+            [98., 99., 100., 101., 102., 103., 104., 106., 130.],
+            [98., 99., 100., 101., 102., 103., 104., 108., 140.],
+            [98., 99., 100., 101., 103., 104., 105., 110., 145.],
+            [98., 98., 99., 100., 106., 108., 110., 120., 150.],
+        ])
+        wrapper.model.predict_batch.return_value = iter([output])
 
         result = wrapper.forecast_batch({"TEST": np.array([100.0] * 60)}, horizon=5)["TEST"]
 
         # T+1 day1_pred is 101.0, curr is 100.0 -> potential = 1.0
         self.assertEqual(result["predicted_price"], 101.0)
-        self.assertEqual(result["potential"], 1.0)
-        self.assertEqual(result["day1_potential"], 1.0)
-        self.assertEqual(result["horizon_potential"], 10.0)
-        # T+1: p50_day1 = 101.0, p10_day1 = 99.0, curr = 100.0 -> reward 1.0, risk 1.0 -> rr 1.0
-        self.assertEqual(result["risk_reward_ratio"], 1.0)
+        self.assertAlmostEqual(result["potential"], 1.0)
+        self.assertAlmostEqual(result["day1_potential"], 1.0)
+        self.assertAlmostEqual(result["horizon_potential"], 10.0)
+        # Native 3.0 indices 0/4/8: P10=98, P50=101 -> reward=1, risk=2.
+        self.assertEqual(result["risk_reward_ratio"], 0.5)
 
     def test_default_initialization_from_config(self):
         """驗證 TimesFMStrategy 預設值正確自 config 讀取 T+1 適配之 0.5% 與 0.35x 門檻"""
