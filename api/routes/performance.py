@@ -85,7 +85,16 @@ def _eval_health(as_of: Optional[str], market: Optional[str], model_name: Option
     iso = as_of or datetime.now(timezone.utc).isoformat()
     query_obj = PerformanceQuery(as_of=iso, market=market, model_name=model_name)
     rows = _fetch(store, query_obj)
-    return evaluate_model_health(rows, as_of=query_obj.as_of, policy_mode=policy_mode)
+    denominator = {}
+    for r in rows:
+        f = r.get("forecast", r)
+        t_date = f.get("target_date")
+        t_ticker = f.get("ticker")
+        if t_date and t_ticker:
+            denominator.setdefault(t_date, set()).add(t_ticker)
+    return evaluate_model_health(rows, as_of=query_obj.as_of,
+                                 eligible_tickers_by_session=denominator,
+                                 policy_mode=policy_mode)
 
 
 @router.get("/health")
