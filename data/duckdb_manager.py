@@ -1097,7 +1097,7 @@ class DuckDBManager:
                    ) as rn
             FROM predictions p
             JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
-            WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%' OR p.dual_model_consensus = TRUE)
+            WHERE (p.model_name = '多維共振' OR p.strategy_type = '多維共振' OR p.tags LIKE '%共振%' OR p.tags LIKE '%雙重符合%' OR p.tags LIKE '%3重符合%' OR p.dual_model_consensus = TRUE OR p.tri_model_consensus = TRUE)
               AND (COALESCE(p.tags, '') NOT LIKE '%防守%' AND COALESCE(p.tags, '') NOT LIKE '%深度防守%')
               AND (p.potential IS NULL OR p.potential > -5.0)
               {p_where_sql}
@@ -1574,7 +1574,8 @@ class DuckDBManager:
                     cand["timestral_potential"] = float(pot)
                 if pred is not None:
                     cand["timestral_predicted_price"] = float(pred)
-                    cand["predicted_price"] = float(pred)
+                    if cand.get("predicted_price") is None:
+                        cand["predicted_price"] = float(pred)
                 if r.get("timestral_p10") is not None:
                     cand["timestral_p10"] = float(r["timestral_p10"])
                 if r.get("timestral_p90") is not None:

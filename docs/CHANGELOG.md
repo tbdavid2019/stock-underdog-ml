@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-11-04 (v2.4.65)
+
+### Bug Fixes & Code Review Hardening (OpenCode & Codex Dual Review Fixes)
+- **多模型加權合成目標價演算法正規化 (`evaluators/composite_evaluator.py`)**：
+  - 改用策略權重比例動態加權合成（TimesFM 0.20、Timestral 0.20、MOIRAI 0.15 正規化）；任一模型缺失時依可用權重動態正規化，完美維持雙模型 50/50 與三模型加權視野。
+  - 修復位階判定順序：`hit_tri_fm` 優先於 `is_triple_resonance`，避免三大模型且具支撐之標的被誤降級為三重共振。
+  - 修正標籤字串一致性（`👑三大模型共振`），杜絕前端 UI 出現重複之「三模型看漲」徽章。
+- **排程日報防護與 None 安全處理 (`evaluators/formatter.py`)**：
+  - 修復 `format_email_message` 與 `print_evaluation_report` 在 `current_price` 或 `predicted_price` 為 `None` 時格式化引發 `TypeError` 的潛在 crash 缺陷。
+  - 修復分位數 `np.nan` 導致之 `[nan~nan]` 顯示字樣。
+- **授權合規檢查防護 (`core/config.py`)**：
+  - 保留生產模式下 `TIMESTRAL_PRODUCTION_ELIGIBLE` 專屬授權合規閘門檢驗。
+- **FastMCP 服務對齊 (`mcp_server.py`)**：
+  - 補齊 `@mcp.tool(name="get_moirai_top_predictions")`，維持 FastMCP SSE 與 WebMCP 工具集 100% 一致。
+- **資料庫快照與前端歷史對齊 (`data/duckdb_manager.py` & `api/static/js/app.js`)**：
+  - `get_latest_candidate_snapshot` 優先保留 `多維共振` 的合成目標價，避免單一模型非確定性覆寫。
+  - `get_resonance_candidates` 查詢補上 `OR p.tri_model_consensus = TRUE`。
+  - `dailyHistoryRows` 補齊 `r.moirai_predicted_price` 映射，確保歷史走勢能完整讀取各批次 MOIRAI 預測。
+
+---
+
 ## 2026-11-04 (v2.4.64)
 
 ### Major Feature & Architecture Fix: Salesforce MOIRAI-2 Full Production Activation & Tri-Model Resonance Pipeline

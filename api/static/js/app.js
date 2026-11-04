@@ -433,6 +433,10 @@ export const app = createApp({
                     const tmp = Number(r.timestral_predicted_price);
                     if (!isNaN(tmp) && tmp > 0) item.timestralPred = tmp;
                 }
+                if (r.moirai_predicted_price && !item.moiraiIssued) {
+                    const mrp = Number(r.moirai_predicted_price);
+                    if (!isNaN(mrp) && mrp > 0) item.moiraiPred = mrp;
+                }
 
                 const predP = Number(r.predicted_price);
                 const verified = r.verification_status === 'settled' &&

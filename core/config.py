@@ -117,7 +117,11 @@ def usage_eligibility(model_key: str, deployment_mode: Optional[str] = None) -> 
     key = model_key.strip().lower()
     if mode not in {"research", "production"}:
         return {"eligible": False, "reason": f"unsupported_deployment_mode:{mode}", "deployment_mode": mode}
-    if key in {"timesfm", "moirai", "timestral"}:
+    if key == "timestral":
+        if mode == "production" and not PipelineConfig.TIMESTRAL_PRODUCTION_ELIGIBLE:
+            return {"eligible": False, "reason": "timestral_modified_mit_production_rights_unconfirmed", "deployment_mode": mode}
+        return {"eligible": True, "reason": "configured_model_use", "deployment_mode": mode}
+    if key in {"timesfm", "moirai"}:
         return {"eligible": True, "reason": "configured_model_use", "deployment_mode": mode}
     return {"eligible": False, "reason": "unknown_model", "deployment_mode": mode}
 

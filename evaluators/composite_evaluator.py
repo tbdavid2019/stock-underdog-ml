@@ -272,7 +272,7 @@ class CompositeEvaluator:
             hit_any_ml = hit_any_fm or hit_lstm
 
             if hit_tri_fm:
-                combined_tags.append("🔮三大模型共振")
+                combined_tags.append("👑三大模型共振")
             elif hit_both_fm:
                 combined_tags.append("🔮雙大模型共振")
             elif hit_both_ml and not hit_both_fm:
@@ -356,10 +356,10 @@ class CompositeEvaluator:
             if not is_ml_bearish:
                 if is_quad_resonance:
                     resonance_tier = "👑四重共振"
-                elif is_triple_resonance:
-                    resonance_tier = "🏆三重共振"
                 elif hit_tri_fm:
                     resonance_tier = "👑三大模型共振"
+                elif is_triple_resonance:
+                    resonance_tier = "🏆三重共振"
                 elif hit_both_fm:
                     resonance_tier = "🔮雙大模型共振"
                 elif hit_both_ml:
@@ -397,14 +397,20 @@ class CompositeEvaluator:
                               next((s.current_price for s in original_strats.values() if getattr(s, "current_price", None) is not None), 0.0))
 
             # Target Price & Potential Defensive Synthesis:
-            # Ensemble of Google TimesFM, Mistral Timestral, and Salesforce MOIRAI-2 P50
-            valid_target_prices = []
-            for fm_res in (timesfm_res, timestral_res, moirai_res):
-                if fm_res and fm_res.predicted_price is not None and np.isfinite(fm_res.predicted_price):
-                    valid_target_prices.append(float(fm_res.predicted_price))
+            # Weighted ensemble of foundation models based on active strategy weights
+            fm_weights = {
+                "timesfm": active_weights.get("timesfm", 0.20),
+                "timestral": active_weights.get("timestral", 0.20),
+                "moirai": active_weights.get("moirai", 0.15),
+            }
+            valid_weights_and_prices = []
+            for name, res in [("timesfm", timesfm_res), ("timestral", timestral_res), ("moirai", moirai_res)]:
+                if res and res.predicted_price is not None and np.isfinite(res.predicted_price):
+                    valid_weights_and_prices.append((fm_weights.get(name, 0.20), float(res.predicted_price)))
 
-            if valid_target_prices:
-                synthesized_target = round(sum(valid_target_prices) / len(valid_target_prices), 2)
+            if valid_weights_and_prices:
+                total_w = sum(w for w, _ in valid_weights_and_prices)
+                synthesized_target = round(sum(w * p for w, p in valid_weights_and_prices) / total_w, 2)
             elif lstm_res and lstm_res.predicted_price is not None and np.isfinite(lstm_res.predicted_price):
                 synthesized_target = round(float(lstm_res.predicted_price), 2)
             else:

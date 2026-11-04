@@ -277,8 +277,15 @@ def get_moirai_top_bullish(
     """
     依據 Salesforce MOIRAI-2 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
     """
+    cache_key = f"moirai_bullish_{index_name}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
     records = db.get_moirai_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
 
 
 @router.get("/moirai/top-bearish", response_model=PredictionResponse, summary="查詢 Salesforce MOIRAI-2 預測跌幅 TOP N 避險股")
@@ -290,8 +297,15 @@ def get_moirai_top_bearish(
     """
     依據 Salesforce MOIRAI-2 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
+    cache_key = f"moirai_bearish_{index_name}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
     records = db.get_moirai_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
 
 
 @router.get("/history/{ticker}", response_model=PredictionResponse, summary="查詢單一標的歷史預測軌跡")

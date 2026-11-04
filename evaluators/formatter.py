@@ -672,7 +672,7 @@ def format_email_message(
             if moirai_p is not None:
                 m_p10 = cand.get("moirai_p10")
                 m_p90 = cand.get("moirai_p90")
-                m_q_info = f"[{m_p10:.0f}~{m_p90:.0f}]" if m_p10 is not None and m_p90 is not None else ""
+                m_q_info = f"[{m_p10:.0f}~{m_p90:.0f}]" if m_p10 is not None and m_p90 is not None and pd.notna(m_p10) and pd.notna(m_p90) else ""
                 ml_p_parts.append(f"MOIRAI: {float(moirai_p):+.1f}%{m_q_info}")
             elif not tfm_p and not tml_p and lstm_p is not None:
                 ml_p_parts.append(f"LSTM: {float(lstm_p):+.1f}%")
@@ -762,8 +762,8 @@ def format_email_message(
             p10 = result.get('p10')
             p90 = result.get('p90')
             q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-            curr_p = result.get('current_price', 0.0)
-            pred_p = result.get('predicted_price', curr_p)
+            curr_p = result.get('current_price') or 0.0
+            pred_p = result.get('predicted_price') or curr_p
             msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str})\n"
         msg += "\n"
 
@@ -986,8 +986,8 @@ def print_evaluation_report(report: EvaluationReport, log=None):
             band_str = f"{p10:.1f}~{p90:.1f}" if p10 is not None and p90 is not None else "N/A"
             rr_val = result.get('risk_reward_ratio')
             rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "    N/A"
-            curr_p = result.get('current_price', 0.0)
-            pred_p = result.get('predicted_price', curr_p)
+            curr_p = result.get('current_price') or 0.0
+            pred_p = result.get('predicted_price') or curr_p
             logger.info(
                 f"   {i:<4} {result['ticker']:<10} "
                 f"{result['potential']:>+9.2f}% "

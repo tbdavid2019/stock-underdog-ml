@@ -203,6 +203,36 @@ def get_timesfm_top_predictions(
 
 
 @mcp.tool(
+    name="get_moirai_top_predictions",
+    description="查詢 Salesforce MOIRAI-2 時序大模型預測之漲幅 TOP N 潛力榜或跌幅 TOP N 避險榜。包含預測目標價、潛在漲跌幅 %、10%~90% 分位數蒙地卡羅風控區間與盈虧比。"
+)
+def get_moirai_top_predictions(
+    index_name: Optional[str] = None,
+    direction: str = "bullish",
+    limit: int = 10
+) -> Dict[str, Any]:
+    """
+    Query Salesforce MOIRAI-2 foundation model price prediction rankings.
+
+    Args:
+        index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
+        direction: 'bullish' (看漲排行) 或 'bearish' (看跌排行)
+        limit: 取得前 N 檔 (預設: 10)
+    """
+    if direction.lower() == "bearish":
+        records = db.get_moirai_top_bearish(index_name=index_name, limit=limit)
+    else:
+        records = db.get_moirai_top_bullish(index_name=index_name, limit=limit)
+
+    return {
+        "success": True,
+        "direction": direction,
+        "count": len(records),
+        "data": records
+    }
+
+
+@mcp.tool(
     name="get_stock_history",
     description="查詢特定股票代號（如 '2330.TW', '2454.TW', 'AAPL', 'NVDA'）的時間序列歷史量化預測軌跡、均線狀態與歷史信號。"
 )
