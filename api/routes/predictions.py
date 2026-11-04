@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from datetime import datetime, timezone
@@ -6,6 +7,8 @@ from fastapi import APIRouter, Query, HTTPException, Depends, Response
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
 from data.duckdb_manager import DuckDBManager
 from data.forecast_store import ForecastStore
+
+logger = logging.getLogger("stock_app.api.predictions")
 
 router = APIRouter(prefix="/predictions", tags=["Predictions & Quant Signals"])
 
@@ -43,7 +46,7 @@ def _enrich_records_with_name(records: List[Dict[str, Any]], db: Optional[DuckDB
     unique_missing = list(set(missing))
     try:
         name_map = {}
-        with db._get_connection() as con:
+        with db._get_connection(read_only=True) as con:
             placeholders = ",".join(["?"] * len(unique_missing))
             try:
                 rows = con.execute(f"""
@@ -322,8 +325,13 @@ def get_ticker_history(
         raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{ticker}")
 
     stock_name = resolved.get("name")
-    records = [{**r, "verification_status": "legacy_unverified", "name": stock_name} for r in
-               (db.get_ticker_history(ticker=resolved["ticker"], limit=limit) or [])]
+    records = []
+    try:
+        raw_history = db.get_ticker_history(ticker=resolved["ticker"], limit=limit) or []
+        records = [{**r, "verification_status": "legacy_unverified", "name": stock_name} for r in raw_history]
+    except Exception as exc:
+        logger.warning("查詢標的 %s 歷史預測失敗: %s", resolved.get("ticker"), exc)
+        records = []
     try:
         store = ForecastStore(db.db_path, read_only=True)
         evidence = store.query_records(as_of=datetime.now(timezone.utc).isoformat())

@@ -118,22 +118,40 @@ flowchart TD
 +-----------------------------------------------------------------------------------+
 ```
 
-### 1. 金魚插件協議 (Self-Describing Plugin Protocol)
+### 1. 金魚插件協議與生命週期勾子 (ModelPlugin Protocol & Lifecycle Hooks)
 
-建立 `models/protocol.py`，未來任何新模型只需實作此抽象介面並放入 `models/plugins/`：
+建立 `models/protocol.py`，未來任何新模型只需實作標準生命週期協議，即可完全熱插拔：
 
 ```python
-from typing import Protocol, Dict, Any, List, Optional
+from typing import Protocol, Dict, Any, List, Optional, runtime_checkable
 import numpy as np
 
-class TimeSeriesModelPlugin(Protocol):
-    model_id: str              # 唯一識別碼，如 "moirai-2"
-    display_name: str          # 顯示名稱，如 "MOIRAI-2"
-    version: str               # 版本號，如 "2.0-R-small"
-    author: str                # 開發機構，如 "Salesforce"
-    supported_markets: List[str] # 支援市場 ["tw", "us", "jp"]
-    default_role: str          # 預設角色: "active" | "shadow" | "candidate"
-    
+@runtime_checkable
+class ModelPlugin(Protocol):
+    """大象底座所依賴的標準化時序模型插件協議"""
+    model_id: str                # 唯一識別碼，如 "moirai-2", "timesfm-2.0"
+    display_name: str            # 介面顯示名稱，如 "Salesforce MOIRAI-2"
+    version: str                 # 模型版本號，如 "2.0-R-small"
+    author: str                  # 機構/作者，如 "Salesforce"
+    supported_markets: List[str] # 支援市場清單 ["tw", "us", "jp"]
+    default_role: str            # 預設角色: "active" | "shadow" | "candidate"
+
+    def initialize(self, config: Dict[str, Any]) -> bool:
+        """
+        [生命週期勾子 1: 初始化與權重載入]
+        下載並載入模型權重至指定運算設備 (CPU / MPS / CUDA)，配置 context 窗口與推論參數。
+        若權重不存在或環境缺乏必要依賴，回傳 False 並記錄結構化 log，不可拋出未攔截異常。
+        """
+        ...
+
+    def health_check(self) -> Dict[str, Any]:
+        """
+        [生命週期勾子 2: 健康檢查與設備探測]
+        回傳設備狀態、記憶體佔用量、推論延遲基準 (Benchmark latency)，供管線判定是否熔斷降級。
+        範例: {"status": "healthy", "device": "mps", "memory_mb": 420.5, "p99_latency_ms": 45.2}
+        """
+        ...
+
     def predict_batch(
         self, 
         series_dict: Dict[str, np.ndarray], 
@@ -142,99 +160,112 @@ class TimeSeriesModelPlugin(Protocol):
         market_params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Dict[str, Any]]:
         """
-        回傳標準化預測字典:
+        [生命週期勾子 3: 批次推論運算]
+        標準輸入: 標的日收盤價時序字典 (包含足額歷史天數)。
+        標準輸出字典結構:
         {
             "ticker": {
-                "predicted_price": float,
-                "potential": float,
-                "quantiles": {"p10": float, "p50": float, "p90": float},
-                "trajectory": List[float],
-                "risk_reward_ratio": float
+                "predicted_price": float,           # P50 點預測目標價
+                "potential": float,                 # 預期潛在漲跌幅 %
+                "quantiles": {                      # 蒙地卡羅風控分位數
+                    "p10": float, "p50": float, "p90": float
+                },
+                "trajectory": List[float],          # 各預測步長軌跡 (t+1 ... t+h)
+                "risk_reward_ratio": float          # 預期盈虧比 (Upside / Downside)
             }
         }
         """
         ...
+
+    def teardown(self) -> None:
+        """
+        [生命週期勾子 4: 資源釋放與優雅退出]
+        清空 GPU/MPS 快取、釋放檔案鎖與模型推論環境，確保多進程或熱拔除時不發生記憶體洩漏。
+        """
+        ...
 ```
 
-### 2. 市場特化動態參數矩陣 (`config/models_market.yaml`)
+### 2. 跨市場特化動態參數矩陣 (Cross-Market Parameter Overrides)
 
-不再將超參數寫死在 Python 程式碼中，而是使用設定檔按市場分離：
+不同市場具有截然不同的交易機制、波動率特徵與預測視野。大象底座透過動態參數矩陣統一向各金魚插件注入市場專屬約束：
 
 ```yaml
-models:
-  moirai:
-    enabled: true
-    weights:
-      tw: 0.15
-      us: 0.20
-      jp: 0.15
-    market_params:
-      tw:
-        min_potential: 0.5       # 台股防禦保守
-        max_daily_change: 10.0   # 台股漲跌幅限制防呆
-        context_len: 64
-      us:
-        min_potential: 1.5       # 美股波動較大，門檻放寬
-        max_daily_change: null   # 無限制
-        context_len: 128
-      jp:
-        min_potential: 0.8
-        context_len: 96
+# config/market_parameters.yaml
+market_matrix:
+  tw:
+    market_name: "台股 (TWSE/TPEx)"
+    default_horizons: [1, 5]               # 隔日與週波段
+    max_daily_change_pct: 10.0             # 台股漲跌幅 10% 剛性限制 (防呆截斷)
+    volatility_scaling: "atr_capped"       # ATR 波動正規化，封頂 ±10%
+    min_potential_threshold: 0.5           # 看漲最小潛力門檻 (%)
+    lookback_window: 60                    # 歷史日 K 回看天數
+    broker_chips_weight: 0.25              # 台灣三大法人與主力券商特有籌碼權重
 
-  timesfm:
-    enabled: true
-    weights:
-      tw: 0.20
-      us: 0.25
-      jp: 0.20
+  us:
+    market_name: "美股 (NYSE/NASDAQ)"
+    default_horizons: [1, 5, 20]           # 美股支援隔日、週波段與月波段 (20日)
+    max_daily_change_pct: null             # 美股無漲跌幅限制 (No circuit collar)
+    volatility_scaling: "realized_vol"     # 歷史 20 日真實已實現波動率動態縮放
+    min_potential_threshold: 1.5           # 美股高波動，門檻放寬至 1.5%
+    lookback_window: 128                   # 歷史長窗口回看 (抓取季度宏觀循環)
+    broker_chips_weight: 0.00              # 💡 美股不適用台灣法人分點籌碼，權重歸零並在 UI 提供提示
 
-  timestral:
-    enabled: true
-    weights:
-      tw: 0.20
-      us: 0.20
-      jp: 0.15
+  jp:
+    market_name: "日股 (Tokyo Stock Exchange)"
+    default_horizons: [1, 5]
+    max_daily_change_pct: null             # 依呼叫價位階段限價 (Tick Tier)
+    volatility_scaling: "fx_adjusted_vol"  # 匯率敏感度 (JPY/USD) 波動修正
+    min_potential_threshold: 0.8           # 日股震盪門檻
+    lookback_window: 90                    # 季度日 K 回看
+    broker_chips_weight: 0.00              # 日股籌碼權重歸零
 ```
 
-### 3. 大象儲存層泛化：從硬編碼欄位到通用結構 (Generic Forecast Storage)
+### 3. 動態集成權重與滾動勝率引擎 (Dynamic Ensemble & Rolling Win-Rate)
 
-現行方案：
-`moirai_predicted_price`, `timesfm_predicted_price`, `timestral_predicted_price` ... 每加一個模型就要 `ALTER TABLE ADD COLUMN`。
+大象底座不應採用寫死的靜態權重（如各 33%），而是建立**滾動 30 交易日真實開獎勝率的動態 Softmax 集成機制**：
 
-演進方案：
-在 DuckDB 與 Supabase 保留向下相容視圖的同時，底層採用泛型 JSONB 存儲：
-```sql
-CREATE TABLE predictions_v3 (
-    id UUID PRIMARY KEY,
-    ticker VARCHAR NOT NULL,
-    market VARCHAR NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    current_price DOUBLE NOT NULL,
-    composite_predicted_price DOUBLE,
-    composite_potential DOUBLE,
-    active_consensus_count INTEGER,     -- 當日共振模型數量 (例如 3/3 模型看漲)
-    model_forecasts JSON,               -- {"timesfm": {...}, "moirai": {...}, "timestral": {...}}
-    tags VARCHAR[]
-);
-```
+$$\tilde{w}_m = \text{Softmax}\left( \frac{\text{HitRate}_{m, 30d} \times (1 - \text{MAPE}_{m, 30d})}{\tau} \right)$$
 
-### 4. 前端自適應動態渲染 (Self-Rendering Dashboard UI)
-
-- 前端在初始化時呼叫 `/api/v1/models/meta`。
-- API 回傳當前市場啟用的模型清單：
-  ```json
-  [
-    {"id": "timesfm", "label": "TimesFM 看漲排行", "icon": "auto_awesome", "color": "#7C3AED"},
-    {"id": "timestral", "label": "Timestral 看漲排行", "icon": "smart_toy", "color": "#D97706"},
-    {"id": "moirai", "label": "MOIRAI-2 看漲排行", "icon": "psychology", "color": "#0284C7"}
-  ]
-  ```
-- 前端 `v-for="model in activeModels"` 自動生成按鈕、走勢折線與 PK 對決表欄位。
-- **未來加入第 4 個、第 5 個模型時，前端 0 行代碼修改，立即上線！**
+1. **實盤結算追蹤**：每日收盤後，`ForecastStore` 透過實際收盤價結算歷史各模型的方向命中率（Hit Rate）與絕對誤差百分比（MAPE）。
+2. **動態溫控 Softmax**：表現較佳的模型自動獲得更高集成話語權；若某模型近期勝率跌破 50%，權重自動衰減並觸發低命中率警示。
+3. **共振判定解耦**：改為泛型標籤輸出：當超過 $K$ 個模型同時預測隔日漲幅超過市場門檻時，自動打上 `👑 多模型共振 (K/N)` 標籤，徹底告別「雙維共振」、「三大模型共振」的硬編碼。
 
 ---
 
-## 四、 現行標準維護 SOP：若要加入或刪除新模型的操作步驟
+## 四、 「金魚記憶」微觀陷阱防護指南 (Goldfish Traps & Single-Point Failure Defenses)
+
+在宏觀架構之外，系統最常因微觀工程細節（7 秒記憶陷阱）而發生雪崩式崩潰。本節詳列四大致命坑點與硬核防禦機制：
+
+### 陷阱 1：DuckDB 單進程排他寫入鎖與多進程並發衝突
+- **血淋淋根因**：DuckDB 採用單進程寫入排他鎖（File Lock）。當背景 Cron Job 或批次推論進程正在寫入資料庫時，FastAPI Web API 若預設使用 `read_only=False` 建立連線，會立刻拋出 `_duckdb.IOException: Conflicting lock is held to database`，引發 HTTP 500。
+- **金魚防護規範**：
+  1. **讀取預設全面 `read_only=True`**：`DuckDBManager.query()` 與所有 `get_*` 讀取方法必須強制預設 `read_only=True`。DuckDB 允許多個進程同時以唯讀模式連線。
+  2. **檔案不存在先初始化**：DuckDB 若在檔案不存在時以唯讀開啟會報錯，因此連線工廠必須先確認檔案存在，未存在時於全域安全鎖內完成結構初始化。
+  3. **指數退避重試迴圈 (Exponential Backoff)**：遇到 `conflicting lock` 或 `could not set lock` 時，讀取連線進行最多 5 次退避重試（`0.2s * 2^attempt`）；寫入連線進行 3 次重試，絕不直接讓 API 拋出未捕獲例外。
+
+### 陷阱 2：N+1 儲存連線鎖死磁碟 I/O
+- **血淋淋根因**：`ForecastStore.record_forecast` 過去在迴圈內部逐筆呼叫 `with self._connect() as con:`。在 850 檔台股 × 3 個模型 × 2 個 Horizon 的場景下，單一排程產生超過 **5,100 次連續連線、解鎖、重連**，引發嚴重磁碟 I/O 爭奪，排他鎖佔用時間延長數倍。
+- **金魚防護規範**：
+  1. **強制批次寫入**：實作 `record_forecasts_batch(forecasts)`，在單一 `with self._lock(), self._connect() as con:` 連線與單一資料庫交易（Single Transaction）中完成成千上萬筆寫入。
+  2. **管線集成層呼叫**：`pipeline/forecast_integration.py` 收集全部標的預測後一次性批次提交，將磁碟鎖定時間由數十秒縮減至數十毫秒。
+
+### 陷阱 3：前端 `Promise.catch(() => [])` 靜默吞錯導致白屏
+- **血淋淋根因**：前端在呼叫後端 API 時，工程師為了防崩潰常撰寫 `.catch(() => [])`。當後端因資料庫鎖衝突或 500 錯誤時，前端靜默收到空陣列，直接觸發「查無資料」，完全沒有錯誤日誌與重新整理按鈕，讓維運人員誤以為是模型沒有計算。
+- **金魚防護規範**：
+  1. **區分空資料與錯誤狀態**：前端必須維護 `loadError` 與 `hasSearched` 狀態，若 API 發生 HTTP 非 200 錯誤，必須渲染明確的警示卡片與「重新整理」按鈕。
+  2. **外國標的與空狀態引導**：
+     - 若為美股/外國標的，在籌碼區明確提示：「💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據」。
+     - 若標的歷史筆數為 0，提示：「🌱 該標的甫納入追蹤清單，或尚無已開獎之時序預測」。
+
+### 陷阱 4：硬編碼模型名稱在 14 個層次處處洩漏
+- **血淋淋根因**：在程式碼中寫死 `if model == 'TimesFM' and model == 'Timestral': '雙維共振'`，導致加入 MOIRAI-2 時，UI 篩選按鈕缺漏、Email 日報缺漏、Telegram 播報缺漏、歷史對決表破圖。
+- **金魚防護規範**：
+  1. **以策略集合（Set of active models）取代二元邏輯**。
+  2. **推播與看板全面依據動態註冊表渲染**，歷史對決表針對未開跑的模型預測欄位安全渲染 `-`，禁止進行 `Number('-').toFixed()` 運算。
+
+---
+
+## 五、 現行標準維護 SOP：若要加入或刪除新模型的操作步驟
 
 在熱插拔架構全面上線前，維護現有代碼庫需嚴格遵守以下步驟：
 

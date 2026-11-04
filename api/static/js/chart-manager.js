@@ -437,9 +437,10 @@ export class ChartManager {
             const pointBorderColors = [];
             const pointBorderWidths = [];
 
-            const denseHit = 2.5, relaxedHit = 4.5;
-            const denseMiss = 4.5, relaxedMiss = 6.5;
-            const denseT1 = 5.5, relaxedT1 = 7.5;
+            const isFewPoints = n <= 2;
+            const denseHit = 2.5, relaxedHit = isFewPoints ? 6.0 : 4.5;
+            const denseMiss = 4.5, relaxedMiss = isFewPoints ? 7.5 : 6.5;
+            const denseT1 = 5.5, relaxedT1 = isFewPoints ? 8.5 : 7.5;
 
             for (let idx = 0; idx < n; idx++) {
                 const val = predArray[idx];
@@ -540,10 +541,10 @@ export class ChartManager {
                         backgroundColor: isDark ? 'rgba(96, 165, 250, 0.08)' : 'rgba(29, 78, 216, 0.05)',
                         borderWidth: 2.8,
                         tension: 0.25,
-                        pointRadius: labels.length > 40 ? 1.5 : 3.5,
-                        _densePointRadius: 1.5,
-                        _relaxedPointRadius: 3.5,
-                        pointHoverRadius: 6,
+                        pointRadius: labels.length <= 2 ? 6.0 : (labels.length > 40 ? 1.5 : 3.5),
+                        _densePointRadius: labels.length <= 2 ? 6.0 : 1.5,
+                        _relaxedPointRadius: labels.length <= 2 ? 6.0 : 3.5,
+                        pointHoverRadius: labels.length <= 2 ? 8.5 : 6,
                         pointBackgroundColor: colorPrice,
                         pointBorderColor: isDark ? '#0D0E11' : '#FFFFFF',
                         pointBorderWidth: 1.5,
@@ -698,7 +699,7 @@ export class ChartManager {
                             }
                         },
                         limits: {
-                            x: { min: 0, max: labels.length - 1, minRange: 6 }
+                            x: { min: 0, max: Math.max(1, labels.length - 1), minRange: Math.min(6, labels.length) }
                         }
                     },
                     tooltip: {

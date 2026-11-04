@@ -387,7 +387,7 @@ class LiveSourceProvider:
     _yahoo_circuit_open_until = 0.0
 
     def _fetch_yahoo(self, ticker, series_id, start, end, ohlcv=False):
-        if time.time() < CovariateBuilder._yahoo_circuit_open_until:
+        if time.time() < LiveSourceProvider._yahoo_circuit_open_until:
             return []
         import yfinance as yf
         session = requests.Session()
@@ -423,7 +423,7 @@ class LiveSourceProvider:
                 err_msg = str(e).lower()
                 if "rate limited" in err_msg or "too many requests" in err_msg or "yfratelimiterror" in err_msg or "429" in err_msg:
                     logger.warning(f"🚨 觸發 Yahoo Finance 頻率限制 (429)，開啟協變量熔斷保護 600 秒: {ticker}")
-                    CovariateBuilder._yahoo_circuit_open_until = time.time() + 600.0
+                    LiveSourceProvider._yahoo_circuit_open_until = time.time() + 600.0
                     return []
                 logger.warning(f"Yahoo fetch attempt {attempt+1} failed for {ticker}: {e}")
                 if attempt < 1:

@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.4.66';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.66';
+import { ApiClient } from '/static/js/api-client.js?v=2.4.67';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.67';
 
 const { createApp } = Vue;
 
@@ -2189,14 +2189,14 @@ export const app = createApp({
             if (s.includes('玄鐵重劍') || s.includes('玄鐵買點') || s.includes('玄鐵')) {
                 return '季線支撐';
             }
-            if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
+            if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振') || s.includes('多模型共振')) {
                 return '綜合優選';
             }
             if (s.includes('三大模型共振') || s.includes('三模型看漲') || s.includes('三模型共振')) {
                 return '三模型看漲';
             }
-            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
-                return '雙模型看漲';
+            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲') || s.includes('雙維共振')) {
+                return '多模型看漲';
             }
             if (s.toLowerCase().includes('moirai')) {
                 return 'MOIRAI-2';
@@ -2223,14 +2223,14 @@ export const app = createApp({
                 if (cleanLabel.includes('玄鐵重劍') || cleanLabel.includes('玄鐵買點') || cleanLabel.includes('玄鐵')) {
                     cleanLabel = cleanLabel.replace(/玄鐵重劍|玄鐵買點|玄鐵/g, '季線支撐');
                 }
-                if (/四重共振|三重共振|多維共振|雙重共振/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振/g, '綜合優選');
+                if (/四重共振|三重共振|多維共振|雙重共振|多模型共振/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振|多模型共振/g, '綜合優選');
                 }
                 if (/三大模型共振|三模型看漲|三模型共振/.test(cleanLabel)) {
                     cleanLabel = cleanLabel.replace(/三大模型共振|三模型看漲|三模型共振/g, '三模型看漲');
                 }
-                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/g, '雙模型看漲');
+                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲|雙維共振/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲|雙維共振/g, '多模型看漲');
                 }
                 let icon = null;
                 let badgeType = 'default';
@@ -2244,10 +2244,10 @@ export const app = createApp({
                     icon = 'psychology';
                     badgeType = 'resonance_triple';
                     tooltip = '三大時序模型同步看漲';
-                } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('雙AI看漲')) {
+                } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('多模型看漲') || cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
-                    tooltip = '模型同步看漲';
+                    tooltip = '多模型同步看漲';
                 } else if (cleanLabel.includes('土洋合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';

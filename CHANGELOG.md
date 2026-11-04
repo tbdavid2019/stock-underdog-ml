@@ -6,6 +6,36 @@
 
 ---
 
+## 2026-11-04 (v2.4.67)
+
+### Concurrency Lock Hardening, Batch Forecast Store & UI/Narrative Multi-Model Integration
+- **DuckDB 唯讀查詢並發鎖保護與指數退避重試 (`data/duckdb_manager.py`)**：
+  - `DuckDBManager.query()` 預設改為 `read_only=True`，確保所有讀取操作不申請寫入排他鎖。
+  - 全面盤點純查詢方法（如 `get_ticker_history`, `get_daily_bars_for_ticker`, `get_company_profile` 等），強制明確以 `read_only=True` 獲取連線。
+  - `_get_connection()` 實作指數退避重試（最多 5 次，捕獲 `conflicting lock` 與 `could not set lock`），並在非唯讀超時且允許降級時平滑降級為唯讀。
+  - 將內部執行緒鎖升級為 `threading.RLock()` 杜絕可重入死鎖；所有主要寫入方法加入 3 次退避重試迴圈。
+- **ForecastStore 批次預測寫入效能最佳化 (`data/forecast_store.py`, `pipeline/forecast_integration.py`)**：
+  - `ForecastStore` 類別新增 `record_forecasts_batch()`，在單一連線交易中批次新增或更新多筆預測，消除單一排程產生數千次連線/斷連造成的磁碟鎖爭用。
+  - `pipeline/forecast_integration.py` 整合批次持久化呼叫，並提供向後相容單筆降級。
+- **FastAPI 歷史預測端點異常安全防護 (`api/routes/predictions.py`)**：
+  - `/api/v1/predictions/history/{ticker}` 端點呼叫包裹於 `try...except`，捕獲例外時記錄 warning 日誌並安全回傳空記錄，阻斷未處理例外拋出 HTTP 500。
+- **Chart.js 點視覺化與外國標的友好提示 (`api/static/js/chart-manager.js`, `api/templates/partials/tab_history.html`)**：
+  - 遵循 `impeccable`、`mobile-native` 與 WCAG AA/AAA 標準，在歷史預測點僅有 1-2 筆時（如 RDDT 等剛納入標的），自動放大點半徑至 `pointRadius: 6.0` 確保清晰可辨。
+  - 外國與美股標的籌碼區顯示友善提示：「💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據」。
+  - 歷史記錄為空時顯示親和空狀態提示：「🌱 該標的甫納入追蹤清單，或尚無已開獎之時序預測」。
+- **AI 操盤觀點與 Telegram 播報納入 MOIRAI-2 (`evaluators/ai_narrative.py`)**：
+  - 於 `overlap_summary`、前瞻重點與備援純文字模板中正式納入 `moirai_potential` 與 `[p10~p90]` 蒙地卡羅區間。
+  - 於 top 標的中加入 MOIRAI-2 隔日看漲焦點 Top 2。
+  - 移除所有硬編碼之「雙維共振」字眼，全面解耦並升級為「多模型共振」。
+- **宏觀架構與大象金魚思維指南擴充 (`docs/MODEL_LIFECYCLE_GUIDE.md`)**：
+  - 擴充 `ModelPlugin` 協議與 4 大標準生命週期勾子（`initialize()`, `health_check()`, `predict_batch()`, `teardown()`）。
+  - 擴充台/美/日跨市場動態參數矩陣（Horizon 窗口、波動率正規化、Lookback 窗口）。
+  - 詳述「金魚記憶」四大微觀陷阱（DuckDB 排他鎖、N+1 儲存連線、Promise.catch 吞錯、硬編碼模型洩漏）之防護規範。
+- **單元測試 (`test/test_duckdb_read_only.py`)**：
+  - 新增測試涵蓋 `DuckDBManager.query(read_only=True)`、鎖衝突自動重試、寫入降級唯讀，以及 `ForecastStore.record_forecasts_batch` 批次寫入與冪等驗證。
+
+---
+
 ## 2026-11-04 (v2.4.66)
 
 ### Resilience, Historical Backfill & Architecture Lifecycle Standardization

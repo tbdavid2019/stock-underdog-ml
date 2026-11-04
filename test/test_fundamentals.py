@@ -8,6 +8,9 @@ from data.fundamentals import sanitize_metric, FundamentalProvider
 
 class TestFundamentals(unittest.TestCase):
 
+    def setUp(self):
+        FundamentalProvider._MEM_CACHE.clear()
+
     def test_sanitize_metric(self):
         self.assertEqual(sanitize_metric(15.5), 15.5)
         self.assertEqual(sanitize_metric("20.1"), 20.1)

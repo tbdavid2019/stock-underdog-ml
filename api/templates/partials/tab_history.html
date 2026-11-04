@@ -1736,6 +1736,16 @@
 
     </div>
 
+    <!-- Foreign Stock Friendly Note for Institutional Flows -->
+    <div v-else-if="!historyLoading && !isTwStock(resolvedTicker || searchTicker) && (historyRecords.length > 0 || hasSearched)"
+         class="p-4 rounded-2xl border flex items-center space-x-3 transition-all"
+         :class="isDark ? 'bg-[#16181D] border-blue-900/40 text-blue-300' : 'bg-blue-50/80 border-blue-200 text-blue-950'">
+        <span class="material-symbols-outlined text-[24px] text-blue-500 shrink-0">info</span>
+        <div class="text-xs sm:text-sm leading-relaxed font-medium">
+            💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。
+        </div>
+    </div>
+
     <!-- Loading State for Predictions & Charts -->
     <div v-if="historyLoading" class="text-center py-16 space-y-2">
         <div class="flex items-center justify-center">
@@ -1758,16 +1768,21 @@
         <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ historyError }}</div>
     </div>
 
-    <!-- Empty State (Only if no predictions and no institutional flow) -->
-    <div v-else-if="hasSearched && !historyLoading && historyRecords.length === 0 && tickerInstHistory.length === 0 && !historyError"
+    <!-- Empty State (When no predictions) -->
+    <div v-else-if="hasSearched && !historyLoading && historyRecords.length === 0 && !historyError"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="text-center py-12 rounded-2xl border space-y-2">
+         class="text-center py-12 rounded-2xl border space-y-3">
         <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center border"
              :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'">
             <span class="material-symbols-outlined text-[28px]">search</span>
         </div>
-        <div class="text-sm font-bold" :class="isDark ? 'text-slate-300' : 'text-slate-700'">查無 <strong>{{ formatTicker(searchTicker) }}</strong> 的時序量化預測與法人籌碼資料</div>
-        <p class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">該標的可能近期未納入量化選股模型追蹤，您仍可在上方個股情報中心檢閱其基本面、集團網絡、法說會與標案情報。</p>
+        <div class="text-sm sm:text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+            🌱 該標的甫納入追蹤清單，或尚無已開獎之時序預測，請參考即時盤面與基本面數據
+        </div>
+        <p class="text-xs sm:text-sm max-w-xl mx-auto leading-relaxed" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+            <span v-if="!isTwStock(resolvedTicker || searchTicker)">💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。</span>
+            <span v-else>該標的可能近期剛納入量化選股模型追蹤，您仍可在上方個股情報中心檢閱其基本面、集團網絡與法說會情報。</span>
+        </p>
     </div>
 
     <!-- ================= 6. ALL-MARKET FORECAST ACCURACY LEADERBOARD (COLLAPSIBLE) ================= -->

@@ -206,8 +206,13 @@ class AINarrativeEngine:
             if r.get("timestral_potential") is not None and pd.notna(r.get("timestral_potential")):
                 p10 = r.get("timestral_p10")
                 p90 = r.get("timestral_p90")
-                range_str = f"[{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None else ""
+                range_str = f"[{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
                 pot_parts.append(f"Timestral {r['timestral_potential']:+.2f}%{range_str}")
+            if r.get("moirai_potential") is not None and pd.notna(r.get("moirai_potential")):
+                mp10 = r.get("moirai_p10")
+                mp90 = r.get("moirai_p90")
+                m_range_str = f"[{mp10:.1f}~{mp90:.1f}]" if mp10 is not None and mp90 is not None and pd.notna(mp10) and pd.notna(mp90) else ""
+                pot_parts.append(f"MOIRAI-2 {r['moirai_potential']:+.2f}%{m_range_str}")
             elif r.get("lstm_potential") is not None and pd.notna(r.get("lstm_potential")):
                 pot_parts.append(f"LSTM(Legacy) {r['lstm_potential']:+.2f}%")
             pot_str = " / ".join(pot_parts) if pot_parts else f"合成預測潛力 {r.get('potential', 0.0):+.2f}%"
@@ -224,6 +229,8 @@ class AINarrativeEngine:
         timestral_predictions = len(timestral_raw) if timestral_raw is not None else 0
         timesfm_raw = report_data.get("timesfm_results")
         timesfm_predictions = len(timesfm_raw) if timesfm_raw is not None else 0
+        moirai_raw = report_data.get("moirai_results")
+        moirai_predictions = len(moirai_raw) if moirai_raw is not None else 0
 
         fm_top_str = ""
         top_parts = []
@@ -245,6 +252,18 @@ class AINarrativeEngine:
             if top_tml:
                 top_parts.append("Timestral隔日看漲: " + "; ".join(top_tml))
 
+        if moirai_raw and isinstance(moirai_raw, list):
+            top_moi = []
+            for mr_res in moirai_raw[:2]:
+                rr_v = mr_res.get("risk_reward_ratio")
+                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
+                p10 = mr_res.get("p10") if mr_res.get("p10") is not None else mr_res.get("moirai_p10")
+                p90 = mr_res.get("p90") if mr_res.get("p90") is not None else mr_res.get("moirai_p90")
+                range_str = f" [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+                top_moi.append(f"{mr_res.get('ticker')}: 隔日漲幅 {mr_res.get('potential', 0.0):+.2f}%{range_str}{rr_info}")
+            if top_moi:
+                top_parts.append("MOIRAI-2隔日看漲: " + "; ".join(top_moi))
+
         if top_parts:
             fm_top_str = "\n- 時序大模型隔日看漲焦點: " + " | ".join(top_parts)
 
@@ -256,12 +275,13 @@ class AINarrativeEngine:
 【量化數據概況】
 - 技術買點 (季線支撐符合): {xuantie_hits} 支
 - TimesFM 預測完成: {timesfm_predictions} 支
-- Timestral 預測完成: {timestral_predictions} 支{fm_top_str}
-- ⭐ 綜合優選 / 雙AI看漲 重點推薦標的:
-{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無雙模型共振股票，建議維持防禦觀望'}
+- Timestral 預測完成: {timestral_predictions} 支
+- MOIRAI-2 預測完成: {moirai_predictions} 支{fm_top_str}
+- ⭐ 綜合優選 / 多模型看漲 重點推薦標的:
+{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無多模型共振股票，建議維持防禦觀望'}
 
 請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
-【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「綜合優選」、「雙AI看漲」或「高盈虧比」個股，請特別提示其雙時序大模型隔日看漲共識與風險收益比優勢。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「綜合優選」、「多模型看漲」或「高盈虧比」個股，請特別提示其時序大模型隔日看漲共識與風險收益比優勢。
 """
         return prompt.strip()
 
@@ -298,6 +318,8 @@ class AINarrativeEngine:
                 pot_parts.append(f"TimesFM {overlap_list[0]['timesfm_potential']:+.2f}%")
             if overlap_list[0].get("timestral_potential") is not None and pd.notna(overlap_list[0].get("timestral_potential")):
                 pot_parts.append(f"Timestral {overlap_list[0]['timestral_potential']:+.2f}%")
+            if overlap_list[0].get("moirai_potential") is not None and pd.notna(overlap_list[0].get("moirai_potential")):
+                pot_parts.append(f"MOIRAI-2 {overlap_list[0]['moirai_potential']:+.2f}%")
             elif overlap_list[0].get("lstm_potential") is not None and pd.notna(overlap_list[0].get("lstm_potential")):
                 pot_parts.append(f"LSTM {overlap_list[0]['lstm_potential']:+.2f}%")
             top_pot = " / ".join(pot_parts) if pot_parts else f"預期潛力 {overlap_list[0].get('potential', 0.0):+.2f}%"

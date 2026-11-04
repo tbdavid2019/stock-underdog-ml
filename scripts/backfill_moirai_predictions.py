@@ -51,7 +51,7 @@ def backfill_moirai(ticker_filter: Optional[str] = None, days: int = 14, dry_run
 
     sql += " GROUP BY ticker, dt ORDER BY ticker, dt DESC"
 
-    with db._get_connection() as conn:
+    with db._get_connection(read_only=True) as conn:
         df_pending = conn.execute(sql, params).df()
 
     if df_pending.empty:

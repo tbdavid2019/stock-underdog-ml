@@ -32,34 +32,68 @@ except Exception:
 class DuckDBManager:
     """DuckDB 本地量化時序資料庫管理器"""
 
-    _WRITE_LOCK = threading.Lock()
-    _RESOLVER_LOCK = threading.Lock()
+    _WRITE_LOCK = threading.RLock()
+    _RESOLVER_LOCK = threading.RLock()
     _SCHEMA_INITIALIZED_PATHS = set()
-    _INIT_LOCK = threading.Lock()
+    _INIT_LOCK = threading.RLock()
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or config.db.DUCKDB_PATH
         self.enabled = config.db.ENABLE_DUCKDB
         self._ensure_storage_dir()
-        if self.enabled and self.db_path not in self._SCHEMA_INITIALIZED_PATHS:
-            with self._INIT_LOCK:
-                if self.db_path not in self._SCHEMA_INITIALIZED_PATHS:
-                    self._init_schema()
-                    self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+        if self.enabled:
+            needs_init = (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path)
+            if needs_init:
+                with self._INIT_LOCK:
+                    if (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path):
+                        self._init_schema()
+                        self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
 
     def _ensure_storage_dir(self):
         storage_dir = os.path.dirname(self.db_path)
         if storage_dir:
             os.makedirs(storage_dir, exist_ok=True)
 
-    def _get_connection(self, read_only: bool = False) -> duckdb.DuckDBPyConnection:
-        """建立或取得 DuckDB 連線，支援唯讀模式以防並發寫入鎖"""
-        return duckdb.connect(self.db_path, read_only=read_only)
+    def _get_connection(
+        self, 
+        read_only: bool = False, 
+        max_retries: int = 5, 
+        retry_delay: float = 0.2,
+        allow_downgrade: bool = False
+    ) -> duckdb.DuckDBPyConnection:
+        """建立或取得 DuckDB 連線，支援唯讀模式與並發鎖衝突指數退避重試"""
+        if self.db_path != ":memory:" and not os.path.exists(self.db_path):
+            with self._INIT_LOCK:
+                if self.db_path != ":memory:" and not os.path.exists(self.db_path):
+                    self._init_schema()
+                    self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+        for attempt in range(max_retries + 1):
+            try:
+                return duckdb.connect(self.db_path, read_only=read_only)
+            except duckdb.IOException as exc:
+                err_msg = str(exc).lower()
+                is_lock_conflict = any(k in err_msg for k in ("conflicting lock", "could not set lock", "unique file handle"))
+                if not is_lock_conflict or attempt >= max_retries:
+                    if not read_only and is_lock_conflict and allow_downgrade:
+                        logger.warning(
+                            "⚠️ DuckDB 取得寫入連線逾時 (鎖衝突)，嘗試降級為唯讀模式以保障查詢: %s", exc
+                        )
+                        try:
+                            return duckdb.connect(self.db_path, read_only=True)
+                        except Exception as downgrade_exc:
+                            logger.error("❌ DuckDB 降級唯讀連線亦失敗: %s", downgrade_exc)
+                    raise
+                sleep_sec = retry_delay * (2 ** attempt)
+                logger.warning(
+                    "⚠️ DuckDB 檔案鎖衝突 (attempt %d/%d, read_only=%s)，將於 %.2fs 後重試: %s",
+                    attempt + 1, max_retries, read_only, sleep_sec, exc
+                )
+                time.sleep(sleep_sec)
 
     def _init_schema(self):
         """初始化表格結構 (若不存在則建立)"""
         try:
-            with self._get_connection() as con:
+            with duckdb.connect(self.db_path, read_only=False) as con:
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS predictions (
                     index_name VARCHAR,
@@ -539,15 +573,25 @@ class DuckDBManager:
         if "tags" in df.columns:
             df["tags"] = df["tags"].apply(lambda x: " | ".join(x) if isinstance(x, list) else str(x) if x is not None else None)
 
-        try:
-            col_names = ", ".join(expected_cols)
-            with self._get_connection() as con:
-                con.register("temp_batch_df", df[expected_cols])
-                con.execute(f"INSERT INTO predictions ({col_names}) SELECT {col_names} FROM temp_batch_df")
-            logger.info(f"💾 成功寫入 {len(df)} 筆量化數據至 DuckDB ({self.db_path})")
-            return len(df)
-        except Exception as e:
-            logger.error(f"❌ DuckDB 批次寫入失敗: {e}", exc_info=True)
+        col_names = ", ".join(expected_cols)
+        with self._WRITE_LOCK:
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_batch_df", df[expected_cols])
+                        con.execute(f"INSERT INTO predictions ({col_names}) SELECT {col_names} FROM temp_batch_df")
+                    logger.info(f"💾 成功寫入 {len(df)} 筆量化數據至 DuckDB ({self.db_path})")
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error(f"❌ DuckDB 批次寫入失敗: {e}", exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error(f"❌ DuckDB 批次寫入失敗: {e}", exc_info=True)
+                    return 0
             return 0
 
     def save_dual_strategy_results(
@@ -849,9 +893,9 @@ class DuckDBManager:
 
         return self.save_predictions_batch(all_data)
 
-    def query(self, sql: str, params: Optional[List[Any]] = None) -> pd.DataFrame:
-        """執行 SQL 查詢並返回 Pandas DataFrame"""
-        with self._get_connection() as con:
+    def query(self, sql: str, params: Optional[List[Any]] = None, read_only: bool = True) -> pd.DataFrame:
+        """執行 SQL 查詢並返回 Pandas DataFrame，預設為唯讀模式以防並發寫入鎖"""
+        with self._get_connection(read_only=read_only, allow_downgrade=True) as con:
             if params:
                 return con.execute(sql, params).df()
             return con.execute(sql).df()
@@ -859,7 +903,7 @@ class DuckDBManager:
     def get_row_count(self, table_name: str = "predictions") -> int:
         """取得指定表格的總記錄數 (排除測試假資料)"""
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
                 res = con.execute(f"SELECT COUNT(*) FROM {table_name} {filter_sql}").fetchone()
                 return res[0] if res else 0
@@ -869,7 +913,7 @@ class DuckDBManager:
     def clean_test_data(self) -> int:
         """清理歷史混入的測試與除錯假數據 (TEST, DEBUG, SERVICE_KEY 等)"""
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 res = con.execute("""
                     DELETE FROM predictions 
                     WHERE index_name LIKE '%TEST%' 
@@ -887,7 +931,7 @@ class DuckDBManager:
     def export_to_parquet(self, output_path: str, table_name: str = "predictions") -> str:
         """將資料庫表格導出為極度壓縮的 Parquet 檔案"""
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        with self._get_connection() as con:
+        with self._get_connection(read_only=True) as con:
             con.execute(f"COPY {table_name} TO '{output_path}' (FORMAT PARQUET, COMPRESSION ZSTD);")
         logger.info(f"📦 已成功導出 {table_name} 至 Parquet: {output_path}")
         return output_path
@@ -984,7 +1028,7 @@ class DuckDBManager:
             WHERE {' AND '.join(where_clauses)}
         """
         latest_ts = None
-        with self._get_connection() as con:
+        with self._get_connection(read_only=True) as con:
             res = con.execute(latest_ts_sql, params).fetchone()
             if res and res[0]:
                 latest_ts = str(res[0])
@@ -1367,8 +1411,8 @@ class DuckDBManager:
         """取得 MOIRAI-2 預測漲幅最大 TOP N 標的"""
         index_name = self._clean_index_name(index_name)
         where_clauses = [
-            "potential IS NOT NULL", 
-            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%')",
+            "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
+            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -1382,26 +1426,28 @@ class DuckDBManager:
         sql = f"""
         WITH ranked AS (
             SELECT *,
+                   COALESCE(moirai_potential, potential) as effective_pot,
                    ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
             FROM predictions
             {where_sql}
         )
-        SELECT * EXCLUDE (rn)
+        SELECT * EXCLUDE (rn, effective_pot, potential),
+               effective_pot as potential
         FROM ranked
         WHERE rn = 1
-        ORDER BY potential DESC
+        ORDER BY effective_pot DESC
         LIMIT ?;
         """
         params.append(limit)
-        df = self.query(sql, params)
+        df = self.query(sql, params, read_only=True)
         return self._clean_df_records(df)
 
     def get_moirai_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 MOIRAI-2 預測跌幅最大 / 潛在做空 TOP N 標的"""
         index_name = self._clean_index_name(index_name)
         where_clauses = [
-            "potential IS NOT NULL", 
-            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%')",
+            "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
+            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -1415,18 +1461,20 @@ class DuckDBManager:
         sql = f"""
         WITH ranked AS (
             SELECT *,
+                   COALESCE(moirai_potential, potential) as effective_pot,
                    ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
             FROM predictions
             {where_sql}
         )
-        SELECT * EXCLUDE (rn)
+        SELECT * EXCLUDE (rn, effective_pot, potential),
+               effective_pot as potential
         FROM ranked
         WHERE rn = 1
-        ORDER BY potential ASC
+        ORDER BY effective_pot ASC
         LIMIT ?;
         """
         params.append(limit)
-        df = self.query(sql, params)
+        df = self.query(sql, params, read_only=True)
         return self._clean_df_records(df)
 
     def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
@@ -1453,7 +1501,7 @@ class DuckDBManager:
         ORDER BY timestamp DESC
         LIMIT ?;
         """
-        df = self.query(sql, [ticker, limit])
+        df = self.query(sql, [ticker, limit], read_only=True)
         return self._clean_df_records(df)
 
     def get_latest_candidate_snapshot(self, ticker: str) -> Optional[Dict[str, Any]]:
@@ -1667,7 +1715,7 @@ class DuckDBManager:
 
         if self.enabled:
             try:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=True) as con:
                     # 1. 優先查 market_universe 全球股票庫 (TW, US, JP, HK 等)
                     try:
                         univ_row = con.execute(
@@ -1736,7 +1784,7 @@ class DuckDBManager:
     def get_db_stats(self) -> Dict[str, Any]:
         """取得 DuckDB 全局時序庫統計資訊 (已排除內部路徑與測試資料)"""
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
                 row_count = con.execute(f"SELECT COUNT(*) FROM predictions {filter_sql}").fetchone()[0]
                 distinct_tickers = con.execute(f"SELECT COUNT(DISTINCT ticker) FROM predictions {filter_sql}").fetchone()[0]
@@ -1760,7 +1808,7 @@ class DuckDBManager:
     def get_latest_macro_regime(self) -> Optional[Dict[str, Any]]:
         """取得最新一筆宏觀市場狀態"""
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 res = con.execute("SELECT * FROM macro_regimes ORDER BY timestamp DESC LIMIT 1").df()
                 if not res.empty:
                     clean = self._clean_df_records(res)
@@ -1786,21 +1834,31 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        try:
-            with self._get_connection() as con:
-                con.register("temp_daily_bars_df", df[expected_cols])
-                # 先刪除當日相同代碼之重複資料以支援冪等覆蓋 (Upsert)
-                con.execute("""
-                DELETE FROM tw_daily_bars
-                WHERE (date, ticker) IN (
-                    SELECT date, ticker FROM temp_daily_bars_df
-                );
-                """)
-                con.execute("INSERT INTO tw_daily_bars SELECT * FROM temp_daily_bars_df;")
-            logger.info(f"💾 成功寫入/更新 {len(df)} 筆全市場日 K 棒至 DuckDB")
-            return len(df)
-        except Exception as e:
-            logger.error(f"❌ 寫入 tw_daily_bars 失敗: {e}", exc_info=True)
+        with self._WRITE_LOCK:
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_daily_bars_df", df[expected_cols])
+                        # 先刪除當日相同代碼之重複資料以支援冪等覆蓋 (Upsert)
+                        con.execute("""
+                        DELETE FROM tw_daily_bars
+                        WHERE (date, ticker) IN (
+                            SELECT date, ticker FROM temp_daily_bars_df
+                        );
+                        """)
+                        con.execute("INSERT INTO tw_daily_bars SELECT * FROM temp_daily_bars_df;")
+                    logger.info(f"💾 成功寫入/更新 {len(df)} 筆全市場日 K 棒至 DuckDB")
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error(f"❌ 寫入 tw_daily_bars 失敗: {e}", exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error(f"❌ 寫入 tw_daily_bars 失敗: {e}", exc_info=True)
+                    return 0
             return 0
 
     def save_market_universe_snapshot(self, snapshot_date: str, records: List[Dict[str, Any]]) -> int:
@@ -1821,19 +1879,29 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        try:
-            with self._get_connection() as con:
-                con.register("temp_market_universe_df", df[expected_cols])
-                con.execute("""
-                DELETE FROM market_universe
-                WHERE snapshot_date = ?
-                  AND source_id IN (SELECT DISTINCT source_id FROM temp_market_universe_df)
-                """, [snapshot_date])
-                con.execute("INSERT INTO market_universe SELECT * FROM temp_market_universe_df")
-            logger.info("💾 成功寫入/更新 %s 筆全球清冊資料至 DuckDB", len(df))
-            return len(df)
-        except Exception as e:
-            logger.error("❌ 寫入 market_universe 失敗: %s", e, exc_info=True)
+        with self._WRITE_LOCK:
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_market_universe_df", df[expected_cols])
+                        con.execute("""
+                        DELETE FROM market_universe
+                        WHERE snapshot_date = ?
+                          AND source_id IN (SELECT DISTINCT source_id FROM temp_market_universe_df)
+                        """, [snapshot_date])
+                        con.execute("INSERT INTO market_universe SELECT * FROM temp_market_universe_df")
+                    logger.info("💾 成功寫入/更新 %s 筆全球清冊資料至 DuckDB", len(df))
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error("❌ 寫入 market_universe 失敗: %s", e, exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error("❌ 寫入 market_universe 失敗: %s", e, exc_info=True)
+                    return 0
             return 0
 
     def get_latest_market_universe(self, source_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -1841,7 +1909,7 @@ class DuckDBManager:
         if not self.enabled:
             return []
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 if source_id:
                     query = """
                     SELECT * FROM market_universe
@@ -1859,6 +1927,46 @@ class DuckDBManager:
             logger.warning("讀取 market_universe 失敗: %s", e)
             return []
 
+    def get_market_coverage(self) -> Dict[str, Any]:
+        """取得當前 market_universe 各市場標的涵蓋統計 (唯讀查詢)"""
+        if not self.enabled:
+            return {}
+        try:
+            with self._get_connection(read_only=True) as con:
+                df = con.execute("""
+                    SELECT market, count(DISTINCT normalized_symbol) as count
+                    FROM market_universe
+                    WHERE listing_status = 'ACTIVE'
+                    GROUP BY market
+                """).df()
+                return dict(zip(df["market"], df["count"])) if not df.empty else {}
+        except Exception as e:
+            logger.warning("取得市場涵蓋統計失敗: %s", e)
+            return {}
+
+    def get_active_universe(self, market: Optional[str] = None) -> List[Dict[str, Any]]:
+        """取得有效追蹤股票清單 (listing_status='ACTIVE'，唯讀查詢)"""
+        if not self.enabled:
+            return []
+        try:
+            with self._get_connection(read_only=True) as con:
+                if market:
+                    df = con.execute("""
+                        SELECT * FROM market_universe
+                        WHERE listing_status = 'ACTIVE' AND market = ?
+                        ORDER BY normalized_symbol
+                    """, [market.upper()]).df()
+                else:
+                    df = con.execute("""
+                        SELECT * FROM market_universe
+                        WHERE listing_status = 'ACTIVE'
+                        ORDER BY market, normalized_symbol
+                    """).df()
+                return self._clean_df_records(df)
+        except Exception as e:
+            logger.warning("取得 active_universe 失敗: %s", e)
+            return []
+
     def get_tw_ranked_active_stocks(self, limit: int = 1000) -> List[Dict[str, Any]]:
         """
         獲取依近期成交金額降序排列之台股有效活躍清冊。
@@ -1868,7 +1976,7 @@ class DuckDBManager:
         if not self.enabled:
             return []
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
                 if "market_universe" not in tables:
                     return []
@@ -1930,7 +2038,7 @@ class DuckDBManager:
         if not self.enabled:
             return {}
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
                 if "market_universe" not in tables:
                     return {}
@@ -1947,7 +2055,7 @@ class DuckDBManager:
         if not self.enabled:
             return {}
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
                 if "market_universe" not in tables:
                     return {}
@@ -1964,7 +2072,7 @@ class DuckDBManager:
         if not self.enabled:
             return {}
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 tables = [row[0] for row in con.execute("SHOW TABLES").fetchall()]
                 if "market_universe" not in tables:
                     return {}
@@ -1987,7 +2095,7 @@ class DuckDBManager:
         if not self.enabled:
             return
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 con.execute(
                     "INSERT INTO universe_sync_runs VALUES (?, ?, ?, ?, ?, ?)",
                     [
@@ -2007,7 +2115,7 @@ class DuckDBManager:
         if not self.enabled:
             return {}
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 if source_id:
                     row = con.execute(
                         """
@@ -2062,7 +2170,7 @@ class DuckDBManager:
             LIMIT ?;
             """
             try:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=True) as con:
                     df = con.execute(sql, [t_upper, limit]).df()
                     if not df.empty:
                         df["Date"] = pd.to_datetime(df["Date"])
@@ -2088,7 +2196,7 @@ class DuckDBManager:
         LIMIT ?;
         """
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
                 if not df.empty:
                     df["Date"] = pd.to_datetime(df["Date"])
@@ -2128,20 +2236,30 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        try:
-            with self._get_connection() as con:
-                con.register("temp_inst_df", df[expected_cols])
-                con.execute("""
-                DELETE FROM tw_institutional_daily
-                WHERE (date, ticker) IN (
-                    SELECT date, ticker FROM temp_inst_df
-                );
-                """)
-                con.execute("INSERT INTO tw_institutional_daily SELECT * FROM temp_inst_df;")
-            logger.info(f"💾 成功寫入/更新 {len(df)} 筆法人籌碼數據至 DuckDB")
-            return len(df)
-        except Exception as e:
-            logger.error(f"❌ 寫入 tw_institutional_daily 失敗: {e}", exc_info=True)
+        with self._WRITE_LOCK:
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_inst_df", df[expected_cols])
+                        con.execute("""
+                        DELETE FROM tw_institutional_daily
+                        WHERE (date, ticker) IN (
+                            SELECT date, ticker FROM temp_inst_df
+                        );
+                        """)
+                        con.execute("INSERT INTO tw_institutional_daily SELECT * FROM temp_inst_df;")
+                    logger.info(f"💾 成功寫入/更新 {len(df)} 筆法人籌碼數據至 DuckDB")
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error(f"❌ 寫入 tw_institutional_daily 失敗: {e}", exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error(f"❌ 寫入 tw_institutional_daily 失敗: {e}", exc_info=True)
+                    return 0
             return 0
 
     def get_institutional_flow_for_ticker(self, ticker: str, limit: int = 60) -> pd.DataFrame:
@@ -2174,7 +2292,7 @@ class DuckDBManager:
         LIMIT ?;
         """
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
                 return df
         except Exception as e:
@@ -2212,20 +2330,30 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        try:
-            with self._get_connection() as con:
-                con.register("temp_broker_df", df[expected_cols])
-                con.execute("""
-                DELETE FROM tw_broker_trades
-                WHERE (date, raw_code, broker_id, side) IN (
-                    SELECT date, raw_code, broker_id, side FROM temp_broker_df
-                );
-                """)
-                con.execute("INSERT INTO tw_broker_trades SELECT * FROM temp_broker_df;")
-            logger.info(f"💾 成功寫入/更新 {len(df)} 筆券商分點資料至 DuckDB")
-            return len(df)
-        except Exception as e:
-            logger.error(f"❌ 寫入 tw_broker_trades 失敗: {e}", exc_info=True)
+        with self._WRITE_LOCK:
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_broker_df", df[expected_cols])
+                        con.execute("""
+                        DELETE FROM tw_broker_trades
+                        WHERE (date, raw_code, broker_id, side) IN (
+                            SELECT date, raw_code, broker_id, side FROM temp_broker_df
+                        );
+                        """)
+                        con.execute("INSERT INTO tw_broker_trades SELECT * FROM temp_broker_df;")
+                    logger.info(f"💾 成功寫入/更新 {len(df)} 筆券商分點資料至 DuckDB")
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error(f"❌ 寫入 tw_broker_trades 失敗: {e}", exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error(f"❌ 寫入 tw_broker_trades 失敗: {e}", exc_info=True)
+                    return 0
             return 0
 
     def get_broker_trades_for_ticker(self, ticker: str, limit: int = 100) -> pd.DataFrame:
@@ -2261,7 +2389,7 @@ class DuckDBManager:
         LIMIT ?;
         """
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
                 return df
         except Exception as e:
@@ -2284,7 +2412,7 @@ class DuckDBManager:
 
         clean_code = t_clean.split(".")[0]
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 # 取得可用日期清單
                 dates_df = con.execute("""
                     SELECT DISTINCT date 
@@ -2367,12 +2495,13 @@ class DuckDBManager:
             df["updated_at"] = now_str
             df = df[expected_cols]
 
-            with self._get_connection() as con:
-                con.register("df_earnings_batch", df)
-                con.execute("""
-                INSERT OR REPLACE INTO earnings_calls BY NAME
-                SELECT * FROM df_earnings_batch;
-                """)
+            with self._WRITE_LOCK:
+                with self._get_connection(read_only=False) as con:
+                    con.register("df_earnings_batch", df)
+                    con.execute("""
+                    INSERT OR REPLACE INTO earnings_calls BY NAME
+                    SELECT * FROM df_earnings_batch;
+                    """)
             logger.info(f"✅ 成功批次寫入/更新 {len(df)} 筆法說會資料")
             return len(df)
         except Exception as e:
@@ -2418,7 +2547,7 @@ class DuckDBManager:
             query += f" {order_clause} LIMIT ?"
             params.append(lim)
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
@@ -2433,7 +2562,7 @@ class DuckDBManager:
         if not self.enabled:
             return 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 val = con.execute("SELECT COUNT(*) FROM earnings_calls;").fetchone()
                 return int(val[0]) if val else 0
         except Exception:
@@ -2467,7 +2596,7 @@ class DuckDBManager:
                 query += " AND is_weight_stock = ?"
                 params.append(is_weight_stock)
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute(query, params).fetchone()
                 if row:
                     return {
@@ -2498,7 +2627,7 @@ class DuckDBManager:
                 params.append(market.upper())
             query += " ORDER BY call_date DESC, call_time ASC;"
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
@@ -2624,11 +2753,12 @@ class DuckDBManager:
         try:
             now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
             data_json = json.dumps(data, ensure_ascii=False)
-            with self._get_connection() as con:
-                con.execute("""
-                INSERT OR REPLACE INTO macro_snapshots (category, data_json, source, updated_at)
-                VALUES (?, ?, ?, ?);
-                """, [category, data_json, source, now_str])
+            with self._WRITE_LOCK:
+                with self._get_connection(read_only=False) as con:
+                    con.execute("""
+                    INSERT OR REPLACE INTO macro_snapshots (category, data_json, source, updated_at)
+                    VALUES (?, ?, ?, ?);
+                    """, [category, data_json, source, now_str])
             return True
         except Exception as e:
             logger.warning(f"⚠️ 寫入宏觀快照至 DuckDB 失敗 ({category}): {e}")
@@ -2639,7 +2769,7 @@ class DuckDBManager:
         if not self.enabled or not category:
             return None
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM macro_snapshots WHERE category = ?;
                 """, [category]).fetchone()
@@ -2685,7 +2815,7 @@ class DuckDBManager:
             is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO")
 
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     # 寫入主代碼
                     con.execute("""
                     INSERT OR REPLACE INTO company_profiles 
@@ -2715,7 +2845,7 @@ class DuckDBManager:
             is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO")
             is_digit = t_upper.isdigit()
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 if is_tw or is_digit:
                     raw_code = re.sub(r"\.(TW|TWO)$", "", t_upper)
                     canon_tw = f"{raw_code}.TW"
@@ -2769,7 +2899,7 @@ class DuckDBManager:
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_networks 
                     (ticker, name, unified_id, capital, representative, address, data_json, web_url, updated_at)
@@ -2797,7 +2927,7 @@ class DuckDBManager:
             canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
             canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM company_networks 
                 WHERE ticker IN (?, ?, ?, ?, ?) OR name = ? OR unified_id = ?
@@ -2840,7 +2970,7 @@ class DuckDBManager:
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_tenders 
                     (ticker, name, tax_id, wins, participations, win_rate, award_total, data_json, web_url, updated_at)
@@ -2868,7 +2998,7 @@ class DuckDBManager:
             canon_tw = f"{raw_code}.TW" if raw_code.isdigit() else t_upper
             canon_two = f"{raw_code}.TWO" if raw_code.isdigit() else t_upper
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute("""
                 SELECT data_json, updated_at FROM company_tenders 
                 WHERE ticker IN (?, ?, ?, ?, ?) OR name = ? OR tax_id = ?
@@ -2899,7 +3029,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         saved = 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 for ch in channels:
                     con.execute("""
                         INSERT INTO podcast_channels (
@@ -2946,7 +3076,7 @@ class DuckDBManager:
         if not self.enabled:
             return []
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute("""
                     SELECT c.channel_id, c.title, c.author, c.description, c.image_url,
                            c.rss_url, c.youtube_channel_url, c.follower_count,
@@ -2971,7 +3101,7 @@ class DuckDBManager:
         if not self.enabled:
             return 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 val = con.execute("SELECT COUNT(*) FROM podcast_channels;").fetchone()
                 return int(val[0]) if val else 0
         except Exception:
@@ -2982,7 +3112,7 @@ class DuckDBManager:
         if not self.enabled:
             return None
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 res = con.execute("SELECT MAX(published_at) FROM podcast_episodes;").fetchone()
                 return str(res[0]) if res and res[0] else None
         except Exception as e:
@@ -2997,7 +3127,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         saved = 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 for r in records:
                     tt = r.get("topic_tags")
                     if isinstance(tt, list):
@@ -3098,7 +3228,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         ts_str = json.dumps(ticker_sentiments, ensure_ascii=False) if isinstance(ticker_sentiments, dict) else str(ticker_sentiments or "{}")
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 con.execute("""
                     UPDATE podcast_episodes
                     SET importance_score = ?,
@@ -3120,7 +3250,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         updated_count = 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 for r in updates:
                     ep_id = r.get("id") or r.get("episode_id")
                     if not ep_id:
@@ -3190,7 +3320,7 @@ class DuckDBManager:
             query += " ORDER BY e.published_at DESC LIMIT ? OFFSET ?;"
             params.extend([limit, offset])
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 df = con.execute(query, params).df()
                 if df.empty:
                     return []
@@ -3204,7 +3334,7 @@ class DuckDBManager:
         if not self.enabled:
             return []
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 # 統計各 topic_tags 的出現次數
                 df = con.execute("SELECT topic_tags FROM podcast_episodes WHERE topic_tags IS NOT NULL;").df()
                 if df.empty:
@@ -3233,7 +3363,7 @@ class DuckDBManager:
         if not self.enabled:
             return 0
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 val = con.execute("SELECT COUNT(*) FROM podcast_episodes;").fetchone()
                 return int(val[0]) if val else 0
         except Exception:
@@ -3247,7 +3377,7 @@ class DuckDBManager:
             clean_tickers = list({str(t).strip().upper() for t in tickers if t})
             if not clean_tickers:
                 return {}
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 placeholders = ",".join(["?"] * len(clean_tickers))
                 query = f"""
                     WITH target_tickers AS (
@@ -3333,7 +3463,7 @@ class DuckDBManager:
             raw_verdict_str = json.dumps(verdict, ensure_ascii=False)
 
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO decision_verdicts
                     (ticker, as_of_date, action_decision, action_confidence, action_probabilities,
@@ -3362,7 +3492,7 @@ class DuckDBManager:
             raw_code = re.sub(r"\.(TW|TWO)$", "", t_clean)
             date_str = as_of_date or datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d")
 
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute("""
                 SELECT action_decision, action_confidence, action_probabilities, conviction_score,
                        is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at
@@ -3430,7 +3560,7 @@ class DuckDBManager:
             data_json = json.dumps(data, ensure_ascii=False)
 
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_fundamentals
                     (ticker, pe, forward_pe, pb, ev_ebitda, data_json, updated_at)
@@ -3452,7 +3582,7 @@ class DuckDBManager:
         try:
             t_clean = str(ticker).strip().upper()
             raw_code = re.sub(r"\.(TW|TWO)$", "", t_clean)
-            with self._get_connection() as con:
+            with self._get_connection(read_only=True) as con:
                 row = con.execute("""
                 SELECT pe, forward_pe, pb, ev_ebitda, updated_at
                 FROM company_fundamentals
@@ -3502,7 +3632,7 @@ class DuckDBManager:
 
         try:
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     for t, data in records.items():
                         if not t or not data:
                             continue
@@ -3547,7 +3677,7 @@ class DuckDBManager:
         for attempt in range(max_retries):
             try:
                 with self._WRITE_LOCK:
-                    with self._get_connection() as con:
+                    with self._get_connection(read_only=False) as con:
                         con.begin()
                         try:
                             # 確保同日重跑之完全冪等性：清除當日舊快照
@@ -3697,7 +3827,7 @@ class DuckDBManager:
 
         try:
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     # 清理論文
                     del_papers = con.execute("DELETE FROM discovery_papers WHERE as_of < ? OR published_date < ?", [paper_cutoff, paper_cutoff])
                     pruned_papers = del_papers.fetchall()[0][0] if del_papers else 0
@@ -3962,7 +4092,7 @@ class DuckDBManager:
         if not self.enabled:
             return
         try:
-            with self._get_connection() as con:
+            with self._get_connection(read_only=False) as con:
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS tw_industry_chains (
                     chain_id VARCHAR PRIMARY KEY,
@@ -4019,7 +4149,7 @@ class DuckDBManager:
 
         try:
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.register("temp_industry_chains_df", df[expected_cols])
                     con.execute("""
                     DELETE FROM tw_industry_chains
@@ -4058,7 +4188,7 @@ class DuckDBManager:
 
         try:
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.register("temp_industry_nodes_df", df[expected_cols])
                     con.execute("BEGIN TRANSACTION;")
                     try:
@@ -4102,7 +4232,7 @@ class DuckDBManager:
 
         try:
             with self._WRITE_LOCK:
-                with self._get_connection() as con:
+                with self._get_connection(read_only=False) as con:
                     con.register("temp_industry_rels_df", df[expected_cols])
                     con.execute("BEGIN TRANSACTION;")
                     try:

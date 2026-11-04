@@ -6,7 +6,7 @@ import hashlib
 import json
 import threading
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 import duckdb
 
@@ -115,6 +115,61 @@ class ForecastStore:
                 VALUES (?,?,?,?,?,?,?,?,?,?)""", [fid, str(p["run_id"]), str(p["ticker"]), str(p["market"]).upper(), str(p["model_revision"]),
                  p["target_date"], int(p["horizon"]), str(p["issued_at"]), p["last_complete_bar"], encoded])
         return fid
+
+    def record_forecasts_batch(self, forecasts: Sequence[Mapping[str, Any]]) -> list[str]:
+        """批次持久化預測記錄，使用單一連線與單一鎖定，大幅降低連線開銷與檔案鎖競爭"""
+        if not forecasts:
+            return []
+        prepared: list[tuple[str, str, list[Any]]] = []
+        required = ("run_id", "ticker", "market", "model_revision", "target_date", "horizon", "issued_at", "last_complete_bar", "prediction")
+        identity_fields = ("run_id", "ticker", "model_revision", "config_hash", "target_date", "horizon", "target_type", "feature_profile")
+        unique_run_ids = set()
+
+        for forecast in forecasts:
+            p = dict(forecast)
+            if "prediction" not in p and "predicted_price" in p:
+                p["prediction"] = p["predicted_price"]
+            if "last_complete_bar" not in p and "last_bar_date" in p:
+                p["last_complete_bar"] = p["last_bar_date"]
+            if "last_complete_bar" not in p and "data_cutoff" in p:
+                p["last_complete_bar"] = str(p["data_cutoff"])[:10]
+            if "current_price" not in p:
+                p["current_price"] = p.get("price_basis_value")
+            missing = [key for key in required if key not in p]
+            if missing:
+                raise ValueError("forecast missing required fields: " + ", ".join(missing))
+            if int(p["horizon"]) < 1:
+                raise ValueError("horizon must be positive")
+            fid = str(p.get("forecast_id") or self._identity("fc", {k: p[k] for k in identity_fields if k in p}))
+            p["forecast_id"] = fid
+            encoded = _json(p)
+            r_id = str(p["run_id"])
+            unique_run_ids.add(r_id)
+            params = [
+                fid, r_id, str(p["ticker"]), str(p["market"]).upper(), str(p["model_revision"]),
+                p["target_date"], int(p["horizon"]), str(p["issued_at"]), p["last_complete_bar"], encoded
+            ]
+            prepared.append((fid, encoded, params))
+
+        with self._lock(), self._connect() as con:
+            for r_id in unique_run_ids:
+                if not con.execute("SELECT 1 FROM model_runs WHERE run_id=?", [r_id]).fetchone():
+                    raise ValueError(f"forecast run_id does not exist: {r_id}")
+            con.execute("BEGIN TRANSACTION")
+            try:
+                for fid, encoded, params in prepared:
+                    row = con.execute("SELECT payload_json FROM forecast_records WHERE forecast_id=?", [fid]).fetchone()
+                    if row and row[0] != encoded:
+                        raise ValueError(f"forecast identity already exists with different immutable content: {fid}")
+                    con.execute("""INSERT OR IGNORE INTO forecast_records
+                        (forecast_id,run_id,ticker,market,model_revision,target_date,horizon,issued_at,last_complete_bar,payload_json)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""", params)
+                con.execute("COMMIT")
+            except Exception:
+                con.execute("ROLLBACK")
+                raise
+
+        return [item[0] for item in prepared]
 
     def list_forecasts(self, filters: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
         filters = filters or {}

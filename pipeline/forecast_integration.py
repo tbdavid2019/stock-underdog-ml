@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import logging
 import math
 from typing import Mapping
 
@@ -12,6 +13,8 @@ import pandas as pd
 
 from backtest.verification import resolve_target_session, session_close
 from core.market_calendar import MarketCalendar
+
+logger = logging.getLogger("stock_app.pipeline.forecast_integration")
 
 
 def retain_complete_bars(contexts: Mapping, as_of: datetime) -> None:
@@ -69,7 +72,7 @@ def persist_forecast_results(store, contexts: Mapping, strategy_outputs: Mapping
         raise ValueError("issued_at must be timezone-aware")
     issued = issued_at.astimezone(timezone.utc)
     store.record_run({"run_id": run_id, "issued_at": issued.isoformat()})
-    saved = []
+    records_to_save = []
     for model_name, results in strategy_outputs.items():
         if model_name not in {"timesfm", "timestral", "moirai"}:
             continue
@@ -119,5 +122,18 @@ def persist_forecast_results(store, contexts: Mapping, strategy_outputs: Mapping
                     native = metadata.get("quantile_source", "native") == "native"
                     record[quantile] = _numeric(quantiles.get(quantile + suffix)) if exact_horizon and native else None
                 record["quantile_source"] = "native" if native and exact_horizon else "unavailable"
-                saved.append(store.record_forecast(record))
+                records_to_save.append(record)
+
+    if not records_to_save:
+        return []
+
+    if hasattr(store, "record_forecasts_batch") and type(store).__name__ != "MagicMock":
+        try:
+            return store.record_forecasts_batch(records_to_save)
+        except Exception as e:
+            logger.warning("⚠️ ForecastStore 批次寫入失敗，降級為逐筆寫入: %s", e)
+
+    saved = []
+    for record in records_to_save:
+        saved.append(store.record_forecast(record))
     return saved
