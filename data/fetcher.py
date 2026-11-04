@@ -411,6 +411,8 @@ class StockFetcher:
 
     # ========== 2. OHLCV Market Data Fetchers ==========
 
+    _stock_fetch_circuit_open_until = 0.0
+
     @classmethod
     def get_stock_data(
         cls, 
@@ -422,11 +424,20 @@ class StockFetcher:
         """
         Fetch historical price data for a single stock with indicators.
         """
-        # 1. Try cache
+        import time
+
+        # 1. Try fresh cache
         if use_cache:
             cached = CacheManager.get_stock_data(ticker, period, max_age_hours=max_age_hours)
             if cached is not None and not cached.empty:
                 return add_base_indicators(cached)
+
+        # 1.1 Check circuit breaker
+        if time.time() < cls._stock_fetch_circuit_open_until:
+            stale = CacheManager.get_stock_data(ticker, period, max_age_hours=None)
+            if stale is not None and not stale.empty:
+                return add_base_indicators(stale)
+            return pd.DataFrame()
 
         # 2. Download from yfinance
         try:
@@ -436,7 +447,11 @@ class StockFetcher:
             data = t.history(period=period, auto_adjust=True)
 
             if data.empty:
-                logger.warning(f"⚠️ {ticker} yfinance 獲取數據為空，嘗試從本地 DuckDB 備援讀取...")
+                logger.warning(f"⚠️ {ticker} yfinance 獲取數據為空，嘗試從本地快取或 DuckDB 備援讀取...")
+                stale_cached = CacheManager.get_stock_data(ticker, period, max_age_hours=None)
+                if stale_cached is not None and not stale_cached.empty:
+                    logger.info(f"🔄 成功從磁碟快取備援載入 {ticker} 歷史日 K ({len(stale_cached)} 筆)")
+                    return add_base_indicators(stale_cached)
                 from data.duckdb_manager import DuckDBManager
                 db_data = DuckDBManager().get_daily_bars_for_ticker(ticker)
                 if not db_data.empty:
@@ -460,7 +475,16 @@ class StockFetcher:
             return add_base_indicators(data)
 
         except Exception as e:
-            logger.error(f"❌ 下載 {ticker} 行情時發生錯誤: {e}，嘗試從本地 DuckDB 備援讀取...")
+            err_msg = str(e).lower()
+            if "rate limited" in err_msg or "too many requests" in err_msg or "yfratelimiterror" in err_msg or "429" in err_msg:
+                logger.warning(f"🚨 觸發 Yahoo Finance 頻率限制 (429)，開啟行情抓取熔斷保護 600 秒: {ticker}")
+                cls._stock_fetch_circuit_open_until = time.time() + 600.0
+
+            logger.warning(f"⚠️ 下載 {ticker} 行情時發生錯誤: {e}，優先從本地磁碟快取備援讀取...")
+            stale_cached = CacheManager.get_stock_data(ticker, period, max_age_hours=None)
+            if stale_cached is not None and not stale_cached.empty:
+                logger.info(f"🔄 成功從磁碟快取備援載入 {ticker} 歷史日 K ({len(stale_cached)} 筆)")
+                return add_base_indicators(stale_cached)
             try:
                 from data.duckdb_manager import DuckDBManager
                 db_data = DuckDBManager().get_daily_bars_for_ticker(ticker)

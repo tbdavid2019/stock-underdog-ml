@@ -384,14 +384,18 @@ class LiveSourceProvider:
                 metadata={"availability_rule":availability_rule}))
         return out
 
+    _yahoo_circuit_open_until = 0.0
+
     def _fetch_yahoo(self, ticker, series_id, start, end, ohlcv=False):
+        if time.time() < CovariateBuilder._yahoo_circuit_open_until:
+            return []
         import yfinance as yf
         session = requests.Session()
         session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         })
         frame = None
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 frame = yf.download(
                     ticker,
@@ -416,8 +420,13 @@ class LiveSourceProvider:
                 if frame is not None and not frame.empty:
                     break
             except Exception as e:
+                err_msg = str(e).lower()
+                if "rate limited" in err_msg or "too many requests" in err_msg or "yfratelimiterror" in err_msg or "429" in err_msg:
+                    logger.warning(f"🚨 觸發 Yahoo Finance 頻率限制 (429)，開啟協變量熔斷保護 600 秒: {ticker}")
+                    CovariateBuilder._yahoo_circuit_open_until = time.time() + 600.0
+                    return []
                 logger.warning(f"Yahoo fetch attempt {attempt+1} failed for {ticker}: {e}")
-                if attempt < 2:
+                if attempt < 1:
                     time.sleep(1)
         if frame is None or frame.empty:
             return []

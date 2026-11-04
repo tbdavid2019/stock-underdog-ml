@@ -9,6 +9,9 @@
 ## 2026-11-04 (v2.4.66)
 
 ### Resilience, Historical Backfill & Architecture Lifecycle Standardization
+- **Yahoo Finance 429 速率限制熔斷保護與過期快取備援機制 (`data/covariates.py`, `data/fetcher.py`, `data/cache.py`)**：
+  - 於 `CovariateBuilder` 與 `StockFetcher` 實作自動熔斷器（Circuit Breaker）：偵測到 HTTP 429 / Rate Limited 錯誤時，立刻開啟 600 秒熔斷保護，阻斷數百檔標的重複無效請求與超時卡死。
+  - 實作過期快取備援策略（遵循 `AGENTS.md` 鐵律：優先抓最新資料，上游失敗時無縫取用歷史磁碟快取 `max_age_hours=None`），徹底避免行情抓取因 429 全部掛零。
 - **Yahoo Finance 429 速率限制協變量平滑降級 (`pipeline/orchestrator.py`)**：
   - 當 Yahoo Finance 觸發 429 速率限制導致外生變數與特徵矩陣不可用時，在非 `STRICT_COVARIATE_MODE` 下自動平滑降級為 `price_only` 純價格時序推論模式。
   - 降級時自動清理 `past_covariates` 與 `feature_snapshot`，徹底避免模型因缺少協變量而全數放棄推論（符合條件: 0 支）的致命架構缺陷。

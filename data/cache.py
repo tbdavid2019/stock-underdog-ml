@@ -34,14 +34,14 @@ class CacheManager:
         return os.path.join(STOCK_DATA_CACHE_DIR, f"{safe_ticker}_{period}.pkl")
 
     @classmethod
-    def get_stock_data(cls, ticker: str, period: str, max_age_hours: int = 12) -> Optional[pd.DataFrame]:
+    def get_stock_data(cls, ticker: str, period: str, max_age_hours: Optional[int] = 12) -> Optional[pd.DataFrame]:
         path = cls._get_stock_data_path(ticker, period)
         if not os.path.exists(path):
             return None
 
         try:
             mtime = datetime.fromtimestamp(os.path.getmtime(path))
-            if datetime.now() - mtime > timedelta(hours=max_age_hours):
+            if max_age_hours is not None and datetime.now() - mtime > timedelta(hours=max_age_hours):
                 return None
 
             with open(path, "rb") as f:

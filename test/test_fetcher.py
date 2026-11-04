@@ -75,6 +75,39 @@ class TestStockFetcher(unittest.TestCase):
         self.assertNotIn("2360.TW", name_map)
         self.assertIn("2603.TW", name_map)
 
+    @patch("yfinance.Ticker")
+    @patch("data.fetcher.CacheManager.get_stock_data")
+    def test_get_stock_data_falls_back_to_stale_cache_on_yfinance_error(self, mock_cache, mock_ticker):
+        # 1. 第一次 get_stock_data (max_age_hours=12) 返回 None 代表快取過期
+        # 2. 第二次 get_stock_data (max_age_hours=None) 返回 stale DataFrame
+        stale_df = pd.DataFrame({"Close": [100.0, 105.0]}, index=pd.date_range("2026-01-01", periods=2))
+        mock_cache.side_effect = [None, stale_df]
+
+        # 模擬 yfinance 報 Rate Limited
+        mock_inst = MagicMock()
+        mock_inst.history.side_effect = Exception("Too Many Requests. Rate limited.")
+        mock_ticker.return_value = mock_inst
+
+        df = StockFetcher.get_stock_data("6770.T", period="6mo", use_cache=True)
+        self.assertFalse(df.empty)
+        self.assertEqual(len(df), 2)
+        self.assertIn("ma5", df.columns)
+
+    @patch("yfinance.Ticker")
+    @patch("data.fetcher.CacheManager.get_stock_data")
+    def test_circuit_breaker_trips_on_rate_limit(self, mock_cache, mock_ticker):
+        StockFetcher._stock_fetch_circuit_open_until = 0.0
+        stale_df = pd.DataFrame({"Close": [100.0, 105.0]}, index=pd.date_range("2026-01-01", periods=2))
+        mock_cache.return_value = stale_df
+
+        # 模擬觸發 rate limit
+        mock_inst = MagicMock()
+        mock_inst.history.side_effect = Exception("Too Many Requests. Rate limited.")
+        mock_ticker.return_value = mock_inst
+
+        StockFetcher.get_stock_data("6770.T", period="6mo", use_cache=False)
+        self.assertGreater(StockFetcher._stock_fetch_circuit_open_until, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
