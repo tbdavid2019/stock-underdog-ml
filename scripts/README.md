@@ -21,7 +21,6 @@ scripts/
 ├── test_cache.py                            測試快取功能
 ├── debug_backfill.py                        除錯回測問題
 ├── clear_backtest_data.py                   清空回測資料
-├── backtest_analysis.py                     回測分析
 ├── app.py                                   Streamlit 測試應用
 └── README.md                                本文件
 ```
@@ -79,7 +78,6 @@ python scripts/verification/verify_predictions_extended.py
 
 ### 回測相關
 - **backfill_historical.py** - 回填歷史預測的實際價格用於驗證
-- **backtest_analysis.py** - 分析回測結果和模型表現
 - **debug_backfill.py** - Debug 回填過程的問題
 - **clear_backtest_data.py** - 清空回測數據重新開始
 
@@ -97,9 +95,8 @@ python scripts/check_db_contents.py
 # 測試預測功能
 python scripts/test_next_day_prediction.py
 
-# 回填並分析回測
+# 回填回測實際價格
 python scripts/backfill_historical.py
-python scripts/backtest_analysis.py
 
 # 檢查快取
 python scripts/check_cache.py
@@ -111,5 +108,4 @@ python scripts/check_cache.py
 
 - [../supabase_schema.sql](../supabase_schema.sql) - 完整資料庫結構（新用戶使用）
 - [../README.md](../README.md) - 專案主文件
-- [../main.py](../main.py) - 主程式入口（雙軌策略）
-- [../main_lstm_only.py](../main_lstm_only.py) - 單純 LSTM 版本（舊版保留）
+- [../main.py](../main.py) - 主程式入口（雙軌量化系統）

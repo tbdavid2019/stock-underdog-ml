@@ -1160,6 +1160,174 @@ class DuckDBManager:
         df = self.query(sql, full_params)
         return self._clean_df_records(df)
 
+    def get_tri_bullish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """取得 3 模型同步看漲標的 (TimesFM ∩ Timestral ∩ MOIRAI-2 全數潛力 > 0)"""
+        index_name = self._clean_index_name(index_name)
+        base_where = [
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            base_where.append("index_name = ?")
+            params.append(index_name)
+
+        base_where_sql = f"WHERE {' AND '.join(base_where)}"
+        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
+        full_params = list(params) + list(params) + [limit]
+
+        sql = f"""
+        WITH latest_ts AS (
+            SELECT ticker, index_name, MAX(timestamp) as max_ts
+            FROM predictions
+            {base_where_sql}
+            GROUP BY ticker, index_name
+        ),
+        candidates AS (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.ticker 
+                       ORDER BY CASE WHEN p.model_name = '多維共振' OR p.strategy_type = '多維共振' THEN 0 ELSE 1 END,
+                                p.potential DESC NULLS LAST
+                   ) as rn
+            FROM predictions p
+            JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
+            WHERE (
+                p.tri_model_consensus = TRUE
+                OR (p.timesfm_potential > 0 AND p.timestral_potential > 0 AND p.moirai_potential > 0)
+                OR (p.tags LIKE '%三模型%' OR p.tags LIKE '%三大模型%' OR p.tags LIKE '%3重符合%')
+            )
+            AND (COALESCE(p.tags, '') NOT LIKE '%防守%' AND COALESCE(p.tags, '') NOT LIKE '%深度防守%')
+            {p_where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM candidates
+        WHERE rn = 1
+        ORDER BY potential DESC NULLS LAST, ticker ASC
+        LIMIT ?;
+        """
+        df = self.query(sql, full_params)
+        return self._clean_df_records(df)
+
+    def get_dual_bullish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """取得雙模型以上看漲標的 (任 2 個時序大模型潛力 > 0)"""
+        index_name = self._clean_index_name(index_name)
+        base_where = [
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            base_where.append("index_name = ?")
+            params.append(index_name)
+
+        base_where_sql = f"WHERE {' AND '.join(base_where)}"
+        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
+        full_params = list(params) + list(params) + [limit]
+
+        sql = f"""
+        WITH latest_ts AS (
+            SELECT ticker, index_name, MAX(timestamp) as max_ts
+            FROM predictions
+            {base_where_sql}
+            GROUP BY ticker, index_name
+        ),
+        candidates AS (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.ticker 
+                       ORDER BY CASE WHEN p.model_name = '多維共振' OR p.strategy_type = '多維共振' THEN 0 ELSE 1 END,
+                                p.potential DESC NULLS LAST
+                   ) as rn
+            FROM predictions p
+            JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
+            WHERE (
+                p.dual_model_consensus = TRUE
+                OR p.tri_model_consensus = TRUE
+                OR (
+                    CASE WHEN p.timesfm_potential > 0 THEN 1 ELSE 0 END +
+                    CASE WHEN p.timestral_potential > 0 THEN 1 ELSE 0 END +
+                    CASE WHEN p.moirai_potential > 0 THEN 1 ELSE 0 END
+                ) >= 2
+                OR (p.tags LIKE '%雙模型%' OR p.tags LIKE '%雙AI%' OR p.tags LIKE '%雙時序%' OR p.tags LIKE '%雙ML%')
+            )
+            AND (COALESCE(p.tags, '') NOT LIKE '%防守%' AND COALESCE(p.tags, '') NOT LIKE '%深度防守%')
+            {p_where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM candidates
+        WHERE rn = 1
+        ORDER BY potential DESC NULLS LAST, ticker ASC
+        LIMIT ?;
+        """
+        df = self.query(sql, full_params)
+        return self._clean_df_records(df)
+
+    def get_dual_bearish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """取得綜合避險標的 (≥2 個時序大模型預測跌幅 < 0 或共振防守破底)"""
+        index_name = self._clean_index_name(index_name)
+        base_where = [
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            base_where.append("index_name = ?")
+            params.append(index_name)
+
+        base_where_sql = f"WHERE {' AND '.join(base_where)}"
+        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
+        full_params = list(params) + list(params) + [limit]
+
+        sql = f"""
+        WITH latest_ts AS (
+            SELECT ticker, index_name, MAX(timestamp) as max_ts
+            FROM predictions
+            {base_where_sql}
+            GROUP BY ticker, index_name
+        ),
+        candidates AS (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.ticker 
+                       ORDER BY CASE WHEN p.model_name = '多維共振' OR p.strategy_type = '多維共振' THEN 0 ELSE 1 END,
+                                p.potential ASC NULLS LAST
+                   ) as rn
+            FROM predictions p
+            JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
+            WHERE (
+                (
+                    CASE WHEN p.timesfm_potential < 0 THEN 1 ELSE 0 END +
+                    CASE WHEN p.timestral_potential < 0 THEN 1 ELSE 0 END +
+                    CASE WHEN p.moirai_potential < 0 THEN 1 ELSE 0 END
+                ) >= 2
+                OR (p.potential < 0 AND (
+                    (p.timesfm_potential IS NOT NULL AND p.timesfm_potential < 0) OR
+                    (p.timestral_potential IS NOT NULL AND p.timestral_potential < 0) OR
+                    (p.moirai_potential IS NOT NULL AND p.moirai_potential < 0)
+                ))
+                OR (p.potential < 0 AND p.model_name IN ('Timestral', 'TimesFM', 'MOIRAI-2'))
+                OR p.tags LIKE '%看跌%'
+                OR p.tags LIKE '%防守%'
+                OR p.tags LIKE '%避險%'
+            )
+            {p_where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM candidates
+        WHERE rn = 1
+        ORDER BY potential ASC NULLS LAST, ticker ASC
+        LIMIT ?;
+        """
+        df = self.query(sql, full_params)
+        return self._clean_df_records(df)
+
     def get_xuantie_candidates(
         self, 
         index_name: Optional[str] = None, 

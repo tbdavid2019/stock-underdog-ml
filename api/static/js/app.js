@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.4.67';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.67';
+import { ApiClient } from '/static/js/api-client.js?v=2.4.68';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.4.68';
 
 const { createApp } = Vue;
 
@@ -22,6 +22,9 @@ export const app = createApp({
             currentLocale: savedLocale,
             activeTab: 'dashboard',
             selectedStrategy: 'resonance',
+            strategyDirection: 'bullish', // 'bullish' | 'bearish'
+            selectedFilterModels: [], // ['timesfm', 'timestral', 'moirai']
+            filterModelOperator: 'AND', // 'AND' | 'OR'
             selectedIndex: '',
             viewMode: savedViewMode, // 'table' | 'card'
             expandedDrawerTicker: null,
@@ -29,47 +32,91 @@ export const app = createApp({
             expandedDrawerLoading: false,
 
             strategyOptions: [
+                // 多方看漲策略
                 {
                     id: 'resonance',
+                    direction: 'bullish',
                     label: '綜合優選',
                     icon: 'military_tech',
                     description: '多模型同步看漲，且具備季線支撐或法人籌碼。'
                 },
                 {
+                    id: 'tri_bullish',
+                    direction: 'bullish',
+                    label: '3 模型同步看漲',
+                    icon: 'workspace_premium',
+                    description: 'TimesFM ∩ Timestral ∩ MOIRAI-2 三大時序大模型同步看漲 (潛力 > 0)。'
+                },
+                {
+                    id: 'dual_bullish',
+                    direction: 'bullish',
+                    label: '雙模型以上看漲',
+                    icon: 'auto_awesome',
+                    description: '任 2 個時序大模型預測漲幅同步 > 0。'
+                },
+                {
                     id: 'timestral_bullish',
-                    label: 'Timestral 看漲排行',
+                    direction: 'bullish',
+                    label: 'Timestral 看漲',
                     icon: 'smart_toy',
-                    description: 'Timestral 預測隔日漲幅排行。'
+                    description: 'Timestral-209M 預測隔日漲幅排行。'
                 },
                 {
                     id: 'timesfm_bullish',
-                    label: 'TimesFM 看漲排行',
-                    icon: 'auto_awesome',
-                    description: 'TimesFM 預測隔日漲幅排行。'
+                    direction: 'bullish',
+                    label: 'TimesFM 看漲',
+                    icon: 'trending_up',
+                    description: 'Google TimesFM 預測隔日漲幅排行。'
                 },
                 {
                     id: 'moirai_bullish',
-                    label: 'MOIRAI-2 看漲排行',
+                    direction: 'bullish',
+                    label: 'MOIRAI-2 看漲',
                     icon: 'psychology',
-                    description: 'MOIRAI-2 預測隔日漲幅排行。'
+                    description: 'Salesforce MOIRAI-2 預測隔日漲幅排行。'
                 },
                 {
                     id: 'xuantie',
+                    direction: 'bullish',
                     label: '季線支撐買點',
                     icon: 'show_chart',
                     description: '股價回測季線或半年線支撐。'
                 },
                 {
-                    id: 'timestral_bearish',
-                    label: '看跌避險排行',
-                    icon: 'shield',
-                    description: '模型預測隔日跌幅排行，注意避險防守。'
-                },
-                {
                     id: 'latest',
+                    direction: 'bullish',
                     label: '全市場最新總表',
                     icon: 'dataset',
                     description: '【全市場快照】最新批次所有追蹤標的之現價、隔日目標價、估值與籌碼總覽。'
+                },
+                // 空方避險策略
+                {
+                    id: 'dual_bearish',
+                    direction: 'bearish',
+                    label: '綜合避險 (≥2模型看跌)',
+                    icon: 'shield',
+                    description: '至少 2 個時序大模型同步預測下跌，提防共振破底風險。'
+                },
+                {
+                    id: 'timestral_bearish',
+                    direction: 'bearish',
+                    label: 'Timestral 看跌排行',
+                    icon: 'smart_toy',
+                    description: 'Timestral 模型預測隔日跌幅排行，注意避險防守。'
+                },
+                {
+                    id: 'timesfm_bearish',
+                    direction: 'bearish',
+                    label: 'TimesFM 看跌排行',
+                    icon: 'trending_down',
+                    description: 'Google TimesFM 模型預測跌幅排行，防範破底走勢。'
+                },
+                {
+                    id: 'moirai_bearish',
+                    direction: 'bearish',
+                    label: 'MOIRAI-2 看跌排行',
+                    icon: 'psychology',
+                    description: 'Salesforce MOIRAI-2 模型預測跌幅排行，防守觀望。'
                 }
             ],
 
@@ -299,6 +346,66 @@ export const app = createApp({
     computed: {
         currentStrategyMeta() {
             return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
+        },
+        currentStrategyOptions() {
+            return this.strategyOptions.filter(s => s.direction === this.strategyDirection);
+        },
+        displayRecords() {
+            let list = this.records || [];
+            if (!this.selectedFilterModels || this.selectedFilterModels.length === 0) {
+                return list;
+            }
+            const isBearish = this.strategyDirection === 'bearish' || ['dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bearish'].includes(this.selectedStrategy);
+            const op = this.filterModelOperator || 'AND';
+            const models = this.selectedFilterModels;
+
+            // 🌟 跨模型聚合：支援單一合成列與單模型獨立列（如最新總表）
+            const tickerModelMap = new Map();
+            for (const r of list) {
+                const tk = r.ticker;
+                if (!tk) continue;
+                if (!tickerModelMap.has(tk)) {
+                    tickerModelMap.set(tk, {
+                        timesfmPot: null,
+                        timestralPot: null,
+                        moiraiPot: null
+                    });
+                }
+                const tm = tickerModelMap.get(tk);
+                if (r.timesfm_potential !== undefined && r.timesfm_potential !== null) tm.timesfmPot = Number(r.timesfm_potential);
+                if (r.timestral_potential !== undefined && r.timestral_potential !== null) tm.timestralPot = Number(r.timestral_potential);
+                if (r.moirai_potential !== undefined && r.moirai_potential !== null) tm.moiraiPot = Number(r.moirai_potential);
+                
+                const pot = Number(r.potential);
+                if (!isNaN(pot)) {
+                    if (r.model_name === 'TimesFM') tm.timesfmPot = pot;
+                    else if (r.model_name === 'Timestral') tm.timestralPot = pot;
+                    else if (r.model_name === 'MOIRAI-2') tm.moiraiPot = pot;
+                }
+            }
+
+            const seenTickers = new Set();
+            return list.filter(r => {
+                const tk = r.ticker;
+                const tm = tickerModelMap.get(tk);
+                if (!tm) return false;
+
+                const matches = models.map(mod => {
+                    let pot = null;
+                    if (mod === 'timesfm') pot = tm.timesfmPot;
+                    else if (mod === 'timestral') pot = tm.timestralPot;
+                    else if (mod === 'moirai') pot = tm.moiraiPot;
+                    return pot !== null && !isNaN(pot) && (isBearish ? pot < 0 : pot > 0);
+                });
+
+                const isMatch = (op === 'AND') ? matches.every(Boolean) : matches.some(Boolean);
+                if (!isMatch) return false;
+
+                // 若同一標的有多列，避免聯集時重複呈現相同股票代碼
+                if (seenTickers.has(tk)) return false;
+                seenTickers.add(tk);
+                return true;
+            });
         },
         uniqueDiscoveryCandidates() {
             return this.deduplicateCandidates(this.discoveryCandidates || []);
@@ -1832,10 +1939,41 @@ export const app = createApp({
                 this.discoveryLoading = false;
             }
         },
-        setStrategy(stratId) {
-            this.selectedStrategy = stratId;
+        setDirection(dir) {
+            if (this.strategyDirection === dir) return;
+            this.strategyDirection = dir;
+            if (dir === 'bearish') {
+                if (!['dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bearish'].includes(this.selectedStrategy)) {
+                    this.selectedStrategy = 'dual_bearish';
+                }
+            } else {
+                if (!['resonance', 'tri_bullish', 'dual_bullish', 'timestral_bullish', 'timesfm_bullish', 'moirai_bullish', 'xuantie', 'latest'].includes(this.selectedStrategy)) {
+                    this.selectedStrategy = 'resonance';
+                }
+            }
             this.updateUrl();
             this.loadData();
+        },
+        setStrategy(stratId) {
+            this.selectedStrategy = stratId;
+            const isBearish = ['dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bearish'].includes(stratId);
+            this.strategyDirection = isBearish ? 'bearish' : 'bullish';
+            this.updateUrl();
+            this.loadData();
+        },
+        toggleFilterModel(modelKey) {
+            const idx = this.selectedFilterModels.indexOf(modelKey);
+            if (idx >= 0) {
+                this.selectedFilterModels.splice(idx, 1);
+            } else {
+                this.selectedFilterModels.push(modelKey);
+            }
+        },
+        setFilterOperator(op) {
+            this.filterModelOperator = op;
+        },
+        clearFilterModels() {
+            this.selectedFilterModels = [];
         },
         setViewMode(mode) {
             this.viewMode = mode;
@@ -1930,7 +2068,17 @@ export const app = createApp({
                 }
 
                 const strat = params.get('strategy');
-                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'timestral_bullish', 'timestral_bearish', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'moirai_bullish', 'moirai_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
+                const validStrats = [
+                    'resonance', 'tri_bullish', 'dual_bullish', 'timestral_bullish', 'timesfm_bullish', 'moirai_bullish', 'xuantie', 'latest',
+                    'dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bullish', 'bearish'
+                ];
+                if (strat && validStrats.includes(strat)) {
+                    this.selectedStrategy = strat;
+                    this.strategyDirection = ['dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bearish'].includes(strat) ? 'bearish' : 'bullish';
+                } else {
+                    this.selectedStrategy = 'resonance';
+                    this.strategyDirection = 'bullish';
+                }
 
                 const idx = params.get('index');
                 this.selectedIndex = (idx && idx !== 'ALL') ? idx : '';

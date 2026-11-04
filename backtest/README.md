@@ -208,7 +208,7 @@ A: 可以，修改 `models/lstm.py` 的 `predict_next_day()` 函數，
 ## 🔗 相關文檔
 
 - [主要 README](../README.md) - 專案總覽
-- [安裝指南](../SETUP.md) - 詳細安裝步驟
+- [專案指南](../README.md) - 詳細安裝與使用說明
 - [環境變數範本](../.env.example) - 設定參考
 
 ---

@@ -162,6 +162,66 @@ def get_resonance_candidates(
     return response_obj
 
 
+@router.get("/tri-bullish", response_model=PredictionResponse, summary="查詢 3 模型同步看漲 (TimesFM ∩ Timestral ∩ MOIRAI-2 全數潛力 > 0)")
+def get_tri_bullish_candidates(
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    篩選 Google TimesFM、Mistral Timestral-209M、Salesforce MOIRAI-2 三大時序模型同步看漲標的。
+    """
+    cache_key = f"tri_bullish_{index_name}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    records = db.get_tri_bullish_candidates(index_name=index_name, limit=limit)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
+
+
+@router.get("/dual-bullish", response_model=PredictionResponse, summary="查詢雙模型以上看漲 (任 2 個時序大模型潛力 > 0)")
+def get_dual_bullish_candidates(
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    篩選任 2 個時序大模型同步預測隔日漲幅大於 0 之潛力標的。
+    """
+    cache_key = f"dual_bullish_{index_name}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    records = db.get_dual_bullish_candidates(index_name=index_name, limit=limit)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
+
+
+@router.get("/dual-bearish", response_model=PredictionResponse, summary="查詢綜合避險排行 (≥2 個模型看跌或共振破底)")
+def get_dual_bearish_candidates(
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    篩選至少 2 個時序大模型同步預測下跌，或具備看跌共振訊號之避險防守標的。
+    """
+    cache_key = f"dual_bearish_{index_name}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    records = db.get_dual_bearish_candidates(index_name=index_name, limit=limit)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
+
+
 @router.get("/xuantie", response_model=PredictionResponse, summary="查詢玄鐵重劍技術面均線回調買點")
 def get_xuantie_candidates(
     index_name: Optional[str] = Query(None, description="指數篩選"),

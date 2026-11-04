@@ -31,7 +31,7 @@ log() {
 }
 
 # 啟動環境與 Python 執行路徑
-# 1. 優先尋找本地 venv (SETUP.md 建議)
+# 1. 優先尋找本地 venv (README.md 建議)
 # 2. 其次尋找指定的 conda 環境
 # 3. 最後使用系統預設 python
 if [ -f "venv/bin/python" ]; then

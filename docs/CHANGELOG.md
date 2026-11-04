@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-11-04 (v2.4.68)
+
+### Multi-Model Strategy Filtering, Bearish Resonance & Responsive HTML Email Reports
+- **前端策略多空切換、多選 Chips 即時過濾與共振維度升級 (`api/templates/partials/tab_dashboard.html`, `api/static/js/app.js`, `api/static/js/api-client.js`)**：
+  - 遵循 `impeccable`、`mobile-native` 與 WCAG AA/AAA 標準，重構首頁策略列為兩段式高質感控制面板。
+  - **多空方向開關 (Direction Switch)**：提供 `[ 📈 多方看漲 (Bullish) ]` 與 `[ 🛡️ 空方避險 (Bearish) ]` 快速切換，按鈕配色高對比度且無黃底白字問題。
+  - **共振維度快捷切換**：
+    - 多方模式下支援：`🏆 綜合優選` (`resonance`)、`👑 3 模型同步看漲` (`tri_bullish`)、`🔮 雙模型以上看漲` (`dual_bullish`)、`Timestral 看漲` (`timestral_bullish`)、`TimesFM 看漲` (`timesfm_bullish`)、`MOIRAI-2 看漲` (`moirai_bullish`)、`季線支撐買點` (`xuantie`)、`全市場最新總表` (`latest`)。
+    - 空方模式下支援：`🛡️ 綜合避險 (≥2模型看跌)` (`dual_bearish`)、`Timestral 看跌排行` (`timestral_bearish`)、`TimesFM 看跌排行` (`timesfm_bearish`)、`MOIRAI-2 看跌排行` (`moirai_bearish`)。
+  - **多模型即時篩選（多選 Chips）**：支援勾選特定模型（`TimesFM` / `Timestral` / `MOIRAI-2`），並可切換 `[ ∩ 交集 (AND) ]` 與 `[ ∪ 聯集 (OR) ]`，支援即時過濾、重設與動態顯示筆數指示。
+  - **後端端點擴充 (`api/routes/predictions.py`, `data/duckdb_manager.py`)**：新增 `/tri-bullish`、`/dual-bullish` 與 `/dual-bearish` 端點與 DuckDB 查詢邏輯，完整串聯三大時序大模型之多空預測。
+- **Email 報告全面升級（響應式 HTML 郵件 + 個股歷史走勢跳轉連結）(`evaluators/formatter.py`, `notifier.py`, `notifier_dual.py`)**：
+  - **結構化響應式 HTML 郵件 (`format_email_html`)**：
+    - 相容 Gmail、Apple Mail、Outlook，以高雅深藍標題橫幅、琥珀色 AI 盤勢解讀卡片與白底陰影 Card UI 呈現。
+    - 所有個股標題均附帶直達 `https://stockdata.david888.com/?tab=history&ticker={ticker}` 的超連結，點擊即可查看歷史走勢與開獎結果。
+    - 優先推薦卡片完整拆解三大時序大模型（Google TimesFM、Mistral Timestral、Salesforce MOIRAI-2）目標價、信賴區間、盈虧比、均線支撐與籌碼狀態。
+    - 獨立列出三大時序模型之看漲 TOP 5 與看跌避險 TOP 5，底部附帶「進入 888 StockQuant 操盤看板」大按鈕。
+  - **純文字備援優化 (`format_email_message`)**：純文字日報每檔標的亦附上完整個股歷史頁面 URL 與操盤看板連結。
+  - **雙格式多重郵件推播 (`notifier.py`, `notifier_dual.py`)**：`send_email()` 支援 `html_body` 參數並以 `MIMEMultipart('alternative')` 結合 UTF-8 編碼發送，支援現代郵件軟體優先渲染 HTML 並保有純文字降級容錯。
+- **動態側參數特徵矩陣架構與模型生命週期指南擴充 (`docs/MODEL_LIFECYCLE_GUIDE.md`)**：
+  - 升級 `ModelPluginProtocol`，將「側參數 / 外部協變量 (Exogenous Covariates)」納入生命週期一等公民（支援 `supports_covariates`, `required_covariates` 與 `covariates_dict` 注入）。
+  - 定義四大側參數維度（匯率貨幣、總經利率、市場恐慌情緒、產業外溢與微觀籌碼）與台美日三大市場特化側參數畫像（`config/market_covariates.yaml`）。
+  - 建立嚴格的防前瞻偏誤鐵律（Lookahead-Free Engineering）、時間時區校準與三級平滑降級鏈（`Full Covariates -> Sector/Macro Only -> Price-Only`）。
+- **過時檔案大掃除與專案衛生清理 (Project Cleanup - 勿增實體)**：
+  - 刪除已廢棄之 13 個舊檔案與腳本（含 14.4MB `bfg-1.14.0.jar`、`docs/CLAUDE.md`、`docs/superpowers/`、`docs/explain.md`、`docs/SECURITY_INCIDENT.md`、`docs/SETUP.md`、`scripts/backtest_analysis.py`、`scripts/setup.sh`、`example.env` 等）。
+  - 同步清理 `scripts/README.md`、`backtest/README.md` 與 `run_daily.sh` 殘留之死連結與無效指令。
+- **雙獨立代碼審查修復 (Dual Code Review - OpenCode & Codex)**：
+  - 修復郵件看漲焦點區塊在空頭盤勢下可能納入負報酬標的之缺陷，強制過濾 `potential > 0`。
+  - 優化 DuckDB `tri_bullish`、`dual_bullish` 與 `dual_bearish` 視窗排序，優先保留「多維共振」合成列，避免子模型數值遺失。
+  - 前端 `displayRecords` 支援跨行模型聚合與代碼去重，確保在 `latest` 獨立列視圖下切換多選 Chips 運作無誤。
+- **單元測試 (`test/test_formatter.py`)**：
+  - 新增 `test_format_email_html_structure_and_links` 與 `test_format_email_html_with_three_models_and_bearish`，驗證 HTML 結構、三大模型拆解、超連結跳轉與空方警示區塊。
+
+---
+
 ## 2026-11-04 (v2.4.67)
 
 ### Concurrency Lock Hardening, Batch Forecast Store & UI/Narrative Multi-Model Integration

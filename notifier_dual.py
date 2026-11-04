@@ -53,7 +53,12 @@ def send_dual_strategy_results(
     
     try:
         subject = f"量化策略投資日報 - {index_name} - {calculation_time}"
-        send_email(subject, messages['email'], EmailConfig.TO_EMAILS)
+        send_email(
+            subject, 
+            messages['email'], 
+            EmailConfig.TO_EMAILS,
+            html_body=messages.get('email_html')
+        )
         logger.info(f"✅ Email 發送成功 - {index_name}")
     except Exception as e:
         logger.error(f"❌ Email 發送失敗: {e}")

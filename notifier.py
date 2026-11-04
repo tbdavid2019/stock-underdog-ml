@@ -7,24 +7,33 @@ import datetime
 import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from core.config import EmailConfig, TelegramConfig, DiscordConfig
 
 
-def send_email(subject: str, body: str, to_emails: List[str]):
+def send_email(subject: str, body: str, to_emails: List[str], html_body: Optional[str] = None):
     """
     Send email notification
 
     Args:
         subject: Email subject line
-        body: Email body content
+        body: Email body content (plain text fallback)
         to_emails: List of recipient email addresses
+        html_body: Optional responsive HTML body content
     """
-    msg = MIMEMultipart()
-    msg['From'] = EmailConfig.SENDER_EMAIL
-    msg['To'] = ", ".join(to_emails)
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    if html_body:
+        msg = MIMEMultipart('alternative')
+        msg['From'] = EmailConfig.SENDER_EMAIL
+        msg['To'] = ", ".join(to_emails)
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+    else:
+        msg = MIMEMultipart()
+        msg['From'] = EmailConfig.SENDER_EMAIL
+        msg['To'] = ", ".join(to_emails)
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     server = smtplib.SMTP_SSL(EmailConfig.SMTP_SERVER, EmailConfig.SMTP_PORT)
     server.login(EmailConfig.SENDER_EMAIL, EmailConfig.EMAIL_PASSWORD)

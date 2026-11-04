@@ -51,8 +51,8 @@ flowchart TD
 
 | # | 模組層次 | 關鍵檔案 | 需實作 / 修改內容 | 潛在致命坑點 (Pitfalls) |
 |---|---|---|---|---|
-| **1** | **模型適配層** | `models/<name>_model.py` | 實作 `load_model()`、`forecast_batch()`、`quantiles` (P10~P90)、盈虧比計算 | 依賴庫未安裝、權重下載卡住、HF Token 遺失、非確定性輸出 |
-| **2** | **策略封裝層** | `strategies/<name>.py` | 繼承 `BaseStrategy`，實作 `evaluate_batch(contexts)`，提取指標與候選分數 | 未處理 `features_unavailable`、`Close` 不足 30 根未過濾 crash |
+| **1** | **模型適配層** | `models/<name>_model.py` | 實作 `load_model()`、`forecast_batch()`、`quantiles` (P10~P90)、盈虧比計算；宣告是否接收側參數 (`supports_covariates`) | 依賴庫未安裝、權重下載卡住、HF Token 遺失、非確定性輸出、多變量特徵維度 mismatch |
+| **2** | **策略封裝層** | `strategies/<name>.py` | 繼承 `BaseStrategy`，實作 `evaluate_batch(contexts)`，提取指標、消費側參數並計算候選分數 | 未處理 `features_unavailable` 降級、未處理跨市場時差、`Close` 不足 30 根未過濾 crash |
 | **3** | **策略註冊層** | `strategies/registry.py` | `@register_strategy("<name>")`，並在 `orchestrator.py` import | 忘記 import 導致註冊表為空，工廠模式找不到策略實例 |
 | **4** | **配置與授權** | `core/config.py` | 設定權重 `STRATEGY_WEIGHTS`、角色 `MODEL_ROLES`、授權 `usage_eligibility()` | 權重設為 0.0、角色停留在 shadow、合規檢查 `eligible: False` 攔截 |
 | **5** | **管線排程層** | `pipeline/orchestrator.py` | 提取 `contexts`、K 線截斷 `retain_complete_bars`、特徵準備、呼叫批次推論 | **最大地雷**：若協變量下載失敗（429 Rate Limit）硬報錯導致所有模型集體罷工 |
@@ -135,6 +135,10 @@ class ModelPlugin(Protocol):
     author: str                  # 機構/作者，如 "Salesforce"
     supported_markets: List[str] # 支援市場清單 ["tw", "us", "jp"]
     default_role: str            # 預設角色: "active" | "shadow" | "candidate"
+    
+    # 🌟 側參數與協變量能力宣告 (Exogenous Covariate Capability)
+    supports_covariates: bool    # 是否原生支援多變量/外部協變量 (如 MOIRAI-2: True, TimesFM 1.0: False)
+    required_covariates: List[str] # 偏好或必備之側參數清單，如 ["vix", "usdtwd", "sox", "tnx"]
 
     def initialize(self, config: Dict[str, Any]) -> bool:
         """
@@ -155,13 +159,29 @@ class ModelPlugin(Protocol):
     def predict_batch(
         self, 
         series_dict: Dict[str, np.ndarray], 
+        covariates_dict: Optional[Dict[str, Dict[str, np.ndarray]]] = None,
         horizon: int = 5,
         market: str = "tw",
         market_params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Dict[str, Any]]:
         """
         [生命週期勾子 3: 批次推論運算]
-        標準輸入: 標的日收盤價時序字典 (包含足額歷史天數)。
+        標準輸入: 
+          - series_dict: 標的日收盤價時序字典 (包含足額歷史天數)。
+          - covariates_dict: 動態側參數特徵矩陣字典 (可選)，結構為:
+            {
+                "ticker": {
+                    "vix": np.ndarray,       # 恐慌指數時序 (長度與 series 對齊)
+                    "fx_rate": np.ndarray,   # 本地匯率時序 (USD/TWD, USD/JPY 或 DXY)
+                    "yield_10y": np.ndarray, # 美債 10 年期殖利率時序 (^TNX)
+                    "benchmark": np.ndarray, # 基準指數/板塊時序 (^SOX, ^TWII, ^N225)
+                    "inst_flow": np.ndarray  # 法人籌碼/淨買賣動能時序 (台股特有)
+                }
+            }
+          - horizon: 預測步長天數 (1, 5, 20)。
+          - market: 目標市場代碼 ("tw", "us", "jp")。
+          - market_params: 跨市場特化參數覆寫字典。
+
         標準輸出字典結構:
         {
             "ticker": {
@@ -185,7 +205,104 @@ class ModelPlugin(Protocol):
         ...
 ```
 
-### 2. 跨市場特化動態參數矩陣 (Cross-Market Parameter Overrides)
+### 2. 動態側參數特徵矩陣架構 (Dynamic Exogenous Covariates Architecture)
+
+純收盤價（Univariate Price-Only）僅能捕捉自回歸與動能慣性，無法感知宏觀流動性收縮、地緣政治恐慌或匯率劇震。大象底座將**「側參數 / 外部協變量」**定義為一等公民，建立 4 大維度與 3 大市場畫像：
+
+```mermaid
+flowchart LR
+    subgraph 側參數四大維度
+        C1[1. 匯率與貨幣面<br/>USDTWD / USDJPY / DXY]
+        C2[2. 總經與無風險利率<br/>美債10Y殖利率 ^TNX / Fed Rate]
+        C3[3. 市場情緒與波動率<br/>CBOE VIX 恐慌指數 / 標普認沽比]
+        C4[4. 產業外溢與微觀籌碼<br/>費城半導體 ^SOX / 外資投信5日買賣超]
+    end
+
+    subgraph 大象特徵對齊引擎
+        ENG[時間戳校準 + 時區對齊 + 滾動Z-Score標準化 + 防前瞻偏誤截斷]
+    end
+
+    subgraph 依模型能力分發
+        M1[多變量模型 MOIRAI-2 / Chronos<br/>👉 注入完整側參數矩陣]
+        M2[單變量模型 TimesFM / Timestral<br/>👉 降級使用純收盤價 + 側參數作後驗過濾]
+    end
+
+    C1 --> ENG
+    C2 --> ENG
+    C3 --> ENG
+    C4 --> ENG
+    ENG --> M1
+    ENG --> M2
+```
+
+#### 四大側參數特徵工程定義
+
+| 側參數維度 | 關鍵指標代碼 | 數據源 (Fallback 鏈) | 經濟意涵與量化特徵提取 | 適用模型消費方式 |
+|---|---|---|---|---|
+| **匯率與貨幣面** | `USDTWD=X`<br/>`USDJPY=X`<br/>`DX-Y.NYB` | Yahoo Finance $\rightarrow$ Stale Cache | 衡量外資熱錢進出與出口匯損/匯兌收益。取 5 日變動率與乖離率。 | MOIRAI-2 協變量輸入；TimesFM 作為宏觀風控折扣係數 |
+| **總經與無風險利率** | `^TNX` (美債10Y)<br/>`FEDFUNDS` | Yahoo Finance $\rightarrow$ FRED API $\rightarrow$ Cache | 科技高成長股折現率定價錨點。殖利率急升時對高 PE 標的估值施加折價。 | 協變量通道；高估值標的潛力扣減 |
+| **市場情緒與波動率** | `^VIX`<br/>`^VXN` (NASDAQ) | Yahoo Finance $\rightarrow$ CBOE $\rightarrow$ Cache | 衡量全市場黑天鵝與系統性防守風險。VIX $> 25$ 時強制收縮預測目標價上行空間。 | 協變量通道；P10~P90 蒙地卡羅區間動態放大 |
+| **產業外溢與籌碼** | `^SOX` (費城半導體)<br/>三大法人 5 日淨買超 | TWSE/TPEx $\rightarrow$ Yahoo Finance | 費半對台日半導體供應鏈（台積電、聯發科、阿爾卑斯阿爾派）具 1 天領先外溢效應。 | 直接納入台日半導體多變量時序通道 |
+
+#### 跨市場特化側參數畫像 (Market Covariate Profiles)
+
+```yaml
+# config/market_covariates.yaml
+covariate_profiles:
+  tw:
+    market_name: "台股 (TWSE/TPEx)"
+    primary_fx: "USDTWD=X"                # 台幣匯率 (外資動向先行指標)
+    external_spillover: "^SOX"             # 費城半導體 (高達 0.85 相關度)
+    domestic_benchmark: "^TWII"            # 台灣加權指數
+    sentiment_index: "^VIX"                # 全球恐慌情緒
+    macro_interest_rate: "^TNX"            # 美債 10 年期殖利率
+    micro_chip_features:                   # 💡 台灣特有籌碼面特徵 (高權重)
+      foreign_net_5d: true                 # 外資 5 日累計買賣超
+      trust_net_5d: true                   # 投信 5 日累計買賣超
+      margin_balance_change: true          # 融資餘額變化
+    covariate_lookback: 60                 # 側參數回溯天數 (交易日)
+    missing_imputation: "forward_fill"     # 遇台美休市不同步時採用前向填充
+
+  us:
+    market_name: "美股 (NYSE/NASDAQ)"
+    primary_fx: "DX-Y.NYB"                 # 美元指數 (DXY)
+    external_spillover: null               # 美股為全球源頭，無外部領先指數
+    domestic_benchmark: "^GSPC"            # S&P 500 大盤 Beta
+    sentiment_index: "^VIX"                # 恐慌指數 (高靈敏度)
+    macro_interest_rate: "^TNX"            # 10Y 美債 (直接影響科技巨頭 DCF 估值)
+    micro_chip_features:                   # 💡 美股不適用台灣法人分點籌碼
+      foreign_net_5d: false
+      trust_net_5d: false
+    covariate_lookback: 128                # 季度宏觀長回看天數
+    missing_imputation: "linear_interp"
+
+  jp:
+    market_name: "日股 (Tokyo Stock Exchange)"
+    primary_fx: "USDJPY=X"                 # 日圓匯率 (出口巨頭命脈、套息交易關聯)
+    external_spillover: "^SOX"             # 隔夜美股與費半連動
+    domestic_benchmark: "^N225"            # 日經 225
+    sentiment_index: "^VIX"                # 全球恐慌情緒
+    macro_interest_rate: "^TNX"            # 美債利差
+    micro_chip_features:
+      foreign_net_5d: false
+      trust_net_5d: false
+    covariate_lookback: 90
+    missing_imputation: "forward_fill"
+```
+
+#### 側參數前處理與防前瞻偏誤鐵律 (Lookahead-Free Engineering)
+1. **嚴格 K 線截斷 (`retain_complete_bars`)**：側參數時間戳必須與個股收盤價完全同頻。若在盤前執行（如 08:00 台股盤前），美股 `^SOX` 與 `^VIX` 使用前一晚已收盤之終值，嚴禁使用尚未走完之即時盤中資料。
+2. **滾動 Robust 標準化 (Stationarity & Scaling)**：
+   - 價格類（匯率、指數）一律轉換為「對數收益率（Log Returns）」或「相對 20MA 乖離率（BIAS%）」，杜絕絕對點位量綱爆炸。
+   - 籌碼類（張數、金額）進行「除以股本之週轉率正規化」或「滾動 60 日分位數 Rank 映射」。
+3. **三級平滑降級鏈 (Degradation Fallback Chain)**：
+   - **Tier 1 (全特徵)**：個股收盤價 + 總經匯率 + 籌碼協變量均完整就緒 $\rightarrow$ 執行最高精度多變量推論。
+   - **Tier 2 (核心側參數)**：籌碼缺失或 429 $\rightarrow$ 僅以匯率與大盤指数對齊後推論。
+   - **Tier 3 (純收盤價 Price-Only)**：Yahoo Finance 全面 429 觸發熔斷 $\rightarrow$ 自動無縫切入純時序收盤價模式，模型照常輸出預測，**決策永不中斷**。
+
+---
+
+### 3. 跨市場特化動態參數矩陣 (Cross-Market Parameter Overrides)
 
 不同市場具有截然不同的交易機制、波動率特徵與預測視野。大象底座透過動態參數矩陣統一向各金魚插件注入市場專屬約束：
 
@@ -220,7 +337,7 @@ market_matrix:
     broker_chips_weight: 0.00              # 日股籌碼權重歸零
 ```
 
-### 3. 動態集成權重與滾動勝率引擎 (Dynamic Ensemble & Rolling Win-Rate)
+### 4. 動態集成權重與滾動勝率引擎 (Dynamic Ensemble & Rolling Win-Rate)
 
 大象底座不應採用寫死的靜態權重（如各 33%），而是建立**滾動 30 交易日真實開獎勝率的動態 Softmax 集成機制**：
 

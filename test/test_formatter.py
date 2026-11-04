@@ -11,6 +11,7 @@ from evaluators.formatter import (
     format_telegram_message,
     format_discord_message,
     format_email_message,
+    format_email_html,
     format_dual_strategy_message,
     print_evaluation_report,
 )
@@ -170,7 +171,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("> 今日盤勢處於全面多頭", msg)
 
     def test_email_message_formatting(self):
-        """驗證 Email 純文字訊息"""
+        """驗證 Email 純文字訊息，包含個股歷史連結與看板連結"""
         msg = format_email_message(
             "台灣50",
             self.report_dict,
@@ -182,11 +183,13 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("多維量化策略投資日報", msg)
         self.assertIn("盤勢重點解讀:\n今日盤勢處於全面多頭", msg)
         self.assertIn("2330.TW 台積電", msg)
+        self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", msg)
         self.assertIn("[👑四重共振]", msg)
         self.assertIn("波段操作 (季線支撐)", msg)
+        self.assertIn("進入 888 StockQuant 操盤看板: https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350", msg)
 
     def test_format_dual_strategy_message_dict(self):
-        """驗證整合輸出字典包含 telegram, discord, email 三種通道"""
+        """驗證整合輸出字典包含 telegram, discord, email, email_html 四種通道"""
         messages = format_dual_strategy_message(
             "台灣50",
             self.report_dict,
@@ -198,7 +201,109 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("telegram", messages)
         self.assertIn("discord", messages)
         self.assertIn("email", messages)
+        self.assertIn("email_html", messages)
         self.assertIsInstance(messages["telegram"], str)
+        self.assertIsInstance(messages["email"], str)
+        self.assertIsInstance(messages["email_html"], str)
+
+    def test_format_email_html_structure_and_links(self):
+        """
+        驗證 Email 響應式 HTML 郵件：
+        1. 包含 DOCTYPE 與 meta viewport
+        2. 包含頂部標題與指數
+        3. 包含宏觀大盤風控與建議曝險
+        4. 包含 AI 盤勢重點解讀卡片
+        5. 包含優先推薦卡片與可點擊個股歷史頁面超連結 (https://stockdata.david888.com/?tab=history&ticker=...)
+        6. 包含底部導流按鈕 (進入 888 StockQuant 操盤看板)
+        """
+        html_msg = format_email_html(
+            "台灣50",
+            self.report_dict,
+            "2026-10-08 09:00:00",
+            name_map=self.name_map,
+            macro_state=self.macro,
+            ai_summary=self.report_dict["ai_summary"]
+        )
+
+        self.assertIn("<!DOCTYPE html>", html_msg)
+        self.assertIn("多維量化策略投資日報", html_msg)
+        self.assertIn("台灣50", html_msg)
+        self.assertIn("全面多頭 (Bullish)", html_msg)
+        self.assertIn("建議曝險 100%", html_msg)
+        self.assertIn("AI 盤勢重點解讀", html_msg)
+        self.assertIn("今日盤勢處於全面多頭", html_msg)
+
+        # 驗證個股超連結
+        self.assertIn('href="https://stockdata.david888.com/?tab=history&ticker=2330.TW"', html_msg)
+        self.assertIn("2330.TW 台積電 ↗", html_msg)
+        self.assertIn("👑四重共振", html_msg)
+
+        # 驗證模型預測區塊
+        self.assertIn("Google TimesFM:", html_msg)
+        self.assertIn("+4.1%", html_msg)
+        self.assertIn("LSTM:", html_msg)
+        self.assertIn("+5.2%", html_msg)
+
+        # 驗證底部進入操盤看板大按鈕
+        self.assertIn('href="https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350"', html_msg)
+        self.assertIn("進入 888 StockQuant 操盤看板 ↗", html_msg)
+
+    def test_format_email_html_with_three_models_and_bearish(self):
+        """驗證 Email HTML 包含三大時序模型 (TimesFM, Timestral, MOIRAI-2) 與空方避險警示區塊"""
+        tri_candidates = [
+            {
+                "ticker": "2454.TW",
+                "current_price": 1250.0,
+                "composite_score": 96.0,
+                "resonance_tier": "👑三大模型共振",
+                "tags": ["👑三大模型共振", "土洋合買", "低PE"],
+                "timesfm_potential": 3.8,
+                "timesfm_predicted_price": 1297.5,
+                "timestral_potential": 4.5,
+                "timestral_predicted_price": 1306.0,
+                "timestral_p10": 1220.0,
+                "timestral_p90": 1330.0,
+                "moirai_potential": 3.2,
+                "moirai_predicted_price": 1290.0,
+                "moirai_p10": 1230.0,
+                "moirai_p90": 1310.0,
+                "risk_reward_ratio": 2.8,
+                "pullback_type": "MA60 (+1.8%)",
+                "fundamentals": {"pe": 18.5, "pb": 3.8},
+                "institutional": {"is_sync_buy": True}
+            }
+        ]
+        bearish_timestral = [
+            {"ticker": "2317.TW", "potential": -3.5, "current_price": 200.0, "predicted_price": 193.0}
+        ]
+        results = {
+            "overlap_candidates": tri_candidates,
+            "xuantie_results": pd.DataFrame(),
+            "timestral_results": [
+                {"ticker": "2454.TW", "potential": 4.5, "current_price": 1250.0, "predicted_price": 1306.0}
+            ],
+            "timesfm_results": [
+                {"ticker": "2454.TW", "potential": 3.8, "current_price": 1250.0, "predicted_price": 1297.5}
+            ],
+            "moirai_results": [
+                {"ticker": "2454.TW", "potential": 3.2, "current_price": 1250.0, "predicted_price": 1290.0}
+            ],
+            "timestral_bearish_results": bearish_timestral,
+            "macro_state": self.macro
+        }
+        html_msg = format_email_html("台灣50", results, "2026-10-18 10:00:00", name_map={"2454.TW": "聯發科", "2317.TW": "鴻海"})
+
+        # 驗證三大模型卡片
+        self.assertIn("聯發科", html_msg)
+        self.assertIn("Google TimesFM:", html_msg)
+        self.assertIn("Mistral Timestral:", html_msg)
+        self.assertIn("Salesforce MOIRAI-2:", html_msg)
+        self.assertIn("[1220~1330]", html_msg)
+
+        # 驗證空方避險警示
+        self.assertIn("時序大模型看跌避險焦點", html_msg)
+        self.assertIn("2317.TW 鴻海 ↗", html_msg)
+        self.assertIn("-3.5%", html_msg)
 
     def test_empty_candidates_graceful_handling(self):
         """驗證當無任何推薦股票時的防守提示"""

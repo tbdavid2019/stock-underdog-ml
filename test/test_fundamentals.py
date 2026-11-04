@@ -10,6 +10,8 @@ class TestFundamentals(unittest.TestCase):
 
     def setUp(self):
         FundamentalProvider._MEM_CACHE.clear()
+        from data.fetcher import StockFetcher
+        StockFetcher._stock_fetch_circuit_open_until = 0
 
     def test_sanitize_metric(self):
         self.assertEqual(sanitize_metric(15.5), 15.5)

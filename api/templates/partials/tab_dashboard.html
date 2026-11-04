@@ -541,62 +541,134 @@
 
     <!-- 2. Strategy Filter Bar & View Mode Selector -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
+         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col space-y-3.5">
 
-        <!-- Strategy Buttons: Responsive Flex-Wrap (Zero Horizontal Scrollbar) -->
+        <!-- Top Row: Direction Toggle & Right Controls (View Mode, Market, Refresh) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <!-- Long/Short Direction Toggle Switch (符合 WCAG AA/AAA) -->
+            <div class="inline-flex rounded-xl border p-0.5 self-start sm:self-auto"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                <button @click="setDirection('bullish')"
+                        :aria-pressed="strategyDirection === 'bullish'"
+                        :class="strategyDirection === 'bullish' ? (isDark ? 'bg-emerald-600 text-white font-black shadow-md shadow-emerald-950/40' : 'bg-emerald-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
+                    <span class="material-symbols-outlined text-[17px]">trending_up</span>
+                    <span>📈 多方看漲 (Bullish)</span>
+                </button>
+                <button @click="setDirection('bearish')"
+                        :aria-pressed="strategyDirection === 'bearish'"
+                        :class="strategyDirection === 'bearish' ? (isDark ? 'bg-rose-600 text-white font-black shadow-md shadow-rose-950/40' : 'bg-rose-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
+                    <span class="material-symbols-outlined text-[17px]">shield</span>
+                    <span>🛡️ 空方避險 (Bearish)</span>
+                </button>
+            </div>
+
+            <!-- Right: View Mode, Market Selector & Refresh -->
+            <div class="flex items-center space-x-2.5 self-end sm:self-auto shrink-0">
+                <!-- View Mode Switcher -->
+                <div class="inline-flex rounded-xl border p-0.5"
+                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                    <button @click="setViewMode('table')"
+                            :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                            title="高密度表格檢視">
+                        <span class="material-symbols-outlined text-[18px]">table_rows</span>
+                        <span class="hidden sm:inline">表格</span>
+                    </button>
+                    <button @click="setViewMode('card')"
+                            :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
+                            title="卡片情報檢視">
+                        <span class="material-symbols-outlined text-[18px]">grid_view</span>
+                        <span class="hidden sm:inline">卡片</span>
+                    </button>
+                </div>
+
+                <!-- Market Index Dropdown -->
+                <select v-model="selectedIndex" @change="setIndex()"
+                        class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
+                    <option value="">全部市場 (All)</option>
+                    <option value="台灣50">台灣50 (TW0050)</option>
+                    <option value="台灣中型100">台灣中型100 (TW0051)</option>
+                    <option value="台股活躍精選">台股活躍精選 (TW-Active 850)</option>
+                    <option value="台股1000">台股全市場1000 (TW1000)</option>
+                    <option value="SP500">S&P 500 (美股標普 500)</option>
+                    <option value="日經225">🇯🇵 日經225 (Nikkei 225)</option>
+                    <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
+                </select>
+
+                <button @click="loadData()"
+                        class="w-9 h-9 rounded-xl border transition-all text-xs font-bold flex items-center justify-center hover:scale-105 active:scale-95"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
+                        title="重新整理日報" aria-label="重新整理日報">
+                    <span class="material-symbols-outlined text-[18px]">sync</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Strategy Dimension Preset Buttons: Responsive Flex-Wrap -->
         <div class="flex flex-wrap items-center gap-2">
-            <button v-for="strat in strategyOptions" :key="strat.id"
+            <button v-for="strat in currentStrategyOptions" :key="strat.id"
                     @click="setStrategy(strat.id)"
                     :aria-pressed="selectedStrategy === strat.id"
                     :title="strat.description"
-                    :class="selectedStrategy === strat.id ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
+                    :class="selectedStrategy === strat.id ? (strategyDirection === 'bearish' ? (isDark ? 'bg-rose-600 text-white border-rose-500 font-black shadow-md shadow-rose-950/40' : 'bg-rose-600 text-white border-rose-600 font-black shadow-sm') : (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black shadow-sm')) : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
                     class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 border">
                 <span class="material-symbols-outlined text-[17px] sm:text-[18px]">{{ strat.icon }}</span>
                 <span>{{ strat.label }}</span>
             </button>
         </div>
 
-        <!-- Right: View Mode, Market Selector & Refresh -->
-        <div class="flex items-center space-x-2.5 self-end xl:self-auto shrink-0 pt-1 xl:pt-0">
-            <!-- View Mode Switcher -->
-            <div class="inline-flex rounded-xl border p-0.5"
-                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                <button @click="setViewMode('table')"
-                        :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                        title="高密度表格檢視">
-                    <span class="material-symbols-outlined text-[18px]">table_rows</span>
-                    <span class="hidden sm:inline">表格</span>
+        <!-- Multi-Model Live Filtering Toolbar (多選 Chips + 交集/聯集運算) -->
+        <div class="pt-3 border-t flex flex-wrap items-center justify-between gap-2.5 text-xs"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="font-bold flex items-center gap-1" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                    <span class="material-symbols-outlined text-[16px]">tune</span>
+                    <span>模型即時篩選:</span>
+                </span>
+
+                <!-- Model Chips (TimesFM, Timestral, MOIRAI-2) -->
+                <button v-for="m in [{key: 'timesfm', label: 'TimesFM (Google)'}, {key: 'timestral', label: 'Timestral (Mistral)'}, {key: 'moirai', label: 'MOIRAI-2 (Salesforce)'}]"
+                        :key="m.key"
+                        @click="toggleFilterModel(m.key)"
+                        :class="selectedFilterModels.includes(m.key) ? (isDark ? 'bg-sky-500/20 border-sky-400 text-sky-300 font-black' : 'bg-sky-50 border-sky-300 text-sky-800 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-slate-200' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]')"
+                        class="px-2.5 py-1 rounded-lg border text-xs transition-all flex items-center space-x-1 cursor-pointer">
+                    <span v-if="selectedFilterModels.includes(m.key)" class="material-symbols-outlined text-[14px] leading-none">check</span>
+                    <span>{{ m.label }}</span>
                 </button>
-                <button @click="setViewMode('card')"
-                        :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                        title="卡片情報檢視">
-                    <span class="material-symbols-outlined text-[18px]">grid_view</span>
-                    <span class="hidden sm:inline">卡片</span>
+
+                <!-- Logic Operator Switcher (AND / OR) -->
+                <div class="inline-flex rounded-lg border p-0.5 ml-1"
+                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                    <button @click="setFilterOperator('AND')"
+                            :class="filterModelOperator === 'AND' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-2 py-0.5 rounded text-[11px] font-bold transition-all"
+                            title="全數符合條件 (交集)">
+                        ∩ 交集 (AND)
+                    </button>
+                    <button @click="setFilterOperator('OR')"
+                            :class="filterModelOperator === 'OR' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-2 py-0.5 rounded text-[11px] font-bold transition-all"
+                            title="任一符合條件 (聯集)">
+                        ∪ 聯集 (OR)
+                    </button>
+                </div>
+
+                <button v-if="selectedFilterModels.length > 0"
+                        @click="clearFilterModels()"
+                        class="text-xs text-amber-500 hover:underline font-bold px-1.5 py-0.5">
+                    重設篩選
                 </button>
             </div>
 
-            <!-- Market Index Dropdown -->
-            <select v-model="selectedIndex" @change="setIndex()"
-                    class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
-                <option value="">全部市場 (All)</option>
-                <option value="台灣50">台灣50 (TW0050)</option>
-                <option value="台灣中型100">台灣中型100 (TW0051)</option>
-                <option value="台股活躍精選">台股活躍精選 (TW-Active 850)</option>
-                <option value="台股1000">台股全市場1000 (TW1000)</option>
-                <option value="SP500">S&P 500 (美股標普 500)</option>
-                <option value="日經225">🇯🇵 日經225 (Nikkei 225)</option>
-                <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
-            </select>
-
-            <button @click="loadData()"
-                    class="w-9 h-9 rounded-xl border transition-all text-xs font-bold flex items-center justify-center hover:scale-105 active:scale-95"
-                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
-                    title="重新整理日報" aria-label="重新整理日報">
-                <span class="material-symbols-outlined text-[18px]">sync</span>
-            </button>
+            <div v-if="selectedFilterModels.length > 0"
+                 class="text-xs font-bold"
+                 :class="isDark ? 'text-sky-400' : 'text-sky-700'">
+                已過濾顯示 {{ displayRecords.length }} / {{ records.length }} 檔
+            </div>
         </div>
 
     </div>
@@ -619,11 +691,11 @@
             <span v-if="batchTimestamp" class="num-font">運算時間: {{ batchTimestamp }}</span>
             <span v-if="batchStale" class="font-bold text-amber-500">資料需更新</span>
         </div>
-        <div>共篩選出 <strong class="num-font font-bold text-amber-500">{{ records.length }}</strong> 檔標的</div>
+        <div>共篩選出 <strong class="num-font font-bold text-amber-500">{{ displayRecords.length }}</strong> 檔標的</div>
     </div>
 
     <!-- 3. Loading & Error States -->
-    <div v-if="loading && records.length === 0" class="p-8 text-center space-y-2" aria-label="日報載入中" aria-busy="true">
+    <div v-if="loading && displayRecords.length === 0" class="p-8 text-center space-y-2" aria-label="日報載入中" aria-busy="true">
         <p class="text-xs sm:text-sm font-bold num-font" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">載入量化數據中...</p>
     </div>
 
@@ -638,7 +710,7 @@
         </button>
     </div>
 
-    <div v-else-if="records.length === 0"
+    <div v-else-if="displayRecords.length === 0"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="text-center py-16 rounded-2xl border space-y-2">
         <span class="material-symbols-outlined text-[48px] text-amber-500/60">filter_alt_off</span>
@@ -650,7 +722,7 @@
     <div v-else-if="viewMode === 'table'" class="space-y-4">
         <!-- 4A. Mobile Responsive Cards (< md) -->
         <div class="block md:hidden space-y-3">
-            <div v-for="(item, idx) in records" :key="'mob-table-' + item.ticker + (item.model_name || '') + idx"
+            <div v-for="(item, idx) in displayRecords" :key="'mob-table-' + item.ticker + (item.model_name || '') + idx"
                  :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
                  class="p-4 rounded-2xl border transition-all space-y-3">
                 <!-- Header: Rank, Ticker, Name, Strategy, Potential Badge -->
@@ -977,7 +1049,7 @@
                         </tr>
                     </thead>
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
-                    <template v-for="(item, idx) in records" :key="item.ticker + (item.model_name || '') + idx">
+                    <template v-for="(item, idx) in displayRecords" :key="item.ticker + (item.model_name || '') + idx">
                         <!-- Primary Row -->
                         <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-11"
                             :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
@@ -1727,7 +1799,7 @@
 
     <!-- 5. VIEW MODE: HIGH-DENSITY QUANT CARDS GRID -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-        <div v-for="item in records" :key="item.ticker + (item.model_name || '') + item.timestamp"
+        <div v-for="item in displayRecords" :key="item.ticker + (item.model_name || '') + item.timestamp"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-500/50 shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3.5 sm:space-y-4">
 

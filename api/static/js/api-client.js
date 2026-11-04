@@ -94,6 +94,12 @@ export const ApiClient = {
         let url = '/api/v1/predictions/latest?limit=' + limit;
         if (strategy === 'resonance') {
             url = '/api/v1/predictions/resonance?limit=' + limit;
+        } else if (strategy === 'tri_bullish') {
+            url = '/api/v1/predictions/tri-bullish?limit=' + limit;
+        } else if (strategy === 'dual_bullish') {
+            url = '/api/v1/predictions/dual-bullish?limit=' + limit;
+        } else if (strategy === 'dual_bearish') {
+            url = '/api/v1/predictions/dual-bearish?limit=' + limit;
         } else if (strategy === 'xuantie') {
             url = '/api/v1/predictions/xuantie?limit=' + limit;
         } else if (strategy === 'timesfm_bullish') {
