@@ -28,6 +28,7 @@
 - **動態側參數特徵矩陣架構與模型生命週期指南擴充 (`docs/MODEL_LIFECYCLE_GUIDE.md`)**：
   - 升級 `ModelPluginProtocol`，將「側參數 / 外部協變量 (Exogenous Covariates)」納入生命週期一等公民（支援 `supports_covariates`, `required_covariates` 與 `covariates_dict` 注入）。
   - 定義四大側參數維度（匯率貨幣、總經利率、市場恐慌情緒、產業外溢與微觀籌碼）與台美日三大市場特化側參數畫像（`config/market_covariates.yaml`）。
+  - **側參數金魚熱插拔架構 (Hot-Pluggable Covariate Pipeline)**：規範 `CovariatePlugin` 協議與宣告式配置 `config/covariates_registry.yaml`，支援零代碼擴充黃金、比特幣、利率利差等新側參數；具備單點故障熱拔除（Hot-Unplug）與動態維度自適應裝配（Dynamic Feature Matrix Assembler）。
   - 建立嚴格的防前瞻偏誤鐵律（Lookahead-Free Engineering）、時間時區校準與三級平滑降級鏈（`Full Covariates -> Sector/Macro Only -> Price-Only`）。
 - **過時檔案大掃除與專案衛生清理 (Project Cleanup - 勿增實體)**：
   - 刪除已廢棄之 13 個舊檔案與腳本（含 14.4MB `bfg-1.14.0.jar`、`docs/CLAUDE.md`、`docs/superpowers/`、`docs/explain.md`、`docs/SECURITY_INCIDENT.md`、`docs/SETUP.md`、`scripts/backtest_analysis.py`、`scripts/setup.sh`、`example.env` 等）。

@@ -302,7 +302,140 @@ covariate_profiles:
 
 ---
 
-### 3. 跨市場特化動態參數矩陣 (Cross-Market Parameter Overrides)
+### 3. 側參數金魚熱插拔架構 (Hot-Pluggable Covariate & Feature Pipeline)
+
+不只時序大模型需要熱插拔，**側參數本身也必須是「可隨時宣告、隨時熱插拔、秒級拔除與隔離」的金魚外掛（Hot-Pluggable Covariate Plugins）**。
+
+#### 核心設計理念：零代碼修改擴充側參數 (Zero Code Change on Covariates)
+未來若要增加「黃金期貨 (GC=F)」、「比特幣流動性 (BTC-USD)」、「日銀政策利率利差」或「台股外資期貨淨未平倉口數」，**嚴禁在 Python 底座中硬編碼手寫 `if-else`**。全面透過宣告式配置與插件協議動態註冊：
+
+```mermaid
+flowchart TD
+    subgraph 宣告式側參數清單 config/covariates.yaml
+        CFG["📄 宣告式側參數設定檔<br/>- id: GOLD, symbol: GC=F<br/>- id: BTC, symbol: BTC-USD<br/>- id: VIX, symbol: ^VIX"]
+    end
+
+    subgraph 側參數熱插拔工廠 (Covariate Registry & Factory)
+        REG["動態插件註冊表 (CovariatePluginRegistry)<br/>- 動態載入 Provider (Yahoo / FRED / TWSE / Custom API)<br/>- 監聽檔案熱變更 (Hot-Reload without Restart)"]
+    end
+
+    subgraph 單點故障隔離與熱拔除 (Hot-Unplug & Fault Isolation)
+        ISO{"健康探針與熔斷檢測"}
+        OK["✅ 正常特徵通道 (注入矩陣)"]
+        FAIL["⚠️ 單點異常 (如 FRED API 429 超時)<br/>👉 僅秒級熱拔除該指標，其餘側參數照常運作"]
+    end
+
+    subgraph 動態特徵矩陣裝配器 (Dynamic Feature Matrix Assembler)
+        ASM["按市場 (TW/US/JP) 與模型需求自動拼裝 (T, K) 矩陣<br/>特徵維度從 (T, 4) 自適應擴展為 (T, 5)"]
+    end
+
+    CFG --> REG
+    REG --> ISO
+    ISO -->|健康| OK
+    ISO -->|異常| FAIL
+    OK --> ASM
+    FAIL -->|安全隔離| ASM
+```
+
+#### 1. 側參數插件協議定義 (`CovariatePluginProtocol`)
+
+```python
+@runtime_checkable
+class CovariatePlugin(Protocol):
+    """側參數插件生命週期標準協議"""
+    covariate_id: str           # 唯一指標代碼，如 "GOLD", "BTC", "VIX", "USDTWD"
+    label: str                  # 顯示標籤，如 "Comex Gold Futures"
+    source_type: str            # 數據源驅動: "yahoo" | "fred" | "twse" | "custom_http"
+    source_code: str            # 上游查詢符號，如 "GC=F", "DGS10"
+    market_affinity: List[str]  # 適用市場清單，如 ["tw", "us", "jp"]
+    category: str               # 類別: "macro" | "fx" | "sentiment" | "commodity" | "chips"
+    normalization_mode: str     # 標準化策略: "log_returns" | "rolling_zscore" | "bias_ma20"
+    update_frequency: str       # 更新頻率: "daily_close" | "hourly" | "tick"
+    
+    def fetch_observations(self, start_date: str, end_date: str) -> pd.Series:
+        """從上游抓取歷史觀測值時序，具備 Stale Cache 備援"""
+        ...
+        
+    def transform(self, raw_series: pd.Series, lookback: int = 60) -> np.ndarray:
+        """執行非線性平穩化與防前瞻截斷，輸出標準化浮點陣列"""
+        ...
+
+    def health_check(self) -> bool:
+        """上游可用性探測，若持續 429 則主動回報 False 觸發平滑熱拔除"""
+        ...
+```
+
+#### 2. 宣告式動態配置範例 (`config/covariates_registry.yaml`)
+
+維運人員或量化研究員只需在 YAML 新增項目，系統自動完成抓取、快取、標準化與推論矩陣注入：
+
+```yaml
+# config/covariates_registry.yaml
+covariates_registry:
+  # 🌟 避險資產：黃金期貨 (全面支援台美日)
+  - id: "GOLD"
+    label: "Comex Gold Continuous Futures"
+    source_type: "yahoo"
+    source_code: "GC=F"
+    market_affinity: ["tw", "us", "jp"]
+    category: "commodity"
+    normalization_mode: "log_returns"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 流動性先行指標：比特幣現貨 (美股與全球科技風險情緒)
+  - id: "BITCOIN"
+    label: "Bitcoin / USD Spot"
+    source_type: "yahoo"
+    source_code: "BTC-USD"
+    market_affinity: ["us", "tw"]
+    category: "crypto_liquidity"
+    normalization_mode: "rolling_zscore"
+    lookback: 60
+    fallback_policy: "forward_fill"
+
+  # 🌟 恐慌情緒：CBOE VIX 波動率
+  - id: "VIX"
+    label: "CBOE Volatility Index"
+    source_type: "yahoo"
+    source_code: "^VIX"
+    market_affinity: ["tw", "us", "jp"]
+    category: "sentiment"
+    normalization_mode: "bias_ma20"
+    lookback: 60
+
+  # 🌟 跨國匯率：美元兌台幣
+  - id: "USDTWD"
+    label: "USD / TWD Spot"
+    source_type: "yahoo"
+    source_code: "USDTWD=X"
+    market_affinity: ["tw"]
+    category: "fx"
+    normalization_mode: "log_returns"
+    lookback: 60
+```
+
+#### 3. 動態特徵矩陣裝配器 (Dynamic Feature Matrix Assembler)
+- **維度自適應**：推論管線啟動時，特徵裝配器自動過濾 `covariates_registry` 中匹配當前 `market` 且通過健康檢查的側參數清單。
+- **無縫擴充**：若啟用 4 個側參數，裝配出的矩陣形狀為 $(T, 4)$；若新增黃金與比特幣，形狀動態擴充為 $(T, 6)$。
+- **模型自適應消費**：
+  - **多變量模型（如 MOIRAI-2）**：自動將 $K$ 個通道透過 `past_covariates` 饋入 Transformer 注意力機制。
+  - **單變量模型（如 TimesFM 1.0）**：自動忽略特徵矩陣，僅使用純收盤價推論；同時將側參數作為事後風控過濾器（例如 VIX $> 25$ 或台幣重貶時扣減潛力）。
+
+#### 4. 側參數單點隔離與熱拔除防護機制 (Fault Isolation & Hot-Unplug)
+- **防雪崩設計（Anti-Cascading Architecture）**：過去系統最大的痛點是「因單一指標（如 `^SOX`）429 失敗，導致所有時序模型完全放棄推論」。
+- **熱拔除策略（Hot-Unplug Policy）**：
+  1. 每個側參數獨立計時與熔斷（Circuit Breaker）。
+  2. 若某指標（如黃金期貨）網路異常，特徵裝配器**僅動態剔除該單一特徵**，矩陣由 $(T, 6)$ 降級為 $(T, 5)$，其餘 5 個特徵照常注入推論！
+  3. 若所有外部側參數全部中斷，管線平滑降級為 Tier 3（純收盤價 Price-Only），**杜絕全盤停擺**。
+- **熱重載（Hot-Reload without Restart）**：
+  - 排程管線每次批次執行前比對 `covariates_registry.yaml` 之 MD5 雜湊值。
+  - 若設定更新，記憶體中即時熱重載側參數實例，免重新部署容器，維運秒級生效。
+
+---
+
+### 4. 跨市場特化動態參數矩陣 (Cross-Market Parameter Overrides)
 
 不同市場具有截然不同的交易機制、波動率特徵與預測視野。大象底座透過動態參數矩陣統一向各金魚插件注入市場專屬約束：
 
@@ -337,7 +470,7 @@ market_matrix:
     broker_chips_weight: 0.00              # 日股籌碼權重歸零
 ```
 
-### 4. 動態集成權重與滾動勝率引擎 (Dynamic Ensemble & Rolling Win-Rate)
+### 5. 動態集成權重與滾動勝率引擎 (Dynamic Ensemble & Rolling Win-Rate)
 
 大象底座不應採用寫死的靜態權重（如各 33%），而是建立**滾動 30 交易日真實開獎勝率的動態 Softmax 集成機制**：
 
