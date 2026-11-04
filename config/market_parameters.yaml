@@ -1,0 +1,27 @@
+market_matrix:
+  tw:
+    market_name: "台股 (TWSE/TPEx)"
+    default_horizons: [1, 5]               # 隔日與週波段
+    max_daily_change_pct: 10.0             # 台股漲跌幅 10% 剛性限制 (防呆截斷)
+    volatility_scaling: "atr_capped"       # ATR 波動正規化，封頂 ±10%
+    min_potential_threshold: 0.5           # 看漲最小潛力門檻 (%)
+    lookback_window: 60                    # 歷史日 K 回看天數
+    broker_chips_weight: 0.25              # 台灣三大法人與主力券商特有籌碼權重
+
+  us:
+    market_name: "美股 (NYSE/NASDAQ)"
+    default_horizons: [1, 5, 20]           # 美股支援隔日、週波段與月波段 (20日)
+    max_daily_change_pct: null             # 美股無漲跌幅限制 (No circuit collar)
+    volatility_scaling: "realized_vol"     # 歷史 20 日真實已實現波動率動態縮放
+    min_potential_threshold: 1.5           # 美股高波動，門檻放寬至 1.5%
+    lookback_window: 128                   # 歷史長窗口回看 (抓取季度宏觀循環)
+    broker_chips_weight: 0.00              # 美股不適用台灣法人分點籌碼，權重歸零並在 UI 提供提示
+
+  jp:
+    market_name: "日股 (Tokyo Stock Exchange)"
+    default_horizons: [1, 5]
+    max_daily_change_pct: null             # 依呼叫價位階段限價 (Tick Tier)
+    volatility_scaling: "fx_adjusted_vol"  # 匯率敏感度 (JPY/USD) 波動修正
+    min_potential_threshold: 0.8           # 日股震盪門檻
+    lookback_window: 90                    # 季度日 K 回看
+    broker_chips_weight: 0.00              # 日股籌碼權重歸零

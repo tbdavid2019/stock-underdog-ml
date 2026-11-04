@@ -493,7 +493,8 @@ export const app = createApp({
             // 1. Group records by Date (YYYY-MM-DD)
             const dateMap = new Map();
             for (const r of this.historyRecords) {
-                const rawTs = String(r.forecast_session || r.timestamp || '').trim();
+                // Canonical date key uses the prediction issuance timestamp (YYYY-MM-DD)
+                const rawTs = String(r.timestamp || r.forecast_session || '').trim();
                 if (rawTs.length < 10) continue;
                 const dateKey = rawTs.slice(0, 10);
                 if (!dateMap.has(dateKey)) {
@@ -522,7 +523,7 @@ export const app = createApp({
                 }
                 const item = dateMap.get(dateKey);
                 const curP = Number(r.current_price);
-                if (!isNaN(curP) && curP > 0) item.closePrice = curP;
+                if (!isNaN(curP) && curP > 0 && (item.closePrice === null || !item.timesfmIssued)) item.closePrice = curP;
 
                 const ma60 = Number(r.ma60);
                 if (!isNaN(ma60) && ma60 > 0) item.ma60 = ma60;
@@ -532,15 +533,15 @@ export const app = createApp({
                 if (r.trust_net_5d !== null && r.trust_net_5d !== undefined && Number.isFinite(Number(r.trust_net_5d))) item.trust_net_5d = Number(r.trust_net_5d);
                 if (r.foreign_net_5d !== null && r.foreign_net_5d !== undefined && Number.isFinite(Number(r.foreign_net_5d))) item.foreign_net_5d = Number(r.foreign_net_5d);
 
-                if (r.timesfm_predicted_price && !item.timesfmIssued) {
+                if (r.timesfm_predicted_price && (!item.timesfmPred || !item.timesfmIssued)) {
                     const tfp = Number(r.timesfm_predicted_price);
                     if (!isNaN(tfp) && tfp > 0) item.timesfmPred = tfp;
                 }
-                if (r.timestral_predicted_price && !item.timestralIssued) {
+                if (r.timestral_predicted_price && (!item.timestralPred || !item.timestralIssued)) {
                     const tmp = Number(r.timestral_predicted_price);
                     if (!isNaN(tmp) && tmp > 0) item.timestralPred = tmp;
                 }
-                if (r.moirai_predicted_price && !item.moiraiIssued) {
+                if (r.moirai_predicted_price && (!item.moiraiPred || !item.moiraiIssued)) {
                     const mrp = Number(r.moirai_predicted_price);
                     if (!isNaN(mrp) && mrp > 0) item.moiraiPred = mrp;
                 }
@@ -552,17 +553,17 @@ export const app = createApp({
                 if (!isNaN(predP) && predP > 0 && Number(r.horizon || 1) === 1) {
                     const strat = ((r.strategy_type || '') + ' ' + (r.model_name || '')).toLowerCase();
                     const issued = String(r.timestamp || '').trim();
-                    if (strat.includes('timesfm') && issued >= item.timesfmIssued) {
+                    if (strat.includes('timesfm') && (!item.timesfmPred || issued >= item.timesfmIssued)) {
                         item.timesfmPred = predP;
                         item.timesfmIssued = issued;
                         item.timesfmActual = verified ? Number(r.actual_price) : null;
                         item.timesfmTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
-                    } else if (strat.includes('timestral') && issued >= item.timestralIssued) {
+                    } else if (strat.includes('timestral') && (!item.timestralPred || issued >= item.timestralIssued)) {
                         item.timestralPred = predP;
                         item.timestralIssued = issued;
                         item.timestralActual = verified ? Number(r.actual_price) : null;
                         item.timestralTarget = /^\d{4}-\d{2}-\d{2}$/.test(String(r.target_date || '').slice(0, 10)) ? String(r.target_date).slice(0, 10) : null;
-                    } else if (strat.includes('moirai') && issued >= item.moiraiIssued) {
+                    } else if (strat.includes('moirai') && (!item.moiraiPred || issued >= item.moiraiIssued)) {
                         item.moiraiPred = predP;
                         item.moiraiIssued = issued;
                         item.moiraiActual = verified ? Number(r.actual_price) : null;

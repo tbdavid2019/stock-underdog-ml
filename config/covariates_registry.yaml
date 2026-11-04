@@ -1,0 +1,91 @@
+covariates_registry:
+  # 🌟 避險資產：黃金期貨 (全面支援台美日)
+  - id: "GOLD"
+    label: "Comex Gold Continuous Futures"
+    source_type: "yahoo"
+    source_code: "GC=F"
+    market_affinity: ["tw", "us", "jp"]
+    category: "commodity"
+    normalization_mode: "log_returns"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 流動性先行指標：比特幣現貨 (美股與全球科技風險情緒)
+  - id: "BITCOIN"
+    label: "Bitcoin / USD Spot"
+    source_type: "yahoo"
+    source_code: "BTC-USD"
+    market_affinity: ["us", "tw"]
+    category: "crypto_liquidity"
+    normalization_mode: "rolling_zscore"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "forward_fill"
+    circuit_breaker_retries: 3
+
+  # 🌟 恐慌情緒：CBOE VIX 波動率
+  - id: "VIX"
+    label: "CBOE Volatility Index"
+    source_type: "yahoo"
+    source_code: "^VIX"
+    market_affinity: ["tw", "us", "jp"]
+    category: "sentiment"
+    normalization_mode: "bias_ma20"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 跨國匯率：美元兌台幣
+  - id: "USDTWD"
+    label: "USD / TWD Spot"
+    source_type: "yahoo"
+    source_code: "USDTWD=X"
+    market_affinity: ["tw"]
+    category: "fx"
+    normalization_mode: "log_returns"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 跨國匯率：美元兌日圓
+  - id: "USDJPY"
+    label: "USD / JPY Spot"
+    source_type: "yahoo"
+    source_code: "USDJPY=X"
+    market_affinity: ["jp"]
+    category: "fx"
+    normalization_mode: "log_returns"
+    update_frequency: "daily_close"
+    lookback: 90
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 總經利率：美債 10 年期殖利率
+  - id: "UST_10Y"
+    label: "US Treasury 10-Year Yield"
+    source_type: "fred"
+    source_code: "DGS10"
+    market_affinity: ["tw", "us", "jp"]
+    category: "macro"
+    normalization_mode: "rolling_zscore"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3
+
+  # 🌟 產業外溢：費城半導體指數
+  - id: "SOX"
+    label: "PHLX Semiconductor Sector Index"
+    source_type: "yahoo"
+    source_code: "^SOX"
+    market_affinity: ["tw", "jp"]
+    category: "spillover"
+    normalization_mode: "log_returns"
+    update_frequency: "daily_close"
+    lookback: 60
+    fallback_policy: "stale_cache"
+    circuit_breaker_retries: 3

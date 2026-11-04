@@ -6,6 +6,31 @@
 
 ---
 
+## 2026-11-04 (v2.4.69)
+
+### Elephant & Goldfish Hot-Pluggable Architecture for Time Series Models and Dynamic Covariates
+- **時序基礎大模型熱插拔協議與工廠 (`models/protocol.py`, `models/plugins.py`)**：
+  - 定義標準 `@runtime_checkable class ModelPlugin(Protocol)`，包含 `model_id`, `display_name`, `version`, `author`, `supported_markets`, `default_role`, `supports_covariates`, `required_covariates` 與四大生命週期勾子（`initialize`, `health_check`, `predict_batch`, `teardown`）。
+  - 實作 `BaseModelPlugin` 與線程安全的 `ModelPluginRegistry` (使用 `RLock` 與原子快照 `get_all()`)，支援動態註冊、延遲實例化、熱卸載與安全退出資源釋放。
+  - 為 `TimesFM`, `Timestral`, `MOIRAI-2` 建立符合協議之標準適配插件（`TimesFMPlugin`, `TimestralPlugin`, `Moirai2Plugin`），並支援跨市場約束防呆（如台股 ±10% 剛性截斷）與多維度協變量自適應轉置 `(Channels, Time)`。
+- **側參數金魚熱插拔架構與動態特徵矩陣裝配器 (`data/covariate_protocol.py`)**：
+  - 定義標準 `@runtime_checkable class CovariatePlugin(Protocol)`，包含非線性平穩化（`log_returns`, `rolling_zscore`, `bias_ma20`）、熔斷器機制與健康探針狀態機。
+  - 實作 Provider 驅動適配器基底 `BaseCovariatePlugin` 與常用驅動（`YahooCovariateProvider`, `FredCovariateProvider`, `TwseCovariateProvider`），FRED 數據嚴格執行日期截斷防範未來資料洩漏 (Lookahead Bias)。
+  - 實作 `HotPluggableCovariateRegistry`：
+    - 支援宣告式設定載入（`config/covariates_registry.yaml`）與 MD5 雜湊無重啟熱重載，並於重載時自動清理已自 YAML 移除之插件。
+    - 實作「動態特徵矩陣裝配器 (Dynamic Feature Matrix Assembler)」：具備跨市場統一交易日曆對齊 (Common Trading Calendar)，避免 24/7 加密貨幣（比特幣）與平日股市交易日產生時間步錯位。
+    - 實作「單點隔離熱拔除 (Fault Isolation & Hot-Unplug)」：若單一指標抓取失敗（如 429 Rate Limit）或熔斷，僅動態隔離該特徵，其餘指標與模型推論照常執行，全盤中斷時平滑降級為 `(T, 0)` 純收盤價，徹底根除骨牌雪崩。
+- **前端歷史對決時間軸修復 (`api/static/js/app.js`)**：
+  - 修復 `dailyHistoryRows` 將 `forecast_session` 優先於 `timestamp` 導致今日預測錯誤覆寫昨日已開獎記錄與 MOIRAI-2 顯示為空的問題。
+  - 以標準預測發布日（`timestamp` YYYY-MM-DD）作為權威分組基準，完善多模型空值保護，確保歷史對決表與 PK scorecard 準確統計。
+- **宣告式設定檔 (`config/covariates_registry.yaml`, `config/market_parameters.yaml`)**：
+  - 宣告 VIX, USDTWD, USDJPY, UST_10Y, SOX, GOLD, BITCOIN 等 7 大動態側參數。
+  - 宣告台美日跨市場參數矩陣（台股 ±10% 漲跌幅限制、美日波動縮放、門檻與 lookback_window）。
+- **完整單元測試覆蓋 (`test/test_model_plugin_protocol.py`, `test/test_hot_pluggable_covariates.py`)**：
+  - 15 項全新單元測試 100% 通過，全面驗證協議合規、動態矩陣裝配、跨市場時間軸對齊、單點故障熱拔除隔離、全癱瘓降級、MD5 熱重載與生命週期勾子。
+
+---
+
 ## 2026-11-04 (v2.4.68)
 
 ### Multi-Model Strategy Filtering, Bearish Resonance & Responsive HTML Email Reports
