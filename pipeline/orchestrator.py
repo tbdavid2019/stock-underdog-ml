@@ -233,6 +233,7 @@ class PipelineOrchestrator:
             "xuantie_results": report.xuantie_results,
             "timestral_results": getattr(report, "timestral_results", []),
             "timesfm_results": getattr(report, "timesfm_results", []),
+            "moirai_results": getattr(report, "moirai_results", []),
             "lstm_results": getattr(report, "lstm_results", []),
             "overlap_results": report.overlap_results,
             "overlap_candidates": getattr(report, "overlap_candidates", []),

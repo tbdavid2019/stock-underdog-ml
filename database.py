@@ -197,19 +197,57 @@ class SupabaseManager:
                 "timestamp": timestamp
             }
             all_data.append(record)
+
+        # 2.6 保存 MOIRAI-2 預測結果
+        moirai_results = results.get('moirai_results', [])
+        for result in moirai_results:
+            record = {
+                "index_name": index_name,
+                "model_name": "MOIRAI-2",
+                "strategy_type": "MOIRAI預測",
+                "ticker": result['ticker'],
+                "current_price": float(result['current_price']),
+                "predicted_price": float(result['predicted_price']),
+                "potential": float(result['potential']),
+                "ma5": None,
+                "ma10": None,
+                "ma60": None,
+                "ma120": None,
+                "ma250": None,
+                "pullback_type": None,
+                "pe": float(result.get('pe')) if result.get('pe') and not pd.isna(result.get('pe')) else None,
+                "pb": float(result.get('pb')) if result.get('pb') and not pd.isna(result.get('pb')) else None,
+                "forward_pe": float(result.get('forward_pe')) if result.get('forward_pe') and not pd.isna(result.get('forward_pe')) else None,
+                "ev_ebitda": float(result.get('ev_ebitda')) if result.get('ev_ebitda') and not pd.isna(result.get('ev_ebitda')) else None,
+                "period": period,
+                "timestamp": timestamp
+            }
+            all_data.append(record)
         
         # 3. 保存雙重符合結果
         overlap_df = results.get('overlap_results', pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
             for idx, row in overlap_df.iterrows():
+                pot_val = 0.0
+                if pd.notna(row.get('potential')) and row.get('potential') is not None:
+                    pot_val = float(row['potential'])
+                elif pd.notna(row.get('timestral_potential')) and row.get('timestral_potential') is not None:
+                    pot_val = float(row['timestral_potential'])
+                elif pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None:
+                    pot_val = float(row['timesfm_potential'])
+                elif pd.notna(row.get('moirai_potential')) and row.get('moirai_potential') is not None:
+                    pot_val = float(row['moirai_potential'])
+                elif pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None:
+                    pot_val = float(row['lstm_potential'])
+
                 record = {
                     "index_name": index_name,
-                    "model_name": "雙重符合",
-                    "strategy_type": "雙重符合",
+                    "model_name": "多維共振",
+                    "strategy_type": "多維共振",
                     "ticker": row['ticker'],
                     "current_price": float(row['current_price']),
                     "predicted_price": float(row['predicted_price']) if row.get('predicted_price') is not None and not pd.isna(row.get('predicted_price')) else float(row['current_price']),
-                    "potential": float(row['lstm_potential']) if pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None else (float(row.get('timesfm_potential')) if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None else 0.0),
+                    "potential": pot_val,
                     "ma5": float(row.get('ma5')) if row.get('ma5') and not pd.isna(row.get('ma5')) else None,
                     "ma10": float(row.get('ma10')) if row.get('ma10') and not pd.isna(row.get('ma10')) else None,
                     "ma60": float(row.get('ma60')) if row.get('ma60') and not pd.isna(row.get('ma60')) else None,

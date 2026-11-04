@@ -268,6 +268,32 @@ def get_timesfm_top_bearish(
     return _build_prediction_response(records, db)
 
 
+@router.get("/moirai/top-bullish", response_model=PredictionResponse, summary="查詢 Salesforce MOIRAI-2 預測漲幅 TOP N 潛力股")
+def get_moirai_top_bullish(
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    依據 Salesforce MOIRAI-2 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
+    """
+    records = db.get_moirai_top_bullish(index_name=index_name, limit=limit)
+    return _build_prediction_response(records, db)
+
+
+@router.get("/moirai/top-bearish", response_model=PredictionResponse, summary="查詢 Salesforce MOIRAI-2 預測跌幅 TOP N 避險股")
+def get_moirai_top_bearish(
+    index_name: Optional[str] = Query(None, description="指數篩選"),
+    limit: int = Query(10, ge=1, le=100, description="取得前 N 檔"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    依據 Salesforce MOIRAI-2 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
+    """
+    records = db.get_moirai_top_bearish(index_name=index_name, limit=limit)
+    return _build_prediction_response(records, db)
+
+
 @router.get("/history/{ticker}", response_model=PredictionResponse, summary="查詢單一標的歷史預測軌跡")
 def get_ticker_history(
     ticker: str,

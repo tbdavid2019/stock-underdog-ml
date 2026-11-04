@@ -43,7 +43,12 @@ class StockPredictionItem(BaseModel):
     timestral_potential: Optional[float] = Field(None, description="Mistral Timestral 預期漲跌幅 (%)")
     timestral_p10: Optional[float] = Field(None, description="Mistral Timestral 10% 悲觀分位數")
     timestral_p90: Optional[float] = Field(None, description="Mistral Timestral 90% 樂觀分位數")
-    dual_model_consensus: Optional[bool] = Field(None, description="TimesFM 與 Timestral 雙時序大模型是否同時看漲共振")
+    moirai_predicted_price: Optional[float] = Field(None, description="Salesforce MOIRAI-2 預測目標價")
+    moirai_potential: Optional[float] = Field(None, description="Salesforce MOIRAI-2 預期漲跌幅 (%)")
+    moirai_p10: Optional[float] = Field(None, description="Salesforce MOIRAI-2 10% 悲觀分位數")
+    moirai_p90: Optional[float] = Field(None, description="Salesforce MOIRAI-2 90% 樂觀分位數")
+    dual_model_consensus: Optional[bool] = Field(None, description="時序大模型是否多模型看漲共振")
+    tri_model_consensus: Optional[bool] = Field(None, description="TimesFM, Timestral 與 MOIRAI-2 三大模型是否同時看漲共振")
     lstm_potential: Optional[float] = Field(None, description="[Deprecated] 舊版 LSTM 預期漲跌幅 (請改用 timestral_potential 或 potential)")
     forecast_id: Optional[str] = None
     forecast_session: Optional[str] = None

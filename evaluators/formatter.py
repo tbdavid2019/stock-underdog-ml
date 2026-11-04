@@ -97,8 +97,8 @@ def _format_telegram_candidate_card(
     if not tier:
         tags = cand.get("tags") or []
         tier_order = [
-            "綜合優選", "雙模型看漲", "雙AI看漲", "👑四重共振", "🏆三重共振", "🔮雙大模型共振",
-            "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"
+            "👑四重共振", "👑三大模型共振", "三模型看漲", "🏆三重共振", "綜合優選", "雙模型看漲", "雙AI看漲",
+            "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"
         ]
         tier = next((t for t in tier_order if t in tags), "")
 
@@ -129,6 +129,11 @@ def _format_telegram_candidate_card(
         highlights.append(f"Timestral <b>{float(tml_pot):+.1f}%</b>")
     elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
         highlights.append(f"LSTM <b>{float(cand.get('lstm_potential')):+0.1f}%</b>")
+
+    # MOIRAI-2
+    moi_pot = cand.get("moirai_potential")
+    if moi_pot is not None and pd.notna(moi_pot):
+        highlights.append(f"MOIRAI <b>{float(moi_pot):+.1f}%</b>")
 
     # Pullback / MA support: auto-replace "玄鐵買點" with "季線支撐"
     pb_type = cand.get("pullback_type")
@@ -200,7 +205,7 @@ def format_telegram_message(
 
     # 🔗 網站完整查詢引導 Footer
     index_url = f"{base_url}/?index={quote(str(index_name))}"
-    msg += "🔗 <b>詳細圖表、雙模型歷史勝率與法人籌碼請至網站查詢：</b>\n"
+    msg += "🔗 <b>詳細圖表、三大模型歷史勝率與法人籌碼請至網站查詢：</b>\n"
     msg += f"👉 <a href=\"{index_url}\"><b>開啟【{html.escape(index_name)}】完整互動儀表板</b></a>\n"
 
     return msg
@@ -348,6 +353,14 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
         pot_val = float(cand.get("lstm_potential"))
         fm_details.append(f"LSTM **{pot_val:+.1f}%**")
 
+    moi_pot = cand.get("moirai_potential")
+    if moi_pot is not None and pd.notna(moi_pot):
+        pot_val = float(moi_pot)
+        p10 = cand.get("moirai_p10")
+        p90 = cand.get("moirai_p90")
+        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+        fm_details.append(f"MOIRAI **{pot_val:+.1f}%**{q_str}")
+
     details.extend(fm_details)
 
     # 2. 均線技術買點
@@ -413,6 +426,7 @@ def format_discord_message(
     timestral_results = results.get("timestral_results", [])
     lstm_results = results.get("lstm_results", [])
     timesfm_results = results.get("timesfm_results", [])
+    moirai_results = results.get("moirai_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
     macro = macro_state or results.get("macro_state")
     summary_text = ai_summary or results.get("ai_summary", "")
@@ -444,6 +458,9 @@ def format_discord_message(
         msg += f"符合共振條件: **{len(candidates)}** 支\n\n"
         tier_display_map = {
             "綜合優選": "【綜合優選】",
+            "👑三大模型共振": "【三模型看漲】",
+            "三模型看漲": "【三模型看漲】",
+            "三大模型共振": "【三模型看漲】",
             "雙模型看漲": "【雙模型看漲】",
             "雙AI看漲": "【雙模型看漲】",
             "👑四重共振": "【四重共振】",
@@ -461,9 +478,9 @@ def format_discord_message(
             "雙重共振": "【雙重共振】"
         }
         tier_order = [
-            "綜合優選", "雙模型看漲", "雙AI看漲",
-            "👑四重共振", "🏆三重共振", "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
-            "四重共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
+            "👑四重共振", "👑三大模型共振", "三模型看漲", "🏆三重共振", "綜合優選", "雙模型看漲", "雙AI看漲",
+            "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
+            "四重共振", "三大模型共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
         ]
         grouped: Dict[str, List[dict]] = {}
         for c in candidates:
@@ -556,6 +573,32 @@ def format_discord_message(
             msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
         msg += "\n"
 
+    # MOIRAI-2
+    if moirai_results:
+        msg += "**【時序大模型 (MOIRAI-2 預測 TOP 5)】**\n"
+        for idx, result in enumerate(moirai_results[:5], 1):
+            ticker_label = format_ticker_label(result['ticker'], lookup)
+            pot = result['potential']
+            curr_p = result.get('current_price')
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
+            rr = result.get('risk_reward_ratio')
+            rr_str = f"盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f"區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+
+            if curr_p is not None and pred_p is not None:
+                p_str = f"`{curr_p:,.1f}` → `{pred_p:,.1f}`"
+            elif pred_p is not None:
+                p_str = f"隔日目標 `{pred_p:,.1f}`"
+            else:
+                p_str = ""
+
+            info_parts = [p for p in [p_str, band_str, rr_str] if p]
+            info_str = f" ({' | '.join(info_parts)})" if info_parts else ""
+            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
+        msg += "\n"
+
     return msg
 
 
@@ -577,6 +620,7 @@ def format_email_message(
     timestral_results = results.get("timestral_results", [])
     lstm_results = results.get("lstm_results", [])
     timesfm_results = results.get("timesfm_results", [])
+    moirai_results = results.get("moirai_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
     macro = macro_state or results.get("macro_state")
     summary_text = ai_summary or results.get("ai_summary", "")
@@ -613,6 +657,7 @@ def format_email_message(
             tier_str = cand.get("resonance_tier", "多維共振")
             tml_p = cand.get("timestral_potential")
             tfm_p = cand.get("timesfm_potential")
+            moirai_p = cand.get("moirai_potential")
             lstm_p = cand.get("lstm_potential")
             rr = cand.get("risk_reward_ratio")
             ml_p_parts = []
@@ -624,7 +669,12 @@ def format_email_message(
                 p90 = cand.get("timestral_p90")
                 q_info = f"[{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None else ""
                 ml_p_parts.append(f"Timestral: {float(tml_p):+.1f}%{q_info}")
-            elif lstm_p is not None:
+            if moirai_p is not None:
+                m_p10 = cand.get("moirai_p10")
+                m_p90 = cand.get("moirai_p90")
+                m_q_info = f"[{m_p10:.0f}~{m_p90:.0f}]" if m_p10 is not None and m_p90 is not None else ""
+                ml_p_parts.append(f"MOIRAI: {float(moirai_p):+.1f}%{m_q_info}")
+            elif not tfm_p and not tml_p and lstm_p is not None:
                 ml_p_parts.append(f"LSTM: {float(lstm_p):+.1f}%")
 
             ml_p_str = " | ".join(ml_p_parts)
@@ -701,6 +751,22 @@ def format_email_message(
             msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}%{p_str}{rr_str}\n"
         msg += "\n"
 
+    # 🔮 MOIRAI-2
+    if moirai_results:
+        msg += f"🔮 時序大模型 (Salesforce MOIRAI-2) - 預測完成: {len(moirai_results)} 支\n\n"
+        msg += "📈 MOIRAI-2 看漲 TOP 10 (含 隔日目標價、P10/P90 分位數與盈虧比)\n"
+        for idx, result in enumerate(moirai_results[:10], 1):
+            ticker_label = format_ticker_label(result['ticker'], lookup)
+            rr = result.get('risk_reward_ratio')
+            rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+            curr_p = result.get('current_price', 0.0)
+            pred_p = result.get('predicted_price', curr_p)
+            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str})\n"
+        msg += "\n"
+
     return msg
 
 
@@ -738,6 +804,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     timestral_results = getattr(report, "timestral_results", [])
     lstm_results = report.lstm_results
     timesfm_results = getattr(report, "timesfm_results", [])
+    moirai_results = getattr(report, "moirai_results", [])
     overlap_df = report.overlap_results
     macro = report.macro_state
 
@@ -778,12 +845,12 @@ def print_evaluation_report(report: EvaluationReport, log=None):
         logger.info("")
 
     # ====== 多策略交集 / 綜合優選 ======
-    logger.info("⭐ 【優先推薦】綜合優選 (TimesFM × Timestral ∩ 季線支撐 ∩ 法人鎖碼)")
+    logger.info("⭐ 【優先推薦】綜合優選 (三大時序大模型 ∩ 季線支撐 ∩ 法人鎖碼)")
     logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
 
     if not overlap_df.empty:
-        logger.info(f"   {'排名':<4} {'等級':<8} {'代碼':<10} {'TimesFM':>8} {'Timestral':>10} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
-        logger.info(f"   {'-'*4} {'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
+        logger.info(f"   {'排名':<4} {'等級':<8} {'代碼':<10} {'TimesFM':>8} {'Timestral':>10} {'MOIRAI':>8} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
+        logger.info(f"   {'-'*4} {'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*8} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
         for idx, row in overlap_df.iterrows():
             cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
             tier_str = (cand.get("resonance_tier") or row.get("resonance_tier") or "共振") if cand else (row.get("resonance_tier") or "共振")
@@ -798,6 +865,9 @@ def print_evaluation_report(report: EvaluationReport, log=None):
             else:
                 tml_str = "      N/A"
 
+            moirai_val = row.get('moirai_potential')
+            moirai_str = f"{moirai_val:>+7.2f}%" if pd.notna(moirai_val) and moirai_val is not None else "    N/A"
+
             rr_val = row.get('risk_reward_ratio')
             rr_str = f"{rr_val:>6.2f}x" if pd.notna(rr_val) and rr_val is not None else "   N/A"
 
@@ -805,6 +875,7 @@ def print_evaluation_report(report: EvaluationReport, log=None):
                 f"   {idx+1:<4} {tier_str:<8} {row['ticker']:<10} "
                 f"{tfm_str} "
                 f"{tml_str} "
+                f"{moirai_str} "
                 f"{rr_str} "
                 f"{str(row.get('pullback_type', ''))[:6]:>6} "
                 f"{format_value(row.get('ma60')):>8} "
@@ -899,5 +970,33 @@ def print_evaluation_report(report: EvaluationReport, log=None):
             )
     else:
         logger.info("   (本期無 TimesFM 預測結果)")
+
+    logger.info("")
+
+    # ====== 軌道 4: MOIRAI-2 預測 ======
+    logger.info("🔮 【時序大模型】MOIRAI-2 預測 (隔日 T+1) - 預測漲幅排行與風控分位數")
+    logger.info(f"   預測完成: {len(moirai_results)} 支\n")
+
+    if moirai_results:
+        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
+        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")
+        for i, result in enumerate(moirai_results[:10], 1):
+            p10 = result.get('p10')
+            p90 = result.get('p90')
+            band_str = f"{p10:.1f}~{p90:.1f}" if p10 is not None and p90 is not None else "N/A"
+            rr_val = result.get('risk_reward_ratio')
+            rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "    N/A"
+            curr_p = result.get('current_price', 0.0)
+            pred_p = result.get('predicted_price', curr_p)
+            logger.info(
+                f"   {i:<4} {result['ticker']:<10} "
+                f"{result['potential']:>+9.2f}% "
+                f"{curr_p:>8.2f} {'→':^3} "
+                f"{pred_p:>8.2f} "
+                f"{band_str:>16} "
+                f"{rr_str:>8}"
+            )
+    else:
+        logger.info("   (本期無 MOIRAI-2 預測結果)")
 
     logger.info(f"\n{'='*100}\n")

@@ -205,6 +205,7 @@ def mcp_root_endpoint():
             "get_xuantie_pullback_stocks",
             "get_timestral_top_predictions",
             "get_timesfm_top_predictions",
+            "get_moirai_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
             "get_top_institutional_flows",
@@ -253,6 +254,7 @@ def get_webmcp_manifest():
             "get_xuantie_pullback_stocks",
             "get_timestral_top_predictions",
             "get_timesfm_top_predictions",
+            "get_moirai_top_predictions",
             "get_stock_history",
             "get_latest_market_snapshot",
             "get_top_institutional_flows",
@@ -576,6 +578,17 @@ def get_webmcp_bridge():
             execute: async (args) => {
                 const ep = args?.direction === 'bearish' ? 'top-bearish' : 'top-bullish';
                 let url = '/api/v1/predictions/timesfm/' + ep + '?limit=' + (args?.limit || 20);
+                if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_moirai_top_predictions',
+            description: '取得 Salesforce MOIRAI-2 時序大模型 5 日預測漲跌幅排行與盈虧比',
+            inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['bullish', 'bearish'] }, limit: { type: 'integer' }, index_name: { type: 'string' } }, required: ['direction'] },
+            execute: async (args) => {
+                const ep = args?.direction === 'bearish' ? 'top-bearish' : 'top-bullish';
+                let url = '/api/v1/predictions/moirai/' + ep + '?limit=' + (args?.limit || 20);
                 if (args?.index_name) url += '&index_name=' + encodeURIComponent(args.index_name);
                 return JSON.stringify(await (await fetch(url)).json());
             }

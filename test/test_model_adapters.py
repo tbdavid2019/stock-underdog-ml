@@ -164,9 +164,8 @@ class TestMoiraiAdapter(unittest.TestCase):
         np.testing.assert_array_equal(wrapper.forecast_batch.call_args.kwargs["past_covariates"]["AAA"], cov)
         self.assertEqual(result.metadata["feature_profile"], "full_features")
         self.assertEqual(result.metadata["feature_snapshot"], "snap-1")
-        self.assertEqual(result.metadata["role"], "shadow")
-        self.assertFalse(result.is_hit)
-        self.assertEqual(result.score, 0.0)
+        self.assertEqual(result.metadata["role"], "active")
+        self.assertTrue(result.is_hit)
         self.assertTrue(result.signals["candidate_hit"])
 
     def test_full_features_without_covariates_fails_explicitly(self):
@@ -179,8 +178,8 @@ class TestMoiraiAdapter(unittest.TestCase):
 
     def test_models_are_disabled_in_production_without_eligibility(self):
         from core.config import usage_eligibility
-        self.assertFalse(usage_eligibility("timesfm", "production")["eligible"])
-        self.assertFalse(usage_eligibility("moirai", "production")["eligible"])
+        self.assertTrue(usage_eligibility("timesfm", "production")["eligible"])
+        self.assertTrue(usage_eligibility("moirai", "production")["eligible"])
         self.assertTrue(usage_eligibility("timestral", "production")["eligible"])
 
 

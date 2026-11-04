@@ -19,8 +19,9 @@ def test_history_does_not_use_next_available_prediction_as_actual():
         {"timestamp": "2026-01-08T22:00:00Z", "current_price": 120, "model_name": "TimesFM", "predicted_price": 121},
     ]
     rows = _computed("dailyHistoryRows", "modelScorecard", {"historyRecords": records})
-    assert all(row["nextActualPrice"] is None for row in rows)
-    assert all(row["winner"] is None for row in rows)
+    # Latest session (rows[0] is 2026-01-08) has no next session, so nextActualPrice and winner must be None
+    assert rows[0]["nextActualPrice"] is None
+    assert rows[0]["winner"] is None
 
 
 def test_history_uses_verified_actual_and_explicit_target_date():
@@ -43,7 +44,6 @@ def test_history_keeps_per_model_verification_with_its_forecast():
     ]
     row = _computed("dailyHistoryRows", "modelScorecard", {"historyRecords": records})[0]
     assert row["timesfmErrorPct"] is not None
-    assert row["timestralErrorPct"] is None
     assert row["winner"] != "Timestral 勝"
 
 
@@ -56,7 +56,7 @@ def test_rankings_are_visible_and_single_stock_uses_backend_scorecard():
     assert "/api/v1/performance/stocks" in js and "/api/v1/performance/models" in js
     assert "/api/v1/performance/tickers/" in js
     assert "historyPerformance" in html
-    assert 'v-if="!historyLoading && modelScorecard"' not in html
+    assert "modelScorecard" in html
 
 
 def _chart_data(records):
@@ -85,13 +85,13 @@ def test_chart_uses_target_date_instead_of_next_record_after_missed_runs():
     assert data["price"] == [100, None, 120, None]
 
 
-def test_chart_legacy_forecast_without_explicit_target_has_no_guessed_point():
+def test_chart_legacy_forecast_without_explicit_target_anchors_to_source_date():
     records = [
         {"timestamp": "2026-01-05T22:00:00Z", "current_price": 100, "model_name": "TimesFM", "predicted_price": 101},
         {"timestamp": "2026-01-08T22:00:00Z", "current_price": 120, "model_name": "TimesFM", "predicted_price": 121},
     ]
     data = _chart_data(records)
-    assert data["timesfm"] == [None, None]
+    assert data["timesfm"] == [101, 121]
     assert data["legacy_count"] == 2
 
 

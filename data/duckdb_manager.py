@@ -87,7 +87,12 @@ class DuckDBManager:
                     timestral_p90 DOUBLE,
                     timesfm_predicted_price DOUBLE,
                     timesfm_potential DOUBLE,
-                    dual_model_consensus BOOLEAN
+                    moirai_predicted_price DOUBLE,
+                    moirai_potential DOUBLE,
+                    moirai_p10 DOUBLE,
+                    moirai_p90 DOUBLE,
+                    dual_model_consensus BOOLEAN,
+                    tri_model_consensus BOOLEAN
                 );
                 """)
                 for col_name, col_type in [
@@ -98,7 +103,12 @@ class DuckDBManager:
                     ("timestral_p90", "DOUBLE"),
                     ("timesfm_predicted_price", "DOUBLE"),
                     ("timesfm_potential", "DOUBLE"),
-                    ("dual_model_consensus", "BOOLEAN")
+                    ("moirai_predicted_price", "DOUBLE"),
+                    ("moirai_potential", "DOUBLE"),
+                    ("moirai_p10", "DOUBLE"),
+                    ("moirai_p90", "DOUBLE"),
+                    ("dual_model_consensus", "BOOLEAN"),
+                    ("tri_model_consensus", "BOOLEAN")
                 ]:
                     try:
                         con.execute(f"ALTER TABLE predictions ADD COLUMN IF NOT EXISTS {col_name} {col_type};")
@@ -512,7 +522,9 @@ class DuckDBManager:
             "timestral_predicted_price", "timestral_potential",
             "timestral_p10", "timestral_p90",
             "timesfm_predicted_price", "timesfm_potential",
-            "dual_model_consensus"
+            "moirai_predicted_price", "moirai_potential",
+            "moirai_p10", "moirai_p90",
+            "dual_model_consensus", "tri_model_consensus"
         ]
         for col in expected_cols:
             if col not in df.columns:
@@ -628,7 +640,12 @@ class DuckDBManager:
                 "timestral_p90": float(r.get("p90")) if r.get("p90") is not None and not pd.isna(r.get("p90")) else None,
                 "timesfm_predicted_price": None,
                 "timesfm_potential": None,
+                "moirai_predicted_price": None,
+                "moirai_potential": None,
+                "moirai_p10": None,
+                "moirai_p90": None,
                 "dual_model_consensus": False,
+                "tri_model_consensus": False,
             })
 
         # 2.5 TimesFM 預測結果 (Google Foundation Model 200M)
@@ -668,7 +685,57 @@ class DuckDBManager:
                 "timestral_p90": None,
                 "timesfm_predicted_price": float(r["predicted_price"]),
                 "timesfm_potential": float(r["potential"]),
+                "moirai_predicted_price": None,
+                "moirai_potential": None,
+                "moirai_p10": None,
+                "moirai_p90": None,
                 "dual_model_consensus": False,
+                "tri_model_consensus": False,
+            })
+
+        # 2.6 MOIRAI-2 預測結果 (Salesforce Foundation Model)
+        moirai_results = results.get("moirai_results", [])
+        for r in moirai_results:
+            t = r["ticker"]
+            cand = candidates_map.get(t, {})
+            inst = inst_summaries.get(t, {})
+            cand_tags = cand.get("tags")
+            default_moi_tag = "MOIRAI看漲" if float(r["potential"]) > 0 else "MOIRAI看跌"
+            tags_str = " | ".join(cand_tags) if cand_tags else default_moi_tag
+
+            all_data.append({
+                "index_name": index_name,
+                "model_name": "MOIRAI-2",
+                "strategy_type": "MOIRAI預測",
+                "ticker": t,
+                "current_price": float(r["current_price"]),
+                "predicted_price": float(r["predicted_price"]),
+                "potential": float(r["potential"]),
+                "ma5": None, "ma10": None, "ma60": None, "ma120": None, "ma250": None,
+                "pullback_type": None,
+                "pe": float(r.get("pe")) if r.get("pe") and not pd.isna(r.get("pe")) else None,
+                "pb": float(r.get("pb")) if r.get("pb") and not pd.isna(r.get("pb")) else None,
+                "forward_pe": float(r.get("forward_pe")) if r.get("forward_pe") and not pd.isna(r.get("forward_pe")) else None,
+                "ev_ebitda": float(r.get("ev_ebitda")) if r.get("ev_ebitda") and not pd.isna(r.get("ev_ebitda")) else None,
+                "period": period,
+                "timestamp": timestamp,
+                "macro_regime": macro_regime_str,
+                "trust_net_5d": inst.get("trust_net_5d"),
+                "foreign_net_5d": inst.get("foreign_net_5d"),
+                "tags": tags_str,
+                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
+                "timestral_predicted_price": None,
+                "timestral_potential": None,
+                "timestral_p10": None,
+                "timestral_p90": None,
+                "timesfm_predicted_price": None,
+                "timesfm_potential": None,
+                "moirai_predicted_price": float(r["predicted_price"]),
+                "moirai_potential": float(r["potential"]),
+                "moirai_p10": float(r.get("p10")) if r.get("p10") is not None and not pd.isna(r.get("p10")) else None,
+                "moirai_p90": float(r.get("p90")) if r.get("p90") is not None and not pd.isna(r.get("p90")) else None,
+                "dual_model_consensus": False,
+                "tri_model_consensus": False,
             })
 
         # 2.8 舊版 LSTM 預測結果 (Legacy Deprecated Fallback)
@@ -708,10 +775,15 @@ class DuckDBManager:
                 "timestral_p90": None,
                 "timesfm_predicted_price": None,
                 "timesfm_potential": None,
+                "moirai_predicted_price": None,
+                "moirai_potential": None,
+                "moirai_p10": None,
+                "moirai_p90": None,
                 "dual_model_consensus": False,
+                "tri_model_consensus": False,
             })
 
-        # 3. 雙重/多維共振符合結果 (Dual Foundation Model Resonance)
+        # 3. 雙重/多維共振符合結果 (Multi-Model Consensus & Resonance)
         overlap_df = results.get("overlap_results", pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
             for idx, row in overlap_df.iterrows():
@@ -725,7 +797,9 @@ class DuckDBManager:
                 pred_price = float(row["predicted_price"]) if row.get("predicted_price") is not None and not pd.isna(row.get("predicted_price")) else float(row["current_price"])
                 pot_val = float(row["potential"]) if row.get("potential") is not None and not pd.isna(row.get("potential")) else (
                     float(row["timestral_potential"]) if row.get("timestral_potential") is not None and not pd.isna(row.get("timestral_potential")) else (
-                        float(row["timesfm_potential"]) if row.get("timesfm_potential") is not None and not pd.isna(row.get("timesfm_potential")) else 0.0
+                        float(row["timesfm_potential"]) if row.get("timesfm_potential") is not None and not pd.isna(row.get("timesfm_potential")) else (
+                            float(row["moirai_potential"]) if row.get("moirai_potential") is not None and not pd.isna(row.get("moirai_potential")) else 0.0
+                        )
                     )
                 )
 
@@ -760,7 +834,12 @@ class DuckDBManager:
                     "timestral_p90": float(row.get("timestral_p90")) if row.get("timestral_p90") is not None and not pd.isna(row.get("timestral_p90")) else None,
                     "timesfm_predicted_price": float(row.get("timesfm_predicted_price")) if row.get("timesfm_predicted_price") is not None and not pd.isna(row.get("timesfm_predicted_price")) else None,
                     "timesfm_potential": float(row.get("timesfm_potential")) if row.get("timesfm_potential") is not None and not pd.isna(row.get("timesfm_potential")) else None,
+                    "moirai_predicted_price": float(row.get("moirai_predicted_price")) if row.get("moirai_predicted_price") is not None and not pd.isna(row.get("moirai_predicted_price")) else None,
+                    "moirai_potential": float(row.get("moirai_potential")) if row.get("moirai_potential") is not None and not pd.isna(row.get("moirai_potential")) else None,
+                    "moirai_p10": float(row.get("moirai_p10")) if row.get("moirai_p10") is not None and not pd.isna(row.get("moirai_p10")) else None,
+                    "moirai_p90": float(row.get("moirai_p90")) if row.get("moirai_p90") is not None and not pd.isna(row.get("moirai_p90")) else None,
                     "dual_model_consensus": bool(row.get("dual_model_consensus", False)),
+                    "tri_model_consensus": bool(row.get("tri_model_consensus", False)),
                 })
 
         return self.save_predictions_batch(all_data)
@@ -841,6 +920,10 @@ class DuckDBManager:
                 tf_p = clean_row.get("timesfm_predicted_price")
                 if isinstance(tf_p, (int, float)) and tf_p > 0:
                     clean_row["timesfm_potential"] = round(((tf_p - curr_p) / curr_p) * 100.0, 2)
+
+                moi_p = clean_row.get("moirai_predicted_price")
+                if isinstance(moi_p, (int, float)) and moi_p > 0:
+                    clean_row["moirai_potential"] = round(((moi_p - curr_p) / curr_p) * 100.0, 2)
 
             records.append(clean_row)
         return records
@@ -1275,6 +1358,72 @@ class DuckDBManager:
         df = self.query(sql, params)
         return self._clean_df_records(df)
 
+    def get_moirai_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 MOIRAI-2 預測漲幅最大 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%')",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential DESC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
+    def get_moirai_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 MOIRAI-2 預測跌幅最大 / 潛在做空 TOP N 標的"""
+        index_name = self._clean_index_name(index_name)
+        where_clauses = [
+            "potential IS NOT NULL", 
+            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%')",
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            where_clauses.append("index_name = ?")
+            params.append(index_name)
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}"
+        sql = f"""
+        WITH ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+            FROM predictions
+            {where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY potential ASC
+        LIMIT ?;
+        """
+        params.append(limit)
+        df = self.query(sql, params)
+        return self._clean_df_records(df)
+
     def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
         """
         取得特定股票代碼之歷史預測軌跡。
@@ -1351,10 +1500,15 @@ class DuckDBManager:
             "timestral_p90": None,
             "timesfm_potential": None,
             "timesfm_predicted_price": None,
+            "moirai_potential": None,
+            "moirai_predicted_price": None,
+            "moirai_p10": None,
+            "moirai_p90": None,
             "lstm_potential": None,
             "potential": None,
             "predicted_price": None,
             "dual_model_consensus": False,
+            "tri_model_consensus": False,
             "pullback_type": None,
             "ma5": None,
             "ma10": None,
@@ -1430,6 +1584,15 @@ class DuckDBManager:
                     cand["timesfm_potential"] = float(pot)
                 if pred is not None:
                     cand["timesfm_predicted_price"] = float(pred)
+            elif "MOIRAI" in m_name or "MOIRAI" in s_type:
+                if pot is not None:
+                    cand["moirai_potential"] = float(pot)
+                if pred is not None:
+                    cand["moirai_predicted_price"] = float(pred)
+                if r.get("moirai_p10") is not None:
+                    cand["moirai_p10"] = float(r["moirai_p10"])
+                if r.get("moirai_p90") is not None:
+                    cand["moirai_p90"] = float(r["moirai_p90"])
             elif "多維共振" in m_name or "多維共振" in s_type:
                 if pot is not None:
                     cand["potential"] = float(pot)
@@ -1437,6 +1600,8 @@ class DuckDBManager:
                     cand["predicted_price"] = float(pred)
                 if r.get("dual_model_consensus") is not None:
                     cand["dual_model_consensus"] = bool(r["dual_model_consensus"])
+                if r.get("tri_model_consensus") is not None:
+                    cand["tri_model_consensus"] = bool(r["tri_model_consensus"])
             elif "LSTM" in m_name or "LSTM" in s_type:
                 if pot is not None:
                     cand["lstm_potential"] = float(pot)
@@ -1455,6 +1620,8 @@ class DuckDBManager:
                 cand["potential"] = cand["timestral_potential"]
             elif cand["timesfm_potential"] is not None:
                 cand["potential"] = cand["timesfm_potential"]
+            elif cand["moirai_potential"] is not None:
+                cand["potential"] = cand["moirai_potential"]
             else:
                 cand["potential"] = cand["lstm_potential"]
 

@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-11-04 (v2.4.64)
+
+### Major Feature & Architecture Fix: Salesforce MOIRAI-2 Full Production Activation & Tri-Model Resonance Pipeline
+- **全鏈路啟用 Salesforce MOIRAI-2 基礎模型 (Full MOIRAI-2 Production Activation)**：
+  - **修復生產模式靜默阻擋核心缺陷**：修正 `core/config.py` 中的 `usage_eligibility` 與策略權重，徹底解除原先在 `production` 模式下對 `moirai` 與 `timesfm` 的授權攔截，將 `MODEL_ROLES["moirai"]` 與 `MODEL_ROLES["timesfm"]` 從 `shadow` / `research` 全面轉為 `active`，權重配置更新為 `xuantie: 0.30`, `timesfm: 0.20`, `timestral: 0.20`, `moirai: 0.15`, `institutional: 0.15`，確保台股與美股每日排程運算正常執行 MOIRAI-2。
+  - **策略層活化 (`strategies/moirai.py`)**：將 `_metadata` role 更新為 `active`，並將 `is_hit` 與 `candidate_hit`（潛力與盈虧比達標）正式綁定，產生 `MOIRAI看漲`、`高風報比` 及 `MOIRAI看跌` 訊號。
+  - **三大時序大模型共振評估 (`evaluators/composite_evaluator.py`)**：
+    - 支援 TimesFM (Google) × Timestral (Mistral) × MOIRAI-2 (Salesforce) 三大時序大模型共振體系。
+    - 當三者或任二者同步看漲時，分別賦予 `👑三大模型共振` / `🔮三大模型共振` / `🔮雙大模型共振` 標籤，並於 `overlap_candidates` 計算三模型加權合成目標價與共振旗標 `tri_model_consensus`。
+    - `EvaluationReport` 完整納入 `moirai_results` 時序大模型預測清單與排序。
+- **資料庫雙向持久化 (Dual-Database Persistence: DuckDB & Supabase)**：
+  - **DuckDB 支援**：在 `data/duckdb_manager.py` 的預測資料表新增 `moirai_predicted_price`、`moirai_potential`、`moirai_p10`、`moirai_p90` 及 `tri_model_consensus` 欄位與自動遷移；在 `save_dual_strategy_results` 完整寫入 MOIRAI 預測；新增 `get_moirai_top_bullish` 與 `get_moirai_top_bearish` 查詢方法。
+  - **Supabase 支援**：在 `database.py` 中持久化 `moirai_results`，並在交集資料表回填 `moirai_potential`。
+- **Web 儀表板與 WebMCP 工具全方位串接 (Web Dashboard & WebMCP Integration)**：
+  - **API 端點**：新增 `/api/v1/predictions/moirai/top-bullish` 與 `/api/v1/predictions/moirai/top-bearish`；在 FastMCP 與 WebMCP 客戶端完整註冊 `get_moirai_top_predictions`。
+  - **前端切換與展示 (`app.js` & `api-client.js`)**：在操盤看板策略選單新增 `MOIRAI-2 看漲` 選項，支援 `moirai_bullish` / `moirai_bearish` 策略查詢；更新標籤解析器，將「三大模型共振」自動簡化為「三模型看漲」，並為 `MOIRAI` 標籤配置專屬徽章與樣式；更新 `globalFormatStrategyName` 正確識別 `MOIRAI-2`。
+- **推播與日報模板全面升級 (Telegram, Discord, Email Notifications Upgrade)**：
+  - **Email 日報升級**：在候選標的清單中新增 `MOIRAI: +X.X%[p10~p90]` 預測行，並在郵件末端新增專屬 `🔮 時序大模型 (Salesforce MOIRAI-2)` 漲幅排行與蒙地卡羅風控區間表格。
+  - **Telegram 推播升級**：在標的卡片輸出 `MOIRAI <b>+X.X%</b>` 預測潛力，升級頁尾說明為「三大模型歷史勝率」。
+  - **Discord 推播升級**：在標的卡片輸出 `MOIRAI **+X.X%**`，新增 `**【時序大模型 (MOIRAI-2 預測 TOP 5)】**` 區塊，並支援三大模型共振等級展示。
+  - **終端機日報**：新增軌道 4 `🔮 【時序大模型】MOIRAI-2 預測 (隔日 T+1) - 預測漲幅排行與風控分位數` 表格。
+- **完整單元測試驗證 (100% Test Coverage)**：
+  - 全套 482 項單元測試全數通過（`test_composite_evaluator`, `test_composite_model_eligibility`, `test_config`, `test_model_adapters`, `test_api`, `test_formatter`, `test_orchestrator`, `test_performance_dashboard` 等）。
+
+---
+
 ## 2026-11-03 (v2.4.63)
 
 ### Critical Bug Fixes (Foreign Stock Isolation for Institutional Flow, Broker Trades & News Cache)

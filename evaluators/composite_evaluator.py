@@ -16,6 +16,7 @@ class EvaluationReport:
     xuantie_results: pd.DataFrame = field(default_factory=pd.DataFrame)
     timestral_results: List[Dict[str, Any]] = field(default_factory=list)
     timesfm_results: List[Dict[str, Any]] = field(default_factory=list)
+    moirai_results: List[Dict[str, Any]] = field(default_factory=list)
     lstm_results: List[Dict[str, Any]] = field(default_factory=list)
     overlap_results: pd.DataFrame = field(default_factory=pd.DataFrame)
     macro_state: Optional[MacroState] = None
@@ -31,9 +32,10 @@ class CompositeEvaluator:
         min_overlap_count: int = 2
     ):
         self.weights = weights or {
-            "xuantie": 0.35,
-            "timesfm": 0.25,
-            "timestral": 0.25,
+            "xuantie": 0.30,
+            "timesfm": 0.20,
+            "timestral": 0.20,
+            "moirai": 0.15,
             "institutional": 0.15,
             "sector": 0.10,
             "fundamental": 0.05
@@ -133,6 +135,28 @@ class CompositeEvaluator:
                     })
             timesfm_results_list.sort(key=lambda x: x["potential"], reverse=True)
 
+        # MOIRAI-2 list (Salesforce Foundation Model)
+        moirai_results_list = []
+        if "moirai" in strategy_outputs:
+            for r in strategy_outputs["moirai"]:
+                if r.potential is not None:
+                    moirai_results_list.append({
+                        "ticker": r.ticker,
+                        "potential": r.potential,
+                        "current_price": r.current_price,
+                        "predicted_price": r.predicted_price or r.current_price,
+                        "horizon_predicted_price": r.signals.get("horizon_predicted_price"),
+                        "risk_reward_ratio": r.signals.get("risk_reward_ratio"),
+                        "p10": r.metrics.get("p10"),
+                        "p50": r.metrics.get("p50"),
+                        "p90": r.metrics.get("p90"),
+                        "pe": r.metrics.get("pe"),
+                        "pb": r.metrics.get("pb"),
+                        "forward_pe": r.metrics.get("forward_pe"),
+                        "ev_ebitda": r.metrics.get("ev_ebitda")
+                    })
+            moirai_results_list.sort(key=lambda x: x["potential"], reverse=True)
+
         # LSTM legacy list (deprecated fallback)
         lstm_results_legacy = []
         if "lstm" in strategy_outputs:
@@ -153,18 +177,20 @@ class CompositeEvaluator:
         # Dynamic active weights matching available strategies
         active_weights = dict(self.weights)
         if "timestral" in strategy_outputs and "timestral" not in active_weights:
-            active_weights["timestral"] = 0.25
+            active_weights["timestral"] = 0.20
         if "timesfm" in strategy_outputs and "timesfm" not in active_weights:
-            active_weights["timesfm"] = 0.25
-        if "lstm" in strategy_outputs and "timestral" in strategy_outputs:
-            # When both Timestral and LSTM are present, deprecate LSTM weight to 0 or trace
+            active_weights["timesfm"] = 0.20
+        if "moirai" in strategy_outputs and "moirai" not in active_weights:
+            active_weights["moirai"] = 0.15
+        if "lstm" in strategy_outputs and ("timestral" in strategy_outputs or "timesfm" in strategy_outputs or "moirai" in strategy_outputs):
+            # When foundation models are present, deprecate LSTM weight to 0 or trace
             active_weights["lstm"] = 0.0
 
         def eligible(name: str, result: StrategyResult) -> bool:
             if name not in {"timesfm", "timestral", "moirai"}:
                 return True
             meta = result.metadata or {}
-            return (meta.get("role", "active") not in {"shadow", "disabled", "suspended"}
+            return (meta.get("role", "active") in {"active", "primary"}
                     and meta.get("status", "ready") in {"ready", "active"}
                     and meta.get("health_state") != "suspended"
                     and meta.get("effective_weight", 1.0) > 0)
@@ -209,6 +235,7 @@ class CompositeEvaluator:
             xuantie_res = strats.get("xuantie")
             timestral_res = strats.get("timestral")
             timesfm_res = strats.get("timesfm")
+            moirai_res = strats.get("moirai")
             lstm_res = strats.get("lstm")
             inst_res = strats.get("institutional")
             sector_res = strats.get("sector_rotation") or strats.get("sector")
@@ -223,21 +250,30 @@ class CompositeEvaluator:
                 combined_tags.append("TimesFM看漲")
                 if timesfm_res.signals.get("risk_reward_ratio", 0) >= 1.0:
                     combined_tags.append("高盈虧比")
+            if moirai_res and moirai_res.is_hit:
+                combined_tags.append("MOIRAI看漲")
+                if moirai_res.signals.get("risk_reward_ratio", 0) >= 1.0:
+                    combined_tags.append("高風報比")
             if lstm_res and lstm_res.is_hit and not timestral_res:
                 combined_tags.append("LSTM看漲")
 
-            # Dual Foundation Model Consensus (TimesFM ∩ Timestral)
+            # Three Foundation Models Consensus (TimesFM × Timestral × MOIRAI-2)
             hit_timestral = bool(timestral_res and timestral_res.is_hit)
             hit_timesfm = bool(timesfm_res and timesfm_res.is_hit)
-            hit_both_fm = hit_timestral and hit_timesfm
-            hit_any_fm = hit_timestral or hit_timesfm
+            hit_moirai = bool(moirai_res and moirai_res.is_hit)
+            fm_hits = [h for h in (hit_timestral, hit_timesfm, hit_moirai) if h]
+            hit_tri_fm = len(fm_hits) >= 3
+            hit_both_fm = len(fm_hits) >= 2
+            hit_any_fm = len(fm_hits) >= 1
 
             # Legacy ML hit indicator (for backward compatibility if only LSTM was run)
             hit_lstm = bool(lstm_res and lstm_res.is_hit)
-            hit_both_ml = hit_both_fm or (hit_lstm and (hit_timesfm or hit_timestral))
+            hit_both_ml = hit_both_fm or (hit_lstm and (hit_timesfm or hit_timestral or hit_moirai))
             hit_any_ml = hit_any_fm or hit_lstm
 
-            if hit_both_fm:
+            if hit_tri_fm:
+                combined_tags.append("🔮三大模型共振")
+            elif hit_both_fm:
                 combined_tags.append("🔮雙大模型共振")
             elif hit_both_ml and not hit_both_fm:
                 combined_tags.append("🔮雙ML共振")
@@ -263,10 +299,6 @@ class CompositeEvaluator:
             is_quad_resonance = hit_xuantie and hit_inst and (hit_both_fm or hit_both_ml)
 
             # Triple Resonance (三重共振): 嚴格符合多策略共振組合（必須具備技術面玄鐵或籌碼面法人支撐）
-            # 1. 玄鐵 + 法人 + 基礎模型 (TimesFM 或 Timestral)
-            # 2. 玄鐵 + 雙大模型 (TimesFM + Timestral)
-            # 3. 法人 + 雙大模型 (TimesFM + Timestral)
-            # 4. 板塊 + (玄鐵 或 法人) + (基礎模型 或 另一方)
             is_triple_resonance = False
             if not is_quad_resonance:
                 if hit_xuantie and hit_inst and hit_any_ml:
@@ -284,6 +316,8 @@ class CompositeEvaluator:
                 ml_potentials.append(float(timestral_res.potential))
             if timesfm_res and timesfm_res.potential is not None and np.isfinite(timesfm_res.potential):
                 ml_potentials.append(float(timesfm_res.potential))
+            if moirai_res and moirai_res.potential is not None and np.isfinite(moirai_res.potential):
+                ml_potentials.append(float(moirai_res.potential))
             if not ml_potentials and lstm_res and lstm_res.potential is not None and np.isfinite(lstm_res.potential):
                 ml_potentials.append(float(lstm_res.potential))
 
@@ -291,8 +325,6 @@ class CompositeEvaluator:
             avg_ml_pot = sum(ml_potentials) / len(ml_potentials) if has_ml else 0.0
 
             # Bearish check (防守門檻):
-            # 1. 雙基礎模型均看跌 (<= 0) 絕對為看跌/防守
-            # 2. 平均潛力 <= 0 或任一模型嚴重破底 (<= -5.0%) 且無強力彌補
             is_ml_bearish = False
             if has_ml:
                 if all(p <= 0.0 for p in ml_potentials):
@@ -308,6 +340,7 @@ class CompositeEvaluator:
                 (xuantie_res and xuantie_res.is_hit) or
                 (timestral_res and timestral_res.is_hit) or
                 (timesfm_res and timesfm_res.is_hit) or
+                (moirai_res and moirai_res.is_hit) or
                 (lstm_res and lstm_res.is_hit)
             )
 
@@ -325,6 +358,8 @@ class CompositeEvaluator:
                     resonance_tier = "👑四重共振"
                 elif is_triple_resonance:
                     resonance_tier = "🏆三重共振"
+                elif hit_tri_fm:
+                    resonance_tier = "👑三大模型共振"
                 elif hit_both_fm:
                     resonance_tier = "🔮雙大模型共振"
                 elif hit_both_ml:
@@ -362,17 +397,14 @@ class CompositeEvaluator:
                               next((s.current_price for s in original_strats.values() if getattr(s, "current_price", None) is not None), 0.0))
 
             # Target Price & Potential Defensive Synthesis:
-            # Ensemble of Google TimesFM and Mistral Timestral P50
+            # Ensemble of Google TimesFM, Mistral Timestral, and Salesforce MOIRAI-2 P50
             valid_target_prices = []
-            if timesfm_res and timesfm_res.predicted_price is not None and np.isfinite(timesfm_res.predicted_price):
-                valid_target_prices.append(float(timesfm_res.predicted_price))
-            if timestral_res and timestral_res.predicted_price is not None and np.isfinite(timestral_res.predicted_price):
-                valid_target_prices.append(float(timestral_res.predicted_price))
+            for fm_res in (timesfm_res, timestral_res, moirai_res):
+                if fm_res and fm_res.predicted_price is not None and np.isfinite(fm_res.predicted_price):
+                    valid_target_prices.append(float(fm_res.predicted_price))
 
-            if len(valid_target_prices) == 2:
-                synthesized_target = round(0.5 * valid_target_prices[0] + 0.5 * valid_target_prices[1], 2)
-            elif len(valid_target_prices) == 1:
-                synthesized_target = round(valid_target_prices[0], 2)
+            if valid_target_prices:
+                synthesized_target = round(sum(valid_target_prices) / len(valid_target_prices), 2)
             elif lstm_res and lstm_res.predicted_price is not None and np.isfinite(lstm_res.predicted_price):
                 synthesized_target = round(float(lstm_res.predicted_price), 2)
             else:
@@ -383,12 +415,11 @@ class CompositeEvaluator:
             else:
                 synthesized_potential = None
 
-            # Risk-reward resolution
+            # Risk-reward resolution across available foundation models
             best_rr = None
-            if timestral_res and timestral_res.signals.get("risk_reward_ratio") is not None:
-                best_rr = timestral_res.signals.get("risk_reward_ratio")
-            elif timesfm_res and timesfm_res.signals.get("risk_reward_ratio") is not None:
-                best_rr = timesfm_res.signals.get("risk_reward_ratio")
+            for fm_res in (timestral_res, timesfm_res, moirai_res):
+                if fm_res and fm_res.signals.get("risk_reward_ratio") is not None:
+                    best_rr = max(best_rr or 0.0, float(fm_res.signals.get("risk_reward_ratio")))
 
             # Deduplicate tags and prepend resonance tier
             if is_ml_bearish:
@@ -422,6 +453,7 @@ class CompositeEvaluator:
                 "is_ml_bearish": is_ml_bearish,
                 "avg_ml_pot": avg_ml_pot,
                 "dual_model_consensus": hit_both_fm,
+                "tri_model_consensus": hit_tri_fm,
                 "risk_reward_ratio": best_rr,
             }
 
@@ -436,6 +468,11 @@ class CompositeEvaluator:
             if timesfm_res:
                 entry["timesfm_potential"] = timesfm_res.potential
                 entry["timesfm_predicted_price"] = timesfm_res.predicted_price
+            if moirai_res:
+                entry["moirai_potential"] = moirai_res.potential
+                entry["moirai_predicted_price"] = moirai_res.predicted_price
+                entry["moirai_p10"] = moirai_res.metrics.get("p10")
+                entry["moirai_p90"] = moirai_res.metrics.get("p90")
             if lstm_res:
                 entry["lstm_potential"] = lstm_res.potential
             if inst_res:
@@ -446,9 +483,10 @@ class CompositeEvaluator:
             if is_valid_overlap:
                 overlap_candidates.append(entry)
 
-        # Tier weights for sorting priority (四重 > 三重 > 雙大模型 > 雙ML > 多維/雙重)
+        # Tier weights for sorting priority (四重 > 三大模型 > 三重 > 雙大模型 > 雙ML > 多維/雙重)
         tier_weights = {
             "👑四重共振": 450.0,
+            "👑三大模型共振": 400.0,
             "🏆三重共振": 350.0,
             "🔮雙大模型共振": 250.0,
             "🔮雙ML共振": 200.0,
@@ -480,7 +518,12 @@ class CompositeEvaluator:
                 "timestral_p90": o.get("timestral_p90"),
                 "timesfm_potential": o.get("timesfm_potential"),
                 "timesfm_predicted_price": o.get("timesfm_predicted_price"),
+                "moirai_potential": o.get("moirai_potential"),
+                "moirai_predicted_price": o.get("moirai_predicted_price"),
+                "moirai_p10": o.get("moirai_p10"),
+                "moirai_p90": o.get("moirai_p90"),
                 "dual_model_consensus": o.get("dual_model_consensus", False),
+                "tri_model_consensus": o.get("tri_model_consensus", False),
                 "lstm_potential": o.get("lstm_potential", 0.0),
                 "risk_reward_ratio": o.get("risk_reward_ratio"),
                 "pullback_type": o.get("pullback_type", ""),
@@ -504,6 +547,7 @@ class CompositeEvaluator:
             xuantie_results=xuantie_df,
             timestral_results=timestral_results_list,
             timesfm_results=timesfm_results_list,
+            moirai_results=moirai_results_list,
             lstm_results=lstm_results_legacy,
             overlap_results=overlap_df,
             macro_state=macro_state

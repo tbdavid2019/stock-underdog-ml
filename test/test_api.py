@@ -167,6 +167,13 @@ class TestFastAPIService(unittest.TestCase):
         bear_resp = self.client.get("/api/v1/predictions/timesfm/top-bearish?limit=5")
         self.assertEqual(bear_resp.status_code, 200)
 
+    def test_moirai_top_bullish_and_bearish(self):
+        bull_resp = self.client.get("/api/v1/predictions/moirai/top-bullish?limit=5")
+        self.assertEqual(bull_resp.status_code, 200)
+        
+        bear_resp = self.client.get("/api/v1/predictions/moirai/top-bearish?limit=5")
+        self.assertEqual(bear_resp.status_code, 200)
+
     def test_stats_summary(self):
         resp = self.client.get("/api/v1/stats/summary")
         self.assertEqual(resp.status_code, 200)
@@ -244,7 +251,7 @@ class TestFastAPIService(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["name"], "stock-quant-engine")
         self.assertEqual(data["transport"], "sse")
-        self.assertEqual(len(data["tools"]), 22)
+        self.assertEqual(len(data["tools"]), 23)
         self.assertIn("get_market_macro_regime", data["tools"])
         self.assertIn("get_fed_rate_monitor", data["tools"])
         self.assertIn("get_us_earnings_calendar", data["tools"])
@@ -256,12 +263,13 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("get_company_network", data["tools"])
         self.assertIn("open_company_network", data["tools"])
         self.assertIn("get_company_tenders", data["tools"])
+        self.assertIn("get_moirai_top_predictions", data["tools"])
 
         # Test alias /mcp.json
         resp_alias = self.client.get("/mcp.json")
         self.assertEqual(resp_alias.status_code, 200)
         self.assertEqual(resp_alias.json()["name"], "stock-quant-engine")
-        self.assertEqual(len(resp_alias.json()["tools"]), 22)
+        self.assertEqual(len(resp_alias.json()["tools"]), 23)
 
     def test_macro_investing_endpoints(self):
         from unittest.mock import patch
@@ -346,8 +354,9 @@ class TestFastAPIService(unittest.TestCase):
         resp = self.client.get("/mcp")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertEqual(len(data.get("tools", [])), 17)
+        self.assertEqual(len(data.get("tools", [])), 18)
         self.assertIn("get_timesfm_top_predictions", data.get("tools", []))
+        self.assertIn("get_moirai_top_predictions", data.get("tools", []))
         self.assertIn("get_commodities_summary", data.get("tools", []))
         self.assertIn("resolve_stock_ticker", data.get("tools", []))
         self.assertIn("get_polymarket_macro_sentiment", data.get("tools", []))
@@ -356,8 +365,9 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp_wk.status_code, 200)
         data_wk = resp_wk.json()
         self.assertEqual(data_wk["version"], APP_VERSION)
-        self.assertEqual(len(data_wk.get("tools", [])), 22)
+        self.assertEqual(len(data_wk.get("tools", [])), 23)
         self.assertIn("get_timesfm_top_predictions", data_wk.get("tools", []))
+        self.assertIn("get_moirai_top_predictions", data_wk.get("tools", []))
         self.assertIn("get_commodities_summary", data_wk.get("tools", []))
         self.assertIn("resolve_stock_ticker", data_wk.get("tools", []))
         self.assertIn("get_polymarket_macro_sentiment", data_wk.get("tools", []))

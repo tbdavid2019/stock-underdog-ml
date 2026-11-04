@@ -48,6 +48,12 @@ export const app = createApp({
                     description: 'TimesFM 預測隔日漲幅排行。'
                 },
                 {
+                    id: 'moirai_bullish',
+                    label: 'MOIRAI-2 看漲排行',
+                    icon: 'psychology',
+                    description: 'MOIRAI-2 預測隔日漲幅排行。'
+                },
+                {
                     id: 'xuantie',
                     label: '季線支撐買點',
                     icon: 'show_chart',
@@ -1920,7 +1926,7 @@ export const app = createApp({
                 }
 
                 const strat = params.get('strategy');
-                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'timestral_bullish', 'timestral_bearish', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
+                this.selectedStrategy = (strat && ['resonance', 'xuantie', 'timestral_bullish', 'timestral_bearish', 'bullish', 'bearish', 'timesfm_bullish', 'timesfm_bearish', 'moirai_bullish', 'moirai_bearish', 'latest'].includes(strat)) ? strat : 'resonance';
 
                 const idx = params.get('index');
                 this.selectedIndex = (idx && idx !== 'ALL') ? idx : '';
@@ -2182,8 +2188,14 @@ export const app = createApp({
             if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
                 return '綜合優選';
             }
+            if (s.includes('三大模型共振') || s.includes('三模型看漲') || s.includes('三模型共振')) {
+                return '三模型看漲';
+            }
             if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
                 return '雙模型看漲';
+            }
+            if (s.toLowerCase().includes('moirai')) {
+                return 'MOIRAI-2';
             }
             return s;
         },
@@ -2210,6 +2222,9 @@ export const app = createApp({
                 if (/四重共振|三重共振|多維共振|雙重共振/.test(cleanLabel)) {
                     cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振/g, '綜合優選');
                 }
+                if (/三大模型共振|三模型看漲|三模型共振/.test(cleanLabel)) {
+                    cleanLabel = cleanLabel.replace(/三大模型共振|三模型看漲|三模型共振/g, '三模型看漲');
+                }
                 if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/.test(cleanLabel)) {
                     cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲/g, '雙模型看漲');
                 }
@@ -2221,6 +2236,10 @@ export const app = createApp({
                     icon = 'military_tech';
                     badgeType = 'resonance_triple';
                     tooltip = '多模型同步看漲 · 具備支撐或籌碼優勢';
+                } else if (cleanLabel.includes('三模型看漲')) {
+                    icon = 'psychology';
+                    badgeType = 'resonance_triple';
+                    tooltip = '三大時序模型同步看漲';
                 } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('雙AI看漲')) {
                     icon = 'psychology';
                     badgeType = 'resonance_ml';
@@ -2422,6 +2441,21 @@ export const app = createApp({
                         required: ['direction']
                     },
                     execute: async ({ direction, index_name, limit }) => JSON.stringify(await ApiClient.getPredictions({ strategy: direction === 'bearish' ? 'timesfm_bearish' : 'timesfm_bullish', indexName: index_name, limit: limit || 20 }))
+                });
+
+                await modelCtx.registerTool({
+                    name: 'get_moirai_top_predictions',
+                    description: '取得 Salesforce MOIRAI-2 時序大模型隔日目標價與 P10/P90 蒙地卡羅風控區間。',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            direction: { type: 'string', enum: ['bullish', 'bearish'], description: 'bullish 看漲 / bearish 看跌' },
+                            index_name: { type: 'string', description: '指數名稱' },
+                            limit: { type: 'integer', description: '回傳筆數' }
+                        },
+                        required: ['direction']
+                    },
+                    execute: async ({ direction, index_name, limit }) => JSON.stringify(await ApiClient.getPredictions({ strategy: direction === 'bearish' ? 'moirai_bearish' : 'moirai_bullish', indexName: index_name, limit: limit || 20 }))
                 });
 
                 await modelCtx.registerTool({
@@ -2998,8 +3032,14 @@ const globalFormatStrategyName = (str) => {
     if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
         return '綜合優選';
     }
+    if (s.includes('三大模型共振') || s.includes('三模型看漲') || s.includes('三模型共振')) {
+        return '三模型看漲';
+    }
     if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
         return '雙模型看漲';
+    }
+    if (s.toLowerCase().includes('moirai')) {
+        return 'MOIRAI-2';
     }
     return s;
 };

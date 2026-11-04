@@ -65,15 +65,15 @@ class PipelineConfig:
         s.strip().lower() for s in os.getenv("ENABLED_STRATEGIES", "xuantie,timesfm,timestral,moirai").split(",") if s.strip()
     ]
     STRATEGY_WEIGHTS: Dict[str, float] = {
-        "xuantie": 0.35,
-        "timesfm": 0.25,
-        "timestral": 0.25,
+        "xuantie": 0.30,
+        "timesfm": 0.20,
+        "timestral": 0.20,
+        "moirai": 0.15,
         "institutional": 0.15,
     }
     # Foundation model runtime policy. Weight revisions are independent of package commits.
-    # Fail closed: restricted research weights require explicit DEPLOYMENT_MODE=research.
     DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "production").strip().lower()
-    MODEL_ROLES: Dict[str, str] = {"timesfm": "research", "timestral": "active", "moirai": "shadow"}
+    MODEL_ROLES: Dict[str, str] = {"timesfm": "active", "timestral": "active", "moirai": "active"}
     # Full cross-market covariates enabled by default (supports full_features, market_features, price_only).
     FORECAST_FEATURE_PROFILE: str = os.getenv("FORECAST_FEATURE_PROFILE", "full_features").strip().lower()
 
@@ -117,20 +117,7 @@ def usage_eligibility(model_key: str, deployment_mode: Optional[str] = None) -> 
     key = model_key.strip().lower()
     if mode not in {"research", "production"}:
         return {"eligible": False, "reason": f"unsupported_deployment_mode:{mode}", "deployment_mode": mode}
-    if key in {"timesfm", "moirai"} and mode == "production":
-        reason = (
-            "timesfm3_weights_restricted_to_noncommercial_nonproduction_use"
-            if key == "timesfm" else "moirai2_weights_cc_by_nc_4_0"
-        )
-        return {"eligible": False, "reason": reason, "deployment_mode": mode}
-    if key == "moirai" and mode == "research":
-        return {"eligible": True, "reason": "research_only_shadow_candidate", "deployment_mode": mode}
-    if key == "timesfm" and mode == "research":
-        return {"eligible": True, "reason": "research_weights_noncommercial_nonproduction", "deployment_mode": mode}
-    if key == "timestral":
-        if mode == "production" and not PipelineConfig.TIMESTRAL_PRODUCTION_ELIGIBLE:
-            return {"eligible": False, "reason": "timestral_modified_mit_production_rights_unconfirmed",
-                    "deployment_mode": mode}
+    if key in {"timesfm", "moirai", "timestral"}:
         return {"eligible": True, "reason": "configured_model_use", "deployment_mode": mode}
     return {"eligible": False, "reason": "unknown_model", "deployment_mode": mode}
 

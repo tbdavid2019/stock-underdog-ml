@@ -38,7 +38,7 @@ class MoiraiStrategy(BaseStrategy):
             "model_id": forecast.get("model_id", config.pipeline.MOIRAI_MODEL_ID),
             "checkpoint_revision": forecast.get("checkpoint_revision", config.pipeline.MOIRAI_CHECKPOINT_REVISION),
             "package_revision": forecast.get("package_revision", "cfd46d4510ed8896f263116f32928eede05b0a75"),
-            "role": config.pipeline.MODEL_ROLES.get("moirai", "shadow"),
+            "role": config.pipeline.MODEL_ROLES.get("moirai", "active"),
             "profile": context.metadata.get("feature_profile", "market_features" if context.metadata.get("past_covariates") is not None else "price_only"),
             "feature_profile": context.metadata.get("feature_profile", "market_features" if context.metadata.get("past_covariates") is not None else "price_only"),
             "feature_status": context.metadata.get("feature_status", "price_only"),
@@ -98,9 +98,12 @@ class MoiraiStrategy(BaseStrategy):
             potential = float(forecast["potential"])
             rr = float(forecast.get("risk_reward_ratio", 0.0))
             candidate_hit = potential >= self.min_potential_hit and rr >= self.min_risk_reward_hit
-            role = config.pipeline.MODEL_ROLES.get("moirai", "shadow")
+            role = config.pipeline.MODEL_ROLES.get("moirai", "active")
             candidate_score = round(max(0., min(100., 50. + potential * 8. + min(20., (rr - 1.) * 10.))), 2)
             quantiles = forecast.get("quantiles", {})
+            model_tag = "MOIRAI看漲" if potential > 0 else "MOIRAI看跌"
+            if role == "shadow":
+                model_tag = "MOIRAI-2 shadow"
             results.append(StrategyResult(
                 ticker=ticker, strategy_name=self.name, is_hit=candidate_hit and role != "shadow",
                 score=candidate_score if role != "shadow" else 0.0,
@@ -115,6 +118,6 @@ class MoiraiStrategy(BaseStrategy):
                 metrics={"p10": quantiles.get("p10"), "p50": quantiles.get("p50"),
                          "p90": quantiles.get("p90"), "risk_reward_ratio": rr},
                 metadata=self._metadata(ctx, "ready", forecast),
-                tags=["MOIRAI-2 shadow"]
+                tags=[model_tag]
             ))
         return results
