@@ -241,21 +241,35 @@ class CompositeEvaluator:
             sector_res = strats.get("sector_rotation") or strats.get("sector")
 
             if xuantie_res and xuantie_res.is_hit:
-                combined_tags.append("玄鐵買點")
-            if timestral_res and timestral_res.is_hit:
-                combined_tags.append("Timestral看漲")
-                if timestral_res.signals.get("risk_reward_ratio", 0) >= 1.5:
-                    combined_tags.append("高風報比")
-            if timesfm_res and timesfm_res.is_hit:
-                combined_tags.append("TimesFM看漲")
-                if timesfm_res.signals.get("risk_reward_ratio", 0) >= 1.0:
-                    combined_tags.append("高盈虧比")
-            if moirai_res and moirai_res.is_hit:
-                combined_tags.append("MOIRAI看漲")
-                if moirai_res.signals.get("risk_reward_ratio", 0) >= 1.0:
-                    combined_tags.append("高風報比")
+                combined_tags.append("季線支撐")
+
+            # Dynamic Model Plugin Tags (零硬編碼，動態遍歷 ModelPluginRegistry)
+            from models.protocol import model_registry
+            active_plugins = model_registry.list_active_plugins()
+            bullish_model_names = []
+
+            for p in active_plugins:
+                p_id = getattr(p, "plugin_id", None) or getattr(p, "tag_name", "").lower() or p.model_id.split("/")[-1].split("-")[0].lower()
+                p_res = strats.get(p_id)
+                if p_res and p_res.is_hit:
+                    pot_val = float(p_res.potential) if p_res.potential is not None else 0.0
+                    rr_val = float(p_res.signals.get("risk_reward_ratio", 0)) if (p_res.signals and isinstance(p_res.signals, dict)) else 0.0
+                    tags = p.generate_tags(pot_val, rr_val)
+                    combined_tags.extend(tags)
+                    if pot_val > 0:
+                        disp_name = getattr(p, "tag_name", None) or getattr(p, "display_name", p_id)
+                        if "(" in disp_name:
+                            disp_name = disp_name.split("(")[0].strip()
+                        bullish_model_names.append(disp_name)
+                    if rr_val >= 1.5:
+                        combined_tags.append("高風報比")
+                    elif rr_val >= 1.0:
+                        combined_tags.append("高盈虧比")
+
             if lstm_res and lstm_res.is_hit and not timestral_res:
-                combined_tags.append("LSTM看漲")
+                combined_tags.append("LSTM看多")
+                if lstm_res.potential and lstm_res.potential > 0:
+                    bullish_model_names.append("LSTM")
 
             # Three Foundation Models Consensus (TimesFM × Timestral × MOIRAI-2)
             hit_timestral = bool(timestral_res and timestral_res.is_hit)
@@ -270,13 +284,6 @@ class CompositeEvaluator:
             hit_lstm = bool(lstm_res and lstm_res.is_hit)
             hit_both_ml = hit_both_fm or (hit_lstm and (hit_timesfm or hit_timestral or hit_moirai))
             hit_any_ml = hit_any_fm or hit_lstm
-
-            if hit_tri_fm:
-                combined_tags.append("👑三大模型共振")
-            elif hit_both_fm:
-                combined_tags.append("🔮雙大模型共振")
-            elif hit_both_ml and not hit_both_fm:
-                combined_tags.append("🔮雙ML共振")
 
             if inst_res:
                 meta = inst_res.metadata or {}
@@ -295,10 +302,8 @@ class CompositeEvaluator:
             hit_inst = bool(inst_res and inst_res.is_hit)
             hit_sector = bool(sector_res and sector_res.is_hit)
 
-            # Quadruple Resonance (四重大模型/多維共振): 玄鐵 + 法人 + (雙大模型 或 雙ML)
+            # Quadruple / Multi-factor Confluence
             is_quad_resonance = hit_xuantie and hit_inst and (hit_both_fm or hit_both_ml)
-
-            # Triple Resonance (三重共振): 嚴格符合多策略共振組合（必須具備技術面玄鐵或籌碼面法人支撐）
             is_triple_resonance = False
             if not is_quad_resonance:
                 if hit_xuantie and hit_inst and hit_any_ml:
@@ -344,28 +349,15 @@ class CompositeEvaluator:
                 (lstm_res and lstm_res.is_hit)
             )
 
-            # Defensive tags for bearish stocks
+            # Defensive tags for bearish stocks (純文字無 emoji)
             if is_ml_bearish:
                 if any(p <= -10.0 for p in ml_potentials):
-                    combined_tags.append("🔻深度防守")
+                    combined_tags.append("深度防守")
                 else:
-                    combined_tags.append("🔻防守")
+                    combined_tags.append("防守")
 
-            # Determine Resonance Tier
-            resonance_tier = ""
-            if not is_ml_bearish:
-                if is_quad_resonance:
-                    resonance_tier = "👑四重共振"
-                elif hit_tri_fm:
-                    resonance_tier = "👑三大模型共振"
-                elif is_triple_resonance:
-                    resonance_tier = "🏆三重共振"
-                elif hit_both_fm:
-                    resonance_tier = "🔮雙大模型共振"
-                elif hit_both_ml:
-                    resonance_tier = "🔮雙ML共振"
-                elif hit_count >= 2:
-                    resonance_tier = "🌟多維共振" if hit_count > 2 else "⭐雙重共振"
+            # Determine Concurring Models Tier
+            resonance_tier = ", ".join(bullish_model_names) if (bullish_model_names and not is_ml_bearish) else ""
 
             # Calculate Weighted Composite Score (0~100)
             score_total = 0.0
@@ -427,14 +419,13 @@ class CompositeEvaluator:
                 if fm_res and fm_res.signals.get("risk_reward_ratio") is not None:
                     best_rr = max(best_rr or 0.0, float(fm_res.signals.get("risk_reward_ratio")))
 
-            # Deduplicate tags and prepend resonance tier
+            # Deduplicate tags
+            cleaned_tags = [t for t in combined_tags if not any(k in t for k in ("共振", "重符合", "👑", "🏆", "🔮", "⭐", "🌟"))]
             if is_ml_bearish:
-                combined_tags = [t for t in combined_tags if "共振" not in t and "符合" not in t]
-            final_tags = list(dict.fromkeys(combined_tags))
-            if resonance_tier and resonance_tier not in final_tags:
-                final_tags.insert(0, resonance_tier)
+                cleaned_tags = [t for t in cleaned_tags if "看多" not in t and "強" not in t and "符合" not in t]
+            final_tags = list(dict.fromkeys(cleaned_tags))
 
-            # Resonance Overlap Condition
+            # Confluence Overlap Condition
             is_resonance = (
                 is_quad_resonance or
                 is_triple_resonance or
@@ -489,19 +480,13 @@ class CompositeEvaluator:
             if is_valid_overlap:
                 overlap_candidates.append(entry)
 
-        # Tier weights for sorting priority (四重 > 三大模型 > 三重 > 雙大模型 > 雙ML > 多維/雙重)
-        tier_weights = {
-            "👑四重共振": 450.0,
-            "👑三大模型共振": 400.0,
-            "🏆三重共振": 350.0,
-            "🔮雙大模型共振": 250.0,
-            "🔮雙ML共振": 200.0,
-            "🌟多維共振": 150.0,
-            "⭐雙重共振": 100.0
-        }
-
+        # Dynamic priority sort based purely on active concurring models & quantitative factors
         def candidate_sort_key(c: Dict[str, Any]):
-            tier_val = tier_weights.get(c.get("resonance_tier", ""), 50.0)
+            tags = c.get("tags", [])
+            model_mult = sum(1 for t in tags if t.endswith("看多"))
+            tech_bonus = 50.0 if any("季線" in t for t in tags) else 0.0
+            inst_bonus = 50.0 if any("合買" in t or "法人" in t or "連買" in t for t in tags) else 0.0
+            tier_val = model_mult * 100.0 + tech_bonus + inst_bonus
             score_val = c.get("composite_score", 0.0)
             pot_val = max(0.0, c.get("avg_ml_pot", 0.0))
             rr_val = c.get("risk_reward_ratio") or 1.0

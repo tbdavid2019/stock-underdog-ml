@@ -72,6 +72,119 @@ def _extract_candidates(results: dict, overlap_df: pd.DataFrame) -> List[dict]:
 
 
 # ==============================================================================
+# 動態模型時序預測萃取工具 (零硬編碼，熱插拔模型架構)
+# ==============================================================================
+
+def get_candidate_model_potentials(cand: dict) -> List[Dict[str, Any]]:
+    """
+    動態抓取 candidate 中所有模型的時序預測，絕不寫死單一模型名稱。
+    未來熱拔插任何新模型（如 Chronos、TiDE），自動識別並輸出。
+    """
+    results = []
+    seen_names = set()
+    
+    # 1. 優先檢查動態外掛註冊表
+    plugin_name_map = {}
+    try:
+        from models.protocol import model_registry
+        for p in model_registry.list_active_plugins():
+            p_id = getattr(p, "plugin_id", None) or getattr(p, "tag_name", "").lower() or p.model_id.split("/")[-1].split("-")[0].lower()
+            disp_name = getattr(p, "tag_name", None) or getattr(p, "display_name", p_id)
+            if "(" in disp_name:
+                disp_name = disp_name.split("(")[0].strip()
+            plugin_name_map[p_id] = disp_name
+    except Exception:
+        pass
+        
+    std_map = {
+        "timesfm": "TimesFM",
+        "timestral": "Timestral",
+        "moirai": "MOIRAI-2",
+        "lstm": "LSTM",
+    }
+    for k, v in std_map.items():
+        if k not in plugin_name_map:
+            plugin_name_map[k] = v
+
+    for k, v in cand.items():
+        if k.endswith("_potential") and v is not None and pd.notna(v):
+            model_key = k[:-10].lower()
+            if model_key in ("composite", "synthetic", "ensemble", "avg_ml"):
+                continue
+            display_name = plugin_name_map.get(model_key, model_key.capitalize())
+            pred_price = cand.get(f"{model_key}_predicted_price")
+            p10 = cand.get(f"{model_key}_p10")
+            p90 = cand.get(f"{model_key}_p90")
+            rr = cand.get(f"{model_key}_risk_reward_ratio") or cand.get("risk_reward_ratio")
+            results.append({
+                "key": model_key,
+                "name": display_name,
+                "potential": float(v),
+                "predicted_price": float(pred_price) if pred_price is not None and pd.notna(pred_price) else None,
+                "p10": float(p10) if p10 is not None and pd.notna(p10) else None,
+                "p90": float(p90) if p90 is not None and pd.notna(p90) else None,
+                "risk_reward_ratio": float(rr) if rr is not None and pd.notna(rr) else None,
+            })
+            seen_names.add(display_name.lower())
+
+    # 2. 如果 cand 是一筆獨立的單模型紀錄
+    single_model = cand.get("model_name")
+    single_pot = cand.get("potential")
+    if single_model and single_pot is not None and pd.notna(single_pot):
+        sm_clean = str(single_model).strip()
+        if sm_clean.lower() not in seen_names and sm_clean not in ("多維共振", "綜合優選"):
+            results.append({
+                "key": sm_clean.lower(),
+                "name": sm_clean,
+                "potential": float(single_pot),
+                "predicted_price": float(cand.get("predicted_price")) if cand.get("predicted_price") is not None and pd.notna(cand.get("predicted_price")) else None,
+                "p10": None,
+                "p90": None,
+                "risk_reward_ratio": float(cand.get("risk_reward_ratio")) if cand.get("risk_reward_ratio") is not None and pd.notna(cand.get("risk_reward_ratio")) else None,
+            })
+            
+    return results
+
+
+def get_candidate_bullish_models(cand: dict) -> List[str]:
+    """取得特定標的之所有看多模型名稱清單"""
+    pots = get_candidate_model_potentials(cand)
+    return [p["name"] for p in pots if p["potential"] > 0]
+
+
+def get_report_model_sections(results: dict) -> List[Tuple[str, list]]:
+    """動態提取 results 字典中包含的所有時序模型預測結果清單"""
+    sections = []
+    seen = set()
+    try:
+        from models.protocol import model_registry
+        for p in model_registry.list_active_plugins():
+            p_id = getattr(p, "plugin_id", None) or getattr(p, "tag_name", "").lower() or p.model_id.split("/")[-1].split("-")[0].lower()
+            key = f"{p_id}_results"
+            res_list = results.get(key)
+            if res_list and isinstance(res_list, list):
+                disp_name = getattr(p, "tag_name", None) or getattr(p, "display_name", p_id)
+                if "(" in disp_name:
+                    disp_name = disp_name.split("(")[0].strip()
+                sections.append((disp_name, res_list))
+                seen.add(disp_name.lower())
+    except Exception:
+        pass
+    
+    # 檢查 results 中任何其他 *_results
+    for k, v in results.items():
+        if k.endswith("_results") and isinstance(v, list) and v:
+            key_name = k[:-8]
+            if key_name in ("xuantie", "overlap", "sector_rotation", "institutional"):
+                continue
+            if key_name.lower() not in seen:
+                name_disp = "TimesFM" if key_name == "timesfm" else ("Timestral" if key_name == "timestral" else ("MOIRAI-2" if key_name == "moirai" else key_name.capitalize()))
+                sections.append((name_disp, v))
+                seen.add(name_disp.lower())
+    return sections
+
+
+# ==============================================================================
 # Telegram 訊息排版 (HTML 高級結構化卡片)
 # ==============================================================================
 
@@ -90,52 +203,31 @@ def _format_telegram_candidate_card(
     else:
         price_str = f"{curr_price:,.2f}" if curr_price > 0 else "N/A"
 
-    # Clef badge or Tier badge
+    # Clef badge or Concurring models badge
     clef_verdict = cand.get("clef_verdict") or {}
     clef_tag = cand.get("clef_tag") or clef_verdict.get("tag")
-    tier = cand.get("resonance_tier")
-    if not tier:
-        tags = cand.get("tags") or []
-        tier_order = [
-            "👑四重共振", "👑三大模型共振", "三模型看漲", "🏆三重共振", "綜合優選", "雙模型看漲", "雙AI看漲",
-            "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振"
-        ]
-        tier = next((t for t in tier_order if t in tags), "")
+    bullish_models = get_candidate_bullish_models(cand)
 
     badge = ""
     if clef_tag:
         clean_clef_tag = str(clef_tag).replace("(本地規則)", "").strip()
         badge = f"[{html.escape(clean_clef_tag)}]"
-    elif tier:
-        badge = f"[{html.escape(tier)}]"
+    elif bullish_models:
+        badge = f"[{html.escape(', '.join(bullish_models))}]"
 
     line1 = f"• <a href=\"{stock_url}\"><b>{ticker_label}</b></a> <code>{price_str}</code>"
     if badge:
         line1 += f" {badge}"
 
-    # Line 2: key model potential & core highlights
+    # Line 2: dynamic model potential & core highlights (零硬編碼)
     highlights = []
-
-    # TimesFM
-    tfm_pot = cand.get("timesfm_potential")
-    if tfm_pot is not None and pd.notna(tfm_pot):
-        rr = cand.get("risk_reward_ratio")
+    pots = get_candidate_model_potentials(cand)
+    for p in pots:
+        rr = p.get("risk_reward_ratio")
         rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        highlights.append(f"TFM <b>{float(tfm_pot):+.1f}%</b>{rr_str}")
+        highlights.append(f"{p['name']} <b>{p['potential']:+.1f}%</b>{rr_str}")
 
-    # Timestral / LSTM
-    tml_pot = cand.get("timestral_potential")
-    if tml_pot is not None and pd.notna(tml_pot):
-        highlights.append(f"Timestral <b>{float(tml_pot):+.1f}%</b>")
-    elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
-        highlights.append(f"LSTM <b>{float(cand.get('lstm_potential')):+0.1f}%</b>")
-
-    # MOIRAI-2
-    moi_pot = cand.get("moirai_potential")
-    if moi_pot is not None and pd.notna(moi_pot):
-        highlights.append(f"MOIRAI <b>{float(moi_pot):+.1f}%</b>")
-
-    # Pullback / MA support: auto-replace "玄鐵買點" with "季線支撐"
+    # Pullback / MA support
     pb_type = cand.get("pullback_type")
     tags = cand.get("tags") or []
     if pb_type:
@@ -180,12 +272,12 @@ def format_telegram_message(
     candidates = _extract_candidates(results, overlap_df)
     base_url = getattr(config.api, "PUBLIC_WEB_URL", "https://stockdata.david888.com").rstrip("/")
 
-    msg = f"<b>📊 多維量化投資日報｜{html.escape(index_name)}</b>\n"
-    msg += f"⏰ {calculation_time}\n\n"
+    msg = f"<b>多維量化投資日報｜{html.escape(index_name)}</b>\n"
+    msg += f"計算時間: {calculation_time}\n\n"
 
-    # 1 行極簡大盤風控
+    # 1 行極簡大盤風控 (純文字無 emoji)
     if macro:
-        msg += f"🛡️ 大盤風控: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {_format_exposure(macro)} · VIX {_format_vix(macro)})\n\n"
+        msg += f"大盤風控: <b>{html.escape(str(macro.regime_name))}</b> (建議曝險 {_format_exposure(macro)} · VIX {_format_vix(macro)})\n\n"
 
     # 1 段極簡 AI 操盤解讀
     if summary_text:
@@ -195,18 +287,18 @@ def format_telegram_message(
         clean_summary = html.escape(raw_summary)
         msg += f"<b>【盤勢重點解讀】</b>\n<blockquote>{clean_summary}</blockquote>\n\n"
 
-    # 🎯【今日精選明牌 (優先推薦)】
-    msg += "<b>🎯【今日精選明牌 (優先推薦)】</b>\n"
+    # 【多因子優選清單】
+    msg += "<b>【多因子優選清單】</b>\n"
     if candidates:
         for cand in candidates[:10]:
             msg += _format_telegram_candidate_card(cand, lookup, base_url=base_url) + "\n\n"
     else:
-        msg += "<i>(本期無符合多維正向共振條件之標的，建議防守觀望)</i>\n\n"
+        msg += "<i>(本期無符合多因子正向條件之標的，建議防守觀望)</i>\n\n"
 
-    # 🔗 網站完整查詢引導 Footer
+    # 網站完整查詢引導 Footer
     index_url = f"{base_url}/?index={quote(str(index_name))}"
-    msg += "🔗 <b>詳細圖表、三大模型歷史勝率與法人籌碼請至網站查詢：</b>\n"
-    msg += f"👉 <a href=\"{index_url}\"><b>開啟【{html.escape(index_name)}】完整互動儀表板</b></a>\n"
+    msg += "<b>詳細圖表、時序模型歷史勝率與法人籌碼請至網站查詢：</b>\n"
+    msg += f"<a href=\"{index_url}\"><b>開啟【{html.escape(index_name)}】完整互動儀表板 ↗</b></a>\n"
 
     return msg
 
@@ -333,33 +425,17 @@ def _format_discord_candidate_card(cand: dict, lookup: Dict[str, str]) -> str:
 
     details = []
 
-    # 1. ML 模型預測
+    # 1. 動態 ML 模型預測 (零硬編碼)
     fm_details = []
-    tfm_pot = cand.get("timesfm_potential")
-    if tfm_pot is not None and pd.notna(tfm_pot):
-        pot_val = float(tfm_pot)
-        rr = cand.get("risk_reward_ratio")
-        rr_str = f" ({float(rr):.1f}x)" if rr and pd.notna(rr) and float(rr) > 0 else ""
-        fm_details.append(f"TFM **{pot_val:+.1f}%**{rr_str}")
-
-    tml_pot = cand.get("timestral_potential")
-    if tml_pot is not None and pd.notna(tml_pot):
-        pot_val = float(tml_pot)
-        p10 = cand.get("timestral_p10")
-        p90 = cand.get("timestral_p90")
-        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-        fm_details.append(f"Timestral **{pot_val:+.1f}%**{q_str}")
-    elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
-        pot_val = float(cand.get("lstm_potential"))
-        fm_details.append(f"LSTM **{pot_val:+.1f}%**")
-
-    moi_pot = cand.get("moirai_potential")
-    if moi_pot is not None and pd.notna(moi_pot):
-        pot_val = float(moi_pot)
-        p10 = cand.get("moirai_p10")
-        p90 = cand.get("moirai_p90")
-        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-        fm_details.append(f"MOIRAI **{pot_val:+.1f}%**{q_str}")
+    pots = get_candidate_model_potentials(cand)
+    for p in pots:
+        pot_val = p["potential"]
+        rr = p.get("risk_reward_ratio")
+        rr_str = f" ({rr:.1f}x)" if rr and rr > 0 else ""
+        p10 = p.get("p10")
+        p90 = p.get("p90")
+        q_str = f" [{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None else ""
+        fm_details.append(f"{p['name']} **{pot_val:+.1f}%**{rr_str}{q_str}")
 
     details.extend(fm_details)
 
@@ -423,10 +499,6 @@ def format_discord_message(
     """格式化量化結果為 Discord Markdown 訊息"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
-    timestral_results = results.get("timestral_results", [])
-    lstm_results = results.get("lstm_results", [])
-    timesfm_results = results.get("timesfm_results", [])
-    moirai_results = results.get("moirai_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
     macro = macro_state or results.get("macro_state")
     summary_text = ai_summary or results.get("ai_summary", "")
@@ -434,7 +506,7 @@ def format_discord_message(
     candidates = _extract_candidates(results, overlap_df)
 
     msg = "**多維量化投資日報**\n"
-    msg += f"⏰ {calculation_time} | 指數: **{index_name}**\n\n"
+    msg += f"計算時間: {calculation_time} | 指數: **{index_name}**\n\n"
 
     is_tw = index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051") or index_name.endswith(".TW")
 
@@ -452,58 +524,14 @@ def format_discord_message(
         quoted = summary_text.replace("\n", "\n> ")
         msg += f"**【盤勢重點解讀】**:\n> {quoted}\n\n"
 
-    # 優先推薦 (多維共振)
-    msg += "**【優先推薦 (多維共振)】**\n"
+    # 【多因子優選清單】
+    msg += "**【多因子優選清單】**\n"
     if candidates:
-        msg += f"符合共振條件: **{len(candidates)}** 支\n\n"
-        tier_display_map = {
-            "綜合優選": "【綜合優選】",
-            "👑三大模型共振": "【三模型看漲】",
-            "三模型看漲": "【三模型看漲】",
-            "三大模型共振": "【三模型看漲】",
-            "雙模型看漲": "【雙模型看漲】",
-            "雙AI看漲": "【雙模型看漲】",
-            "👑四重共振": "【四重共振】",
-            "🏆三重共振": "【三重共振】",
-            "🔮雙大模型共振": "【雙模型看漲】",
-            "👑雙時序共振": "【雙模型看漲】",
-            "🔮雙ML共振": "【雙模型看漲】",
-            "🌟多維共振": "【多維共振】",
-            "⭐雙重共振": "【雙重共振】",
-            "四重共振": "【四重共振】",
-            "三重共振": "【三重共振】",
-            "雙大模型共振": "【雙模型看漲】",
-            "雙ML共振": "【雙模型看漲】",
-            "多維共振": "【多維共振】",
-            "雙重共振": "【雙重共振】"
-        }
-        tier_order = [
-            "👑四重共振", "👑三大模型共振", "三模型看漲", "🏆三重共振", "綜合優選", "雙模型看漲", "雙AI看漲",
-            "🔮雙大模型共振", "👑雙時序共振", "🔮雙ML共振", "🌟多維共振", "⭐雙重共振",
-            "四重共振", "三大模型共振", "三重共振", "雙大模型共振", "雙ML共振", "多維共振", "雙重共振"
-        ]
-        grouped: Dict[str, List[dict]] = {}
-        for c in candidates:
-            tier = c.get("resonance_tier") or "多維共振"
-            grouped.setdefault(tier, []).append(c)
-
-        for tier_key in tier_order:
-            if tier_key in grouped:
-                label = tier_display_map.get(tier_key, f"【{tier_key}】")
-                msg += f"**{label}**\n"
-                for cand in grouped[tier_key]:
-                    msg += _format_discord_candidate_card(cand, lookup) + "\n"
-                msg += "\n"
-                del grouped[tier_key]
-
-        for tier_key, c_list in grouped.items():
-            label = tier_display_map.get(tier_key, f"【{tier_key}】")
-            msg += f"**{label}**\n"
-            for cand in c_list:
-                msg += _format_discord_candidate_card(cand, lookup) + "\n"
-            msg += "\n"
+        msg += f"符合條件標的: **{len(candidates)}** 支\n\n"
+        for cand in candidates[:10]:
+            msg += _format_discord_candidate_card(cand, lookup) + "\n\n"
     else:
-        msg += "*(本期無符合多維正向共振條件之標的，建議防守觀望)*\n\n"
+        msg += "*(本期無符合多因子正向條件之標的，建議防守觀望)*\n\n"
 
     # 波段操作 (季線支撐)
     msg += "**【波段操作 (季線支撐)】**\n"
@@ -522,81 +550,22 @@ def format_discord_message(
     else:
         msg += "*(本期無符合波段買點標的)*\n\n"
 
-    # 時序大模型 (Timestral-209M)
-    if timestral_results:
-        msg += "**【時序大模型 (Timestral-209M 預測 TOP 5)】**\n"
-        for idx, result in enumerate(timestral_results[:5], 1):
+    # 動態遍歷時序大模型預測清單 (零硬編碼)
+    model_sections = get_report_model_sections(results)
+    for model_name, m_results in model_sections:
+        msg += f"**【時序大模型 ({model_name} 預測 TOP 5)】**\n"
+        for idx, result in enumerate(m_results[:5], 1):
             ticker_label = format_ticker_label(result['ticker'], lookup)
-            pot = result['potential']
-            curr_p = result['current_price']
-            pred_p = result.get('predicted_price', curr_p)
+            pot = result.get('potential', 0.0)
+            curr_p = result.get('current_price')
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price') or curr_p
             rr = result.get('risk_reward_ratio')
             rr_str = f" | 盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
             p10 = result.get('p10')
             p90 = result.get('p90')
             band_str = f" | 區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`{band_str}{rr_str})\n"
-        msg += "\n"
-    elif lstm_results:
-        msg += "**【短線操作 (LSTM 預測 TOP 5)】**\n"
-        for idx, result in enumerate(lstm_results[:5], 1):
-            ticker_label = format_ticker_label(result['ticker'], lookup)
-            pot = result['potential']
-            curr_p = result['current_price']
-            pred_p = result.get('predicted_price', curr_p)
-            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** (`{curr_p:,.1f}` → `{pred_p:,.1f}`)\n"
-        msg += "\n"
-
-    # TimesFM
-    if timesfm_results:
-        msg += "**【時序大模型 (TimesFM 預測 TOP 5)】**\n"
-        for idx, result in enumerate(timesfm_results[:5], 1):
-            ticker_label = format_ticker_label(result['ticker'], lookup)
-            pot = result['potential']
-            curr_p = result.get('current_price')
-            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
-            rr = result.get('risk_reward_ratio')
-            rr_str = f"盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
-            p10 = result.get('p10')
-            p90 = result.get('p90')
-            band_str = f"區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-
-            if curr_p is not None and pred_p is not None:
-                p_str = f"`{curr_p:,.1f}` → `{pred_p:,.1f}`"
-            elif pred_p is not None:
-                p_str = f"隔日目標 `{pred_p:,.1f}`"
-            else:
-                p_str = ""
-
-            info_parts = [p for p in [p_str, band_str, rr_str] if p]
-            info_str = f" ({' | '.join(info_parts)})" if info_parts else ""
-            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
-        msg += "\n"
-
-    # MOIRAI-2
-    if moirai_results:
-        msg += "**【時序大模型 (MOIRAI-2 預測 TOP 5)】**\n"
-        for idx, result in enumerate(moirai_results[:5], 1):
-            ticker_label = format_ticker_label(result['ticker'], lookup)
-            pot = result['potential']
-            curr_p = result.get('current_price')
-            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
-            rr = result.get('risk_reward_ratio')
-            rr_str = f"盈虧比: **{rr:.1f}x**" if rr and pd.notna(rr) else ""
-            p10 = result.get('p10')
-            p90 = result.get('p90')
-            band_str = f"區間 `{p10:.1f}~{p90:.1f}`" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-
-            if curr_p is not None and pred_p is not None:
-                p_str = f"`{curr_p:,.1f}` → `{pred_p:,.1f}`"
-            elif pred_p is not None:
-                p_str = f"隔日目標 `{pred_p:,.1f}`"
-            else:
-                p_str = ""
-
-            info_parts = [p for p in [p_str, band_str, rr_str] if p]
-            info_str = f" ({' | '.join(info_parts)})" if info_parts else ""
-            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%**{info_str}\n"
+            curr_str = f"`{curr_p:,.1f}` → " if curr_p is not None else ""
+            msg += f"{idx}. **{ticker_label}** **{pot:+.1f}%** ({curr_str}`{pred_p:,.1f}`{band_str}{rr_str})\n"
         msg += "\n"
 
     return msg
@@ -618,10 +587,6 @@ def format_email_message(
     """格式化量化結果為 Email 純文字格式 (包含完整個股查圖連結)"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
-    timestral_results = results.get("timestral_results", [])
-    lstm_results = results.get("lstm_results", [])
-    timesfm_results = results.get("timesfm_results", [])
-    moirai_results = results.get("moirai_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
     macro = macro_state or results.get("macro_state")
     summary_text = ai_summary or results.get("ai_summary", "")
@@ -638,47 +603,35 @@ def format_email_message(
         if is_tw:
             twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
             sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
-            msg += f"🇹🇼 台股大盤與風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {_format_vix(macro)})\n\n"
+            msg += f"台股大盤與風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | 加權: {twii_str} | 國際連動: {sox_str} (VIX {_format_vix(macro)})\n\n"
         else:
             spy_str = _format_trend(getattr(macro, 'spy_above_ma60', None), '站穩MA60', '破季線')
             sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '站穩MA60', '破季線')
-            msg += f"🇺🇸 美股宏觀風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
+            msg += f"美股宏觀風控: {macro.regime_name} (建議曝險 {_format_exposure(macro)}) | VIX: {_format_vix(macro)} | SPY: {spy_str} | SOX: {sox_str}\n\n"
 
     if summary_text:
         msg += f"盤勢重點解讀:\n{summary_text}\n\n"
 
     msg += "=" * 75 + "\n\n"
 
-    # ⭐ 優先推薦
-    msg += f"⭐ 優先推薦 (多維共振) - 符合條件: {len(candidates)} 支\n\n"
+    # 【多因子優選清單】
+    msg += f"【多因子優選清單】 - 符合條件: {len(candidates)} 支\n\n"
     if candidates:
         for idx, cand in enumerate(candidates, 1):
             ticker = str(cand.get("ticker", "")).strip()
             stock_url = f"{base_url}/?tab=history&ticker={quote(ticker)}"
             ticker_label = format_ticker_label(ticker, lookup)
             price_val = cand.get("current_price", 0.0)
-            tier_str = cand.get("resonance_tier", "多維共振")
-            tml_p = cand.get("timestral_potential")
-            tfm_p = cand.get("timesfm_potential")
-            moirai_p = cand.get("moirai_potential")
-            lstm_p = cand.get("lstm_potential")
-            rr = cand.get("risk_reward_ratio")
+
+            bullish_models = get_candidate_bullish_models(cand)
+            badge_str = f"[{', '.join(bullish_models)}]" if bullish_models else "[多因子選股]"
+
+            pots = get_candidate_model_potentials(cand)
             ml_p_parts = []
-            if tfm_p is not None:
-                rr_info = f"({float(rr):.1f}x)" if rr and pd.notna(rr) else ""
-                ml_p_parts.append(f"TimesFM: {float(tfm_p):+.1f}%{rr_info}")
-            if tml_p is not None:
-                p10 = cand.get("timestral_p10")
-                p90 = cand.get("timestral_p90")
-                q_info = f"[{p10:.0f}~{p90:.0f}]" if p10 is not None and p90 is not None else ""
-                ml_p_parts.append(f"Timestral: {float(tml_p):+.1f}%{q_info}")
-            if moirai_p is not None:
-                m_p10 = cand.get("moirai_p10")
-                m_p90 = cand.get("moirai_p90")
-                m_q_info = f"[{m_p10:.0f}~{m_p90:.0f}]" if m_p10 is not None and m_p90 is not None and pd.notna(m_p10) and pd.notna(m_p90) else ""
-                ml_p_parts.append(f"MOIRAI: {float(moirai_p):+.1f}%{m_q_info}")
-            elif not tfm_p and not tml_p and lstm_p is not None:
-                ml_p_parts.append(f"LSTM: {float(lstm_p):+.1f}%")
+            for p in pots:
+                rr_info = f"({p['risk_reward_ratio']:.1f}x)" if p.get('risk_reward_ratio') else ""
+                q_info = f"[{p['p10']:.0f}~{p['p90']:.0f}]" if p.get('p10') is not None and p.get('p90') is not None else ""
+                ml_p_parts.append(f"{p['name']}: {p['potential']:+.1f}%{rr_info}{q_info}")
 
             ml_p_str = " | ".join(ml_p_parts)
 
@@ -689,17 +642,17 @@ def format_email_message(
             pb_str = f"PB:{float(pb_val):.1f}" if pb_val and pd.notna(pb_val) else ""
             val_str = f" | {pe_str} {pb_str}".strip() if (pe_str or pb_str) else ""
 
-            msg += f"{idx}. [{tier_str}] {ticker_label} 現價: {price_val:,.2f} ({stock_url})\n"
+            msg += f"{idx}. {badge_str} {ticker_label} 現價: {price_val:,.2f} ({stock_url})\n"
             if ml_p_str:
                 msg += f"   預測: {ml_p_str}\n"
             if tags_str:
                 msg += f"   標籤: {tags_str}{val_str}\n"
             msg += "\n"
     else:
-        msg += "(本期無符合多維正向共振條件之標的)\n\n"
+        msg += "(本期無符合多因子正向條件之標的)\n\n"
 
-    # 🗡️ 波段操作
-    msg += f"🗡️  波段操作 (季線支撐) - 符合條件: {len(xuantie_df)} 支 (顯示前10名)\n\n"
+    # 波段操作 (季線支撐)
+    msg += f"波段操作 (季線支撐) - 符合條件: {len(xuantie_df)} 支 (顯示前10名)\n\n"
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         for idx, row in xuantie_df.head(10).iterrows():
             r_ticker = str(row['ticker']).strip()
@@ -712,11 +665,12 @@ def format_email_message(
             msg += f"{idx+1}. {ticker_label} 現價: {row['current_price']:,.2f} ({stock_url}) | 回調: {row.get('pullback_type', '')} | {pe_str} · {pb_str}\n"
         msg += "\n"
 
-    # 🔮 Timestral-209M
-    if timestral_results:
-        msg += f"🔮 時序大模型 (Timestral-209M) - 預測完成: {len(timestral_results)} 支\n\n"
-        msg += "📈 Timestral 看漲 TOP 10 (含 隔日目標價、P10/P90 分位數與盈虧比)\n"
-        for idx, result in enumerate(timestral_results[:10], 1):
+    # 動態遍歷時序大模型預測清單 (零硬編碼)
+    model_sections = get_report_model_sections(results)
+    for model_name, m_results in model_sections:
+        msg += f"時序大模型 ({model_name}) - 預測完成: {len(m_results)} 支\n\n"
+        msg += f"{model_name} 看漲 TOP 10 (含 隔日目標價、分位數與盈虧比)\n"
+        for idx, result in enumerate(m_results[:10], 1):
             r_ticker = str(result['ticker']).strip()
             stock_url = f"{base_url}/?tab=history&ticker={quote(r_ticker)}"
             ticker_label = format_ticker_label(r_ticker, lookup)
@@ -724,60 +678,10 @@ def format_email_message(
             rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
             p10 = result.get('p10')
             p90 = result.get('p90')
-            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-            curr_p = result['current_price']
-            pred_p = result.get('predicted_price', curr_p)
-            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str}) - {stock_url}\n"
-        msg += "\n"
-    elif lstm_results:
-        msg += f"🤖 短線操作 (LSTM) - 預測完成: {len(lstm_results)} 支\n\n"
-        msg += "📈 預測上漲 TOP 10\n"
-        for idx, result in enumerate(lstm_results[:10], 1):
-            r_ticker = str(result['ticker']).strip()
-            stock_url = f"{base_url}/?tab=history&ticker={quote(r_ticker)}"
-            ticker_label = format_ticker_label(r_ticker, lookup)
-            curr_p = result['current_price']
-            pred_p = result.get('predicted_price', curr_p)
-            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}) - {stock_url}\n"
-        msg += "\n"
-
-    # 🔮 TimesFM
-    if timesfm_results:
-        msg += f"🔮 時序大模型 (TimesFM) - 預測完成: {len(timesfm_results)} 支\n\n"
-        msg += "📈 TimesFM 看漲 TOP 10 (含 隔日目標價與盈虧比)\n"
-        for idx, result in enumerate(timesfm_results[:10], 1):
-            r_ticker = str(result['ticker']).strip()
-            stock_url = f"{base_url}/?tab=history&ticker={quote(r_ticker)}"
-            ticker_label = format_ticker_label(r_ticker, lookup)
-            rr = result.get('risk_reward_ratio')
-            rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
-            curr_p = result.get('current_price')
-            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price')
-            if curr_p is not None and pred_p is not None:
-                p_str = f" ({curr_p:,.1f} → {pred_p:,.1f})"
-            elif pred_p is not None:
-                p_str = f" | 隔日目標: {pred_p:,.2f}"
-            else:
-                p_str = ""
-            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}%{p_str}{rr_str} - {stock_url}\n"
-        msg += "\n"
-
-    # 🔮 MOIRAI-2
-    if moirai_results:
-        msg += f"🔮 時序大模型 (Salesforce MOIRAI-2) - 預測完成: {len(moirai_results)} 支\n\n"
-        msg += "📈 MOIRAI-2 看漲 TOP 10 (含 隔日目標價、P10/P90 分位數與盈虧比)\n"
-        for idx, result in enumerate(moirai_results[:10], 1):
-            r_ticker = str(result['ticker']).strip()
-            stock_url = f"{base_url}/?tab=history&ticker={quote(r_ticker)}"
-            ticker_label = format_ticker_label(r_ticker, lookup)
-            rr = result.get('risk_reward_ratio')
-            rr_str = f" | 盈虧比: {rr:.2f}x" if rr and pd.notna(rr) else ""
-            p10 = result.get('p10')
-            p90 = result.get('p90')
-            q_str = f" | 區間: [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+            q_str = f" [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None else ""
             curr_p = result.get('current_price') or 0.0
-            pred_p = result.get('predicted_price') or curr_p
-            msg += f"{idx}. {ticker_label} 漲幅: {result['potential']:>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str}) - {stock_url}\n"
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price') or curr_p
+            msg += f"{idx}. {ticker_label} 漲幅: {result.get('potential', 0.0):>+6.2f}% ({curr_p:,.1f} → {pred_p:,.1f}{q_str}{rr_str}) - {stock_url}\n"
         msg += "\n"
 
     msg += f"進入 888 StockQuant 操盤看板: {base_url}/?index={quote(index_name)}\n"
@@ -796,10 +700,6 @@ def format_email_html(
     """產出結構優雅、相容各大郵件客戶端（Gmail, Apple Mail, Outlook）的響應式 HTML 郵件"""
     lookup = name_map or {}
     xuantie_df = results.get("xuantie_results", pd.DataFrame())
-    timestral_results = results.get("timestral_results", [])
-    lstm_results = results.get("lstm_results", [])
-    timesfm_results = results.get("timesfm_results", [])
-    moirai_results = results.get("moirai_results", [])
     overlap_df = results.get("overlap_results", pd.DataFrame())
     macro = macro_state or results.get("macro_state")
     summary_text = ai_summary or results.get("ai_summary", "")
@@ -828,7 +728,7 @@ def format_email_html(
         <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; margin: 16px 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                 <div style="font-size: 15px; font-weight: 800; color: #0F172A;">
-                    🌐 宏觀風控狀態: {regime_title}
+                    宏觀風控狀態: {regime_title}
                 </div>
                 <div>{exposure_badge}</div>
             </div>
@@ -845,13 +745,13 @@ def format_email_html(
         ai_html = f"""
         <div style="background-color: #FFFDF7; border: 1px solid #FDE68A; border-left: 4px solid #D97706; border-radius: 8px; padding: 14px 16px; margin: 16px 0; line-height: 1.65; color: #451A03; font-size: 14px;">
             <div style="font-size: 14px; font-weight: 800; color: #B45309; margin-bottom: 6px;">
-                🧠 AI 盤勢重點解讀
+                AI 盤勢重點解讀
             </div>
             <div>{safe_summary}</div>
         </div>
         """
 
-    # ⭐ 優先推薦 / 多模型共振焦點 Cards
+    # 優先推薦 / 多因子優選 Cards
     candidates_cards_html = ""
     if candidates:
         for idx, cand in enumerate(candidates, 1):
@@ -884,38 +784,24 @@ def format_email_html(
                 else:
                     pot_html = f'<span style="background-color: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 9999px;">{pot_val:.2f}%</span>'
 
-            tier_str = cand.get("resonance_tier") or "多維共振"
+            tier_str = cand.get("resonance_tier") or ""
             safe_tier = html.escape(tier_str)
+            tier_badge = f'<span style="background-color: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-left: 6px;">{safe_tier}</span>' if safe_tier else ""
 
-            # 三大模型預測拆解
+            # 動態遍歷各時序模型預測
             model_items = []
-            tfm_p = cand.get("timesfm_potential")
-            if tfm_p is not None and pd.notna(tfm_p):
-                rr = cand.get("risk_reward_ratio")
+            for mp in get_candidate_model_potentials(cand):
+                m_name = html.escape(mp["name"])
+                m_pot = mp["potential"]
+                m_pred = mp.get("predicted_price")
+                m_target = f" · 目標 <code>${float(m_pred):,.1f}</code>" if m_pred and pd.notna(m_pred) and float(m_pred) > 0 else ""
+                p10 = mp.get("p10")
+                p90 = mp.get("p90")
+                q_str = f" · 區間 <code>[{p10:.0f}~{p90:.0f}]</code>" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
+                rr = mp.get("risk_reward_ratio")
                 rr_str = f" · 盈虧比 <strong>{float(rr):.1f}x</strong>" if rr and pd.notna(rr) and float(rr) > 0 else ""
-                tfm_pred = cand.get("timesfm_predicted_price")
-                tfm_target = f" · 目標 <code>${float(tfm_pred):,.1f}</code>" if tfm_pred and pd.notna(tfm_pred) else ""
-                model_items.append(f"<div>• <strong>Google TimesFM:</strong> <span style='color: #059669; font-weight: 700;'>{float(tfm_p):+.1f}%</span>{tfm_target}{rr_str}</div>")
-
-            tml_p = cand.get("timestral_potential")
-            if tml_p is not None and pd.notna(tml_p):
-                p10 = cand.get("timestral_p10")
-                p90 = cand.get("timestral_p90")
-                q_str = f" · 區間 <code>[{p10:.0f}~{p90:.0f}]</code>" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-                tml_pred = cand.get("timestral_predicted_price")
-                tml_target = f" · 目標 <code>${float(tml_pred):,.1f}</code>" if tml_pred and pd.notna(tml_pred) else ""
-                model_items.append(f"<div>• <strong>Mistral Timestral:</strong> <span style='color: #059669; font-weight: 700;'>{float(tml_p):+.1f}%</span>{tml_target}{q_str}</div>")
-            elif cand.get("lstm_potential") is not None and pd.notna(cand.get("lstm_potential")):
-                model_items.append(f"<div>• <strong>LSTM:</strong> <span style='color: #059669; font-weight: 700;'>{float(cand.get('lstm_potential')):+.1f}%</span></div>")
-
-            moi_p = cand.get("moirai_potential")
-            if moi_p is not None and pd.notna(moi_p):
-                p10 = cand.get("moirai_p10")
-                p90 = cand.get("moirai_p90")
-                q_str = f" · 區間 <code>[{p10:.0f}~{p90:.0f}]</code>" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-                moi_pred = cand.get("moirai_predicted_price")
-                moi_target = f" · 目標 <code>${float(moi_pred):,.1f}</code>" if moi_pred and pd.notna(moi_pred) else ""
-                model_items.append(f"<div>• <strong>Salesforce MOIRAI-2:</strong> <span style='color: #059669; font-weight: 700;'>{float(moi_p):+.1f}%</span>{moi_target}{q_str}</div>")
+                color = "#059669" if m_pot >= 0 else "#DC2626"
+                model_items.append(f"<div>• <strong>{m_name}:</strong> <span style='color: {color}; font-weight: 700;'>{m_pot:+.1f}%</span>{m_target}{q_str}{rr_str}</div>")
 
             models_box = ""
             if model_items:
@@ -965,9 +851,7 @@ def format_email_html(
                         <a href="{stock_url}" target="_blank" style="color: #2563EB; font-weight: 800; font-size: 16px; text-decoration: none;">
                             {safe_label} ↗
                         </a>
-                        <span style="background-color: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-left: 6px;">
-                            {safe_tier}
-                        </span>
+                        {tier_badge}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 14px; color: #1E293B;">現價: <strong>{price_str}</strong>{target_display}</span>
@@ -982,7 +866,7 @@ def format_email_html(
     else:
         candidates_cards_html = """
         <div style="background-color: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 10px; padding: 20px; text-align: center; color: #64748B; font-size: 14px; margin-bottom: 16px;">
-            (本期無符合多維正向共振條件之標的，建議防守觀望)
+            (本期無多因子一致條件之標的，建議防守觀望)
         </div>
         """
 
@@ -1033,38 +917,34 @@ def format_email_html(
         </div>
         """
 
-    # 4. 時序大模型看漲焦點 (Top 5，嚴格過濾 potential > 0)
-    timestral_bullish = results.get("timestral_bullish_results") or [r for r in timestral_results if (r.get("potential") or 0) > 0]
-    timesfm_bullish = results.get("timesfm_bullish_results") or [r for r in timesfm_results if (r.get("potential") or 0) > 0]
-    moirai_bullish = results.get("moirai_bullish_results") or [r for r in moirai_results if (r.get("potential") or 0) > 0]
+    # 動態產生各時序模型看漲與看跌清單
+    model_sections = get_report_model_sections(results)
+    bullish_htmls = []
+    bearish_htmls = []
 
-    timestral_bullish_html = _build_model_top_html("📈 Timestral-209M 看漲 TOP 5", timestral_bullish)
-    timesfm_bullish_html = _build_model_top_html("📈 Google TimesFM 看漲 TOP 5", timesfm_bullish)
-    moirai_bullish_html = _build_model_top_html("📈 Salesforce MOIRAI-2 看漲 TOP 5", moirai_bullish)
+    for m_name, m_list in model_sections:
+        b_list = [r for r in m_list if (r.get("potential") or 0) > 0]
+        if b_list:
+            b_list = sorted(b_list, key=lambda x: x.get("potential", 0.0), reverse=True)
+            bullish_htmls.append(_build_model_top_html(f"{m_name} 看漲 TOP 5", b_list))
 
-    # 5. 時序大模型看跌避險焦點 (Top 5 Bearish)
-    timestral_bearish = results.get("timestral_bearish_results") or [r for r in timestral_results if (r.get("potential") or 0) < 0]
-    timesfm_bearish = results.get("timesfm_bearish_results") or [r for r in timesfm_results if (r.get("potential") or 0) < 0]
-    moirai_bearish = results.get("moirai_bearish_results") or [r for r in moirai_results if (r.get("potential") or 0) < 0]
-
-    timestral_bearish_html = _build_model_top_html("🛡️ Timestral 預測跌幅避險 TOP 5", timestral_bearish, is_bearish=True)
-    timesfm_bearish_html = _build_model_top_html("🛡️ TimesFM 預測跌幅避險 TOP 5", timesfm_bearish, is_bearish=True)
-    moirai_bearish_html = _build_model_top_html("🛡️ MOIRAI-2 預測跌幅避險 TOP 5", moirai_bearish, is_bearish=True)
+        d_list = [r for r in m_list if (r.get("potential") or 0) < 0]
+        if d_list:
+            d_list = sorted(d_list, key=lambda x: x.get("potential", 0.0))
+            bearish_htmls.append(_build_model_top_html(f"{m_name} 預測跌幅避險 TOP 5", d_list, is_bearish=True))
 
     bearish_section = ""
-    if timestral_bearish_html or timesfm_bearish_html or moirai_bearish_html:
+    if bearish_htmls:
         bearish_section = f"""
         <div style="margin-top: 24px;">
             <h2 style="font-size: 16px; font-weight: 800; color: #991B1B; margin: 0 0 12px 0; border-bottom: 2px solid #FECACA; padding-bottom: 6px;">
-                🛡️ 時序大模型看跌避險焦點 (提防破底風險)
+                時序大模型看跌避險焦點 (提防破底風險)
             </h2>
-            {timestral_bearish_html}
-            {timesfm_bearish_html}
-            {moirai_bearish_html}
+            {''.join(bearish_htmls)}
         </div>
         """
 
-    # 6. 波段操作 (季線支撐) Top 5
+    # 波段操作 (季線支撐) Top 5
     xuantie_html = ""
     if isinstance(xuantie_df, pd.DataFrame) and not xuantie_df.empty:
         x_rows = ""
@@ -1089,11 +969,15 @@ def format_email_html(
         xuantie_html = f"""
         <div style="background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;">
             <div style="font-size: 13px; font-weight: 800; color: #0F172A; margin-bottom: 6px;">
-                🗡️ 波段操作 (季線支撐買點 TOP 5)
+                波段操作 (季線支撐買點 TOP 5)
             </div>
             {x_rows}
         </div>
         """
+
+    bullish_combined_html = "".join(bullish_htmls)
+    if xuantie_html:
+        bullish_combined_html += xuantie_html
 
     full_html = f"""<!DOCTYPE html>
 <html>
@@ -1131,7 +1015,7 @@ def format_email_html(
             <div style="margin-top: 20px;">
                 <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; border-bottom: 2px solid #E2E8F0; padding-bottom: 6px;">
                     <h2 style="font-size: 17px; font-weight: 900; color: #0F172A; margin: 0;">
-                        ⭐ 優先推薦 (多維共振焦點)
+                        【多因子優選清單】
                     </h2>
                     <span style="font-size: 13px; font-weight: 700; color: #64748B;">共 {len(candidates)} 檔符合</span>
                 </div>
@@ -1141,12 +1025,9 @@ def format_email_html(
             <!-- 時序大模型看漲焦點 -->
             <div style="margin-top: 24px;">
                 <h2 style="font-size: 16px; font-weight: 800; color: #0F172A; margin: 0 0 12px 0; border-bottom: 2px solid #E2E8F0; padding-bottom: 6px;">
-                    📈 時序大模型獨立預測看漲焦點 (TOP 5)
+                    時序大模型獨立預測看漲焦點 (TOP 5)
                 </h2>
-                {timestral_bullish_html}
-                {timesfm_bullish_html}
-                {moirai_bullish_html}
-                {xuantie_html}
+                {bullish_combined_html}
             </div>
 
             {bearish_section}
@@ -1167,6 +1048,7 @@ def format_email_html(
     </div>
 </body>
 </html>"""
+    return full_html
     return full_html
 
 
@@ -1204,15 +1086,11 @@ def print_evaluation_report(report: EvaluationReport, log=None):
     logger = log or default_logger
     index_name = report.index_name
     xuantie_df = report.xuantie_results
-    timestral_results = getattr(report, "timestral_results", [])
-    lstm_results = report.lstm_results
-    timesfm_results = getattr(report, "timesfm_results", [])
-    moirai_results = getattr(report, "moirai_results", [])
     overlap_df = report.overlap_results
     macro = report.macro_state
 
     logger.info(f"\n{'='*100}")
-    logger.info(f"📊 投資建議報告 - {index_name}")
+    logger.info(f"投資建議報告 - {index_name}")
     logger.info(f"{'='*100}\n")
 
     # ====== 頂層 1: 大盤與宏觀風控 ======
@@ -1220,65 +1098,58 @@ def print_evaluation_report(report: EvaluationReport, log=None):
         is_jp = (getattr(macro, "market", "") == "JP") or any(k in index_name for k in ("日經", "日股", "JP225", "N225", "NIKKEI")) or index_name.endswith(".T")
         is_tw = (getattr(macro, "market", "") == "TW") or index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000") or any(k in index_name for k in ("台股", "台灣")) or index_name.endswith(".TW")
         if is_jp:
-            logger.info("🇯🇵 【日股大盤與科技連動風向】")
+            logger.info("【日股大盤與科技連動風向】")
             logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
             n225_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
             sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
             logger.info(f"   • 關鍵指標: 日經225={n225_str} | 國際連動={sox_str} (VIX={_format_vix(macro)})")
         elif is_tw:
-            logger.info("🇹🇼 【台股大盤與籌碼風向】")
+            logger.info("【台股大盤與籌碼風向】")
             logger.info(f"   • 大盤狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
             twii_str = _format_trend(getattr(macro, 'twii_above_ma60', None), '站穩MA60', '跌破MA60')
             sox_str = _format_trend(getattr(macro, 'sox_above_ma60', None), '費半站穩季線', '費半破季線')
             logger.info(f"   • 關鍵指標: 加權指數={twii_str} | 國際連動={sox_str} (VIX={_format_vix(macro)})")
         else:
-            logger.info("🇺🇸 【美股宏觀環境與風控門檻】")
+            logger.info("【美股宏觀環境與風控門檻】")
             logger.info(f"   • 市場狀態: {macro.regime_name} (建議曝險: {_format_exposure(macro)})")
             logger.info(f"   • 關鍵指標: VIX={_format_vix(macro)} | SPY={_format_trend(macro.spy_above_ma60, '站穩MA60', '破季線')} | SOX={_format_trend(macro.sox_above_ma60, '站穩MA60', '破季線')}")
         if macro.warnings:
             for w in macro.warnings:
-                logger.info(f"   • ⚠️  {w}")
+                logger.info(f"   • [警告] {w}")
         logger.info("")
 
     # ====== 頂層 2: 盤勢重點解讀 ======
     if report.ai_summary:
-        logger.info("🧠 【盤勢重點解讀】")
+        logger.info("【盤勢重點解讀】")
         for line in report.ai_summary.split("\n"):
             logger.info(f"   {line}")
         logger.info("")
 
     # ====== 多策略交集 / 綜合優選 ======
-    logger.info("⭐ 【優先推薦】綜合優選 (三大時序大模型 ∩ 季線支撐 ∩ 法人鎖碼)")
+    logger.info("【多因子優選清單】(時序大模型 ∩ 季線支撐 ∩ 法人鎖碼)")
     logger.info(f"   重點交集符合: {len(overlap_df)} 支\n")
 
     if not overlap_df.empty:
-        logger.info(f"   {'排名':<4} {'等級':<8} {'代碼':<10} {'TimesFM':>8} {'Timestral':>10} {'MOIRAI':>8} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
-        logger.info(f"   {'-'*4} {'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*8} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
+        logger.info(f"   {'排名':<4} {'等級':<12} {'代碼':<10} {'現價':>8} {'目標價':>8} {'預期漲幅':>10} {'盈虧比':>7} {'回調':>6} {'MA60':>8} {'PE':>6} {'PB':>6} {'綜合標籤'}")
+        logger.info(f"   {'-'*4} {'-'*12} {'-'*10} {'-'*8} {'-'*8} {'-'*10} {'-'*7} {'-'*6} {'-'*8} {'-'*6} {'-'*6} {'-'*30}")
         for idx, row in overlap_df.iterrows():
             cand = next((c for c in report.overlap_candidates if c["ticker"] == row["ticker"]), None)
-            tier_str = (cand.get("resonance_tier") or row.get("resonance_tier") or "共振") if cand else (row.get("resonance_tier") or "共振")
+            tier_str = (cand.get("resonance_tier") or row.get("resonance_tier") or "") if cand else (row.get("resonance_tier") or "")
             tags_str = " | ".join(cand["tags"]) if cand and cand.get("tags") else (" | ".join(row.get("tags", [])) if row.get("tags") else "觀察")
 
-            tfm_str = f"{row['timesfm_potential']:>+7.2f}%" if pd.notna(row.get('timesfm_potential')) and row.get('timesfm_potential') is not None else "    N/A"
-            tml_val = row.get('timestral_potential')
-            if pd.notna(tml_val) and tml_val is not None:
-                tml_str = f"{tml_val:>+9.2f}%"
-            elif pd.notna(row.get('lstm_potential')) and row.get('lstm_potential') is not None:
-                tml_str = f"{row['lstm_potential']:>+9.2f}%"
-            else:
-                tml_str = "      N/A"
-
-            moirai_val = row.get('moirai_potential')
-            moirai_str = f"{moirai_val:>+7.2f}%" if pd.notna(moirai_val) and moirai_val is not None else "    N/A"
+            curr_p = row.get("current_price", 0.0)
+            pred_p = row.get("predicted_price", curr_p)
+            pot_v = row.get("potential", 0.0)
+            pot_str = f"{pot_v:>+9.2f}%" if pd.notna(pot_v) and pot_v is not None else "      N/A"
 
             rr_val = row.get('risk_reward_ratio')
             rr_str = f"{rr_val:>6.2f}x" if pd.notna(rr_val) and rr_val is not None else "   N/A"
 
             logger.info(
-                f"   {idx+1:<4} {tier_str:<8} {row['ticker']:<10} "
-                f"{tfm_str} "
-                f"{tml_str} "
-                f"{moirai_str} "
+                f"   {idx+1:<4} {tier_str:<12} {row['ticker']:<10} "
+                f"{curr_p:>8.2f} "
+                f"{pred_p:>8.2f} "
+                f"{pot_str} "
                 f"{rr_str} "
                 f"{str(row.get('pullback_type', ''))[:6]:>6} "
                 f"{format_value(row.get('ma60')):>8} "
@@ -1287,12 +1158,12 @@ def print_evaluation_report(report: EvaluationReport, log=None):
                 f"{tags_str}"
             )
     else:
-        logger.info("   (本期無多維共振推薦股票)")
+        logger.info("   (本期無多因子一致推薦股票)")
 
     logger.info("")
 
     # ====== 軌道 1: 季線支撐 ======
-    logger.info("🗡️  【波段操作】季線支撐策略 (持有 2-4 週) - 技術面買點")
+    logger.info("【波段操作】季線支撐策略 (持有 2-4 週) - 技術面買點")
     logger.info(f"   符合條件: {len(xuantie_df)} 支\n")
 
     if not xuantie_df.empty:
@@ -1312,94 +1183,29 @@ def print_evaluation_report(report: EvaluationReport, log=None):
 
     logger.info("")
 
-    # ====== 軌道 2: Timestral-209M / LSTM ======
-    if timestral_results:
-        logger.info("🔮 【時序大模型】Timestral (隔日 T+1) - 預測漲幅排行與風控分位數")
-        logger.info(f"   預測完成: {len(timestral_results)} 支\n")
+    # ====== 各時序大模型預測動態列印 ======
+    model_sections = get_report_model_sections(report.__dict__)
+    for model_name, m_results in model_sections:
+        logger.info(f"【時序大模型】{model_name} (隔日 T+1) - 預測漲幅排行與風控")
+        logger.info(f"   預測完成: {len(m_results)} 支\n")
         logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
         logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")
-        for i, result in enumerate(timestral_results[:10], 1):
-            p10 = result.get('p10')
-            p90 = result.get('p90')
-            band_str = f"{p10:.1f}~{p90:.1f}" if p10 is not None and p90 is not None else "N/A"
-            rr_val = result.get('risk_reward_ratio')
-            rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "    N/A"
-            logger.info(
-                f"   {i:<4} {result['ticker']:<10} "
-                f"{result['potential']:>+9.2f}% "
-                f"{result['current_price']:>8.2f} {'→':^3} "
-                f"{result['predicted_price']:>8.2f} "
-                f"{band_str:>16} "
-                f"{rr_str:>8}"
-            )
-    elif lstm_results:
-        logger.info("🤖 【短線操作】LSTM 預測 (持有 1-7 天) - 預測漲幅排行")
-        logger.info(f"   預測完成: {len(lstm_results)} 支\n")
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'預測價':>8} {'PE':>6} {'PB':>6}")
-        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*6} {'-'*6}")
-        for i, result in enumerate(lstm_results[:10], 1):
-            logger.info(
-                f"   {i:<4} {result['ticker']:<10} "
-                f"{result['potential']:>+9.2f}% "
-                f"{result['current_price']:>8.2f} {'→':^3} "
-                f"{result['predicted_price']:>8.2f} "
-                f"{format_value(result.get('pe')):>6} "
-                f"{format_value(result.get('pb')):>6}"
-            )
-    else:
-        logger.info("   (本期無時序大模型預測結果)")
-
-    logger.info("")
-
-    # ====== 軌道 3: TimesFM 預測 ======
-    logger.info("🔮 【時序大模型】TimesFM 預測 (隔日 T+1) - 預測漲幅排行與盈虧比")
-    logger.info(f"   預測完成: {len(timesfm_results)} 支\n")
-
-    if timesfm_results:
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'盈虧比':>8} {'PE':>6} {'PB':>6}")
-        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*8} {'-'*6} {'-'*6}")
-        for i, result in enumerate(timesfm_results[:10], 1):
-            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price') or result.get('current_price', 0.0)
-            rr_val = result.get('risk_reward_ratio')
-            rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "     N/A"
-            logger.info(
-                f"   {i:<4} {result['ticker']:<10} "
-                f"{result['potential']:>+9.2f}% "
-                f"{result.get('current_price', 0.0):>8.2f} {'→':^3} "
-                f"{pred_p:>8.2f} "
-                f"{rr_str:>8} "
-                f"{format_value(result.get('pe')):>6} "
-                f"{format_value(result.get('pb')):>6}"
-            )
-    else:
-        logger.info("   (本期無 TimesFM 預測結果)")
-
-    logger.info("")
-
-    # ====== 軌道 4: MOIRAI-2 預測 ======
-    logger.info("🔮 【時序大模型】MOIRAI-2 預測 (隔日 T+1) - 預測漲幅排行與風控分位數")
-    logger.info(f"   預測完成: {len(moirai_results)} 支\n")
-
-    if moirai_results:
-        logger.info(f"   {'排名':<4} {'代碼':<10} {'預測漲幅':>10} {'現價':>8} {'→':^3} {'目標價':>8} {'P10~P90區間':>16} {'盈虧比':>8}")
-        logger.info(f"   {'-'*4} {'-'*10} {'-'*10} {'-'*8} {'-'*3} {'-'*8} {'-'*16} {'-'*8}")
-        for i, result in enumerate(moirai_results[:10], 1):
+        for i, result in enumerate(m_results[:10], 1):
             p10 = result.get('p10')
             p90 = result.get('p90')
             band_str = f"{p10:.1f}~{p90:.1f}" if p10 is not None and p90 is not None else "N/A"
             rr_val = result.get('risk_reward_ratio')
             rr_str = f"{rr_val:>7.2f}x" if pd.notna(rr_val) and rr_val is not None else "    N/A"
             curr_p = result.get('current_price') or 0.0
-            pred_p = result.get('predicted_price') or curr_p
+            pred_p = result.get('predicted_price') or result.get('horizon_predicted_price') or curr_p
             logger.info(
-                f"   {i:<4} {result['ticker']:<10} "
-                f"{result['potential']:>+9.2f}% "
+                f"   {i:<4} {result.get('ticker', ''):<10} "
+                f"{result.get('potential', 0.0):>+9.2f}% "
                 f"{curr_p:>8.2f} {'→':^3} "
                 f"{pred_p:>8.2f} "
                 f"{band_str:>16} "
                 f"{rr_str:>8}"
             )
-    else:
-        logger.info("   (本期無 MOIRAI-2 預測結果)")
+        logger.info("")
 
-    logger.info(f"\n{'='*100}\n")
+    logger.info(f"{'='*100}\n")

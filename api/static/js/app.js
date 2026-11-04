@@ -25,6 +25,21 @@ export const app = createApp({
             strategyDirection: 'bullish', // 'bullish' | 'bearish'
             selectedFilterModels: [], // ['timesfm', 'timestral', 'moirai']
             filterModelOperator: 'AND', // 'AND' | 'OR'
+
+            // 6-Dimension Quant Screener Reactive State
+            availableModels: [
+                { id: 'timesfm', name: 'timesfm', display_name: 'TimesFM (Google)' },
+                { id: 'timestral', name: 'timestral', display_name: 'Timestral (Mistral)' },
+                { id: 'moirai', name: 'moirai', display_name: 'MOIRAI-2 (Salesforce)' }
+            ],
+            selectedDirection: 'bullish', // 'bullish' | 'bearish'
+            selectedModels: [],           // Array of model IDs e.g. ['timesfm', 'timestral']
+            selectedPeRange: 'all',       // 'all' | 'low' | 'reasonable' | 'growth'
+            selectedMinPotential: 0,      // 0 | 3 | 5 | 8
+            selectedRiskRewardOnly: false,
+            selectedMa60Only: false,
+            selectedInstBuyOnly: false,
+
             selectedIndex: '',
             viewMode: savedViewMode, // 'table' | 'card'
             expandedDrawerTicker: null,
@@ -352,57 +367,93 @@ export const app = createApp({
         },
         displayRecords() {
             let list = this.records || [];
-            if (!this.selectedFilterModels || this.selectedFilterModels.length === 0) {
-                return list;
-            }
-            const isBearish = this.strategyDirection === 'bearish' || ['dual_bearish', 'timestral_bearish', 'timesfm_bearish', 'moirai_bearish', 'bearish'].includes(this.selectedStrategy);
-            const op = this.filterModelOperator || 'AND';
-            const models = this.selectedFilterModels;
+            const isBearish = this.selectedDirection === 'bearish';
 
-            // 🌟 跨模型聚合：支援單一合成列與單模型獨立列（如最新總表）
+            // 跨模型聚合：動態抽取各模型潛力指標
             const tickerModelMap = new Map();
             for (const r of list) {
                 const tk = r.ticker;
                 if (!tk) continue;
                 if (!tickerModelMap.has(tk)) {
-                    tickerModelMap.set(tk, {
-                        timesfmPot: null,
-                        timestralPot: null,
-                        moiraiPot: null
-                    });
+                    tickerModelMap.set(tk, {});
                 }
                 const tm = tickerModelMap.get(tk);
-                if (r.timesfm_potential !== undefined && r.timesfm_potential !== null) tm.timesfmPot = Number(r.timesfm_potential);
-                if (r.timestral_potential !== undefined && r.timestral_potential !== null) tm.timestralPot = Number(r.timestral_potential);
-                if (r.moirai_potential !== undefined && r.moirai_potential !== null) tm.moiraiPot = Number(r.moirai_potential);
-                
+                for (const key of Object.keys(r)) {
+                    if (key.endsWith('_potential')) {
+                        const mId = key.replace('_potential', '').toLowerCase();
+                        if (r[key] !== null && r[key] !== undefined && !isNaN(Number(r[key]))) {
+                            tm[mId] = Number(r[key]);
+                        }
+                    }
+                }
                 const pot = Number(r.potential);
-                if (!isNaN(pot)) {
-                    if (r.model_name === 'TimesFM') tm.timesfmPot = pot;
-                    else if (r.model_name === 'Timestral') tm.timestralPot = pot;
-                    else if (r.model_name === 'MOIRAI-2') tm.moiraiPot = pot;
+                if (!isNaN(pot) && r.model_name) {
+                    const mId = String(r.model_name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                    tm[mId] = pot;
                 }
             }
 
             const seenTickers = new Set();
             return list.filter(r => {
                 const tk = r.ticker;
-                const tm = tickerModelMap.get(tk);
-                if (!tm) return false;
+                if (!tk || seenTickers.has(tk)) return false;
 
-                const matches = models.map(mod => {
-                    let pot = null;
-                    if (mod === 'timesfm') pot = tm.timesfmPot;
-                    else if (mod === 'timestral') pot = tm.timestralPot;
-                    else if (mod === 'moirai') pot = tm.moiraiPot;
-                    return pot !== null && !isNaN(pot) && (isBearish ? pot < 0 : pot > 0);
-                });
+                const tm = tickerModelMap.get(tk) || {};
 
-                const isMatch = (op === 'AND') ? matches.every(Boolean) : matches.some(Boolean);
-                if (!isMatch) return false;
+                // 1. 方向篩選 (Direction)
+                const rPot = Number(r.potential);
+                if (isBearish) {
+                    if (!isNaN(rPot) && rPot > 0) return false;
+                } else {
+                    if (!isNaN(rPot) && rPot < 0) return false;
+                }
 
-                // 若同一標的有多列，避免聯集時重複呈現相同股票代碼
-                if (seenTickers.has(tk)) return false;
+                // 2. 自選 AI 時序模型全數同向共識 (Models Multi-Select AND)
+                if (this.selectedModels && this.selectedModels.length > 0) {
+                    const allMatch = this.selectedModels.every(mId => {
+                        const mClean = mId.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const pot = tm[mClean];
+                        if (pot === undefined || pot === null || isNaN(pot)) return false;
+                        return isBearish ? pot < 0 : pot > 0;
+                    });
+                    if (!allMatch) return false;
+                }
+
+                // 3. 本益比估值區間 (PE Range)
+                if (this.selectedPeRange && this.selectedPeRange !== 'all') {
+                    const pe = Number(r.pe);
+                    if (isNaN(pe) || pe <= 0) return false;
+                    if (this.selectedPeRange === 'low' && pe >= 15) return false;
+                    if (this.selectedPeRange === 'reasonable' && (pe < 15 || pe > 25)) return false;
+                    if (this.selectedPeRange === 'growth' && pe <= 25) return false;
+                }
+
+                // 4. 預期潛力空間門檻 (Potential)
+                if (this.selectedMinPotential > 0) {
+                    const absPot = Math.abs(rPot || 0);
+                    if (absPot < this.selectedMinPotential) return false;
+                }
+
+                // 5. 核心量化因子: 高盈虧比
+                const tagsStr = Array.isArray(r.tags) ? r.tags.join(' ') : String(r.tags || '');
+                if (this.selectedRiskRewardOnly) {
+                    const hasRR = tagsStr.includes('盈虧比') || tagsStr.includes('風報比') || (Number(r.risk_reward_ratio) >= 1.5);
+                    if (!hasRR) return false;
+                }
+
+                // 6. 核心量化因子: 季線 MA60 支撐
+                if (this.selectedMa60Only) {
+                    const hasMA = Boolean(r.pullback_type) || tagsStr.includes('季線') || tagsStr.includes('MA60');
+                    if (!hasMA) return false;
+                }
+
+                // 7. 核心量化因子: 三大法人合買
+                if (this.selectedInstBuyOnly) {
+                    const instBuy = tagsStr.includes('合買') || tagsStr.includes('法人') || tagsStr.includes('投信') ||
+                        ((Number(r.trust_net_5d) > 0) && (Number(r.foreign_net_5d) > 0));
+                    if (!instBuy) return false;
+                }
+
                 seenTickers.add(tk);
                 return true;
             });
@@ -773,9 +824,9 @@ export const app = createApp({
                 winningModel = null;
                 const active = candidates.filter(c => c.count >= 2 && c.hitRate !== null);
                 if (active.length > 0 && active.every(c => c.hitRate < 50.0)) {
-                    overallWinner = '⚠️ 各模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主';
+                    overallWinner = '各模型於該股方向勝率皆低於 50%，建議以均線支撐與籌碼為主';
                 } else {
-                    overallWinner = '⏳ 驗證樣本累積中（需至少 2 日開獎紀錄且方向勝率 ≥ 50%）';
+                    overallWinner = '驗證樣本累積中（需至少 2 日開獎紀錄且方向勝率 ≥ 50%）';
                 }
             } else {
                 eligible.sort((a, b) => {
@@ -790,10 +841,10 @@ export const app = createApp({
 
                 if (eligible.length > 1 && Math.abs(eligible[0].hitRate - eligible[1].hitRate) < 5.0 && eligible[0].wins === eligible[1].wins && Math.abs((eligible[0].mape || 0) - (eligible[1].mape || 0)) < 0.01) {
                     winningModel = null;
-                    overallWinner = `⚖️ 該股歷史表現：模型實力相當（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
+                    overallWinner = `該股歷史表現：模型實力相當（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
                 } else {
                     winningModel = eligible[0].name;
-                    overallWinner = `🏆 該股表現較佳：${winningModel}（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
+                    overallWinner = `該股表現較佳：${winningModel}（方向勝率 ${eligible[0].hitRate.toFixed(1)}% · 平均誤差 ±${eligible[0].mape.toFixed(2)}%）`;
                 }
             }
 
@@ -1875,7 +1926,7 @@ export const app = createApp({
             }
             if (force) {
                 try {
-                    this.showToast('🚀 正在向 arXiv 即時同步最新學術論文與前沿題材...');
+                    this.showToast('正在向 arXiv 即時同步最新學術論文與前沿題材...');
                     await ApiClient.triggerDiscoverySync();
                     // 等待 2.5 秒讓後台拉取與 DuckDB 快照完成
                     await new Promise(r => setTimeout(r, 2500));
@@ -1975,6 +2026,33 @@ export const app = createApp({
         },
         clearFilterModels() {
             this.selectedFilterModels = [];
+        },
+        toggleModelFilter(mId) {
+            const idx = this.selectedModels.indexOf(mId);
+            if (idx > -1) {
+                this.selectedModels.splice(idx, 1);
+            } else {
+                this.selectedModels.push(mId);
+            }
+        },
+        resetFilters() {
+            this.selectedDirection = 'bullish';
+            this.selectedModels = [];
+            this.selectedPeRange = 'all';
+            this.selectedMinPotential = 0;
+            this.selectedRiskRewardOnly = false;
+            this.selectedMa60Only = false;
+            this.selectedInstBuyOnly = false;
+        },
+        async fetchAvailableModels() {
+            try {
+                const data = await ApiClient.getActiveModels();
+                if (Array.isArray(data) && data.length > 0) {
+                    this.availableModels = data;
+                }
+            } catch (e) {
+                console.warn('Failed to load active models:', e);
+            }
         },
         setViewMode(mode) {
             this.viewMode = mode;
@@ -2413,18 +2491,18 @@ export const app = createApp({
                     icon = 'show_chart';
                     badgeType = 'technical';
                     tooltip = '均線支撐買點';
-                } else if (cleanLabel.includes('Timestral')) {
-                    icon = 'smart_toy';
-                    badgeType = 'ai_timestral';
-                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'Timestral 看跌' : 'Timestral 看漲';
-                } else if (cleanLabel.includes('TimesFM')) {
-                    icon = 'auto_awesome';
-                    badgeType = 'ai_timesfm';
-                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'TimesFM 看跌' : 'TimesFM 看漲';
-                } else if (cleanLabel.includes('MOIRAI')) {
-                    icon = 'insights';
-                    badgeType = 'ai_moirai';
-                    tooltip = cleanLabel.includes('跌') || cleanLabel.includes('避險') || cleanLabel.includes('防守') ? 'MOIRAI-2 看跌' : 'MOIRAI-2 看漲';
+                } else if (cleanLabel.endsWith('看多') || cleanLabel.endsWith('看漲')) {
+                    icon = 'trending_up';
+                    badgeType = 'ai_bullish';
+                    tooltip = cleanLabel;
+                } else if (cleanLabel.endsWith('看空') || cleanLabel.endsWith('看跌')) {
+                    icon = 'trending_down';
+                    badgeType = 'ai_bearish';
+                    tooltip = cleanLabel;
+                } else if (cleanLabel.endsWith('強')) {
+                    icon = 'bolt';
+                    badgeType = 'ai_strong';
+                    tooltip = cleanLabel;
                 } else if (cleanLabel.includes('高盈虧比') || cleanLabel.includes('高風報比')) {
                     icon = 'balance';
                     badgeType = 'risk_reward';
@@ -2881,7 +2959,7 @@ export const app = createApp({
             }
             const comp = this.getSelectedNodeCompany();
             const label = comp ? `${this.selectedNodeTicker} (${comp})` : this.selectedNodeTicker;
-            this.copyText(fullUrl, `✅ 已複製「${label}」產業鏈直達連結！可直接分享給他人`);
+            this.copyText(fullUrl, `已複製「${label}」產業鏈直達連結！可直接分享給他人`);
         },
 
         toggleFocusConnectedOnly() {
@@ -3072,6 +3150,7 @@ export const app = createApp({
     mounted() {
         this.applyTheme();
         this.parseUrlParams();
+        this.fetchAvailableModels();
         this.loadMacro();
         this.loadStats();
         this.loadMarketStats();

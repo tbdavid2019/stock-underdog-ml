@@ -88,6 +88,34 @@ export const ApiClient = {
     },
 
     /**
+     * Fetch active foundation models from backend registry
+     */
+    async getActiveModels() {
+        const res = await fetch('/api/v1/models');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Multi-Factor Quant Screener API
+     */
+    async screenPredictions({ direction = 'bullish', models = '', peRange = '', minPotential = 0, riskReward = false, ma60 = false, institutional = false, indexName = '', limit = 100 } = {}) {
+        const params = new URLSearchParams();
+        if (direction) params.append('direction', direction);
+        if (models) params.append('models', models);
+        if (peRange && peRange !== 'all') params.append('pe_range', peRange);
+        if (minPotential > 0) params.append('min_potential', minPotential);
+        if (riskReward) params.append('risk_reward', 'true');
+        if (ma60) params.append('ma60', 'true');
+        if (institutional) params.append('institutional', 'true');
+        if (indexName && indexName !== 'ALL' && indexName !== '全部市場') params.append('index_name', indexName);
+        params.append('limit', limit);
+        const res = await fetch('/api/v1/predictions/screen?' + params.toString());
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
      * Quantitative predictions by strategy & market index
      */
     async getPredictions({ strategy = 'resonance', indexName = '', limit = 60 } = {}) {

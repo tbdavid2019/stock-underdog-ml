@@ -222,6 +222,48 @@ def get_dual_bearish_candidates(
     return response_obj
 
 
+@router.get("/screen", response_model=PredictionResponse, summary="多維量化自訂篩選器")
+def screen_quant_candidates(
+    direction: str = Query("bullish", description="交易方向: bullish (多方看漲) 或 bearish (空方避險)"),
+    models: Optional[str] = Query(None, description="AI 時序模型 (逗號分隔，例如 timesfm,timestral,moirai)"),
+    pe_range: Optional[str] = Query(None, description="本益比區間: low (<15), reasonable (15-25), growth (>25)"),
+    min_potential: Optional[float] = Query(None, description="預期潛力空間門檻 (例如 3.0, 5.0, 8.0)"),
+    risk_reward: bool = Query(False, description="高盈虧比 / 風報比優質"),
+    ma60: bool = Query(False, description="季線 MA60 支撐 / 回調買點"),
+    institutional: bool = Query(False, description="三大法人合買 (外資投信同步買超)"),
+    index_name: Optional[str] = Query(None, description="指數代碼"),
+    limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
+    offset: int = Query(0, ge=0, description="分頁偏移"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """
+    動態多維量化自訂篩選器，支援任意時序模型多選（使用者自行多選，所有選中模型皆須同方向）、
+    估值區間、最小預期漲跌空間及核心因子（盈虧比、季線支撐、法人合買）。
+    """
+    model_list = sorted([m.strip().lower() for m in models.split(",") if m.strip()]) if models else None
+    norm_models = ",".join(model_list) if model_list else ""
+    cache_key = f"screen_{direction}_{norm_models}_{pe_range}_{min_potential}_{risk_reward}_{ma60}_{institutional}_{index_name}_{limit}_{offset}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    records = db.screen_candidates(
+        direction=direction,
+        models=model_list,
+        pe_range=pe_range,
+        min_potential=min_potential,
+        risk_reward=risk_reward,
+        ma60=ma60,
+        institutional=institutional,
+        index_name=index_name,
+        limit=limit,
+        offset=offset
+    )
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
+
+
 @router.get("/xuantie", response_model=PredictionResponse, summary="查詢玄鐵重劍技術面均線回調買點")
 def get_xuantie_candidates(
     index_name: Optional[str] = Query(None, description="指數篩選"),

@@ -87,7 +87,9 @@ class TimesFMPlugin(BaseModelPlugin):
     """Google TimesFM 3.0 標準插件適配器"""
 
     model_id: str = "google/timesfm-3.0-pytorch"
-    display_name: str = "Google TimesFM 3.0"
+    plugin_id: str = "timesfm"
+    tag_name: str = "TimesFM"
+    display_name: str = "TimesFM (Google)"
     version: str = "3.0"
     author: str = "Google Research"
     supported_markets: List[str] = ["tw", "us", "jp"]
@@ -166,7 +168,9 @@ class TimestralPlugin(BaseModelPlugin):
     """Mistral AI Timestral-209M 標準插件適配器"""
 
     model_id: str = "mistralai/Timestral-209M"
-    display_name: str = "Mistral Timestral-209M"
+    plugin_id: str = "timestral"
+    tag_name: str = "Timestral"
+    display_name: str = "Timestral (Mistral)"
     version: str = "209M"
     author: str = "Mistral AI"
     supported_markets: List[str] = ["tw", "us", "jp"]
@@ -243,7 +247,9 @@ class Moirai2Plugin(BaseModelPlugin):
     """Salesforce MOIRAI-2 R-small 標準插件適配器"""
 
     model_id: str = "Salesforce/moirai-2.0-R-small"
-    display_name: str = "Salesforce MOIRAI-2"
+    plugin_id: str = "moirai"
+    tag_name: str = "MOIRAI-2"
+    display_name: str = "MOIRAI-2 (Salesforce)"
     version: str = "2.0-R-small"
     author: str = "Salesforce"
     supported_markets: List[str] = ["tw", "us", "jp"]

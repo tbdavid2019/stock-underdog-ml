@@ -539,55 +539,25 @@
         </div>
     </div>
 
-    <!-- 2. Strategy Filter Bar & View Mode Selector -->
+    <!-- 2. Multi-Factor Quant Screener & Filter Panel (符合 WCAG AA/AAA, Lucide Icons, 繁中標準字體 >=14px) -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-3.5 sm:p-4 rounded-2xl border flex flex-col space-y-3.5">
+         class="p-4 sm:p-5 rounded-2xl border flex flex-col space-y-4">
 
-        <!-- Top Row: Direction Toggle & Right Controls (View Mode, Market, Refresh) -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <!-- Long/Short Direction Toggle Switch (符合 WCAG AA/AAA) -->
-            <div class="inline-flex rounded-xl border p-0.5 self-start sm:self-auto"
-                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                <button @click="setDirection('bullish')"
-                        :aria-pressed="strategyDirection === 'bullish'"
-                        :class="strategyDirection === 'bullish' ? (isDark ? 'bg-emerald-600 text-white font-black shadow-md shadow-emerald-950/40' : 'bg-emerald-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
-                    <span class="material-symbols-outlined text-[17px]">trending_up</span>
-                    <span>📈 多方看漲 (Bullish)</span>
-                </button>
-                <button @click="setDirection('bearish')"
-                        :aria-pressed="strategyDirection === 'bearish'"
-                        :class="strategyDirection === 'bearish' ? (isDark ? 'bg-rose-600 text-white font-black shadow-md shadow-rose-950/40' : 'bg-rose-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                        class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5">
-                    <span class="material-symbols-outlined text-[17px]">shield</span>
-                    <span>🛡️ 空方避險 (Bearish)</span>
-                </button>
+        <!-- Top Header & Global Controls (市場選擇、檢視模式、重新整理) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span class="text-sm sm:text-base font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
+                    多維量化自訂篩選器
+                </span>
+                <span class="text-xs text-slate-400 font-medium hidden sm:inline">自主多選模型與因子</span>
             </div>
 
-            <!-- Right: View Mode, Market Selector & Refresh -->
-            <div class="flex items-center space-x-2.5 self-end sm:self-auto shrink-0">
-                <!-- View Mode Switcher -->
-                <div class="inline-flex rounded-xl border p-0.5"
-                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                    <button @click="setViewMode('table')"
-                            :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                            title="高密度表格檢視">
-                        <span class="material-symbols-outlined text-[18px]">table_rows</span>
-                        <span class="hidden sm:inline">表格</span>
-                    </button>
-                    <button @click="setViewMode('card')"
-                            :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1"
-                            title="卡片情報檢視">
-                        <span class="material-symbols-outlined text-[18px]">grid_view</span>
-                        <span class="hidden sm:inline">卡片</span>
-                    </button>
-                </div>
-
+            <div class="flex items-center space-x-2.5 shrink-0">
                 <!-- Market Index Dropdown -->
                 <select v-model="selectedIndex" @change="setIndex()"
-                        class="border text-xs sm:text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
+                        class="border text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
                     <option value="">全部市場 (All)</option>
                     <option value="台灣50">台灣50 (TW0050)</option>
@@ -595,79 +565,216 @@
                     <option value="台股活躍精選">台股活躍精選 (TW-Active 850)</option>
                     <option value="台股1000">台股全市場1000 (TW1000)</option>
                     <option value="SP500">S&P 500 (美股標普 500)</option>
-                    <option value="日經225">🇯🇵 日經225 (Nikkei 225)</option>
+                    <option value="日經225">日經225 (Nikkei 225)</option>
                     <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
                 </select>
 
-                <button @click="loadData()"
-                        class="w-9 h-9 rounded-xl border transition-all text-xs font-bold flex items-center justify-center hover:scale-105 active:scale-95"
-                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
-                        title="重新整理日報" aria-label="重新整理日報">
-                    <span class="material-symbols-outlined text-[18px]">sync</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Strategy Dimension Preset Buttons: Responsive Flex-Wrap -->
-        <div class="flex flex-wrap items-center gap-2">
-            <button v-for="strat in currentStrategyOptions" :key="strat.id"
-                    @click="setStrategy(strat.id)"
-                    :aria-pressed="selectedStrategy === strat.id"
-                    :title="strat.description"
-                    :class="selectedStrategy === strat.id ? (strategyDirection === 'bearish' ? (isDark ? 'bg-rose-600 text-white border-rose-500 font-black shadow-md shadow-rose-950/40' : 'bg-rose-600 text-white border-rose-600 font-black shadow-sm') : (isDark ? 'bg-amber-500 text-black border-amber-500 font-black shadow-md shadow-amber-500/20' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black shadow-sm')) : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626] hover:bg-[#262626] hover:text-white' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB] hover:bg-white')"
-                    class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 border">
-                <span class="material-symbols-outlined text-[17px] sm:text-[18px]">{{ strat.icon }}</span>
-                <span>{{ strat.label }}</span>
-            </button>
-        </div>
-
-        <!-- Multi-Model Live Filtering Toolbar (多選 Chips + 交集/聯集運算) -->
-        <div class="pt-3 border-t flex flex-wrap items-center justify-between gap-2.5 text-xs"
-             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="font-bold flex items-center gap-1" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-                    <span class="material-symbols-outlined text-[16px]">tune</span>
-                    <span>模型即時篩選:</span>
-                </span>
-
-                <!-- Model Chips (TimesFM, Timestral, MOIRAI-2) -->
-                <button v-for="m in [{key: 'timesfm', label: 'TimesFM (Google)'}, {key: 'timestral', label: 'Timestral (Mistral)'}, {key: 'moirai', label: 'MOIRAI-2 (Salesforce)'}]"
-                        :key="m.key"
-                        @click="toggleFilterModel(m.key)"
-                        :class="selectedFilterModels.includes(m.key) ? (isDark ? 'bg-sky-500/20 border-sky-400 text-sky-300 font-black' : 'bg-sky-50 border-sky-300 text-sky-800 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-slate-200' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]')"
-                        class="px-2.5 py-1 rounded-lg border text-xs transition-all flex items-center space-x-1 cursor-pointer">
-                    <span v-if="selectedFilterModels.includes(m.key)" class="material-symbols-outlined text-[14px] leading-none">check</span>
-                    <span>{{ m.label }}</span>
-                </button>
-
-                <!-- Logic Operator Switcher (AND / OR) -->
-                <div class="inline-flex rounded-lg border p-0.5 ml-1"
+                <!-- View Mode Switcher -->
+                <div class="inline-flex rounded-xl border p-0.5"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                    <button @click="setFilterOperator('AND')"
-                            :class="filterModelOperator === 'AND' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                            class="px-2 py-0.5 rounded text-[11px] font-bold transition-all"
-                            title="全數符合條件 (交集)">
-                        ∩ 交集 (AND)
+                    <button @click="setViewMode('table')"
+                            :class="viewMode === 'table' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer"
+                            title="高密度表格檢視">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+                        <span class="hidden sm:inline">表格</span>
                     </button>
-                    <button @click="setFilterOperator('OR')"
-                            :class="filterModelOperator === 'OR' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
-                            class="px-2 py-0.5 rounded text-[11px] font-bold transition-all"
-                            title="任一符合條件 (聯集)">
-                        ∪ 聯集 (OR)
+                    <button @click="setViewMode('card')"
+                            :class="viewMode === 'card' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                            class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer"
+                            title="卡片情報檢視">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                        <span class="hidden sm:inline">卡片</span>
                     </button>
                 </div>
 
-                <button v-if="selectedFilterModels.length > 0"
-                        @click="clearFilterModels()"
-                        class="text-xs text-amber-500 hover:underline font-bold px-1.5 py-0.5">
-                    重設篩選
+                <button @click="loadData()"
+                        class="w-9 h-9 rounded-xl border transition-all text-sm font-bold flex items-center justify-center hover:scale-105 active:scale-95 cursor-pointer"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:bg-[#262626] hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
+                        title="重新整理日報" aria-label="重新整理日報">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
                 </button>
             </div>
+        </div>
 
-            <div v-if="selectedFilterModels.length > 0"
-                 class="text-xs font-bold"
-                 :class="isDark ? 'text-sky-400' : 'text-sky-700'">
-                已過濾顯示 {{ displayRecords.length }} / {{ records.length }} 檔
+        <!-- Dimension 1: 交易方向 (Direction) -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <span class="text-sm font-bold w-28 shrink-0 flex items-center space-x-1.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>1. 交易方向:</span>
+            </span>
+            <div class="inline-flex rounded-xl border p-0.5"
+                 :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
+                <button @click="selectedDirection = 'bullish'; setDirection('bullish');"
+                        :aria-pressed="selectedDirection === 'bullish'"
+                        :class="selectedDirection === 'bullish' ? (isDark ? 'bg-emerald-600 text-white font-black shadow-md shadow-emerald-950/40' : 'bg-emerald-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    <span>多方看漲</span>
+                </button>
+                <button @click="selectedDirection = 'bearish'; setDirection('bearish');"
+                        :aria-pressed="selectedDirection === 'bearish'"
+                        :class="selectedDirection === 'bearish' ? (isDark ? 'bg-rose-600 text-white font-black shadow-md shadow-rose-950/40' : 'bg-rose-600 text-white font-black shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')"
+                        class="px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                    <span>空方避險</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dimension 2: AI 時序預測模型 (Models - User directly multi-selects) -->
+        <div class="flex flex-col sm:flex-row sm:items-start gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <span class="text-sm font-bold w-28 shrink-0 pt-2" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>2. AI 預測模型:</span>
+            </span>
+            <div class="flex flex-wrap items-center gap-2">
+                <button v-for="m in (availableModels && availableModels.length ? availableModels : [{id: 'timesfm', display_name: 'TimesFM (Google)'}, {id: 'timestral', display_name: 'Timestral (Mistral)'}, {id: 'moirai', display_name: 'MOIRAI-2 (Salesforce)'}])"
+                        :key="m.id"
+                        @click="toggleModelFilter(m.id)"
+                        :class="selectedModels.includes(m.id) ? (isDark ? 'bg-sky-500/20 border-sky-400 text-sky-300 font-bold' : 'bg-sky-50 border-sky-400 text-sky-800 font-bold') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        class="px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg v-if="selectedModels.includes(m.id)" class="w-4 h-4 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>{{ m.display_name || m.name }}</span>
+                </button>
+                <span class="text-xs text-slate-400 self-center pl-1">(勾選多個模型代表需全數一致同向)</span>
+            </div>
+        </div>
+
+        <!-- Dimension 3: 本益比估值 PE (Valuation) -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <span class="text-sm font-bold w-28 shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>3. 本益比估值:</span>
+            </span>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button @click="selectedPeRange = 'all'"
+                        :class="selectedPeRange === 'all' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    不限
+                </button>
+                <button @click="selectedPeRange = 'low'"
+                        :class="selectedPeRange === 'low' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    低估 (PE &lt; 15)
+                </button>
+                <button @click="selectedPeRange = 'reasonable'"
+                        :class="selectedPeRange === 'reasonable' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    合理 (15 ≤ PE ≤ 25)
+                </button>
+                <button @click="selectedPeRange = 'growth'"
+                        :class="selectedPeRange === 'growth' ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    成長/高估 (PE &gt; 25)
+                </button>
+            </div>
+        </div>
+
+        <!-- Dimension 4: 預期潛力空間 (Potential) -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <span class="text-sm font-bold w-28 shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>4. 預期潛力空間:</span>
+            </span>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button @click="selectedMinPotential = 0"
+                        :class="selectedMinPotential === 0 ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    不限
+                </button>
+                <button @click="selectedMinPotential = 3"
+                        :class="selectedMinPotential === 3 ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    &gt; 3%
+                </button>
+                <button @click="selectedMinPotential = 5"
+                        :class="selectedMinPotential === 5 ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    &gt; 5%
+                </button>
+                <button @click="selectedMinPotential = 8"
+                        :class="selectedMinPotential === 8 ? (isDark ? 'bg-amber-500 text-black font-black' : 'bg-amber-500 text-[#2B251A] font-black shadow-sm') : (isDark ? 'bg-[#16181D] text-slate-300 border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-[#E5E7EB]')"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer">
+                    &gt; 8%
+                </button>
+            </div>
+        </div>
+
+        <!-- Dimension 5: 核心量化因子 (Core Factors) -->
+        <div class="flex flex-col sm:flex-row sm:items-start gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <span class="text-sm font-bold w-28 shrink-0 pt-2" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>5. 核心量化因子:</span>
+            </span>
+            <div class="flex flex-wrap items-center gap-2">
+                <button @click="selectedRiskRewardOnly = !selectedRiskRewardOnly"
+                        :class="selectedRiskRewardOnly ? (isDark ? 'bg-teal-500/20 border-teal-400 text-teal-300 font-bold' : 'bg-teal-50 border-teal-400 text-teal-900 font-bold') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        class="px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg class="w-4 h-4 text-teal-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                    <span>高盈虧比 / 風報比優</span>
+                </button>
+
+                <button @click="selectedMa60Only = !selectedMa60Only"
+                        :class="selectedMa60Only ? (isDark ? 'bg-sky-500/20 border-sky-400 text-sky-300 font-bold' : 'bg-sky-50 border-sky-400 text-sky-900 font-bold') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        class="px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg class="w-4 h-4 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.48 12H2"/></svg>
+                    <span>季線 MA60 支撐</span>
+                </button>
+
+                <button @click="selectedInstBuyOnly = !selectedInstBuyOnly"
+                        :class="selectedInstBuyOnly ? (isDark ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-amber-50 border-amber-400 text-amber-900 font-bold') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        class="px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer">
+                    <svg class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                    <span>三大法人合買 (外資/投信5日同步買超)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dimension 6: Active Filter Feedback & Reset -->
+        <div class="pt-3 border-t flex flex-wrap items-center justify-between gap-3 text-sm"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">已套用條件:</span>
+                <span class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border"
+                      :class="selectedDirection === 'bullish' ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40' : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40'">
+                    {{ selectedDirection === 'bullish' ? '多方看漲' : '空方避險' }}
+                </span>
+                <span v-for="mId in selectedModels" :key="mId"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
+                    {{ (availableModels.find(m => m.id === mId) || {}).display_name || mId }}
+                </span>
+                <span v-if="selectedPeRange && selectedPeRange !== 'all'"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                    PE: {{ selectedPeRange === 'low' ? '< 15' : (selectedPeRange === 'reasonable' ? '15~25' : '> 25') }}
+                </span>
+                <span v-if="selectedMinPotential > 0"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                    潛力 &gt; {{ selectedMinPotential }}%
+                </span>
+                <span v-if="selectedRiskRewardOnly"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-teal-50 text-teal-800 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/40">
+                    高盈虧比
+                </span>
+                <span v-if="selectedMa60Only"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
+                    季線支撐
+                </span>
+                <span v-if="selectedInstBuyOnly"
+                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                    三大法人合買
+                </span>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <span class="text-sm font-bold" :class="isDark ? 'text-amber-400' : 'text-amber-700'">
+                    共篩選出 <strong class="num-font text-base">{{ displayRecords.length }}</strong> 檔標的
+                </span>
+                <button @click="resetFilters()"
+                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all flex items-center space-x-1.5 hover:scale-105 active:scale-95 cursor-pointer"
+                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-800 hover:bg-white'">
+                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <span>重設條件</span>
+                </button>
             </div>
         </div>
 

@@ -16,4 +16,9 @@ try:
 except Exception:
     pass
 
-__all__ = ['timestral_model', 'timesfm_model', 'lstm']
+try:
+    from . import plugins
+except Exception:
+    pass
+
+__all__ = ['timestral_model', 'timesfm_model', 'lstm', 'plugins']

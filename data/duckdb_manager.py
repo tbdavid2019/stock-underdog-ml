@@ -1328,6 +1328,124 @@ class DuckDBManager:
         df = self.query(sql, full_params)
         return self._clean_df_records(df)
 
+    def screen_candidates(
+        self,
+        direction: str = "bullish",
+        models: Optional[List[str]] = None,
+        pe_range: Optional[str] = None,
+        min_potential: Optional[float] = None,
+        risk_reward: bool = False,
+        ma60: bool = False,
+        institutional: bool = False,
+        index_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        多維量化自訂篩選器 (Multi-Factor Quant Screener)
+        依交易方向、AI 時序預測模型多選、本益比估值、預期空間與核心量化因子進行高效率列式篩選。
+        """
+        index_name = self._clean_index_name(index_name)
+        base_where = [
+            "index_name NOT LIKE '%TEST%'",
+            "index_name NOT LIKE '%DEBUG%'",
+            "index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        params = []
+        if index_name:
+            base_where.append("index_name = ?")
+            params.append(index_name)
+
+        base_where_sql = f"WHERE {' AND '.join(base_where)}"
+        p_where_clauses = [f"p.{clause}" for clause in base_where]
+
+        is_bearish = (direction or "").strip().lower() == "bearish"
+
+        # 方向條件
+        if is_bearish:
+            p_where_clauses.append("p.potential < 0")
+            if min_potential is not None:
+                p_where_clauses.append("p.potential <= ?")
+                params.append(-abs(float(min_potential)))
+        else:
+            p_where_clauses.append("p.potential > 0")
+            if min_potential is not None:
+                p_where_clauses.append("p.potential >= ?")
+                params.append(abs(float(min_potential)))
+
+        # 模型多選條件 (所有選中模型皆須符合方向，且僅限支援的模型欄位以防 SQL 異常)
+        MODEL_COL_MAP = {
+            "timesfm": "timesfm_potential",
+            "timestral": "timestral_potential",
+            "moirai": "moirai_potential",
+            "moirai-2": "moirai_potential",
+            "moirai2": "moirai_potential",
+            "lstm": "lstm_potential",
+        }
+        if models:
+            for m in models:
+                m_clean = m.strip().lower()
+                col_name = MODEL_COL_MAP.get(m_clean) or MODEL_COL_MAP.get(re.sub(r'[^a-zA-Z0-9_]', '', m_clean))
+                if not col_name:
+                    continue
+                if is_bearish:
+                    p_where_clauses.append(f"(p.{col_name} IS NOT NULL AND p.{col_name} < 0)")
+                else:
+                    p_where_clauses.append(f"(p.{col_name} IS NOT NULL AND p.{col_name} > 0)")
+
+        # 本益比估值區間
+        if pe_range:
+            pe_clean = pe_range.strip().lower()
+            if pe_clean in ("low", "undervalued", "低估"):
+                p_where_clauses.append("(p.pe IS NOT NULL AND p.pe > 0 AND p.pe < 15)")
+            elif pe_clean in ("reasonable", "fair", "合理"):
+                p_where_clauses.append("(p.pe IS NOT NULL AND p.pe >= 15 AND p.pe <= 25)")
+            elif pe_clean in ("growth", "overvalued", "高估", "成長"):
+                p_where_clauses.append("(p.pe IS NOT NULL AND p.pe > 25)")
+
+        # 核心量化因子
+        if risk_reward:
+            p_where_clauses.append("(p.tags LIKE '%高盈虧比%' OR p.tags LIKE '%高風報比%' OR p.tags LIKE '%盈虧比%')")
+
+        if ma60:
+            p_where_clauses.append("((p.pullback_type IS NOT NULL AND p.pullback_type != '') OR p.tags LIKE '%季線%' OR p.tags LIKE '%MA60%')")
+
+        if institutional:
+            p_where_clauses.append("((p.trust_net_5d > 0 AND p.foreign_net_5d > 0) OR p.tags LIKE '%法人合買%' OR p.tags LIKE '%外資投信合買%' OR p.tags LIKE '%土洋合買%')")
+
+        order_direction = "ASC" if is_bearish else "DESC"
+        p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
+
+        ts_params = [index_name] if index_name else []
+        full_params = ts_params + params + [limit, offset]
+
+        sql = f"""
+        WITH latest_ts AS (
+            SELECT ticker, index_name, MAX(timestamp) as max_ts
+            FROM predictions
+            {base_where_sql}
+            GROUP BY ticker, index_name
+        ),
+        candidates AS (
+            SELECT p.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY p.ticker 
+                       ORDER BY p.potential {order_direction} NULLS LAST, p.composite_score DESC NULLS LAST
+                   ) as rn
+            FROM predictions p
+            JOIN latest_ts l ON p.ticker = l.ticker AND p.index_name = l.index_name AND p.timestamp = l.max_ts
+            WHERE 1=1
+            {p_where_sql}
+        )
+        SELECT * EXCLUDE (rn)
+        FROM candidates
+        WHERE rn = 1
+        ORDER BY potential {order_direction} NULLS LAST, ticker ASC
+        LIMIT ? OFFSET ?;
+        """
+        df = self.query(sql, full_params)
+        return self._clean_df_records(df)
+
     def get_xuantie_candidates(
         self, 
         index_name: Optional[str] = None, 

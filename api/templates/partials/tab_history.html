@@ -881,9 +881,9 @@
         </div>
 
         <!-- 互動操作提示文字 (Interactive Hint) -->
-        <div class="flex items-center space-x-1.5 text-[11px] px-0.5"
+        <div class="flex items-center space-x-1.5 text-xs sm:text-sm px-0.5"
              :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-            <span class="text-amber-500 font-bold" aria-hidden="true">💡</span>
+            <span class="material-symbols-outlined text-[16px] text-amber-500" aria-hidden="true">info</span>
             <span>支援滑鼠滾輪縮放、按住拖曳平移、手機雙指縮放（雙擊圖表重置）</span>
         </div>
 
@@ -909,7 +909,7 @@
             <div>
                 <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">bolt</span>
-                    <span>⚡ 綜合操作建議</span>
+                    <span>綜合操作建議</span>
                 </h3>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     綜合時序模型目標價、季線支撐、三大法人籌碼與估值，評估當前買賣動作與進場勝率
@@ -952,10 +952,10 @@
                      ]">
                     <div class="text-xs font-bold opacity-80 mb-1">建議操作</div>
                     <div class="text-xl sm:text-2xl font-black flex items-center space-x-1.5">
-                        <span v-if="historyDecisionVerdict.action_decision === 'strong_buy'">🚀 積極買進</span>
-                        <span v-else-if="historyDecisionVerdict.action_decision === 'buy'">📈 逢低佈局</span>
-                        <span v-else-if="historyDecisionVerdict.action_decision === 'avoid'">⚠️ 避開風險</span>
-                        <span v-else>👀 觀望等待</span>
+                        <span v-if="historyDecisionVerdict.action_decision === 'strong_buy'">積極買進</span>
+                        <span v-else-if="historyDecisionVerdict.action_decision === 'buy'">逢低佈局</span>
+                        <span v-else-if="historyDecisionVerdict.action_decision === 'avoid'">避開風險</span>
+                        <span v-else>觀望等待</span>
                     </div>
                     <div class="text-xs font-medium opacity-75 mt-1">
                         模型信心度 {{ Math.round((historyDecisionVerdict.action_confidence || 0) * 100) }}%
@@ -1111,7 +1111,7 @@
                     <span v-if="modelScorecard.timesfm.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black"
                           :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-purple-100 text-purple-900 border border-purple-300'">
-                        🏆 該股表現較佳
+                        該股表現較佳
                     </span>
                     <span v-else-if="modelScorecard.timesfm.lowHitWarning"
                           class="px-2 py-0.5 rounded-md text-xs font-semibold"
@@ -1177,7 +1177,7 @@
                     <span v-if="modelScorecard.timestral.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black"
                           :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-900 border border-amber-300'">
-                        🏆 該股表現較佳
+                        該股表現較佳
                     </span>
                     <span v-else-if="modelScorecard.timestral.lowHitWarning"
                           class="px-2 py-0.5 rounded-md text-xs font-semibold"
@@ -1243,7 +1243,7 @@
                     <span v-if="modelScorecard.moirai.isLeader"
                           class="px-2 py-0.5 rounded-md text-xs font-black"
                           :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-sky-100 text-sky-900 border border-sky-300'">
-                        🏆 該股表現較佳
+                        該股表現較佳
                     </span>
                     <span v-else-if="modelScorecard.moirai.lowHitWarning"
                           class="px-2 py-0.5 rounded-md text-xs font-semibold"
@@ -1351,7 +1351,7 @@
                             </span>
                         </div>
                         <div v-else class="text-xs font-semibold text-amber-500 flex items-center space-x-1">
-                            <span>{{ row.nextDate ? '⏳ ' + row.nextDate + ' 待開獎' : '⏳ 待隔日開獎' }}</span>
+                            <span>{{ row.nextDate ? row.nextDate + ' 待結算' : '待隔日結算' }}</span>
                         </div>
                     </td>
 
@@ -1525,7 +1525,7 @@
                         </span>
                         <span v-else-if="row.nextActualPrice === null"
                               class="text-xs text-amber-500 font-semibold flex items-center">
-                            ⏳ 待開獎
+                            待開獎
                         </span>
                         <span v-else class="text-xs text-slate-400">—</span>
                     </div>
@@ -1547,7 +1547,7 @@
                                 ({{ row.actualReturnPct >= 0 ? '+' : '' }}{{ row.actualReturnPct.toFixed(2) }}%)
                             </span>
                         </span>
-                        <span v-else class="text-amber-500 font-semibold">⏳ 待開獎</span>
+                        <span v-else class="text-amber-500 font-semibold">待開獎</span>
                     </div>
                 </div>
 
@@ -1742,7 +1742,7 @@
          :class="isDark ? 'bg-[#16181D] border-blue-900/40 text-blue-300' : 'bg-blue-50/80 border-blue-200 text-blue-950'">
         <span class="material-symbols-outlined text-[24px] text-blue-500 shrink-0">info</span>
         <div class="text-xs sm:text-sm leading-relaxed font-medium">
-            💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。
+            本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。
         </div>
     </div>
 
@@ -1777,10 +1777,10 @@
             <span class="material-symbols-outlined text-[28px]">search</span>
         </div>
         <div class="text-sm sm:text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
-            🌱 該標的甫納入追蹤清單，或尚無已開獎之時序預測，請參考即時盤面與基本面數據
+            該標的甫納入追蹤清單，或尚無已開獎之時序預測，請參考即時盤面與基本面數據
         </div>
         <p class="text-xs sm:text-sm max-w-xl mx-auto leading-relaxed" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
-            <span v-if="!isTwStock(resolvedTicker || searchTicker)">💡 本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。</span>
+            <span v-if="!isTwStock(resolvedTicker || searchTicker)">本標的為美股/外國標的，不適用台灣三大法人籌碼數據，請參考上方的時序量化預測與個股基本面。</span>
             <span v-else>該標的可能近期剛納入量化選股模型追蹤，您仍可在上方個股情報中心檢閱其基本面、集團網絡與法說會情報。</span>
         </p>
     </div>

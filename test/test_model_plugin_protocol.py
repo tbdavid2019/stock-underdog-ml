@@ -234,6 +234,30 @@ class TestModelPluginProtocol(unittest.TestCase):
         past_covs = call_kwargs["past_covariates"]["7203.T"]
         self.assertEqual(past_covs.shape, (2, 90))
 
+    def test_dynamic_tag_generation_and_active_plugins(self):
+        """驗證純粹基於模型實體名稱的動態標籤生成與活躍插件清單"""
+        tfm = TimesFMPlugin()
+        tst = TimestralPlugin()
+        moi = Moirai2Plugin()
+
+        # 看多標籤
+        self.assertEqual(tfm.generate_tags(6.2), ["TimesFM看多", "TimesFM強"])
+        self.assertEqual(tst.generate_tags(3.5), ["Timestral看多"])
+        self.assertEqual(moi.generate_tags(8.0), ["MOIRAI-2看多", "MOIRAI-2強"])
+
+        # 看空標籤
+        self.assertEqual(tfm.generate_tags(-4.5), ["TimesFM看空"])
+        self.assertEqual(tst.generate_tags(-6.0), ["Timestral看空"])
+
+        # 活躍插件清單
+        reg = ModelPluginRegistry()
+        reg.register(tfm)
+        reg.register(tst)
+        active = reg.list_active_plugins()
+        active_ids = [getattr(p, "plugin_id", "") for p in active]
+        self.assertIn("timesfm", active_ids)
+        self.assertIn("timestral", active_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

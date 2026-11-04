@@ -106,6 +106,24 @@ def get_performance_health(as_of: Optional[str] = Query(None),
     return _eval_health(as_of, market, model_name, policy_mode, store)
 
 
+@models_router.get("", summary="取得當前註冊啟用之時序大模型清單")
+def list_active_models():
+    """回傳系統當前註冊啟用之 AI 時序預測模型列表（動態熱拔插）"""
+    from models.protocol import model_registry
+    plugins = model_registry.list_active_plugins()
+    return [
+        {
+            "id": getattr(p, "plugin_id", p.model_id),
+            "name": getattr(p, "name", getattr(p, "plugin_id", p.model_id)),
+            "display_name": p.display_name,
+            "author": getattr(p, "author", "Unknown"),
+            "version": p.version,
+            "tag_name": getattr(p, "tag_name", getattr(p, "plugin_id", p.model_id))
+        }
+        for p in plugins
+    ]
+
+
 @models_router.get("/health")
 def get_models_health(as_of: Optional[str] = Query(None),
                       market: Optional[str] = Query(None, pattern="^(TW|US|JP)$"),

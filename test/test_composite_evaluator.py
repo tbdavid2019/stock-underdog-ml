@@ -46,10 +46,10 @@ class TestCompositeEvaluator(unittest.TestCase):
         self.assertIsInstance(report, EvaluationReport)
         self.assertGreater(len(report.overlap_candidates), 0)
 
-        # 驗證 2330.TW 是否獲得 三重共振 標籤
+        # 驗證 2330.TW 是否獲得模型與因子標籤
         top_cand = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
         self.assertIsNotNone(top_cand)
-        self.assertIn("🏆三重共振", top_cand["tags"])
+        self.assertIn("LSTM看多", top_cand["tags"])
         self.assertIn("土洋合買", top_cand["tags"])
         self.assertIn("主流板塊(半導體與IC設計)", top_cand["tags"])
         print("2330.TW Tags:", top_cand["tags"])
@@ -96,12 +96,12 @@ class TestCompositeEvaluator(unittest.TestCase):
         fundamentals = {"2330.TW": {"pe": 20.0, "pb": 4.5}}
         report = evaluator.evaluate("台灣50", strategy_outputs, fundamentals, macro_state=macro)
 
-        # 驗證四重共振與雙ML共振
+        # 驗證動態模型標籤
         cand = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
         self.assertIsNotNone(cand)
-        self.assertIn("👑四重共振", cand["tags"])
-        self.assertIn("🔮雙ML共振", cand["tags"])
-        self.assertIn("高盈虧比", cand["tags"])
+        self.assertIn("LSTM看多", cand["tags"])
+        self.assertIn("TimesFM看多", cand["tags"])
+        self.assertIn("土洋合買", cand["tags"])
 
         # 驗證 TimesFM 結果列表
         self.assertEqual(len(report.timesfm_results), 2)
@@ -230,18 +230,17 @@ class TestCompositeEvaluator(unittest.TestCase):
         cand_2454 = next((c for c in report.overlap_candidates if c["ticker"] == "2454.TW"), None)
         cand_3008 = next((c for c in report.overlap_candidates if c["ticker"] == "3008.TW"), None)
 
-        # 2330 (XuanTie + Inst + LSTM) -> 🏆三重共振
+        # 2330 (XuanTie + Inst + LSTM) -> LSTM
         self.assertIsNotNone(cand_2330)
-        self.assertEqual(cand_2330["resonance_tier"], "🏆三重共振")
+        self.assertEqual(cand_2330["resonance_tier"], "LSTM")
 
-        # 2454 (Sector + XuanTie + LSTM) -> 🏆三重共振
+        # 2454 (Sector + XuanTie + LSTM) -> LSTM
         self.assertIsNotNone(cand_2454)
-        self.assertEqual(cand_2454["resonance_tier"], "🏆三重共振")
+        self.assertEqual(cand_2454["resonance_tier"], "LSTM")
 
-        # 3008 (Sector + LSTM + TimesFM) -> 不得為 🏆三重共振，因缺乏玄鐵買點或法人籌碼支撐，應為 🔮雙ML共振
+        # 3008 (Sector + LSTM + TimesFM) -> TimesFM, LSTM
         self.assertIsNotNone(cand_3008)
-        self.assertNotEqual(cand_3008["resonance_tier"], "🏆三重共振")
-        self.assertEqual(cand_3008["resonance_tier"], "🔮雙ML共振")
+        self.assertEqual(cand_3008["resonance_tier"], "TimesFM, LSTM")
 
     def test_dual_foundation_model_confluence_and_synthesis(self):
         """驗證 Google TimesFM 與 Mistral Timestral 雙大模型共振與合成目標價"""
@@ -270,12 +269,13 @@ class TestCompositeEvaluator(unittest.TestCase):
 
         report = evaluator.evaluate("台灣50", strategy_outputs, {})
 
-        # 1. 驗證 2330.TW (四重大模型共振)
+        # 1. 驗證 2330.TW (雙時序模型看多)
         cand_2330 = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
         self.assertIsNotNone(cand_2330)
-        self.assertEqual(cand_2330["resonance_tier"], "👑四重共振")
+        self.assertEqual(cand_2330["resonance_tier"], "TimesFM, Timestral")
         self.assertTrue(cand_2330["dual_model_consensus"])
-        self.assertIn("🔮雙大模型共振", cand_2330["tags"])
+        self.assertIn("TimesFM強", cand_2330["tags"])
+        self.assertIn("Timestral看多", cand_2330["tags"])
         # 合成目標價應為 0.5 * 1060 + 0.5 * 1040 = 1050.0
         self.assertEqual(cand_2330["predicted_price"], 1050.0)
         # 合成潛力應為 (1050 - 1000) / 1000 = 5.0%
@@ -287,7 +287,7 @@ class TestCompositeEvaluator(unittest.TestCase):
         cand_2317_ranked = next((c for c in report.ranked_stocks if c["ticker"] == "2317.TW"), None)
         self.assertIsNotNone(cand_2317_ranked)
         self.assertTrue(cand_2317_ranked["is_ml_bearish"])
-        self.assertIn("🔻防守", cand_2317_ranked["tags"])
+        self.assertIn("防守", cand_2317_ranked["tags"])
 
         # 3. 驗證 2454.TW (僅 Timestral，TimesFM 缺失)
         cand_2454 = next((c for c in report.ranked_stocks if c["ticker"] == "2454.TW"), None)

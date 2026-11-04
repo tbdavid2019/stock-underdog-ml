@@ -36,7 +36,7 @@ class StockPredictionItem(BaseModel):
     trust_net_5d: Optional[int] = Field(None, description="投信 5 日累計買賣超 (張)")
     foreign_net_5d: Optional[int] = Field(None, description="外資 5 日累計買賣超 (張)")
     risk_reward_ratio: Optional[float] = Field(None, description="盈虧比 (時序大模型 90%分位數上行 / 10%下行)")
-    tags: Optional[str] = Field(None, description="綜合標籤 (如 🏆雙模型共振 | 🏆三重共振 | 土洋合買)")
+    tags: Optional[str] = Field(None, description="綜合標籤 (如 TimesFM看多 | Timestral看多 | 季線支撐 | 法人合買)")
     timesfm_predicted_price: Optional[float] = Field(None, description="Google TimesFM 預測目標價")
     timesfm_potential: Optional[float] = Field(None, description="Google TimesFM 預期漲跌幅 (%)")
     timestral_predicted_price: Optional[float] = Field(None, description="Mistral Timestral 預測目標價 (P50)")

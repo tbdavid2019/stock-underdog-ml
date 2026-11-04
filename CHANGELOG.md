@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-11-04 (v2.4.70)
+
+### 6-Dimension Quant Screener, Lucide Icons, Dynamic Model Plugins & FastMCP Modernization
+- **全站極簡設計與 Lucide 圖標標準化（全面拔除 Emoji 雜訊）**：
+  - 徹底清除儀表板所有過濾器、策略選擇按鈕、徽章標籤、報告模板（Telegram、Discord、純文字與 HTML Email）、終端輸出與 FastMCP 描述中的花俏 emoji（🏆, 👑, 🔮, 💎, 🚀, 🛡️, 📈, 📉, 🎯, 🏢, ⭐, 🌟, 🤖 等）。
+  - 全面換裝為 Crisp Lucide SVG 圖標（標準 `viewBox="0 0 24 24"`、`stroke="currentColor"`、`stroke-width="2"`、`fill="none"`、`stroke-linecap="round"`、`stroke-linejoin="round"`）。
+- **嚴格中文字體排印規範 (Chinese Typography Standards)**：
+  - 嚴禁於繁複筆畫中文字體使用 `text-[10px]`、`text-[11px]` 等微型字。
+  - 所有篩選控制器、按鈕選項與區塊標題字級統一提升至至少 14px (`text-sm`)，行高採用 `leading-normal` / `leading-relaxed`，次要標籤保持 13px～14px，大幅優化行動端與桌面端長文舒適度與可讀性。
+- **儀表板自選 6 維度量化篩選器 (Dashboard Multi-Factor Quant Screener)**：
+  - 1. **交易方向 (Direction)**：`[ 多方看漲 ]` `[ 空方避險 ]` 雙態切換。
+  - 2. **AI 時序預測模型 (Models Multi-Select)**：透過 `GET /api/v1/models` 動態渲染當前啟用模型（`[ TimesFM ]` `[ Timestral ]` `[ MOIRAI-2 ]` 等），由使用者自由多選；勾選多個模型代表需全數一致同向看漲/看跌（AND 交集共識）。
+  - 3. **本益比估值 PE (Valuation)**：`[ 不限 ]`、`[ 低估 (PE < 15) ]`、`[ 合理 (15 ≤ PE ≤ 25) ]`、`[ 成長/高估 (PE > 25) ]`。
+  - 4. **預期潛力空間門檻 (Potential)**：`[ 不限 ]`、`[ > 3% ]`、`[ > 5% ]`、`[ > 8% ]`。
+  - 5. **核心量化因子 (Core Factors)**：自由複選 `[ 高盈虧比 / 風報比優 ]`、`[ 季線 MA60 支撐 ]`、`[ 三大法人合買 (外資/投信5日同步買超) ]`。
+  - 6. **即時篩選反饋與重設**：即時顯示已套用條件標籤、動態計數 `共篩選出 X 檔標的`、一鍵 `[ ↺ 重設條件 ]` 清空篩選。
+- **徹底廢除假大空數字分類，實現真正動態實體參數化架構**：
+  - 拔除所有「3模型一致看多」、「2模型看多」、「雙模型共振」、「多維共振」等數字合成假分類。
+  - 在 `ModelPlugin` 協議定義 `generate_tags(self, potential, risk_reward)`：動態產生如 `TimesFM看多`、`TimesFM強`、`Timestral看空` 等客觀事實標籤。
+  - 報告（Telegram、Discord、Email）一律使用 `get_candidate_model_potentials` 與 `get_candidate_bullish_models` 動態組裝「看多模型：TimesFM, Timestral, MOIRAI-2」，零字串硬編碼。
+  - 前端標籤解析器改為通用後綴規則（`tag.endsWith('看多')`、`tag.endsWith('看空')`、`tag.endsWith('強')`），無須寫死特定模型名稱即可自動套用樣式。
+- **API 與 DuckDB 多因子即時篩選擴充**：
+  - `data/duckdb_manager.py` 新增 `screen_candidates(...)`：支援高效能 SQL 結合動態模型欄位與因子條件。
+  - 新增 REST 端點：`GET /api/v1/predictions/screen`。
+  - 新增 REST 端點：`GET /api/v1/models`：回傳 `ModelPluginRegistry.list_active_plugins()`。
+- **FastMCP 與 WebMCP 現代化**：
+  - MCP Server 工具擴充至 27 項，新增 4 大實用工具：`screen_quant_stocks`、`get_industry_chain`、`get_discovery_signals`、`get_model_performance_scorecard`。
+  - 同步更新 WebMCP manifest (`/.well-known/mcp.json`, `/mcp.json`, `/mcp`) 與 Cloudflare WebMCP Bridge (`/.webmcp/bridge.js`)。
+  - 更新 `llms.txt` 零 emoji 與動態架構說明。
+- **新增單元測試**：
+  - `test/test_quant_screener_api.py`：驗證多因子篩選 API 與模型列表端點。
+  - `test/test_mcp_tools.py`：驗證新增之 4 大 FastMCP 工具。
+
+---
+
 ## 2026-11-04 (v2.4.69)
 
 ### Elephant & Goldfish Hot-Pluggable Architecture for Time Series Models and Dynamic Covariates

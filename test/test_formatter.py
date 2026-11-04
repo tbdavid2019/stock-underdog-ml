@@ -130,19 +130,19 @@ class TestFormatter(unittest.TestCase):
             ai_summary=self.report_dict["ai_summary"]
         )
 
-        self.assertIn("<b>📊 多維量化投資日報｜台灣50</b>", msg)
+        self.assertIn("<b>多維量化投資日報｜台灣50</b>", msg)
         self.assertIn("<b>全面多頭 (Bullish)</b>", msg)
         self.assertIn("<b>【盤勢重點解讀】</b>", msg)
         self.assertIn("<blockquote>今日盤勢處於全面多頭", msg)
 
         # 優先推薦區塊
-        self.assertIn("<b>🎯【今日精選明牌 (優先推薦)】</b>", msg)
+        self.assertIn("<b>【多因子優選清單】</b>", msg)
 
         # 驗證個股卡片內容與網站連結
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("<code>1,005.00</code>", msg)
         self.assertIn("LSTM <b>+5.2%</b>", msg)
-        self.assertIn("TFM <b>+4.1%</b> (2.5x)", msg)
+        self.assertIn("TimesFM <b>+4.1%</b> (2.5x)", msg)
         self.assertIn("土洋合買", msg)
         self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", msg)
         self.assertIn("詳情↗", msg)
@@ -163,8 +163,7 @@ class TestFormatter(unittest.TestCase):
         )
 
         self.assertIn("**多維量化投資日報**", msg)
-        self.assertIn("**【四重共振】**", msg)
-        self.assertIn("**【三重共振】**", msg)
+        self.assertIn("**【多因子優選清單】**", msg)
         self.assertIn("**【波段操作 (季線支撐)】**", msg)
         self.assertIn("• **2330.TW 台積電** `1,005.00`", msg)
         self.assertIn("**【盤勢重點解讀】**", msg)
@@ -184,7 +183,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("盤勢重點解讀:\n今日盤勢處於全面多頭", msg)
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", msg)
-        self.assertIn("[👑四重共振]", msg)
+        self.assertIn("【多因子優選清單】", msg)
         self.assertIn("波段操作 (季線支撐)", msg)
         self.assertIn("進入 888 StockQuant 操盤看板: https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350", msg)
 
@@ -236,10 +235,10 @@ class TestFormatter(unittest.TestCase):
         # 驗證個股超連結
         self.assertIn('href="https://stockdata.david888.com/?tab=history&ticker=2330.TW"', html_msg)
         self.assertIn("2330.TW 台積電 ↗", html_msg)
-        self.assertIn("👑四重共振", html_msg)
+        self.assertIn("【多因子優選清單】", html_msg)
 
         # 驗證模型預測區塊
-        self.assertIn("Google TimesFM:", html_msg)
+        self.assertIn("TimesFM:", html_msg)
         self.assertIn("+4.1%", html_msg)
         self.assertIn("LSTM:", html_msg)
         self.assertIn("+5.2%", html_msg)
@@ -295,9 +294,9 @@ class TestFormatter(unittest.TestCase):
 
         # 驗證三大模型卡片
         self.assertIn("聯發科", html_msg)
-        self.assertIn("Google TimesFM:", html_msg)
-        self.assertIn("Mistral Timestral:", html_msg)
-        self.assertIn("Salesforce MOIRAI-2:", html_msg)
+        self.assertIn("TimesFM:", html_msg)
+        self.assertIn("Timestral:", html_msg)
+        self.assertIn("MOIRAI-2:", html_msg)
         self.assertIn("[1220~1330]", html_msg)
 
         # 驗證空方避險警示
@@ -315,7 +314,7 @@ class TestFormatter(unittest.TestCase):
             "macro_state": self.macro
         }
         msg = format_telegram_message("台灣50", empty_results, "2026-10-08 09:00:00")
-        self.assertIn("本期無符合多維正向共振條件之標的", msg)
+        self.assertIn("本期無符合多因子正向條件之標的", msg)
 
     def test_telegram_html_escaping(self):
         """驗證動態文字與 AI Summary 中的 HTML 保留字元 (<, >, &) 會被自動轉義，避免 Telegram 解析失敗"""
@@ -424,15 +423,15 @@ class TestFormatter(unittest.TestCase):
         
         # Telegram checks
         self.assertIn("Timestral <b>+4.8%</b>", res["telegram"])
-        self.assertIn("TFM <b>+4.1%</b>", res["telegram"])
+        self.assertIn("TimesFM <b>+4.1%</b>", res["telegram"])
         self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", res["telegram"])
         
         # Discord checks
-        self.assertIn("Timestral-209M", res["discord"])
+        self.assertIn("Timestral", res["discord"])
         self.assertIn("Timestral **+4.8%**", res["discord"])
         
         # Email checks
-        self.assertIn("Timestral-209M", res["email"])
+        self.assertIn("Timestral", res["email"])
         self.assertIn("Timestral: +4.8%", res["email"])
 
     def test_formatter_timesfm_t_plus_1_target_flow(self):
@@ -456,7 +455,7 @@ class TestFormatter(unittest.TestCase):
         }
         res = format_dual_strategy_message("台灣50", results, "2026-10-21 17:00:00", name_map=self.name_map)
         # Telegram: when no overlap candidates, shows defensive notice & dashboard link
-        self.assertIn("本期無符合多維正向共振條件之標的", res["telegram"])
+        self.assertIn("本期無符合多因子正向條件之標的", res["telegram"])
         self.assertIn("https://stockdata.david888.com/?index=%E5%8F%B0%E7%81%A350", res["telegram"])
 
         # Discord
@@ -464,7 +463,7 @@ class TestFormatter(unittest.TestCase):
         self.assertIn("區間 `990.0~1035.0`", res["discord"])
 
         # Email
-        self.assertIn("(1,000.0 → 1,025.0)", res["email"])
+        self.assertIn("1,000.0 → 1,025.0", res["email"])
         self.assertIn("盈虧比: 3.00x", res["email"])
 
     def test_formatter_dual_model_bullish_tier_formatting(self):
@@ -498,9 +497,8 @@ class TestFormatter(unittest.TestCase):
             "macro_state": self.macro
         }
         res = format_dual_strategy_message("台灣50", results, "2026-10-22 10:00:00", name_map=self.name_map)
-        self.assertIn("[雙模型看漲]", res["telegram"])
-        self.assertIn("[雙AI看漲]", res["telegram"])
-        self.assertIn("【雙模型看漲】", res["discord"])
+        self.assertIn("[TimesFM, Timestral]", res["telegram"])
+        self.assertIn("【多因子優選清單】", res["discord"])
 
 
 

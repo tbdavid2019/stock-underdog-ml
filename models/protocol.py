@@ -95,12 +95,25 @@ class ModelPlugin(Protocol):
         """
         ...
 
+    def generate_tags(self, potential: float, risk_reward: Optional[float] = None) -> List[str]:
+        """
+        [生命週期勾子 5: 模型實體標籤生成]
+        純粹基於模型實體名稱動態生成量化標籤（零硬編碼）：
+        - potential > 0: f"{display_name}看多"
+        - potential < 0: f"{display_name}看空"
+        - potential >= 5.0: f"{display_name}強"
+        """
+        ...
+
 
 class BaseModelPlugin:
     """
     可選的基礎插件骨架類別，提供預設屬性與標準勾子模板。
     """
     model_id: str = "base-model"
+    plugin_id: str = "base-model"
+    name: str = "base-model"
+    tag_name: str = "BaseModel"
     display_name: str = "Base Time-Series Model"
     version: str = "1.0.0"
     author: str = "Unknown"
@@ -112,6 +125,8 @@ class BaseModelPlugin:
     def __init__(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
+        if not getattr(self, "name", None):
+            self.name = getattr(self, "plugin_id", self.model_id)
         if not hasattr(self, "supported_markets") or self.supported_markets is None:
             self.supported_markets = ["tw", "us", "jp"]
         if not hasattr(self, "required_covariates") or self.required_covariates is None:
@@ -139,6 +154,20 @@ class BaseModelPlugin:
 
     def teardown(self) -> None:
         pass
+
+    def generate_tags(self, potential: float, risk_reward: Optional[float] = None) -> List[str]:
+        """純粹基於模型實體名稱動態生成量化標籤（零硬編碼）"""
+        tags = []
+        name = getattr(self, "tag_name", None) or getattr(self, "display_name", "Model")
+        if "(" in name:
+            name = name.split("(")[0].strip()
+        if potential > 0:
+            tags.append(f"{name}看多")
+            if potential >= 5.0:
+                tags.append(f"{name}強")
+        elif potential < 0:
+            tags.append(f"{name}看空")
+        return tags
 
 
 class ModelPluginRegistry:
@@ -182,7 +211,7 @@ class ModelPluginRegistry:
                                  "supported_markets", "default_role", "supports_covariates", "required_covariates"):
                         if not hasattr(plugin_or_cls, attr):
                             missing.append(attr)
-                    for meth in ("initialize", "health_check", "predict_batch", "teardown"):
+                    for meth in ("initialize", "health_check", "predict_batch", "teardown", "generate_tags"):
                         if not hasattr(plugin_or_cls, meth) or not callable(getattr(plugin_or_cls, meth)):
                             missing.append(meth)
                     raise TypeError(f"Object {plugin_or_cls} does not conform to ModelPlugin protocol. Missing: {missing}")
@@ -238,14 +267,23 @@ class ModelPluginRegistry:
                     return None
             return None
 
+    def _ensure_default_plugins(self) -> None:
+        if not self._plugins and not self._classes:
+            try:
+                import models.plugins  # noqa: F401
+            except Exception:
+                pass
+
     def list_models(self) -> List[str]:
         """列出所有已註冊之 model_id 清單"""
+        self._ensure_default_plugins()
         with self._lock:
             all_ids = set(self._plugins.keys()).union(self._classes.keys())
             return sorted(all_ids)
 
     def get_all(self) -> Dict[str, ModelPlugin]:
         """取得所有已註冊的模型插件實例字典 (線程安全原子快照)"""
+        self._ensure_default_plugins()
         with self._lock:
             result = {}
             for mid in self.list_models():
@@ -253,6 +291,17 @@ class ModelPluginRegistry:
                 if p is not None:
                     result[mid] = p
             return result
+
+    def list_active_plugins(self) -> List[ModelPlugin]:
+        """列出所有已啟用之模型插件實例清單 (線程安全原子快照)"""
+        self._ensure_default_plugins()
+        with self._lock:
+            active = []
+            for mid in self.list_models():
+                p = self.get(mid)
+                if p is not None and getattr(p, "default_role", "active") == "active":
+                    active.append(p)
+            return active
 
     def clear(self) -> None:
         """清空註冊表並釋放所有外掛資源"""

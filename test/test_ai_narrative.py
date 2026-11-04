@@ -76,8 +76,8 @@ class TestAINarrativeEngine(unittest.TestCase):
         # 2. 驗證純程式規則模板是否包含雙 ML 預期
         template = engine._generate_template_narrative("台灣50", macro, sample_report)
         self.assertIn("2330.TW", template)
-        self.assertIn("TimesFM +5.80% / LSTM +4.50%", template)
-        self.assertIn("👑四重共振", template)
+        self.assertIn("LSTM +4.50% / TimesFM +5.80%", template)
+        self.assertIn("時序模型同步看多", template)
 
     def test_timestral_in_prompt_and_narrative(self):
         engine = AINarrativeEngine()
@@ -115,7 +115,7 @@ class TestAINarrativeEngine(unittest.TestCase):
         template = engine._generate_template_narrative("台灣50", macro, sample_report)
         self.assertIn("2330.TW", template)
         self.assertIn("TimesFM +5.80% / Timestral +6.20%", template)
-        self.assertIn("🏆雙模型共振", template)
+        self.assertIn("時序模型同步看多", template)
 
 
 if __name__ == "__main__":

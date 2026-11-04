@@ -14,6 +14,7 @@ import pandas as pd
 
 from core.config import config
 from data.macro import MacroState
+from evaluators.formatter import get_candidate_model_potentials, get_report_model_sections
 
 logger = logging.getLogger("stock_app.evaluators.ai_narrative")
 
@@ -138,7 +139,7 @@ class AINarrativeEngine:
         is_tw = (getattr(macro_state, "market", "") == "TW") or index_name.strip() in ("台灣50", "台灣中型100", "TW0050", "TW0051", "0050", "0051", "台股活躍精選", "台股1000", "TW1000") or any(k in index_name for k in ("台股", "台灣")) or index_name.endswith(".TW")
         
         if is_jp:
-            market_type = "🇯🇵 日本股市 (TSE / Nikkei 225)"
+            market_type = "日本股市 (TSE / Nikkei 225)"
             if macro_state:
                 n225_flag = getattr(macro_state, "twii_above_ma60", None)
                 sox_flag = getattr(macro_state, "sox_above_ma60", None)
@@ -154,7 +155,7 @@ class AINarrativeEngine:
             else:
                 macro_info = "日股大盤數據缺失"
         elif is_tw:
-            market_type = "🇹🇼 台灣股市 (TWSE/TPEX)"
+            market_type = "台灣股市 (TWSE/TPEX)"
             if macro_state:
                 twii_flag = getattr(macro_state, "twii_above_ma60", None)
                 sox_flag = getattr(macro_state, "sox_above_ma60", None)
@@ -170,7 +171,7 @@ class AINarrativeEngine:
             else:
                 macro_info = "台股大盤數據缺失"
         else:
-            market_type = "🇺🇸 美國股市 (US Markets)"
+            market_type = "美國股市 (US Markets)"
             if macro_state:
                 spy_flag = getattr(macro_state, "spy_above_ma60", None)
                 sox_flag = getattr(macro_state, "sox_above_ma60", None)
@@ -199,23 +200,17 @@ class AINarrativeEngine:
         for r in overlap_list[:3]:
             ticker = r.get("ticker", "")
             pot_parts = []
-            if r.get("timesfm_potential") is not None and pd.notna(r.get("timesfm_potential")):
-                rr_val = r.get("risk_reward_ratio")
+            for mp in get_candidate_model_potentials(r):
+                m_name = mp["name"]
+                m_pot = mp["potential"]
+                rr_val = mp.get("risk_reward_ratio")
                 rr_str = f"(盈虧比{rr_val:.2f}x)" if rr_val else ""
-                pot_parts.append(f"TimesFM {r['timesfm_potential']:+.2f}%{rr_str}")
-            if r.get("timestral_potential") is not None and pd.notna(r.get("timestral_potential")):
-                p10 = r.get("timestral_p10")
-                p90 = r.get("timestral_p90")
+                p10 = mp.get("p10")
+                p90 = mp.get("p90")
                 range_str = f"[{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-                pot_parts.append(f"Timestral {r['timestral_potential']:+.2f}%{range_str}")
-            if r.get("moirai_potential") is not None and pd.notna(r.get("moirai_potential")):
-                mp10 = r.get("moirai_p10")
-                mp90 = r.get("moirai_p90")
-                m_range_str = f"[{mp10:.1f}~{mp90:.1f}]" if mp10 is not None and mp90 is not None and pd.notna(mp10) and pd.notna(mp90) else ""
-                pot_parts.append(f"MOIRAI-2 {r['moirai_potential']:+.2f}%{m_range_str}")
-            elif r.get("lstm_potential") is not None and pd.notna(r.get("lstm_potential")):
-                pot_parts.append(f"LSTM(Legacy) {r['lstm_potential']:+.2f}%")
-            pot_str = " / ".join(pot_parts) if pot_parts else f"合成預測潛力 {r.get('potential', 0.0):+.2f}%"
+                pot_parts.append(f"{m_name} {m_pot:+.2f}%{range_str}{rr_str}")
+
+            pot_str = " / ".join(pot_parts) if pot_parts else f"預測潛力 {r.get('potential', 0.0):+.2f}%"
             raw_tags = r.get("tags", [])
             tags = ",".join(raw_tags) if isinstance(raw_tags, list) else str(raw_tags)
             pe = r.get("pe", "N/A")
@@ -225,47 +220,24 @@ class AINarrativeEngine:
 
         xuantie_raw = report_data.get("xuantie_results")
         xuantie_hits = len(xuantie_raw) if xuantie_raw is not None else 0
-        timestral_raw = report_data.get("timestral_results")
-        timestral_predictions = len(timestral_raw) if timestral_raw is not None else 0
-        timesfm_raw = report_data.get("timesfm_results")
-        timesfm_predictions = len(timesfm_raw) if timesfm_raw is not None else 0
-        moirai_raw = report_data.get("moirai_results")
-        moirai_predictions = len(moirai_raw) if moirai_raw is not None else 0
 
-        fm_top_str = ""
+        # 動態抓取各時序模型預測統計與 Top 2
+        model_sections = get_report_model_sections(report_data)
+        model_stat_lines = []
         top_parts = []
-        if timesfm_raw and isinstance(timesfm_raw, list):
-            top_tfm = []
-            for t_res in timesfm_raw[:2]:
-                rr_v = t_res.get("risk_reward_ratio")
-                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
-                top_tfm.append(f"{t_res.get('ticker')}: 隔日漲幅 {t_res.get('potential', 0.0):+.2f}%{rr_info}")
-            if top_tfm:
-                top_parts.append("TimesFM隔日看漲: " + "; ".join(top_tfm))
+        for m_name, m_list in model_sections:
+            model_stat_lines.append(f"- {m_name} 預測完成: {len(m_list)} 支")
+            if m_list:
+                top_m = []
+                for item in m_list[:2]:
+                    rr_v = item.get("risk_reward_ratio")
+                    rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
+                    top_m.append(f"{item.get('ticker')}: 隔日漲幅 {item.get('potential', 0.0):+.2f}%{rr_info}")
+                if top_m:
+                    top_parts.append(f"{m_name}隔日看漲: " + "; ".join(top_m))
 
-        if timestral_raw and isinstance(timestral_raw, list):
-            top_tml = []
-            for m_res in timestral_raw[:2]:
-                rr_v = m_res.get("risk_reward_ratio")
-                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
-                top_tml.append(f"{m_res.get('ticker')}: 隔日漲幅 {m_res.get('potential', 0.0):+.2f}%{rr_info}")
-            if top_tml:
-                top_parts.append("Timestral隔日看漲: " + "; ".join(top_tml))
-
-        if moirai_raw and isinstance(moirai_raw, list):
-            top_moi = []
-            for mr_res in moirai_raw[:2]:
-                rr_v = mr_res.get("risk_reward_ratio")
-                rr_info = f", 盈虧比 {rr_v:.2f}x" if rr_v else ""
-                p10 = mr_res.get("p10") if mr_res.get("p10") is not None else mr_res.get("moirai_p10")
-                p90 = mr_res.get("p90") if mr_res.get("p90") is not None else mr_res.get("moirai_p90")
-                range_str = f" [{p10:.1f}~{p90:.1f}]" if p10 is not None and p90 is not None and pd.notna(p10) and pd.notna(p90) else ""
-                top_moi.append(f"{mr_res.get('ticker')}: 隔日漲幅 {mr_res.get('potential', 0.0):+.2f}%{range_str}{rr_info}")
-            if top_moi:
-                top_parts.append("MOIRAI-2隔日看漲: " + "; ".join(top_moi))
-
-        if top_parts:
-            fm_top_str = "\n- 時序大模型隔日看漲焦點: " + " | ".join(top_parts)
+        model_stat_str = "\n".join(model_stat_lines) if model_stat_lines else "- 時序模型預測完成: 0 支"
+        fm_top_str = ("\n- 時序模型隔日看漲焦點: " + " | ".join(top_parts)) if top_parts else ""
 
         prompt = f"""
 目標市場: {market_type} - {index_name}
@@ -274,14 +246,12 @@ class AINarrativeEngine:
 
 【量化數據概況】
 - 技術買點 (季線支撐符合): {xuantie_hits} 支
-- TimesFM 預測完成: {timesfm_predictions} 支
-- Timestral 預測完成: {timestral_predictions} 支
-- MOIRAI-2 預測完成: {moirai_predictions} 支{fm_top_str}
-- ⭐ 綜合優選 / 多模型看漲 重點推薦標的:
-{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無多模型共振股票，建議維持防禦觀望'}
+{model_stat_str}{fm_top_str}
+- 【多因子優選清單】重點推薦標的:
+{chr(10).join(['  • ' + s for s in overlap_summary]) if overlap_summary else '  • 本期無多模型一致標的，建議維持防禦觀望'}
 
 請針對以上數據，以專業、精準、客觀的視角撰寫操盤總評（100~150字）。
-【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「綜合優選」、「多模型看漲」或「高盈虧比」個股，請特別提示其時序大模型隔日看漲共識與風險收益比優勢。
+【語意要求】：若為台股指數請以台股大盤與籌碼為主視角，美股連動為輔；若為美股指數請以美股總體經濟與S&P500/VIX為主視角。若出現「多因子優選」或「高盈虧比」個股，請特別提示其時序大模型隔日看漲共識與風險收益比優勢。
 """
         return prompt.strip()
 
@@ -314,25 +284,17 @@ class AINarrativeEngine:
         if overlap_list:
             top_stock = overlap_list[0].get("ticker", "")
             pot_parts = []
-            if overlap_list[0].get("timesfm_potential") is not None and pd.notna(overlap_list[0].get("timesfm_potential")):
-                pot_parts.append(f"TimesFM {overlap_list[0]['timesfm_potential']:+.2f}%")
-            if overlap_list[0].get("timestral_potential") is not None and pd.notna(overlap_list[0].get("timestral_potential")):
-                pot_parts.append(f"Timestral {overlap_list[0]['timestral_potential']:+.2f}%")
-            if overlap_list[0].get("moirai_potential") is not None and pd.notna(overlap_list[0].get("moirai_potential")):
-                pot_parts.append(f"MOIRAI-2 {overlap_list[0]['moirai_potential']:+.2f}%")
-            elif overlap_list[0].get("lstm_potential") is not None and pd.notna(overlap_list[0].get("lstm_potential")):
-                pot_parts.append(f"LSTM {overlap_list[0]['lstm_potential']:+.2f}%")
+            for mp in get_candidate_model_potentials(overlap_list[0]):
+                pot_parts.append(f"{mp['name']} {mp['potential']:+.2f}%")
             top_pot = " / ".join(pot_parts) if pot_parts else f"預期潛力 {overlap_list[0].get('potential', 0.0):+.2f}%"
 
-            raw_tags = overlap_list[0].get("tags", [])
-            tags_str = "、".join(raw_tags[:4]) if isinstance(raw_tags, list) else str(raw_tags)
             return (
                 f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，整體建議曝險為 {exposure_str}。"
                 f"今日 {index_name} 優先聚焦 {top_stock}（{top_pot}），"
-                f"符合 {tags_str or '多維共振'} 等條件，建議順應大盤水位分批佈局。"
+                f"時序模型同步看多，具備高盈虧比與均線支撐，建議順應大盤水位分批佈局。"
             )
         else:
             return (
                 f"【量化操盤觀點】當前{market_label}處於「{regime_str}」，建議曝險比例維持 {exposure_str}。"
-                f"今日 {index_name} 無多策略共振之重點交集標的，短線操作宜保持耐心，控制倉位。"
+                f"今日 {index_name} 無多模型一致之候選標的，短線操作宜保持耐心，控制倉位。"
             )

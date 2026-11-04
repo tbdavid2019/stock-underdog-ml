@@ -198,7 +198,7 @@
                 <!-- AI Importance Filter Pills -->
                 <div class="flex items-center space-x-1 p-0.5 rounded-xl border"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
-                    <button v-for="imp in [{ id: 'ALL', label: '全部' }, { id: 'heavyweight', label: '⭐ 重磅' }, { id: 'important', label: '⚡ 重要' }]" :key="imp.id"
+                    <button v-for="imp in [{ id: 'ALL', label: '全部' }, { id: 'heavyweight', label: '重磅焦點' }, { id: 'important', label: '重要追蹤' }]" :key="imp.id"
                             @click="setPodcastImportance(imp.id)"
                             class="px-2.5 py-1.5 rounded-lg font-bold transition-all text-xs sm:text-sm"
                             :class="podcastSelectedImportance === imp.id ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">

@@ -175,7 +175,7 @@ class TestTypographyAndRWD(unittest.TestCase):
 
         self.assertIn("天中猜對", history_html)
         self.assertIn("天同場比準度", history_html)
-        self.assertIn("🏆 該股表現較佳", history_html)
+        self.assertIn("該股表現較佳", history_html)
         self.assertIn("lowHitWarning", history_html)
 
     def test_model_scorecard_js_logic_floor_and_h2h(self):
@@ -252,7 +252,7 @@ class TestTypographyAndRWD(unittest.TestCase):
         self.assertTrue(res2["timesfm"]["lowHitWarning"])
         self.assertEqual(res2["timestral"]["hitCount"], 2)
         self.assertEqual(res2["timestral"]["count"], 3)
-        self.assertIn("🏆 該股表現較佳：Timestral", res2["overallWinner"])
+        self.assertIn("該股表現較佳：Timestral", res2["overallWinner"])
 
         # Scenario 3 assertions: ties and headToHeadCount
         res3 = data["res3"]

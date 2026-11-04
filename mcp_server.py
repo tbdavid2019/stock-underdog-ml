@@ -21,7 +21,7 @@ from data.macro import MacroRegimeAnalyzer
 # Initialize FastMCP Server with name and instructions
 mcp = FastMCP(
     "stock-quant-engine",
-    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)"
+    instructions="888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、多維量化篩選、產業鏈圖譜、Polymarket 預測市場)"
 )
 
 # Global DuckDB Manager & Rate Limiting state
@@ -59,7 +59,7 @@ def get_market_macro_regime(
 
 @mcp.tool(
     name="get_triple_resonance_stocks",
-    description="查詢多策略交集與 👑 雙時序大模型共振 (Google TimesFM × Mistral Timestral ∩ 技術面玄鐵回調 ∩ 投信/外資主力連續買超鎖碼) 之最高信心標的。目標價由雙大模型加權合成。"
+    description="查詢多策略交集與雙時序大模型共振 (Google TimesFM × Mistral Timestral ∩ 技術面玄鐵回調 ∩ 投信/外資主力連續買超鎖碼) 之標的。目標價由雙大模型加權合成。"
 )
 def get_triple_resonance_stocks(
     index_name: Optional[str] = None,
@@ -655,6 +655,118 @@ def get_company_tenders(
     if not res:
         return {"success": False, "ticker": ticker, "data": None, "message": "無法取得該標的之政府標案情報"}
     return {"success": True, "ticker": ticker, "data": res}
+
+
+@mcp.tool(
+    name="screen_quant_stocks",
+    description="多維量化自訂篩選器。支援交易方向（bullish 多方 / bearish 空方）、AI 時序模型多選（timesfm, timestral, moirai 等，所有選中模型皆須同方向共識）、本益比估值區間（low <15, reasonable 15-25, growth >25）、預期潛力空間門檻（如 3.0, 5.0, 8.0）與核心量化因子（高盈虧比、季線支撐、法人合買）。"
+)
+def screen_quant_stocks(
+    direction: str = "bullish",
+    models: Optional[str] = None,
+    pe_range: Optional[str] = None,
+    min_potential: Optional[float] = None,
+    risk_reward: bool = False,
+    ma60: bool = False,
+    institutional: bool = False,
+    index_name: Optional[str] = None,
+    limit: int = 50
+) -> Dict[str, Any]:
+    """
+    Multi-Factor Quant Screener.
+    """
+    model_list = [m.strip() for m in models.split(",") if m.strip()] if models else None
+    records = db.screen_candidates(
+        direction=direction,
+        models=model_list,
+        pe_range=pe_range,
+        min_potential=min_potential,
+        risk_reward=risk_reward,
+        ma60=ma60,
+        institutional=institutional,
+        index_name=index_name,
+        limit=limit
+    )
+    return {
+        "success": True,
+        "count": len(records),
+        "direction": direction,
+        "data": records
+    }
+
+
+@mcp.tool(
+    name="get_industry_chain",
+    description="查詢跨市場 AI 產業價值鏈與實體拓撲關係圖譜（上游 ➔ 中游 ➔ 下游）。支援主題（ALL, HBM_STORAGE, CPO_OPTICAL, POWER_COOLING, ADV_PACKAGING, AI_CHIPS, SERVER_ODM, ROBOTICS）並動態注入 DuckDB 最新量化預測與法人籌碼。"
+)
+def get_industry_chain(
+    theme: str = "ALL",
+    relation_type: str = "ALL"
+) -> Dict[str, Any]:
+    """
+    Query Industry Value Chain & Knowledge Graph.
+    """
+    from data.industry_chain_fetcher import IndustryChainFetcher
+    fetcher = IndustryChainFetcher()
+    graph_data = fetcher.get_theme_graph(theme=theme, relation_filter=relation_type, duckdb_mgr=db)
+    return {
+        "success": True,
+        "theme": theme,
+        "data": graph_data
+    }
+
+
+@mcp.tool(
+    name="get_discovery_signals",
+    description="查詢 AI 產業前沿挖掘機 (Discovery Tech Radar) 即時訊號流與前沿候選標的，掌握 arXiv 前沿突破技術、技術瓶頸與跨市場關聯股票池。"
+)
+def get_discovery_signals(
+    ticker: Optional[str] = None,
+    theme_id: Optional[str] = None,
+    limit: int = 50
+) -> Dict[str, Any]:
+    """
+    Query Discovery Signals and Frontier Tech radar.
+    """
+    records, total_count = db.get_discovery_signals(ticker=ticker, theme_id=theme_id, limit=limit, return_total=True)
+    return {
+        "success": True,
+        "count": len(records),
+        "total_count": total_count,
+        "data": records
+    }
+
+
+@mcp.tool(
+    name="get_model_performance_scorecard",
+    description="查詢各 AI 時序預測模型（Google TimesFM、Mistral Timestral、Salesforce MOIRAI-2 等）的歷史預測回測驗證績效計分卡（包含 Directional Accuracy 勝率、MAE 平均絕對誤差、真實盈虧比、樣本數）。"
+)
+def get_model_performance_scorecard(
+    window: int = 60,
+    market: Optional[str] = None,
+    model_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Query Model Performance Scorecard based on verified historical forecasts.
+    """
+    from data.forecast_store import ForecastStore
+    from evaluators.forecast_performance import PerformanceQuery, rank_models
+    import datetime
+    store = ForecastStore(db.db_path, read_only=True)
+    query = PerformanceQuery(
+        as_of=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        window=window,
+        market=market,
+        model_name=model_name
+    )
+    rows = store.query_records(as_of=query.as_of)
+    res = rank_models(rows, query)
+    return {
+        "success": True,
+        "window_days": window,
+        "count": len(res.get("data", [])),
+        "data": res.get("data", [])
+    }
 
 
 if __name__ == "__main__":

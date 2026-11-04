@@ -40,6 +40,7 @@ except Exception:
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
 from evaluators.ai_narrative import AINarrativeEngine
 from evaluators.formatter import print_evaluation_report
+from models.protocol import model_registry
 from database import SupabaseManager
 from data.duckdb_manager import DuckDBManager
 from data.forecast_store import ForecastStore
@@ -170,22 +171,27 @@ class PipelineOrchestrator:
         strategy_outputs: Dict[str, List[StrategyResult]] = {}
 
         for strat in self.strategies:
-            strat_key = strat.name
+            strat_key = strat.name.lower()
             # Map canonical keys
             if "玄鐵" in strat.name or strat.name == "xuantie":
                 strat_key = "xuantie"
-            elif "timestral" in strat.name.lower():
-                strat_key = "timestral"
-            elif "timesfm" in strat.name.lower():
-                strat_key = "timesfm"
-            elif "moirai" in strat.name.lower():
-                strat_key = "moirai"
-            elif "lstm" in strat.name.lower():
-                strat_key = "lstm"
             elif "板塊" in strat.name or strat.name == "sector_rotation":
                 strat_key = "sector_rotation"
             elif "籌碼" in strat.name or strat.name == "institutional":
                 strat_key = "institutional"
+            else:
+                # Dynamic model matching based on registry
+                matched = False
+                for p in model_registry.list_active_plugins():
+                    p_name = getattr(p, "name", None) or getattr(p, "plugin_id", "")
+                    p_tag = getattr(p, "tag_name", "").lower()
+                    strat_lower = strat.name.lower()
+                    if (p_name and p_name.lower() in strat_lower) or (p.plugin_id and p.plugin_id.lower() in strat_lower) or (p_tag and p_tag in strat_lower):
+                        strat_key = getattr(p, "plugin_id", p_name.lower())
+                        matched = True
+                        break
+                if not matched and "lstm" in strat.name.lower():
+                    strat_key = "lstm"
 
             logger.info(f"   ▶ 正在執行策略: {strat.name} ({strat.category})...")
             results = strat.evaluate_batch(contexts)
@@ -249,10 +255,6 @@ class PipelineOrchestrator:
 
         report_dict = {
             "xuantie_results": report.xuantie_results,
-            "timestral_results": getattr(report, "timestral_results", []),
-            "timesfm_results": getattr(report, "timesfm_results", []),
-            "moirai_results": getattr(report, "moirai_results", []),
-            "lstm_results": getattr(report, "lstm_results", []),
             "overlap_results": report.overlap_results,
             "overlap_candidates": getattr(report, "overlap_candidates", []),
             "ranked_stocks": getattr(report, "ranked_stocks", []),
@@ -260,6 +262,9 @@ class PipelineOrchestrator:
             "candidates_map": candidates_map,
             "institutional_summaries": inst_summaries
         }
+        for attr in dir(report):
+            if attr.endswith("_results") and attr not in report_dict:
+                report_dict[attr] = getattr(report, attr, [])
 
         # 3.2 生成 AI 操盤解讀 (3-Tier Fallback)
         report.ai_summary = self.ai_narrative_engine.generate_narrative(
