@@ -118,6 +118,19 @@ class FundamentalProvider:
         }
 
         try:
+            from data.fetcher import StockFetcher
+            if time.time() < StockFetcher._stock_fetch_circuit_open_until:
+                # 熔斷中，優先嘗試讀取過期磁碟快取
+                stale_cached = CacheManager.get_fundamentals(ticker, max_age_hours=None)
+                if stale_cached is not None:
+                    return {
+                        "pe": sanitize_metric(stale_cached.get("pe")),
+                        "forward_pe": sanitize_metric(stale_cached.get("forward_pe")),
+                        "pb": sanitize_metric(stale_cached.get("pb")),
+                        "ev_ebitda": sanitize_metric(stale_cached.get("ev_ebitda"))
+                    }
+                return result
+
             target_yf = yf
             if target_yf is None:
                 import yfinance as target_yf
@@ -143,6 +156,19 @@ class FundamentalProvider:
                 CacheManager.set_fundamentals(ticker, result)
 
         except Exception as e:
+            err_msg = str(e).lower()
+            if "rate limited" in err_msg or "too many requests" in err_msg or "yfratelimiterror" in err_msg or "429" in err_msg:
+                from data.fetcher import StockFetcher
+                StockFetcher._stock_fetch_circuit_open_until = time.time() + 600.0
+                logger.warning(f"🚨 基本面抓取觸發 429 頻率限制，開啟熔斷 600 秒: {ticker}")
+            stale_cached = CacheManager.get_fundamentals(ticker, max_age_hours=None)
+            if stale_cached is not None:
+                return {
+                    "pe": sanitize_metric(stale_cached.get("pe")),
+                    "forward_pe": sanitize_metric(stale_cached.get("forward_pe")),
+                    "pb": sanitize_metric(stale_cached.get("pb")),
+                    "ev_ebitda": sanitize_metric(stale_cached.get("ev_ebitda"))
+                }
             logger.debug(f"獲取 {ticker} 基本面資料失敗: {e}")
 
         return result

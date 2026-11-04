@@ -34,13 +34,18 @@ class DuckDBManager:
 
     _WRITE_LOCK = threading.Lock()
     _RESOLVER_LOCK = threading.Lock()
+    _SCHEMA_INITIALIZED_PATHS = set()
+    _INIT_LOCK = threading.Lock()
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or config.db.DUCKDB_PATH
         self.enabled = config.db.ENABLE_DUCKDB
         self._ensure_storage_dir()
-        if self.enabled:
-            self._init_schema()
+        if self.enabled and self.db_path not in self._SCHEMA_INITIALIZED_PATHS:
+            with self._INIT_LOCK:
+                if self.db_path not in self._SCHEMA_INITIALIZED_PATHS:
+                    self._init_schema()
+                    self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
 
     def _ensure_storage_dir(self):
         storage_dir = os.path.dirname(self.db_path)
