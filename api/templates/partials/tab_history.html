@@ -1907,7 +1907,7 @@
                                             {{ formatTicker(row.ticker) }}
                                         </button>
                                         <span v-else class="font-bold">{{ row.model_name }}</span>
-                                        <span class="block text-[11px] mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                        <span class="block text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                             {{ performanceView === 'stocks' ? row.model_name + ' · ' : '' }}{{ row.model_revision || '版本未提供' }}
                                             <span v-if="row.role === 'shadow'"> · 研究觀察</span>
                                             <span v-if="row.status !== 'eligible'"> · 樣本累積中</span>
@@ -1919,7 +1919,7 @@
                                     <td class="py-2.5 px-3 num-font">{{ formatPerformancePercent(row.baseline_improvement) }}</td>
                                     <td class="py-2.5 px-3 num-font">
                                         {{ row.sample_count }} 筆
-                                        <span class="block text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                        <span class="block text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                             {{ row.coverage === null || row.coverage === undefined ? '覆蓋率待提供' : '覆蓋 ' + formatPerformancePercent(row.coverage) }}
                                         </span>
                                     </td>

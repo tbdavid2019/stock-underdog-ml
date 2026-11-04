@@ -17,34 +17,64 @@ class TestTypographyAndRWD(unittest.TestCase):
     def test_no_sub_12px_arbitrary_classes(self):
         """
         Verify that no arbitrary sub-12px Tailwind font classes (text-[10px], text-[11px]) exist.
-        CJK characters (繁體中文) require at least 12px to prevent stroke clumping and illegibility.
+        CJK characters (繁體中文) require at least 12px/13px to prevent stroke clumping and illegibility.
         """
-        sub_12px_matches = re.findall(r'text-\[(?:[0-9]|10|11)px\]', self.html)
+        # Check index.html and all partials
+        all_templates = list(Path("api/templates").rglob("*.html"))
+        sub_12px_found = {}
+        for tmpl in all_templates:
+            if tmpl.name == "header.html":
+                continue # Header logo micro-badge for English STOCK/QUANT
+            content = tmpl.read_text(encoding="utf-8")
+            matches = re.findall(r'text-\[(?:[0-9]|10|11)px\]', content)
+            if matches:
+                sub_12px_found[tmpl.name] = set(matches)
         self.assertEqual(
-            len(sub_12px_matches), 
+            len(sub_12px_found), 
             0, 
-            f"Found {len(sub_12px_matches)} sub-12px font classes: {set(sub_12px_matches)}. "
-            "CJK text must have a minimum floor of 12px (text-xs)."
+            f"Found sub-12px font classes in templates: {sub_12px_found}. "
+            "CJK text must have a minimum floor of 13px (text-xs) or 14px (text-sm)."
         )
 
     def test_stock_card_price_labels_readability(self):
         """
-        Verify that stock card price labels ('當前現價', '預測目標價') do not use text-[10px] or text-[11px].
-        They should be at least text-xs with font-semibold or font-bold.
+        Verify that stock card price labels ('現價', '目標價 / 均線') in tab_dashboard.html
+        do not use sub-12px classes and are at least text-xs (13px) or text-sm.
         """
-        self.assertNotIn('text-[11px]" :class="isDark ? \'text-dark-muted\' : \'text-claude-muted\'">當前現價', self.html)
-        self.assertNotIn('text-[11px]" :class="isDark ? \'text-sky-400\' : \'text-claude-terracotta\'">預測目標價', self.html)
+        dash_html = Path("api/templates/partials/tab_dashboard.html").read_text(encoding="utf-8")
+        self.assertNotIn('text-[11px]" :class="isDark ? \'text-slate-400\' : \'text-slate-500\'">現價', dash_html)
+        self.assertNotIn('text-[10px]" :class="isDark ? \'text-slate-400\' : \'text-slate-500\'">現價', dash_html)
+        self.assertIn('>現價</div>', dash_html)
+        self.assertIn('>目標價 / 均線</div>', dash_html)
 
     def test_stock_card_tags_readability(self):
         """
-        Verify that strategy tags (parseTags) do not use text-[11px].
+        Verify that strategy tags (parseTags) in tab_dashboard.html do not use sub-12px classes
+        and have a minimum readability floor of text-[13px] or text-sm.
         """
-        tag_match = re.search(r'v-for="tag in parseTags\(item\.tags\)".*?\sclass="([^"]+)"', self.html, re.DOTALL)
-        if tag_match:
-            class_str = tag_match.group(1)
+        dash_html = Path("api/templates/partials/tab_dashboard.html").read_text(encoding="utf-8")
+        tag_matches = re.findall(r'v-for="tag in parseTags\(item\.tags\)[^"]*".*?\sclass="([^"]+)"', dash_html, re.DOTALL)
+        self.assertGreaterEqual(len(tag_matches), 1, "Must find at least one parseTags badge in tab_dashboard.html")
+        for class_str in tag_matches:
             self.assertNotIn("text-[10px]", class_str)
             self.assertNotIn("text-[11px]", class_str)
-            self.assertIn("text-xs", class_str)
+            self.assertTrue("text-[13px]" in class_str or "text-sm" in class_str or "text-xs" in class_str)
+
+    def test_parse_tags_js_deduplication_and_filtering(self):
+        """
+        Verify app.js parseTags logic: deduplicates duplicate badges and discards fake consensus keywords.
+        """
+        app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
+        # 1. Deduplication with Set
+        self.assertIn("const seen = new Set();", app_js)
+        self.assertIn("if (seen.has(cleanLabel)) continue;", app_js)
+        # 2. Rejection of fake consensus terms
+        self.assertIn("if (/三模型|三大模型|雙大模型|雙ML|雙時序|雙模型|雙AI|雙維|四重共振|三重共振|多維共振|雙重共振|多模型共振|3重符合|2重符合|全共振|共振/.test(cleanLabel)) {", app_js)
+        # 3. Semantic directional classes in getTagClass
+        self.assertIn("case 'ai_bullish':", app_js)
+        self.assertIn("case 'ai_bearish':", app_js)
+        self.assertIn("case 'ai_strong':", app_js)
+        self.assertIn("case 'fundamental':", app_js)
 
     def test_heading_hierarchy_no_skipped_levels(self):
         """
@@ -260,6 +290,37 @@ class TestTypographyAndRWD(unittest.TestCase):
         self.assertEqual(res3["ties"], 1)
         self.assertEqual(res3["timesfm"]["wins"], 1)
         self.assertEqual(res3["timestral"]["wins"], 0)
+
+    def test_cjk_typography_minimum_floor_on_buttons_and_tables(self):
+        """
+        Verify that action buttons (查看時序歷史軌跡, Yahoo, Goodinfo, 股權關係網絡圖)
+        and Bloomberg quant table use text-sm (14px) instead of text-xs (12px).
+        """
+        dash_path = Path("api/templates/partials/tab_dashboard.html")
+        self.assertTrue(dash_path.exists())
+        dash_html = dash_path.read_text(encoding="utf-8")
+
+        # 1. Table base font must be text-sm
+        self.assertIn('<table class="w-full text-left text-sm border-collapse whitespace-nowrap">', dash_html)
+
+        # 2. History tracking button must be text-sm font-bold
+        history_btn_match = re.search(r'<button[^>]+class="[^"]*text-sm[^"]*font-bold[^"]*"[^>]*>.*?查看時序歷史軌跡', dash_html, re.DOTALL)
+        self.assertIsNotNone(history_btn_match, "查看時序歷史軌跡 button must be at least text-sm font-bold")
+
+        # 3. Yahoo and Goodinfo links must be text-sm font-bold
+        yahoo_match = re.search(r'<a[^>]+class="[^"]*text-sm[^"]*font-bold[^"]*"[^>]*>.*?Yahoo 奇摩股市', dash_html, re.DOTALL)
+        self.assertIsNotNone(yahoo_match, "Yahoo link must be at least text-sm font-bold")
+
+        goodinfo_match = re.search(r'<a[^>]+class="[^"]*text-sm[^"]*font-bold[^"]*"[^>]*>.*?Goodinfo 台灣股市', dash_html, re.DOTALL)
+        self.assertIsNotNone(goodinfo_match, "Goodinfo link must be at least text-sm font-bold")
+
+        # 4. Drawer subtabs must be text-sm font-bold
+        subtab_match = re.search(r'<button[^>]+class="[^"]*text-sm[^"]*font-bold[^"]*"[^>]*>.*?基本面與新聞', dash_html, re.DOTALL)
+        self.assertIsNotNone(subtab_match, "基本面與新聞 subtab must be text-sm font-bold")
+
+        # 5. No '三模型看漲' in app.js
+        app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
+        self.assertNotIn("'三模型看漲'", app_js, "app.js must not output '三模型看漲'")
 
 
 if __name__ == "__main__":

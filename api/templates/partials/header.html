@@ -77,7 +77,7 @@
 
             <!-- Language Switcher Button (繁中 / EN) -->
             <button @click="toggleLocale()"
-                    class="h-10 px-2.5 sm:px-3 rounded-full border transition-all flex items-center space-x-1 shadow-sm hover:scale-105 active:scale-95 text-xs font-bold select-none"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     :title="currentLocale === 'zh' ? '切換為 English' : '切換為繁體中文'" aria-label="切換語言">
                 <span class="material-symbols-outlined text-[18px]">language</span>

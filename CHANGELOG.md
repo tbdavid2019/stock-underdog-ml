@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-11-04 (v2.4.71)
+
+### CJK Typography Floor Elevation (14px+), Mobile RWD Touch Optimization & Pure Tag Deduplication
+- **嚴格中文字級底線全面提升 (CJK Readability Floor Elevation)**：
+  - 徹底根絕「12px / 10px / 11px」微型繁體字排版反模式，避免筆畫沾黏與眼部疲勞。
+  - 控制按鈕（「查看時序歷史軌跡」、「Yahoo 奇摩股市」、「Goodinfo 台灣股市」、「股權關係網絡圖」、「收合 / 詳情」）全面升級為至少 14px (`text-sm font-bold`)。
+  - 彭博量化表格（Bloomberg Quant Signal Table）字型基線由 `text-xs` 提升至 `text-sm`，表頭 `th` 升級為 `text-sm font-bold`。
+  - 抽屜子分頁（基本面與新聞、法說會與簡報、集團股權網絡、政府標案）統一採用 `text-sm font-bold`。
+  - Tailwind CDN 全域字級映射升級：`xs` 映射為 `['13px', { lineHeight: '18px' }]`，`sm` 映射為 `['14px', { lineHeight: '20px' }]`。
+  - 全站模板（`tab_dashboard.html`、`tab_industry_chain.html`、`tab_history.html`、`tab_discovery.html`）徹底清除所有 `text-[10px]` 與 `text-[11px]`。
+- **RWD 行動版檢視與觸控優化 (Mobile RWD & Touch Target Optimization)**：
+  - 行動版卡片檢視（Mobile Cards `< md`）按鈕觸控高度升級至至少 38px～40px（`min-h-[38px]` / `min-h-[40px]`），支援 `active:scale-95` 觸控回饋。
+  - 行動版抽屜所有外部連結與操作按鈕全面換裝 Lucide vector SVG，並確保 `max-w-full overflow-hidden` 防止行動視口橫向溢出。
+  - 確保底部固定導覽列（Mobile App Bar）具備 `safe-area-inset-bottom` 與主要內容區 `pb-24` 防遮擋邊界。
+- **純淨標籤去重與模型方向語意著色 (Tag Deduplication & Semantic Direction Styling)**：
+  - `parseTags` 導入 `Set` 去重機制，杜絕「TimesFM強」與「TimesFM看漲」同義重複徽章。
+  - `parseTags` 徹底排除 `三模型看漲`、`雙模型共識`、`多模型共振`、`全共振` 等假大空硬編碼分類。
+  - `getTagClass` 新增語意方向類別：`ai_bullish`（綠色/多方）、`ai_bearish`（紅色/空方）、`ai_strong`（琥珀金/強勢）、`fundamental`（靛藍/估值）。
+- **單元與回歸測試擴充**：
+  - `test/test_typography_rwd.py` 新增並強化 `test_cjk_typography_minimum_floor_on_buttons_and_tables`、`test_stock_card_price_labels_readability`、`test_stock_card_tags_readability` 與 `test_parse_tags_js_deduplication_and_filtering`（15 項測試全數 PASS）。
+
+---
+
 ## 2026-11-04 (v2.4.70)
 
 ### 6-Dimension Quant Screener, Lucide Icons, Dynamic Model Plugins & FastMCP Modernization

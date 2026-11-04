@@ -25,7 +25,7 @@
         <!-- Market Regime -->
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
-            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+            <div class="flex items-center justify-between text-sm font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>美股宏觀環境</span>
                 <span class="material-symbols-outlined text-[20px] text-amber-500">public</span>
             </div>
@@ -34,7 +34,7 @@
                       :class="macro.regime_name.includes('多頭') ? 'bg-emerald-500' : (macro.regime_name.includes('空頭') ? 'bg-rose-500' : 'bg-amber-500')"></span>
                 <span>{{ cleanRegimeName(macro.regime_name) }}</span>
             </div>
-            <div class="pt-2.5 border-t flex items-center justify-between text-xs"
+            <div class="pt-2.5 border-t flex items-center justify-between text-sm"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                 <span class="font-medium">建議曝險:</span>
                 <span class="text-sm sm:text-base font-black num-font text-amber-500">
@@ -46,7 +46,7 @@
         <!-- VIX Card -->
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
-            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+            <div class="flex items-center justify-between text-sm font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>VIX 恐慌指數</span>
                 <span class="material-symbols-outlined text-[20px] text-amber-500">bolt</span>
             </div>
@@ -54,7 +54,7 @@
                  :class="macro.vix === null || macro.vix === undefined ? (isDark ? 'text-slate-300' : 'text-slate-500') : (macro.vix > 20 ? 'text-amber-500' : 'text-emerald-500')">
                 {{ macro.vix !== null && macro.vix !== undefined ? Number(macro.vix).toFixed(1) : '—' }}
             </div>
-            <div class="pt-2.5 border-t text-xs flex items-center space-x-1.5"
+            <div class="pt-2.5 border-t text-sm flex items-center space-x-1.5"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                 <span class="w-2 h-2 rounded-full shrink-0" :class="macro.vix === null || macro.vix === undefined ? 'bg-slate-400' : (macro.vix > 20 ? 'bg-amber-500' : 'bg-emerald-500')"></span>
                 <span class="truncate font-medium">{{ macro.vix === null || macro.vix === undefined ? '等待總經資料' : (macro.vix < 20 ? '低恐慌 (市場情緒穩定)' : '情緒波動偏高，注意風控') }}</span>
@@ -64,11 +64,11 @@
         <!-- Benchmarks (SPY / SOX) -->
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
-            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+            <div class="flex items-center justify-between text-sm font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>標普 / 費半均線狀態</span>
                 <span class="material-symbols-outlined text-[20px] text-amber-500">monitoring</span>
             </div>
-            <div class="space-y-1.5 text-xs font-semibold my-1">
+            <div class="space-y-1.5 text-sm font-semibold my-1">
                 <div class="flex items-center justify-between">
                     <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">SPY 標普:</span>
                     <span v-if="macro.spy_above_ma60 !== null && macro.spy_above_ma60 !== undefined" :class="macro.spy_above_ma60 ? 'text-emerald-400' : 'text-rose-500'" class="flex items-center space-x-1 font-bold">
@@ -86,7 +86,7 @@
                     <span v-else class="text-slate-400">讀取中…</span>
                 </div>
             </div>
-            <div class="pt-2.5 border-t text-xs flex items-center justify-between"
+            <div class="pt-2.5 border-t text-sm flex items-center justify-between"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                 <span class="font-medium">科技股上限:</span>
                 <span class="num-font font-black text-sm text-amber-500">
@@ -98,15 +98,15 @@
         <!-- DuckDB In-Memory Engine Stats -->
         <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              class="p-4 sm:p-5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all hover:border-amber-500/40">
-            <div class="flex items-center justify-between text-xs font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+            <div class="flex items-center justify-between text-sm font-bold tracking-wide" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                 <span>歷史報告資料</span>
                 <span class="material-symbols-outlined text-[20px] text-amber-500">database</span>
             </div>
             <div class="text-2xl sm:text-3xl font-black num-font my-1 flex items-baseline text-amber-500">
                 {{ stats.total_records !== null && stats.total_records !== undefined ? Number(stats.total_records).toLocaleString() : '—' }}
-                <span class="text-xs font-bold ml-1.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">筆</span>
+                <span class="text-sm font-bold ml-1.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">筆</span>
             </div>
-            <div class="pt-2.5 border-t flex items-center justify-between text-xs"
+            <div class="pt-2.5 border-t flex items-center justify-between text-sm"
                  :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                 <span class="font-medium">標的檔數:</span>
                 <span class="font-bold num-font">{{ stats.distinct_tickers !== null && stats.distinct_tickers !== undefined ? stats.distinct_tickers : '—' }} 檔</span>
@@ -129,12 +129,12 @@
                         <h2 class="text-base sm:text-lg font-black tracking-tight" :class="isDark ? 'text-white' : 'text-slate-900'">
                             總經流動性與重磅行事曆
                         </h2>
-                        <span class="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                        <span class="text-sm px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
                               :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-800 border border-amber-200'">
                             Investing.com via 2MD
                         </span>
                     </div>
-                    <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                    <p class="text-sm mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                         CME FedWatch 聯準會利率預期 · 美股財報行事曆 · 原油/黃金/期銅 · 總經催化劑
                     </p>
                 </div>
@@ -143,14 +143,14 @@
             <!-- Action Buttons -->
             <div class="flex items-center space-x-2 self-end sm:self-auto">
                 <button @click="refreshMacro()" :disabled="macroRefreshing"
-                        class="px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                        class="px-3.5 py-2 rounded-xl border text-sm font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6] shadow-sm'"
                         title="強制刷新 Investing.com 宏觀數據">
                     <span class="material-symbols-outlined text-[16px]" :class="{'animate-spin': macroRefreshing}">sync</span>
                     <span class="hidden sm:inline">{{ macroRefreshing ? '更新中...' : '即時更新' }}</span>
                 </button>
                 <button @click="toggleMacroDetails()"
-                        class="px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center space-x-1"
+                        class="px-3.5 py-2 rounded-xl border text-sm font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
                         :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'">
                     <span>{{ showMacroDetails ? '收合日曆' : '展開完整行事曆' }}</span>
                     <span class="material-symbols-outlined text-[16px]">{{ showMacroDetails ? 'expand_less' : 'expand_more' }}</span>
@@ -161,9 +161,9 @@
         <!-- Catalyst Alerts Pills -->
         <div v-if="macro.catalyst_alerts && macro.catalyst_alerts.length" class="flex flex-wrap gap-2 pt-1">
             <div v-for="(alert, idx) in macro.catalyst_alerts" :key="idx"
-                 class="text-xs sm:text-sm px-3 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
+                 class="text-sm px-3.5 py-1.5 rounded-xl font-medium border flex items-center space-x-1.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-900'">
-                <span class="material-symbols-outlined text-[15px] text-amber-400">campaign</span>
+                <span class="material-symbols-outlined text-[16px] text-amber-400">campaign</span>
                 <span>{{ stripEmojis(alert) }}</span>
             </div>
         </div>
@@ -177,24 +177,24 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span class="material-symbols-outlined text-[20px] text-amber-500">crisis_alert</span>
-                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">FedWatch 降息監控</span>
+                        <span class="text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">FedWatch 降息監控</span>
                     </div>
-                    <span v-if="macro.fed_rate && macro.fed_rate.meeting_date" class="text-xs font-bold num-font text-amber-500">
+                    <span v-if="macro.fed_rate && macro.fed_rate.meeting_date" class="text-sm font-bold num-font text-amber-500">
                         {{ macro.fed_rate.meeting_date }}
                     </span>
                 </div>
 
                 <div v-if="macro.fed_rate" class="space-y-2">
-                    <div class="p-2.5 rounded-xl border text-xs transition-all shadow-xs"
+                    <div class="p-3 rounded-xl border text-sm transition-all shadow-xs"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-emerald-50/70 border-emerald-200/90'">
-                        <div class="font-bold mb-1 leading-relaxed text-xs sm:text-sm"
+                        <div class="font-bold mb-1 leading-relaxed text-sm sm:text-base"
                              :class="isDark ? 'text-emerald-300' : 'text-emerald-950'">
                             {{ macro.fed_rate.summary || 'FOMC 利率預期' }}
                         </div>
-                        <div v-if="macro.fed_rate.countdown" class="text-xs flex items-center space-x-1"
+                        <div v-if="macro.fed_rate.countdown" class="text-sm flex items-center space-x-1"
                              :class="isDark ? 'text-slate-400' : 'text-emerald-900/80'">
                             <span>會議倒數:</span>
-                            <span class="font-bold font-mono px-1.5 py-0.2 rounded"
+                            <span class="font-bold font-mono px-1.5 py-0.5 rounded text-xs"
                                   :class="isDark ? 'bg-white/10 text-slate-200' : 'bg-emerald-100 text-emerald-950 font-black'">{{ macro.fed_rate.countdown }}</span>
                         </div>
                     </div>
@@ -202,8 +202,8 @@
                     <!-- Probability Bars -->
                     <div class="space-y-2 pt-1">
                         <div v-for="rate in (macro.fed_rate.target_rates || []).slice(0, 4)" :key="rate.rate_range"
-                             class="text-xs space-y-1">
-                            <div class="flex justify-between items-center text-xs font-medium">
+                             class="text-sm space-y-1">
+                            <div class="flex justify-between items-center text-sm font-medium">
                                 <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">目標利率 {{ rate.rate_range }}%</span>
                                 <span class="font-bold num-font" :class="rate.probability_value >= 30 ? 'text-amber-500' : (isDark ? 'text-[#9CA3AF]' : 'text-slate-500')">
                                     {{ rate.current_probability }}
@@ -218,7 +218,7 @@
                         </div>
                     </div>
                 </div>
-                <div v-else class="text-xs text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
+                <div v-else class="text-sm text-slate-400 py-3 text-center">暫無 FedWatch 數據</div>
             </div>
 
             <!-- Panel 2: Dual-Market Earnings Calls (法人說明會 - 對齊 BigGo 財報法說會設計) -->
@@ -227,18 +227,18 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <span class="material-symbols-outlined text-[20px] text-amber-500">calendar_month</span>
-                        <span class="text-xs sm:text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">法人說明會</span>
+                        <span class="text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">法人說明會</span>
                     </div>
                     <div class="flex items-center space-x-1.5">
                         <button @click="openEarningsCalendar()"
-                                class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors flex items-center space-x-1"
+                                class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors flex items-center space-x-1 cursor-pointer"
                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-400 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-700 hover:bg-amber-50'"
                                 title="查看全月跨市場法說會一覽 (BigGo 設計)">
-                            <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                            <span class="material-symbols-outlined text-[15px]">calendar_today</span>
                             <span>日曆一覽</span>
                         </button>
                         <button @click="syncEarningsNow()"
-                                class="p-1 rounded-lg text-xs border transition-colors flex items-center justify-center"
+                                class="p-1.5 rounded-lg text-sm border transition-colors flex items-center justify-center cursor-pointer"
                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-400 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-600 hover:bg-[#F4F4F6]'"
                                 title="即時同步公開資訊觀測站與 BigGo 全球法說會">
                             <span class="material-symbols-outlined text-[16px]">sync</span>
@@ -249,31 +249,31 @@
                 <!-- 1. Time Focus Filter Pills (4-Column Segmented Control: 徹底解決折行與左右位移) -->
                 <div class="pt-0.5 border-b pb-2"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="grid grid-cols-4 gap-1 p-1 rounded-xl border text-xs"
+                    <div class="grid grid-cols-4 gap-1 p-1 rounded-xl border text-sm"
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-slate-100/90 border-slate-200'">
                         <button @click="setEarningsTimeFilter('TODAY')"
-                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                class="py-1 px-1 rounded-lg text-sm font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate cursor-pointer"
                                 :class="earningsTimeFilter === 'TODAY' ? 'bg-rose-500 text-white shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                            <span class="material-symbols-outlined text-[12px] leading-none text-rose-200 hidden sm:inline">local_fire_department</span>
+                            <span class="material-symbols-outlined text-[13px] leading-none text-rose-200 hidden sm:inline">local_fire_department</span>
                             <span>今天</span>
-                            <span v-if="earningsTodayCount > 0" class="px-1 rounded-full text-[10px] bg-white/20 text-white font-mono">{{ earningsTodayCount }}</span>
+                            <span v-if="earningsTodayCount > 0" class="px-1 rounded-full text-xs bg-white/20 text-white font-mono">{{ earningsTodayCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('UPCOMING')"
-                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                class="py-1 px-1 rounded-lg text-sm font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate cursor-pointer"
                                 :class="earningsTimeFilter === 'UPCOMING' ? 'bg-amber-500 text-black shadow-sm' : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                             <span>即將</span>
-                            <span v-if="earningsUpcomingCount > 0" class="px-1 rounded-full text-[10px] font-mono"
+                            <span v-if="earningsUpcomingCount > 0" class="px-1 rounded-full text-xs font-mono"
                                   :class="earningsTimeFilter === 'UPCOMING' ? 'bg-black/20 text-black' : (isDark ? 'bg-white/10 text-slate-300' : 'bg-black/10 text-slate-600')">{{ earningsUpcomingCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('PAST')"
-                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate"
+                                class="py-1 px-1 rounded-lg text-sm font-bold transition-all flex items-center justify-center space-x-1 whitespace-nowrap truncate cursor-pointer"
                                 :class="earningsTimeFilter === 'PAST' ? (isDark ? 'bg-slate-200 text-black shadow-sm' : 'bg-slate-800 text-white shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                             <span>歷史</span>
-                            <span v-if="earningsPastCount > 0" class="px-1 rounded-full text-[10px] font-mono opacity-80"
+                            <span v-if="earningsPastCount > 0" class="px-1 rounded-full text-xs font-mono opacity-80"
                                   :class="earningsTimeFilter === 'PAST' ? '' : (isDark ? 'bg-white/10 text-slate-300' : 'bg-black/10 text-slate-600')">{{ earningsPastCount }}</span>
                         </button>
                         <button @click="setEarningsTimeFilter('ALL')"
-                                class="py-1 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center whitespace-nowrap truncate"
+                                class="py-1 px-1 rounded-lg text-sm font-bold transition-all flex items-center justify-center whitespace-nowrap truncate cursor-pointer"
                                 :class="earningsTimeFilter === 'ALL' ? (isDark ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : 'bg-white text-amber-800 shadow-sm') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                             <span>全部</span>
                         </button>
@@ -281,11 +281,11 @@
                 </div>
 
                 <!-- 2. Market & Weight Stock Filter Pills (防折行與收窄適配) -->
-                <div class="flex items-center justify-between text-xs pt-0.5">
+                <div class="flex items-center justify-between text-sm pt-0.5">
                     <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5">
                         <button v-for="m in ['ALL', 'TW', 'US', 'JP', 'KR']" :key="m"
                                 @click="setEarningsMarket(m)"
-                                class="px-2 py-0.5 rounded-md text-xs font-bold transition-all whitespace-nowrap shrink-0"
+                                class="px-2.5 py-1 rounded-md text-sm font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer"
                                 :class="earningsMarket === m ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
                             {{ m === 'ALL' ? '全市場' : (m === 'TW' ? '台股' : (m === 'US' ? '美股' : (m === 'JP' ? '日股' : '韓股'))) }}
                         </button>
@@ -302,18 +302,18 @@
                 <div v-if="earningsTimeFilter === 'TODAY' && (!upcomingEarningsCalls || upcomingEarningsCalls.length === 0) && !earningsLoading"
                      class="p-4 rounded-xl border text-center space-y-2.5 my-2"
                      :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
-                    <div class="flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-500">
+                    <div class="flex items-center justify-center space-x-1.5 text-sm font-bold text-amber-500">
                         <span class="material-symbols-outlined text-[16px]">info</span>
                         <span>今日暫無法說會召開排程</span>
                     </div>
-                    <div class="text-xs text-slate-500 max-w-xs mx-auto">
+                    <div class="text-sm text-slate-500 max-w-xs mx-auto">
                         各大交易所多於盤後或盤前公布，建議切換至「即將召開」或「近期回放」查閱最新動態。
                     </div>
                     <div class="flex items-center justify-center space-x-2 pt-1">
-                        <button @click="setEarningsTimeFilter('UPCOMING')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition-colors">
+                        <button @click="setEarningsTimeFilter('UPCOMING')" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-500 text-black hover:bg-amber-400 transition-colors">
                             查看即將召開
                         </button>
-                        <button @click="setEarningsTimeFilter('PAST')" class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors"
+                        <button @click="setEarningsTimeFilter('PAST')" class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors"
                                 :class="isDark ? 'border-[#262626] text-slate-300 hover:bg-[#16181D]' : 'border-slate-300 text-slate-700 hover:bg-slate-100'">
                             查看昨日/歷史回放
                         </button>
@@ -321,7 +321,7 @@
                 </div>
 
                 <!-- 4. Dynamic Earnings Calls List (BigGo Style) -->
-                <div v-if="earningsLoading" class="py-8 text-center text-xs text-amber-400 animate-pulse">
+                <div v-if="earningsLoading" class="py-8 text-center text-sm text-amber-400 animate-pulse">
                     載入法說會時程中...
                 </div>
                 <div v-else-if="upcomingEarningsCalls && upcomingEarningsCalls.length" class="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -330,13 +330,13 @@
                          :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] hover:border-amber-400'">
                         <div class="flex items-center space-x-2.5 truncate mr-2">
                             <!-- Initials Avatar Badge (BigGo Inspired) -->
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] font-mono shrink-0 shadow-sm"
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs font-mono shrink-0 shadow-sm"
                                  :class="call.market === 'TW' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : (call.market === 'US' ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : (call.market === 'JP' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : (call.market === 'KR' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-slate-700 text-slate-300')))">
                                 {{ (call.ticker.split('.')[0] || call.ticker).slice(0, 4) }}
                             </div>
                             <div class="space-y-0.5 truncate">
                                 <div class="flex items-center space-x-1.5">
-                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase"
+                                    <span class="px-1.5 py-0.2 rounded text-xs font-black uppercase"
                                           :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (call.market === 'US' ? (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300') : (call.market === 'JP' ? (isDark ? 'bg-rose-950/70 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-300') : (call.market === 'KR' ? (isDark ? 'bg-purple-950/70 text-purple-400 border border-purple-800/60' : 'bg-purple-100 text-purple-800 border border-purple-300') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'))))">
                                         {{ call.market }}
                                     </span>
@@ -350,10 +350,10 @@
                                     </span>
                                     <span v-if="call.is_weight_stock" class="material-symbols-outlined text-[13px] text-amber-400" title="重量級權值股">star</span>
                                 </div>
-                                <div class="text-[11px] truncate" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <div class="text-xs truncate" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                     {{ call.remarks || call.financial_period || '法人說明會' }}
                                 </div>
-                                <div class="text-[11px] flex items-center space-x-2 pt-0.5" :class="isDark ? 'text-slate-500' : 'text-slate-400'">
+                                <div class="text-xs flex items-center space-x-2 pt-0.5" :class="isDark ? 'text-slate-500' : 'text-slate-400'">
                                     <span>{{ call.call_date }} <strong v-if="call.weekday" class="font-normal">({{ call.weekday }})</strong></span>
                                     <span v-if="call.presentation_url">
                                         <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline font-semibold flex items-center space-x-0.5" title="下載官方法說會簡報">
@@ -386,11 +386,11 @@
                                       :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                                     T-{{ call.countdown_days }} 天
                                 </span>
-                                <span v-else class="text-[11px] text-slate-500">
+                                <span v-else class="text-xs text-slate-500">
                                     已召開
                                 </span>
                             </div>
-                            <div v-if="call.eps_estimate" class="text-[11px] num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                            <div v-if="call.eps_estimate" class="text-xs num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                                 預估 EPS: <span class="text-emerald-400 font-bold">{{ call.eps_estimate }}</span>
                             </div>
                         </div>
@@ -735,32 +735,32 @@
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <div class="flex flex-wrap items-center gap-2">
                 <span class="font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">已套用條件:</span>
-                <span class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border"
+                <span class="px-3 py-1 rounded-md text-sm font-bold border"
                       :class="selectedDirection === 'bullish' ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40' : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40'">
                     {{ selectedDirection === 'bullish' ? '多方看漲' : '空方避險' }}
                 </span>
                 <span v-for="mId in selectedModels" :key="mId"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
                     {{ (availableModels.find(m => m.id === mId) || {}).display_name || mId }}
                 </span>
                 <span v-if="selectedPeRange && selectedPeRange !== 'all'"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
                     PE: {{ selectedPeRange === 'low' ? '< 15' : (selectedPeRange === 'reasonable' ? '15~25' : '> 25') }}
                 </span>
                 <span v-if="selectedMinPotential > 0"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
                     潛力 &gt; {{ selectedMinPotential }}%
                 </span>
                 <span v-if="selectedRiskRewardOnly"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-teal-50 text-teal-800 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-teal-50 text-teal-800 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/40">
                     高盈虧比
                 </span>
                 <span v-if="selectedMa60Only"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-sky-50 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40">
                     季線支撐
                 </span>
                 <span v-if="selectedInstBuyOnly"
-                      class="px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                      class="px-3 py-1 rounded-md text-sm font-bold border bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
                     三大法人合買
                 </span>
             </div>
@@ -770,7 +770,7 @@
                     共篩選出 <strong class="num-font text-base">{{ displayRecords.length }}</strong> 檔標的
                 </span>
                 <button @click="resetFilters()"
-                        class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all flex items-center space-x-1.5 hover:scale-105 active:scale-95 cursor-pointer"
+                        class="px-3.5 py-2 rounded-lg border text-sm font-bold transition-all flex items-center space-x-1.5 hover:scale-105 active:scale-95 cursor-pointer"
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-800 hover:bg-white'">
                     <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     <span>重設條件</span>
@@ -782,17 +782,17 @@
 
     <!-- Active Strategy Explainer Banner (明確說明各項策略意涵與量化邏輯) -->
     <div v-if="currentStrategyMeta"
-         class="p-3.5 sm:p-4 rounded-2xl border flex items-start sm:items-center space-x-3 transition-all"
+         class="p-4 sm:p-5 rounded-2xl border flex items-start sm:items-center space-x-3 transition-all"
          :class="isDark ? 'bg-[#16181D] border-amber-500/30 text-slate-200' : 'bg-amber-50/80 border-amber-200 text-amber-950'">
-        <span class="material-symbols-outlined text-[22px] text-amber-500 shrink-0 mt-0.5 sm:mt-0">{{ currentStrategyMeta.icon }}</span>
-        <div class="text-xs sm:text-sm leading-relaxed">
-            <span class="font-black text-amber-500 mr-1.5">{{ currentStrategyMeta.label }}：</span>
+        <span class="material-symbols-outlined text-[24px] text-amber-500 shrink-0 mt-0.5 sm:mt-0">{{ currentStrategyMeta.icon }}</span>
+        <div class="text-sm sm:text-base leading-relaxed">
+            <span class="font-black text-amber-500 mr-2">{{ currentStrategyMeta.label }}：</span>
             <span :class="isDark ? 'text-slate-300' : 'text-slate-700'">{{ currentStrategyMeta.description }}</span>
         </div>
     </div>
 
     <!-- Batch Header & Count Indicator -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm px-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm px-1" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
         <div class="flex items-center space-x-3">
             <span>日報批次: <strong class="num-font font-bold text-amber-500">{{ batchDate || '最近批次' }}</strong></span>
             <span v-if="batchTimestamp" class="num-font">運算時間: {{ batchTimestamp }}</span>
@@ -812,7 +812,7 @@
          role="alert">
         <span class="material-symbols-outlined text-[40px] text-rose-500">error</span>
         <div class="text-base font-bold" :class="isDark ? 'text-rose-200' : 'text-rose-800'">{{ loadError }}</div>
-        <button @click="loadData()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-black text-[#2B251A] transition-all bg-amber-500 hover:bg-amber-600">
+        <button @click="loadData()" class="px-4 py-2 rounded-xl text-sm font-black text-[#2B251A] transition-all bg-amber-500 hover:bg-amber-600">
             重新整理
         </button>
     </div>
@@ -822,7 +822,7 @@
          class="text-center py-16 rounded-2xl border space-y-2">
         <span class="material-symbols-outlined text-[48px] text-amber-500/60">filter_alt_off</span>
         <div class="text-base font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">當前篩選條件下無符合標的</div>
-        <p class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">請嘗試切換其他策略或選擇全部市場</p>
+        <p class="text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">請嘗試切換其他策略或選擇全部市場</p>
     </div>
 
     <!-- 4. VIEW MODE: HIGH-DENSITY BLOOMBERG QUANT SIGNAL TABLE & MOBILE RESPONSIVE CARDS -->
@@ -835,7 +835,7 @@
                 <!-- Header: Rank, Ticker, Name, Strategy, Potential Badge -->
                 <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center space-x-2.5">
-                        <span class="text-xs font-black num-font px-2 py-0.5 rounded-md"
+                        <span class="text-sm font-black num-font px-2.5 py-0.5 rounded-md"
                               :class="isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-100 text-slate-600'">
                             #{{ idx + 1 }}
                         </span>
@@ -845,16 +845,16 @@
                                         class="font-black num-font hover:underline text-amber-500 text-base sm:text-lg">
                                     {{ formatTicker(item.ticker) }}
                                 </button>
-                                <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                                <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-base" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
                                     {{ item.name || companyProfileCache[item.ticker]?.name }}
                                 </span>
                             </div>
                             <div class="flex items-center space-x-1.5 mt-0.5">
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded border"
+                                <span class="px-2 py-0.5 text-sm font-semibold rounded border"
                                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
                                     {{ item.index_name || '綜合' }}
                                 </span>
-                                <span class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                <span class="text-sm font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                     {{ formatStrategyName(item.strategy_type || item.model_name) }}
                                 </span>
                             </div>
@@ -864,32 +864,32 @@
                     <!-- Potential Badge -->
                     <div v-if="item.potential !== null && item.potential !== undefined"
                          :class="item.potential >= 0 ? (isDark ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-800 border-emerald-300') : (isDark ? 'bg-rose-950/80 text-rose-400 border-rose-800' : 'bg-rose-50 text-rose-800 border-rose-300')"
-                         class="px-2.5 py-1 rounded-xl text-xs font-black num-font border flex items-center space-x-1 shrink-0 shadow-sm">
-                        <span class="material-symbols-outlined text-[14px] leading-none">{{ item.potential >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                         class="px-3 py-1 rounded-xl text-sm font-black num-font border flex items-center space-x-1 shrink-0 shadow-sm">
+                        <span class="material-symbols-outlined text-[15px] leading-none">{{ item.potential >= 0 ? 'trending_up' : 'trending_down' }}</span>
                         <span>{{ item.potential > 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%</span>
                     </div>
                 </div>
 
                 <!-- Price & Target Valuation Bar -->
-                <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl text-xs" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
+                <div class="grid grid-cols-2 gap-2 p-3 rounded-xl text-sm" :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'">
                     <div>
-                        <div class="text-[11px] font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">現價</div>
-                        <div class="text-base font-black num-font" :class="isDark ? 'text-white' : 'text-slate-900'">
+                        <div class="text-xs font-medium" :class="isDark ? 'text-slate-400' : 'text-slate-500'">現價</div>
+                        <div class="text-lg font-black num-font" :class="isDark ? 'text-white' : 'text-slate-900'">
                             {{ formatPrice(item.current_price, item.ticker) }}
                         </div>
                     </div>
                     <div>
-                        <div class="text-[11px] font-medium text-amber-500">目標價 / 均線</div>
-                        <div class="text-base font-black num-font text-amber-500">
+                        <div class="text-xs font-medium text-amber-500">目標價 / 均線</div>
+                        <div class="text-lg font-black num-font text-amber-500">
                             <span v-if="item.predicted_price">{{ formatPrice(item.predicted_price, item.ticker) }}</span>
-                            <span v-else-if="item.pullback_type" class="text-xs font-bold">{{ item.pullback_type }}</span>
-                            <span v-else class="text-slate-400">-</span>
+                            <span v-else-if="item.pullback_type" class="text-sm font-bold">{{ item.pullback_type }}</span>
+                            <span v-else class="text-sm text-slate-400">-</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Key Metrics & Chips -->
-                <div class="flex items-center justify-between text-xs pt-1 border-t" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-sm pt-1 border-t" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <div class="num-font" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
                         PE: <span class="font-bold text-amber-500">{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}</span>
                         <span class="mx-1 opacity-40">|</span>
@@ -910,88 +910,97 @@
                     <div class="flex flex-wrap gap-1">
                         <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
                               :title="tag.tooltip || tag.label"
-                              class="px-2 py-0.5 text-[11px] rounded-md font-semibold border inline-flex items-center space-x-1 cursor-help"
+                              class="px-2.5 py-1 text-[13px] rounded-md font-semibold border inline-flex items-center space-x-1 cursor-help"
                               :class="getTagClass(tag)">
-                            <span v-if="tag.icon" class="material-symbols-outlined text-[12px] leading-none shrink-0">{{ tag.icon }}</span>
+                            <svg v-if="tag.icon === 'trending_up'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                            <svg v-else-if="tag.icon === 'trending_down'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                            <svg v-else-if="tag.icon === 'bolt'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <svg v-else-if="tag.icon === 'balance'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                            <svg v-else-if="tag.icon === 'handshake'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                            <svg v-else-if="tag.icon === 'show_chart'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.48 12H2"/></svg>
+                            <svg v-else-if="tag.icon === 'equalizer'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
                             <span>{{ tag.label }}</span>
                         </span>
                     </div>
-                    <div class="flex items-center space-x-1.5 shrink-0">
+                    <div class="flex items-center space-x-2 shrink-0">
                         <button @click="searchTickerHistory(item.ticker)"
-                                class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400' : 'bg-white border-[#E5E7EB] text-amber-600'">
-                            <span class="material-symbols-outlined text-[13px] leading-none">timeline</span>
+                                class="px-3 py-1.5 min-h-[38px] rounded-xl border text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer active:scale-95"
+                                :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                             <span>歷史</span>
                         </button>
                         <button @click="toggleRowDrawer(item.ticker)"
-                                class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1"
-                                :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-amber-500 text-black border-amber-500' : 'bg-amber-500 text-[#2B251A] border-amber-500') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700')">
+                                class="px-3.5 py-1.5 min-h-[38px] rounded-xl border text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer active:scale-95"
+                                :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700 hover:bg-white')">
                             <span>{{ expandedDrawerTicker === item.ticker ? '收起' : '詳情' }}</span>
-                            <span class="material-symbols-outlined text-[13px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline v-if="expandedDrawerTicker === item.ticker" points="18 15 12 9 6 15"></polyline>
+                                <polyline v-else points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </button>
                     </div>
                 </div>
 
                 <!-- Mobile Drawer Expansion -->
-                <div v-if="expandedDrawerTicker === item.ticker" class="mt-3 pt-3 border-t text-xs space-y-3"
+                <div v-if="expandedDrawerTicker === item.ticker" class="mt-3 pt-3 border-t text-sm space-y-3"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                    <div class="flex flex-wrap items-center gap-1.5 border-b pb-2.5"
+                    <div class="flex flex-wrap items-center gap-2 border-b pb-2.5"
                          :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                         <button @click.stop="drawerActiveSubTab = 'profile'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
-                                :class="drawerActiveSubTab === 'profile' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                            <span class="material-symbols-outlined text-[14px] leading-none">business</span>
+                                class="px-3.5 py-2 min-h-[40px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                                :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:text-black')">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
                             <span>基本面</span>
                         </button>
                         <button @click.stop="drawerActiveSubTab = 'earnings'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
-                                :class="drawerActiveSubTab === 'earnings' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                            <span class="material-symbols-outlined text-[14px] leading-none">event_note</span>
+                                class="px-3.5 py-2 min-h-[40px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                                :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:text-black')">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                             <span>法說會 ({{ (drawerEarningsMap[item.ticker] || []).length }})</span>
                         </button>
                         <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                                 @click.stop="drawerActiveSubTab = 'network'"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
-                                :class="drawerActiveSubTab === 'network' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                            <span class="material-symbols-outlined text-[14px] leading-none">account_tree</span>
+                                class="px-3.5 py-2 min-h-[40px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                                :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:text-black')">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                             <span>集團網絡</span>
                         </button>
                         <button v-if="isTwStock(item.ticker)"
                                 @click.stop="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                                class="px-2.5 py-1 rounded-lg font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
-                                :class="drawerActiveSubTab === 'tender' ? 'bg-amber-500 text-black' : (isDark ? 'bg-[#16181D] text-slate-400' : 'bg-slate-200 text-slate-700')">
-                            <span class="material-symbols-outlined text-[14px] leading-none">account_balance</span>
+                                class="px-3.5 py-2 min-h-[40px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                                :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:text-black')">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                             <span>政府標案</span>
                         </button>
                     </div>
                     <!-- Sub-tab 1: Profile -->
                     <div v-if="drawerActiveSubTab === 'profile'">
-                        <div v-if="expandedDrawerLoading" class="py-2 text-center text-amber-400 animate-pulse">載入中...</div>
+                        <div v-if="expandedDrawerLoading" class="py-2 text-center text-sm text-amber-400 animate-pulse">載入中...</div>
                         <div v-else-if="expandedDrawerData" class="space-y-1.5">
-                            <p class="leading-relaxed line-clamp-3" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                            <p class="text-sm leading-relaxed line-clamp-3" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                 {{ expandedDrawerData.business_summary || '無資料' }}
                             </p>
                         </div>
                     </div>
                     <!-- Sub-tab 2: Earnings -->
                     <div v-if="drawerActiveSubTab === 'earnings'">
-                        <div v-if="drawerEarningsLoading" class="py-2 text-center text-amber-400 animate-pulse">查詢法說會資料中...</div>
+                        <div v-if="drawerEarningsLoading" class="py-2 text-center text-sm text-amber-400 animate-pulse">查詢法說會資料中...</div>
                         <div v-else-if="drawerEarningsMap[item.ticker] && drawerEarningsMap[item.ticker].length" class="space-y-1.5">
                             <div v-for="(call, cidx) in drawerEarningsMap[item.ticker].slice(0, 3)" :key="cidx"
-                                 class="p-2 rounded-lg border text-xs"
+                                 class="p-2.5 rounded-lg border text-sm"
                                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200'">
                                 <div class="font-bold flex items-center justify-between">
                                     <span>{{ call.call_date }} {{ call.call_time || '' }}</span>
-                                    <span class="text-xs px-1.5 py-0.5 rounded" :class="isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800'">{{ call.market }}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded font-bold" :class="isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-800'">{{ call.market }}</span>
                                 </div>
-                                <div class="text-xs truncate mt-0.5">{{ call.location_or_link || call.title }}</div>
+                                <div class="text-sm truncate mt-1">{{ call.location_or_link || call.title }}</div>
                             </div>
                         </div>
-                        <div v-else class="text-xs text-slate-400 py-1">近期無法人說明會日程</div>
+                        <div v-else class="text-sm text-slate-400 py-1">近期無法人說明會日程</div>
                     </div>
                     <!-- Sub-tab 3: Network (Mobile) -->
-                    <div v-if="drawerActiveSubTab === 'network'" class="space-y-2.5 text-xs">
-                        <div v-if="expandedDrawerLoading" class="py-3 text-center text-amber-400 animate-pulse">正在解析集團股權網絡...</div>
+                    <div v-if="drawerActiveSubTab === 'network'" class="space-y-2.5 text-sm">
+                        <div v-if="expandedDrawerLoading" class="py-3 text-center text-sm text-amber-400 animate-pulse">正在解析集團股權網絡...</div>
                         <div v-else-if="expandedDrawerData?.company_network" class="space-y-2.5">
                             <div class="flex items-center justify-between pb-1.5 border-b" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
                                 <div class="font-bold text-amber-500">
@@ -1002,26 +1011,26 @@
                                 </div>
                                 <a :href="expandedDrawerData.company_network.web_url" target="_blank" class="text-amber-400 underline font-bold flex items-center space-x-0.5">
                                     <span>股權圖</span>
-                                    <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                                    <span class="material-symbols-outlined text-[14px]">open_in_new</span>
                                 </a>
                             </div>
                             <!-- Upstream Parents -->
                             <div v-if="expandedDrawerData.company_network.relationships?.upstream?.length" class="space-y-1">
-                                <div class="text-indigo-400 font-bold text-[11px]">母公司 / 控股主體:</div>
+                                <div class="text-indigo-400 font-bold text-xs">母公司 / 控股主體:</div>
                                 <div class="flex flex-wrap gap-1">
                                     <span v-for="(up, uidx) in expandedDrawerData.company_network.relationships.upstream" :key="uidx"
-                                          class="px-2 py-0.5 rounded text-xs border bg-indigo-500/10 border-indigo-500/30 text-indigo-300">
+                                          class="px-2.5 py-1 rounded text-sm border bg-indigo-500/10 border-indigo-500/30 text-indigo-300">
                                         {{ up.name }} <strong v-if="up.code">({{ up.code }})</strong>
                                     </span>
                                 </div>
                             </div>
                             <!-- Downstream Subsidiaries -->
                             <div v-if="expandedDrawerData.company_network.relationships?.downstream?.length" class="space-y-1">
-                                <div class="text-slate-400 font-bold text-[11px]">轉投資關係企業:</div>
+                                <div class="text-slate-400 font-bold text-xs">轉投資關係企業:</div>
                                 <div class="flex flex-wrap gap-1">
                                     <span v-for="(down, didx) in expandedDrawerData.company_network.relationships.downstream.slice(0, 6)" :key="didx"
                                           @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
-                                          class="px-2 py-0.5 rounded text-xs border"
+                                          class="px-2.5 py-1 rounded text-sm border"
                                           :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') : 'text-slate-400 border-slate-700'">
                                         {{ down.name }} <strong v-if="down.code">({{ down.code }})</strong>
                                     </span>
@@ -1039,10 +1048,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="py-2 text-center text-slate-400">此標的尚無公開集團控股資料</div>
+                        <div v-else class="py-2 text-center text-sm text-slate-400">此標的尚無公開集團控股資料</div>
                     </div>
                     <!-- Sub-tab 4: Tender (Mobile) -->
-                    <div v-if="drawerActiveSubTab === 'tender'" class="space-y-2.5 text-xs">
+                    <div v-if="drawerActiveSubTab === 'tender'" class="space-y-2.5 text-sm">
                         <div v-if="companyTenderLoading" class="py-4 text-center text-amber-400 animate-pulse flex items-center justify-center space-x-1.5">
                             <span class="material-symbols-outlined text-[16px] animate-spin">sync</span>
                             <span>查詢 ToBid 政府電子採購網資料庫中...</span>
@@ -1053,9 +1062,9 @@
                                 <span class="material-symbols-outlined text-[18px] text-amber-500">info</span>
                                 <span>{{ expandedDrawerData.company_tender.message || '查無公家標案紀錄' }}</span>
                             </div>
-                            <p class="text-xs font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">該標的非政府標案依賴型產業。</p>
+                            <p class="text-sm font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-600'">該標的非政府標案依賴型產業。</p>
                             <a :href="expandedDrawerData.company_tender.web_url" target="_blank"
-                               class="inline-block text-xs font-bold underline underline-offset-4 pt-0.5"
+                               class="inline-block text-sm font-bold underline underline-offset-4 pt-0.5"
                                :class="isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-800 hover:text-amber-950'">
                                 在 ToBid 查詢 ↗
                             </a>
@@ -1136,21 +1145,21 @@
         <div class="hidden md:block rounded-2xl border overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse whitespace-nowrap">
+                <table class="w-full text-left text-sm border-collapse whitespace-nowrap">
                     <!-- Deep Obsidian Table Header -->
                     <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                         <tr>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold num-font text-center w-8 whitespace-nowrap" title="排序名次">#</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold whitespace-nowrap" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-center whitespace-nowrap" title="標的所屬市場指數（台灣50、台灣中型100、S&P 500、太空概念）">市場</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-center whitespace-nowrap" title="產生該推薦之量化策略或時序神經網路模型（如綜合優選、Timestral、TimesFM、季線支撐）">策略模型</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-right num-font whitespace-nowrap" title="資料庫最新收盤價或最新撮合即時成交價">現價</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-right num-font whitespace-nowrap" title="時序基礎模型預測目標價 (P50) 或季線支撐價格 (MA60/MA120)">目標價 / 均線</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-right num-font whitespace-nowrap" title="相較現價之預期潛在報酬空間百分比（目標價 vs 現價）">潛力</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-center num-font whitespace-nowrap" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-right num-font whitespace-nowrap" title="近 5 個交易日投信法人與外資法人累積買賣超張數（主力籌碼動向）">5日籌碼 (張)</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold whitespace-nowrap" title="多維量化條件交集狀態（綜合優選、雙模型看漲、季線支撐、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略標籤</th>
-                            <th class="py-2.5 px-1.5 xl:px-2 font-bold text-center whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]"
+                            <th class="py-3 px-2 font-bold num-font text-center w-8 whitespace-nowrap text-sm" title="排序名次">#</th>
+                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
+                            <th class="py-3 px-2 font-bold text-center whitespace-nowrap text-sm" title="標的所屬市場指數（台灣50、台灣中型100、S&P 500、太空概念）">市場</th>
+                            <th class="py-3 px-2 font-bold text-center whitespace-nowrap text-sm" title="產生該推薦之量化策略或時序神經網路模型（如綜合優選、Timestral、TimesFM、季線支撐）">策略模型</th>
+                            <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="資料庫最新收盤價或最新撮合即時成交價">現價</th>
+                            <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="時序基礎模型預測目標價 (P50) 或季線支撐價格 (MA60/MA120)">目標價 / 均線</th>
+                            <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="相較現價之預期潛在報酬空間百分比（目標價 vs 現價）">潛力</th>
+                            <th class="py-3 px-2 font-bold text-center num-font whitespace-nowrap text-sm" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
+                            <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="近 5 個交易日投信法人與外資法人累積買賣超張數（主力籌碼動向）">5日籌碼 (張)</th>
+                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm" title="多維量化條件交集狀態（綜合優選、季線支撐、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略標籤</th>
+                            <th class="py-3 px-2 font-bold text-center whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] text-sm"
                                 :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'"
                                 title="點擊展開技術指標與深度分析抽屜">操作</th>
                         </tr>
@@ -1158,50 +1167,50 @@
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                     <template v-for="(item, idx) in displayRecords" :key="item.ticker + (item.model_name || '') + idx">
                         <!-- Primary Row -->
-                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-11"
+                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-12"
                             :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
                             @click="toggleRowDrawer(item.ticker)">
-                            <td class="py-2.5 px-1.5 xl:px-2 font-black num-font text-center opacity-60 whitespace-nowrap">{{ idx + 1 }}</td>
-                            <td class="py-2.5 px-1.5 xl:px-2 whitespace-nowrap">
-                                <div class="flex items-center space-x-1.5">
+                            <td class="py-3 px-2 font-black num-font text-center opacity-60 whitespace-nowrap text-sm">{{ idx + 1 }}</td>
+                            <td class="py-3 px-2 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
-                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm shrink-0"
+                                            class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base shrink-0"
                                             :title="'點擊速查 ' + formatTicker(item.ticker) + ' 歷史走勢'">
                                         {{ formatTicker(item.ticker) }}
                                     </button>
-                                    <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-xs truncate max-w-[80px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name || companyProfileCache[item.ticker]?.name">
+                                    <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm truncate max-w-[140px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name || companyProfileCache[item.ticker]?.name">
                                         {{ item.name || companyProfileCache[item.ticker]?.name }}
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-center whitespace-nowrap">
-                                <span class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans"
+                            <td class="py-3 px-2 text-center whitespace-nowrap">
+                                <span class="px-2 py-0.5 text-sm font-semibold rounded-md border font-sans"
                                       :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-600'">
                                     {{ item.index_name || '綜合' }}
                                 </span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-center font-bold text-xs whitespace-nowrap">
+                            <td class="py-3 px-2 text-center font-bold text-sm whitespace-nowrap">
                                 <span>{{ formatStrategyName(item.strategy_type || item.model_name) }}</span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
+                            <td class="py-3 px-2 text-right font-black num-font text-sm sm:text-base whitespace-nowrap">
                                 {{ formatPrice(item.current_price, item.ticker) }}
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-right font-black num-font text-amber-500 text-xs sm:text-sm whitespace-nowrap">
+                            <td class="py-3 px-2 text-right font-black num-font text-amber-500 text-sm sm:text-base whitespace-nowrap">
                                 <span v-if="item.predicted_price">{{ formatPrice(item.predicted_price, item.ticker) }}</span>
-                                <span v-else-if="item.pullback_type" class="text-xs font-bold text-amber-500">{{ item.pullback_type }}</span>
-                                <span v-else class="text-xs text-slate-400">-</span>
+                                <span v-else-if="item.pullback_type" class="text-sm font-bold text-amber-500">{{ item.pullback_type }}</span>
+                                <span v-else class="text-sm text-slate-400">-</span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-right font-black num-font text-xs sm:text-sm whitespace-nowrap">
+                            <td class="py-3 px-2 text-right font-black num-font text-sm sm:text-base whitespace-nowrap">
                                 <span v-if="item.potential !== null && item.potential !== undefined"
                                       :class="item.potential >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-600 font-bold') : 'text-rose-500 font-bold'">
                                     {{ item.potential >= 0 ? '+' : '' }}{{ Number(item.potential).toFixed(2) }}%
                                 </span>
-                                <span v-else class="text-slate-400">-</span>
+                                <span v-else class="text-sm text-slate-400">-</span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-center num-font text-xs whitespace-nowrap">
+                            <td class="py-3 px-2 text-center num-font text-sm whitespace-nowrap">
                                 <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }} / {{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-right num-font text-xs whitespace-nowrap">
+                            <td class="py-3 px-2 text-right num-font text-sm whitespace-nowrap">
                                 <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1 font-bold">
                                     <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
                                         投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
@@ -1212,39 +1221,48 @@
                                 </span>
                                 <span v-else class="text-slate-400">-</span>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 whitespace-nowrap">
-                                <div class="flex items-center gap-1 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
+                            <td class="py-3 px-2 whitespace-nowrap">
+                                <div class="flex items-center gap-1.5 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
                                     <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
                                           :title="tag.tooltip || tag.label"
                                           :class="getTagClass(tag)"
-                                          class="px-1.5 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm cursor-help">
-                                        <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
+                                          class="px-2 py-1 text-[13px] sm:text-sm font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm cursor-help">
+                                        <svg v-if="tag.icon === 'trending_up'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                        <svg v-else-if="tag.icon === 'trending_down'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                                        <svg v-else-if="tag.icon === 'bolt'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        <svg v-else-if="tag.icon === 'balance'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                                        <svg v-else-if="tag.icon === 'handshake'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                        <svg v-else-if="tag.icon === 'show_chart'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.48 12H2"/></svg>
+                                        <svg v-else-if="tag.icon === 'equalizer'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
                                         <span>{{ tag.label }}</span>
                                     </span>
                                     <span v-if="parseTags(item.tags).length > 2"
-                                          class="px-1.5 py-0.5 text-[11px] font-bold rounded-md border shrink-0 cursor-help transition-colors whitespace-nowrap shadow-sm"
+                                          class="px-2 py-1 text-[13px] font-bold rounded-md border shrink-0 cursor-help transition-colors whitespace-nowrap shadow-sm"
                                           :class="isDark ? 'bg-[#16181D] text-amber-400 border-[#262626] hover:border-amber-500/50' : 'bg-slate-100 text-amber-600 border-slate-200 hover:border-amber-400'"
                                           :title="'其餘標籤: ' + parseTags(item.tags).slice(2).map(t => t.label).join(', ')">
                                         +{{ parseTags(item.tags).length - 2 }}
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-2.5 px-1.5 xl:px-2 text-center whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]"
+                            <td class="py-3 px-2 text-center whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]"
                                 :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : (isDark ? 'bg-[#0D0E11]' : 'bg-white')"
                                 @click.stop>
-                                <div class="flex items-center justify-center space-x-1">
+                                <div class="flex items-center justify-center space-x-1.5">
                                     <button @click="toggleRowDrawer(item.ticker)"
-                                            class="px-2 py-0.5 rounded-lg border text-xs font-bold transition-all flex items-center space-x-0.5 shrink-0"
+                                            class="px-3 py-1.5 rounded-lg border text-sm font-bold transition-all flex items-center space-x-1 shrink-0 cursor-pointer"
                                             :class="expandedDrawerTicker === item.ticker ? 'bg-amber-500 text-black border-amber-500' : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
                                             :title="expandedDrawerTicker === item.ticker ? '收合簡介抽屜' : '展開公司簡介抽屜'">
                                         <span>{{ expandedDrawerTicker === item.ticker ? '收合' : '詳情' }}</span>
-                                        <span class="material-symbols-outlined text-[13px] leading-none">{{ expandedDrawerTicker === item.ticker ? 'expand_less' : 'expand_more' }}</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline v-if="expandedDrawerTicker === item.ticker" points="18 15 12 9 6 15"></polyline>
+                                            <polyline v-else points="6 9 12 15 18 9"></polyline>
+                                        </svg>
                                     </button>
                                     <button @click="searchTickerHistory(item.ticker)"
-                                            class="p-1 rounded-lg border text-xs font-bold transition-all flex items-center justify-center shrink-0"
+                                            class="p-1.5 rounded-lg border text-sm font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer"
                                             :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-white border-[#E5E7EB] text-amber-600 hover:bg-[#F4F4F6]'"
                                             title="查詢時序歷史">
-                                        <span class="material-symbols-outlined text-[15px] leading-none">timeline</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                                     </button>
                                 </div>
                             </td>
@@ -1259,15 +1277,15 @@
                                 <div class="flex flex-wrap items-center gap-2 border-b pb-3"
                                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                                     <button @click="drawerActiveSubTab = 'profile'"
-                                            class="px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
+                                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-2 cursor-pointer"
                                             :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">business</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
                                         <span>基本面與新聞</span>
                                     </button>
                                     <button @click="drawerActiveSubTab = 'earnings'"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
+                                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-2 cursor-pointer"
                                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">event_note</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                                         <span>法說會與簡報</span>
                                         <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                                               :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
@@ -1276,9 +1294,9 @@
                                     </button>
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                                             @click="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
+                                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-2 cursor-pointer"
                                             :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                                         <span>集團股權網絡</span>
                                         <span v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                                               :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
@@ -1287,9 +1305,9 @@
                                     </button>
                                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                                             @click="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5"
+                                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-2 cursor-pointer"
                                             :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">account_balance</span>
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                                         <span>政府標案</span>
                                         <span v-if="expandedDrawerData?.company_tender?.wins" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
                                               :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-black/30 text-white' : 'bg-white/40 text-black') : 'bg-amber-500/20 text-amber-400'">
@@ -1303,58 +1321,64 @@
                                     <div class="space-y-2 flex-1 min-w-0 max-w-3xl">
                                         <div class="flex items-center flex-wrap gap-2">
                                             <span class="text-xl font-black num-font text-amber-500">{{ formatTicker(item.ticker) }}</span>
-                                            <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                            <span class="text-base sm:text-lg font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                 {{ (expandedDrawerData?.ticker === item.ticker && expandedDrawerData?.name && expandedDrawerData.name !== expandedDrawerData.raw_code) ? expandedDrawerData.name : (item.name || formatTicker(item.ticker)) }}
                                             </span>
-                                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md border"
+                                            <span class="px-3 py-1 text-sm font-semibold rounded-md border"
                                                   :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
                                                 {{ expandedDrawerData?.industry || '綜合產業' }}
                                             </span>
-                                            <span v-if="expandedDrawerData?.market_cap" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                            <span v-if="expandedDrawerData?.market_cap" class="text-sm font-mono font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 市值: {{ expandedDrawerData.market_cap }}
                                             </span>
-                                            <span v-if="expandedDrawerData?.capital" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                            <span v-if="expandedDrawerData?.capital" class="text-sm font-mono font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 資本額: {{ expandedDrawerData.capital }}
                                             </span>
-                                            <span v-if="expandedDrawerData?.unified_id" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                            <span v-if="expandedDrawerData?.unified_id" class="text-sm font-mono font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 統編: {{ expandedDrawerData.unified_id }}
                                             </span>
-                                            <span v-if="expandedDrawerData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                            <span v-if="expandedDrawerData?.chairman" class="text-sm font-medium" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                 董座: {{ expandedDrawerData.chairman }}
                                             </span>
                                         </div>
 
-                                        <!-- Full Resonance Tags in Drawer -->
-                                        <div v-if="item.tags" class="flex flex-wrap gap-1.5 pt-1">
+                                        <!-- Quant & Model Factor Tags in Drawer -->
+                                        <div v-if="item.tags" class="flex flex-wrap gap-2 pt-1">
                                             <span v-for="tag in parseTags(item.tags)" :key="tag.label"
                                                   :title="tag.tooltip || tag.label"
                                                   :class="getTagClass(tag)"
-                                                  class="px-2 py-0.5 text-xs font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shadow-sm whitespace-nowrap cursor-help">
-                                                <span v-if="tag.icon" class="material-symbols-outlined text-[13px] leading-none shrink-0">{{ tag.icon }}</span>
+                                                  class="px-2.5 py-1 text-[13px] sm:text-sm font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1.5 shadow-sm whitespace-nowrap cursor-help">
+                                                <svg v-if="tag.icon === 'trending_up'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                                <svg v-else-if="tag.icon === 'trending_down'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                                                <svg v-else-if="tag.icon === 'bolt'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                                <svg v-else-if="tag.icon === 'balance'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                                                <svg v-else-if="tag.icon === 'handshake'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                <svg v-else-if="tag.icon === 'show_chart'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.48 12H2"/></svg>
+                                                <svg v-else-if="tag.icon === 'equalizer'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
                                                 <span>{{ tag.label }}</span>
                                             </span>
                                         </div>
 
                                         <!-- Business Overview -->
-                                        <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                        <p class="text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                             {{ expandedDrawerData?.business_summary || '正在連線 2md 即時爬取公司基本資料與新聞...' }}
                                         </p>
 
                                         <!-- Corporate Network Quick Highlights -->
                                         <div v-if="expandedDrawerData?.company_network" class="pt-2 space-y-1.5">
-                                            <div class="text-xs font-bold text-amber-500 flex items-center justify-between">
-                                                <div class="flex items-center space-x-1">
-                                                    <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
+                                            <div class="text-sm font-bold text-amber-500 flex items-center justify-between">
+                                                <div class="flex items-center space-x-1.5">
+                                                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                                                     <span>集團與轉投資關係企業:</span>
                                                 </div>
-                                                <button @click="drawerActiveSubTab = 'network'" class="text-xs text-amber-400 hover:underline flex items-center space-x-0.5">
+                                                <button @click="drawerActiveSubTab = 'network'" class="text-sm font-bold text-amber-400 hover:underline flex items-center space-x-0.5 cursor-pointer">
                                                     <span>完整架構</span>
-                                                    <span class="material-symbols-outlined text-[13px] leading-none">chevron_right</span>
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                                 </button>
                                             </div>
-                                            <div class="flex flex-wrap gap-1.5">
+                                            <div class="flex flex-wrap gap-2">
                                                 <span v-for="(up, uidx) in (expandedDrawerData.company_network.relationships?.upstream || [])" :key="'up-'+uidx"
-                                                      class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
+                                                      class="px-3 py-1 rounded-md text-sm border font-medium inline-flex items-center space-x-1.5"
                                                       :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
                                                     <span class="text-xs font-bold opacity-80">母/控股</span>
                                                     <span>{{ up.name }}</span>
@@ -1362,14 +1386,14 @@
                                                 <button v-for="(down, didx) in (expandedDrawerData.company_network.relationships?.downstream || []).slice(0, 6)" :key="'down-'+didx"
                                                         @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
                                                         :disabled="!down.is_listed"
-                                                        class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1 transition-all"
+                                                        class="px-3 py-1 rounded-md text-sm border font-medium inline-flex items-center space-x-1.5 transition-all"
                                                         :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-600 cursor-default')">
                                                     <span>{{ down.name }}</span>
-                                                    <span v-if="down.code" class="text-[11px] font-mono font-bold px-1 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
+                                                    <span v-if="down.code" class="text-xs font-mono font-bold px-1.5 py-0.5 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
                                                 </button>
                                                 <span v-if="(expandedDrawerData.company_network.relationships?.downstream || []).length > 6"
                                                       @click="drawerActiveSubTab = 'network'"
-                                                      class="px-2 py-0.5 rounded-md text-xs border font-medium cursor-pointer"
+                                                      class="px-3 py-1 rounded-md text-sm border font-bold cursor-pointer"
                                                       :class="isDark ? 'bg-[#1a1b20] border-[#2a2c33] text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'">
                                                     +{{ expandedDrawerData.company_network.relationships.downstream.length - 6 }} 更多
                                                 </span>
@@ -1378,14 +1402,14 @@
 
                                         <!-- Recent News -->
                                         <div v-if="expandedDrawerData?.recent_news && expandedDrawerData.recent_news.length > 0" class="pt-2 space-y-1.5">
-                                            <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
-                                                <span class="material-symbols-outlined text-[16px] leading-none">newspaper</span>
+                                            <div class="text-sm font-bold text-amber-500 flex items-center space-x-1.5">
+                                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
                                                 <span>即時最新動態:</span>
                                             </div>
                                             <div class="flex flex-wrap gap-2">
                                                 <a v-for="(news, nidx) in expandedDrawerData.recent_news.slice(0, 3)" :key="nidx"
                                                    :href="news.url" target="_blank"
-                                                   class="px-2.5 py-1 rounded-lg border text-xs leading-normal transition-all hover:underline"
+                                                   class="px-3 py-1.5 rounded-lg border text-sm leading-normal transition-all hover:underline"
                                                    :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-800 hover:border-amber-400'">
                                                     • {{ news.title }}
                                                 </a>
@@ -1393,64 +1417,64 @@
                                         </div>
                                     </div>
 
-                                    <!-- Right: External Portals & Shortcuts -->
-                                    <div class="flex flex-wrap sm:flex-row lg:flex-col gap-2 shrink-0 self-start">
+                                    <!-- Right: External Portals & Shortcuts (All minimum 14px text-sm font-bold) -->
+                                    <div class="flex flex-wrap sm:flex-row lg:flex-col gap-2.5 shrink-0 self-start">
                                         <a v-if="expandedDrawerData?.links?.network_graph" :href="expandedDrawerData.links.network_graph" target="_blank"
-                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1 whitespace-nowrap"
+                                           class="px-4 py-2 rounded-xl border text-sm font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1.5 whitespace-nowrap cursor-pointer"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-amber-400 hover:text-amber-300 hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-amber-800 hover:bg-[#F4F4F6]'">
                                             <span>股權關係網絡圖</span>
-                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                         </a>
                                         <a v-if="expandedDrawerData?.links?.yahoo" :href="expandedDrawerData.links.yahoo" target="_blank"
-                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1 whitespace-nowrap"
+                                           class="px-4 py-2 rounded-xl border text-sm font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1.5 whitespace-nowrap cursor-pointer"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                                             <span>Yahoo 奇摩股市</span>
-                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                         </a>
                                         <a v-if="expandedDrawerData?.links?.goodinfo" :href="expandedDrawerData.links.goodinfo" target="_blank"
-                                           class="px-3 py-1.5 rounded-xl border text-xs font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1 whitespace-nowrap"
+                                           class="px-4 py-2 rounded-xl border text-sm font-bold text-center transition-all shadow-sm flex items-center justify-center space-x-1.5 whitespace-nowrap cursor-pointer"
                                            :class="isDark ? 'bg-[#0D0E11] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                                             <span>Goodinfo 台灣股市</span>
-                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                         </a>
                                         <button @click="searchTickerHistory(item.ticker)"
-                                                class="px-3 py-1.5 rounded-xl text-xs font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1 whitespace-nowrap">
+                                                class="px-4 py-2 rounded-xl text-sm font-bold text-center text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5 whitespace-nowrap cursor-pointer">
                                             <span>查看時序歷史軌跡</span>
-                                            <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                         </button>
                                     </div>
                                 </div>
 
                                 <!-- Subtab 2: Earnings Calls Information & Presentations -->
                                 <div v-if="drawerActiveSubTab === 'earnings'" class="space-y-3">
-                                    <div v-if="drawerEarningsLoading" class="py-4 text-center text-xs text-amber-400 animate-pulse">
+                                    <div v-if="drawerEarningsLoading" class="py-4 text-center text-sm text-amber-400 animate-pulse">
                                         載入法說會時程與官方簡報中...
                                     </div>
                                     <div v-else-if="drawerEarningsMap[item.ticker] && drawerEarningsMap[item.ticker].length" class="space-y-2">
                                         <div v-for="(ec, ecIdx) in drawerEarningsMap[item.ticker]" :key="ec.id || ecIdx"
-                                             class="p-3 rounded-xl border text-xs flex flex-col md:flex-row md:items-center justify-between gap-3"
+                                             class="p-3.5 rounded-xl border text-sm flex flex-col md:flex-row md:items-center justify-between gap-3"
                                              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
                                             <div class="space-y-1">
                                                 <div class="flex items-center space-x-2">
-                                                    <span class="px-2.5 py-0.5 rounded text-xs font-black"
+                                                    <span class="px-3 py-1 rounded text-sm font-black"
                                                           :class="ec.status === 'today' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' : (ec.status === 'upcoming' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : (isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-[#F5E6C4] text-[#5C5038] border border-[#DDC58B]'))">
                                                         {{ ec.status === 'today' ? '今日召開' : (ec.status === 'upcoming' ? '即將召開' : '已召開') }}
                                                     </span>
-                                                    <span class="font-bold text-xs sm:text-sm" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                    <span class="font-bold text-sm sm:text-base" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                         {{ ec.datetime_cst || (ec.call_date + ' ' + (ec.call_time || '')) }}
                                                     </span>
-                                                    <span class="text-xs sm:text-sm text-slate-400">({{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }})</span>
+                                                    <span class="text-sm text-slate-400">({{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }})</span>
                                                 </div>
-                                                <div v-if="ec.location" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                                                <div v-if="ec.location" class="text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                                     地點 / 方式: {{ ec.location }}
                                                 </div>
-                                                <div v-if="ec.remarks" class="text-xs text-amber-400/90">
+                                                <div v-if="ec.remarks" class="text-sm text-amber-400/90">
                                                     備註: {{ ec.remarks }}
                                                 </div>
                                             </div>
 
                                             <div class="flex items-center space-x-2 shrink-0">
-                                                <div v-if="ec.eps_estimate || ec.eps_actual" class="text-right mr-2 text-xs">
+                                                <div v-if="ec.eps_estimate || ec.eps_actual" class="text-right mr-2 text-sm">
                                                     <div v-if="ec.eps_estimate" class="num-font text-slate-400">
                                                         預估: <span class="text-amber-400">{{ ec.eps_estimate }}</span>
                                                     </div>
@@ -1459,28 +1483,28 @@
                                                     </div>
                                                 </div>
                                                 <a v-if="ec.presentation_url" :href="ec.presentation_url" target="_blank"
-                                                   class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center space-x-1"
+                                                   class="px-3.5 py-2 rounded-xl border text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center space-x-1.5 cursor-pointer"
                                                    :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-amber-500' : 'bg-amber-50 border-amber-200 hover:bg-amber-100'">
-                                                    <span class="material-symbols-outlined text-[15px] leading-none">description</span>
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">description</span>
                                                     <span>官方簡報</span>
                                                 </a>
                                                 <a v-if="ec.webcast_url" :href="ec.webcast_url" target="_blank"
-                                                   class="px-2.5 py-1.5 rounded-lg border text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors flex items-center space-x-1"
+                                                   class="px-3.5 py-2 rounded-xl border text-sm font-bold text-sky-400 hover:text-sky-300 transition-colors flex items-center space-x-1.5 cursor-pointer"
                                                    :class="isDark ? 'bg-[#16181D] border-[#262626] hover:border-sky-500' : 'bg-sky-50 border-sky-200 hover:bg-sky-100'">
-                                                    <span class="material-symbols-outlined text-[15px] leading-none">play_circle</span>
+                                                    <span class="material-symbols-outlined text-[16px] leading-none">play_circle</span>
                                                     <span>直播回放</span>
                                                 </a>
                                             </div>
                                         </div>
                                     </div>
-                                    <div v-else class="py-6 text-center text-xs text-slate-400">
+                                    <div v-else class="py-6 text-center text-sm text-slate-400">
                                         此標的近期尚無法說會或財報發布排程紀錄
                                     </div>
                                 </div>
 
                                 <!-- Subtab 3: Taiwan Company Network (Corporate Hierarchy & Graph) -->
                                 <div v-if="drawerActiveSubTab === 'network'" class="space-y-4">
-                                    <div v-if="expandedDrawerLoading" class="py-8 text-center text-amber-400 animate-pulse text-xs space-y-2">
+                                    <div v-if="expandedDrawerLoading" class="py-8 text-center text-amber-400 animate-pulse text-sm space-y-2">
                                         <div class="flex items-center justify-center">
                                             <svg class="animate-spin h-7 w-7 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
@@ -1495,32 +1519,32 @@
                                              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                                             <div>
                                                 <div class="flex items-center flex-wrap gap-2">
-                                                    <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                                    <span class="text-base sm:text-lg font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
                                                         {{ expandedDrawerData?.company_network?.name || expandedDrawerData?.name }}
                                                     </span>
-                                                    <span v-if="expandedDrawerData?.company_network?.unified_id" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
+                                                    <span v-if="expandedDrawerData?.company_network?.unified_id" class="px-2.5 py-1 rounded text-sm font-mono font-semibold"
                                                           :class="isDark ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-300'">
                                                         統編: {{ expandedDrawerData.company_network.unified_id }}
                                                     </span>
-                                                    <span v-if="expandedDrawerData?.company_network?.capital_formatted" class="px-2 py-0.5 rounded text-xs font-mono font-semibold"
+                                                    <span v-if="expandedDrawerData?.company_network?.capital_formatted" class="px-2.5 py-1 rounded text-sm font-mono font-semibold"
                                                           :class="isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
                                                         資本額: {{ expandedDrawerData.company_network.capital_formatted }}
                                                     </span>
-                                                    <span v-if="expandedDrawerData?.company_network?.representative" class="px-2 py-0.5 rounded text-xs font-semibold"
+                                                    <span v-if="expandedDrawerData?.company_network?.representative" class="px-2.5 py-1 rounded text-sm font-semibold"
                                                           :class="isDark ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-200'">
                                                         代表董座: {{ expandedDrawerData.company_network.representative }}
                                                     </span>
                                                 </div>
-                                                <p v-if="expandedDrawerData?.company_network?.address" class="text-xs mt-1" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                                                <p v-if="expandedDrawerData?.company_network?.address" class="text-sm mt-1" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                                     登記地址: {{ expandedDrawerData.company_network.address }}
                                                 </p>
                                             </div>
                                             <div class="flex items-center space-x-2 shrink-0">
                                                 <a :href="expandedDrawerData?.company_network?.web_url" target="_blank"
-                                                   class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center space-x-1.5">
+                                                   class="px-4 py-2 rounded-xl text-sm font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center space-x-1.5 cursor-pointer">
                                                     <span class="material-symbols-outlined text-[16px] leading-none">account_tree</span>
                                                     <span>開啟互動式股權關係圖</span>
-                                                    <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
+                                                    <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                                                 </a>
                                             </div>
                                         </div>
@@ -1529,10 +1553,10 @@
                                             <!-- Upstream Holding / Controlling -->
                                             <div class="p-3.5 rounded-xl border space-y-2"
                                                  :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
-                                                <div class="flex items-center space-x-2 text-xs font-bold text-indigo-400">
+                                                <div class="flex items-center space-x-2 text-sm font-bold text-indigo-400">
                                                     <span class="material-symbols-outlined text-[16px] leading-none">arrow_upward</span>
                                                     <span>上游母公司 / 控股法人 (Upstream)</span>
-                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-500/20 text-indigo-300">
+                                                    <span class="px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300">
                                                         {{ (expandedDrawerData?.company_network?.relationships?.upstream || []).length }}
                                                     </span>
                                                 </div>
@@ -1558,7 +1582,7 @@
                                                 <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400">
                                                     <span class="material-symbols-outlined text-[16px] leading-none">arrow_downward</span>
                                                     <span>下游轉投資與核心關係企業 (Downstream)</span>
-                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
+                                                    <span class="px-1.5 py-0.2 rounded-full text-xs font-mono bg-emerald-500/20 text-emerald-300">
                                                         {{ (expandedDrawerData?.company_network?.relationships?.downstream || []).length }}
                                                     </span>
                                                 </div>
@@ -2040,7 +2064,7 @@
                             :class="expandedDrawerTicker === item.ticker && drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black border-amber-500 font-black' : 'bg-amber-500 text-[#2B251A] border-amber-500 font-black') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')">
                         <span class="material-symbols-outlined text-[14px] leading-none">event_note</span>
                         <span>法說會</span>
-                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="px-1 py-0.2 rounded-full text-[10px] font-black"
+                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="px-1 py-0.2 rounded-full text-xs font-black"
                               :class="drawerActiveSubTab === 'earnings' && expandedDrawerTicker === item.ticker ? 'bg-black text-amber-400' : 'bg-amber-500/20 text-amber-400'">
                             {{ drawerEarningsMap[item.ticker].length }}
                         </span>
@@ -2058,7 +2082,7 @@
 
                 <!-- Right: History & Age -->
                 <div class="flex items-center space-x-2 shrink-0 ml-auto">
-                    <span class="num-font text-[11px] opacity-75">{{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
+                    <span class="num-font text-xs opacity-75">{{ (item.age_hours !== null && item.age_hours !== undefined) ? item.age_hours + 'h 前' : '最新' }}</span>
                     <button @click="searchTickerHistory(item.ticker)"
                             class="px-2 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-0.5 text-amber-500 hover:text-amber-400 shadow-sm"
                             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-white border-[#E5E7EB]'"
@@ -2076,39 +2100,39 @@
                 <div class="flex flex-wrap items-center gap-1.5 border-b pb-2.5"
                      :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <button @click.stop="drawerActiveSubTab = 'profile'"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
+                            class="px-3.5 py-1.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'profile' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                        <span class="material-symbols-outlined text-[15px] leading-none">business</span>
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
                         <span>基本面與新聞</span>
                     </button>
                     <button @click.stop="drawerActiveSubTab = 'earnings'"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
+                            class="px-3.5 py-1.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'earnings' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                        <span class="material-symbols-outlined text-[15px] leading-none">event_note</span>
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                         <span>法說會</span>
-                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                        <span v-if="(drawerEarningsMap[item.ticker] || []).length" class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-black"
                               :class="drawerActiveSubTab === 'earnings' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                             {{ drawerEarningsMap[item.ticker].length }}
                         </span>
                     </button>
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_network"
                             @click.stop="drawerActiveSubTab = 'network'; ensureCompanyNetworkLoaded(item.ticker)"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
+                            class="px-3.5 py-1.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'network' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                        <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                         <span>集團股權網絡</span>
-                        <span v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                        <span v-if="(expandedDrawerData?.company_network?.relationships?.downstream || []).length" class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-black"
                               :class="drawerActiveSubTab === 'network' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                             {{ (expandedDrawerData.company_network.relationships?.downstream || []).length }}
                         </span>
                     </button>
                     <button v-if="isTwStock(item.ticker) || expandedDrawerData?.company_tender"
                             @click.stop="drawerActiveSubTab = 'tender'; ensureCompanyTenderLoaded(item.ticker)"
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition-colors flex items-center space-x-1.5"
+                            class="px-3.5 py-1.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5"
                             :class="drawerActiveSubTab === 'tender' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
-                        <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                         <span>政府標案</span>
-                        <span v-if="expandedDrawerData?.company_tender?.wins" class="ml-1 px-1.5 py-0.2 rounded-full text-xs font-black"
+                        <span v-if="expandedDrawerData?.company_tender?.wins" class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-black"
                               :class="drawerActiveSubTab === 'tender' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
                             {{ expandedDrawerData.company_tender.wins }} 案
                         </span>
@@ -2117,7 +2141,7 @@
 
                 <!-- Sub-tab 1: Profile -->
                 <div v-if="drawerActiveSubTab === 'profile'" class="space-y-3">
-                    <div v-if="expandedDrawerLoading" class="py-4 text-center text-amber-400 animate-pulse text-xs">
+                    <div v-if="expandedDrawerLoading" class="py-4 text-center text-amber-400 animate-pulse text-sm">
                         正在連線 2md 即時爬取公司基本資料與新聞...
                     </div>
                     <div v-else-if="expandedDrawerData" class="space-y-3">
@@ -2126,44 +2150,44 @@
                             <span class="text-base font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
                                 {{ expandedDrawerData?.name || item.name || formatTicker(item.ticker) }}
                             </span>
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-md border"
+                            <span class="px-2.5 py-0.5 text-sm font-semibold rounded-md border"
                                   :class="isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-amber-100 text-amber-800 border-amber-300'">
                                 {{ expandedDrawerData?.industry || '綜合產業' }}
                             </span>
-                            <span v-if="expandedDrawerData?.market_cap" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            <span v-if="expandedDrawerData?.market_cap" class="text-sm font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 市值: {{ expandedDrawerData.market_cap }}
                             </span>
-                            <span v-if="expandedDrawerData?.capital" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            <span v-if="expandedDrawerData?.capital" class="text-sm font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 資本額: {{ expandedDrawerData.capital }}
                             </span>
-                            <span v-if="expandedDrawerData?.unified_id" class="text-xs font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            <span v-if="expandedDrawerData?.unified_id" class="text-sm font-mono" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 統編: {{ expandedDrawerData.unified_id }}
                             </span>
-                            <span v-if="expandedDrawerData?.chairman" class="text-xs" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
+                            <span v-if="expandedDrawerData?.chairman" class="text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                                 董座: {{ expandedDrawerData.chairman }}
                             </span>
                         </div>
 
                         <!-- Business Summary -->
-                        <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                        <p class="text-sm leading-relaxed" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                             {{ expandedDrawerData.business_summary || '暫無詳細業務描述' }}
                         </p>
 
                         <!-- Corporate Network Quick Highlights -->
                         <div v-if="expandedDrawerData?.company_network" class="pt-2 border-t space-y-1.5" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                            <div class="text-xs font-bold text-amber-500 flex items-center justify-between">
-                                <div class="flex items-center space-x-1">
-                                    <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
+                            <div class="text-sm font-bold text-amber-500 flex items-center justify-between">
+                                <div class="flex items-center space-x-1.5">
+                                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                                     <span>集團與轉投資關係企業:</span>
                                 </div>
-                                <button @click.stop="drawerActiveSubTab = 'network'" class="text-xs text-amber-400 hover:underline flex items-center space-x-0.5">
+                                <button @click.stop="drawerActiveSubTab = 'network'" class="text-sm font-bold text-amber-400 hover:underline flex items-center space-x-0.5">
                                     <span>完整圖譜</span>
-                                    <span class="material-symbols-outlined text-[12px] leading-none">chevron_right</span>
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                 </button>
                             </div>
                             <div class="flex flex-wrap gap-1.5">
                                 <span v-for="(up, uidx) in (expandedDrawerData.company_network.relationships?.upstream || [])" :key="'up-'+uidx"
-                                      class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1"
+                                      class="px-2.5 py-0.5 rounded-md text-sm border font-medium inline-flex items-center space-x-1"
                                       :class="isDark ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-800'">
                                     <span class="text-xs font-bold opacity-80">母/控股</span>
                                     <span>{{ up.name }}</span>
@@ -2171,14 +2195,14 @@
                                 <button v-for="(down, didx) in (expandedDrawerData.company_network.relationships?.downstream || []).slice(0, 5)" :key="'down-'+didx"
                                         @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
                                         :disabled="!down.is_listed"
-                                        class="px-2 py-0.5 rounded-md text-xs border font-medium inline-flex items-center space-x-1 transition-all"
+                                        class="px-2.5 py-0.5 rounded-md text-sm border font-medium inline-flex items-center space-x-1 transition-all"
                                         :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-600 cursor-default')">
                                     <span>{{ down.name }}</span>
-                                    <span v-if="down.code" class="text-[10px] font-mono font-bold px-1 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
+                                    <span v-if="down.code" class="text-xs font-mono font-bold px-1 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
                                 </button>
                                 <span v-if="(expandedDrawerData.company_network.relationships?.downstream || []).length > 5"
                                       @click.stop="drawerActiveSubTab = 'network'"
-                                      class="px-2 py-0.5 rounded-md text-xs border font-medium cursor-pointer"
+                                      class="px-2.5 py-0.5 rounded-md text-sm border font-bold cursor-pointer"
                                       :class="isDark ? 'bg-[#1a1b20] border-[#2a2c33] text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'">
                                     +{{ expandedDrawerData.company_network.relationships.downstream.length - 5 }} 更多
                                 </span>
@@ -2187,14 +2211,14 @@
 
                         <!-- Recent News -->
                         <div v-if="expandedDrawerData?.recent_news && expandedDrawerData.recent_news.length > 0" class="pt-2 border-t space-y-1.5" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
-                            <div class="text-xs font-bold text-amber-500 flex items-center space-x-1">
-                                <span class="material-symbols-outlined text-[15px] leading-none">newspaper</span>
+                            <div class="text-sm font-bold text-amber-500 flex items-center space-x-1.5">
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
                                 <span>即時最新動態:</span>
                             </div>
                             <div class="space-y-1.5">
                                 <a v-for="(news, nidx) in expandedDrawerData.recent_news.slice(0, 2)" :key="nidx"
                                    :href="news.url" target="_blank"
-                                   class="block p-2 rounded-lg border text-xs leading-normal transition-all truncate hover:underline"
+                                   class="block p-2.5 rounded-lg border text-sm leading-normal transition-all truncate hover:underline"
                                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-800 hover:bg-white'">
                                     • {{ news.title }}
                                 </a>
@@ -2202,30 +2226,30 @@
                         </div>
 
                         <!-- External Links Bar -->
-                        <div class="pt-2 border-t flex flex-wrap items-center gap-1.5 text-xs font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
+                        <div class="pt-2 border-t flex flex-wrap items-center gap-2 text-sm font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                             <button v-if="expandedDrawerData?.company_network"
                                     @click.stop="drawerActiveSubTab = 'network'"
-                                    class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                                    class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
                                     :class="isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'">
-                                <span class="material-symbols-outlined text-[13px] leading-none">account_tree</span>
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
                                 <span>股權網絡圖</span>
                             </button>
                             <a v-if="expandedDrawerData?.links?.yahoo" :href="expandedDrawerData.links.yahoo" target="_blank"
-                               class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                               class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
                                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
                                 <span>Yahoo</span>
-                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                             </a>
                             <a v-if="expandedDrawerData?.links?.goodinfo" :href="expandedDrawerData.links.goodinfo" target="_blank"
-                               class="px-2.5 py-1 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                               class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
                                :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]'">
                                 <span>Goodinfo</span>
-                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                             </a>
                             <button @click="searchTickerHistory(item.ticker)"
-                                    class="px-2.5 py-1 rounded-lg border transition-all text-black bg-amber-500 hover:bg-amber-400 border-amber-500 flex items-center space-x-1 ml-auto shadow-sm">
+                                    class="px-3 py-1.5 rounded-lg border transition-all text-black bg-amber-500 hover:bg-amber-400 border-amber-500 flex items-center space-x-1.5 ml-auto shadow-sm cursor-pointer">
                                 <span>時序軌跡</span>
-                                <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                             </button>
                         </div>
                     </div>
@@ -2250,28 +2274,28 @@
                                         {{ ec.datetime_cst || (ec.call_date + ' ' + (ec.call_time || '')) }}
                                     </span>
                                 </div>
-                                <span class="text-slate-400 text-[11px]">
+                                <span class="text-slate-400 text-xs">
                                     {{ ec.meeting_type === 'online' ? '線上直播' : '實體會議' }}
                                 </span>
                             </div>
-                            <div v-if="ec.location || ec.remarks" class="text-[11px]" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
+                            <div v-if="ec.location || ec.remarks" class="text-xs" :class="isDark ? 'text-slate-300' : 'text-slate-600'">
                                 <div v-if="ec.location">地點 / 方式: {{ ec.location }}</div>
                                 <div v-if="ec.remarks" class="text-amber-400/90">備註: {{ ec.remarks }}</div>
                             </div>
                             <div class="flex items-center justify-between pt-1 border-t" :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
-                                <div v-if="ec.eps_estimate || ec.eps_actual" class="text-[11px] flex items-center space-x-2">
+                                <div v-if="ec.eps_estimate || ec.eps_actual" class="text-xs flex items-center space-x-2">
                                     <span v-if="ec.eps_estimate" class="text-slate-400">預估: <strong class="text-amber-400">{{ ec.eps_estimate }}</strong></span>
                                     <span v-if="ec.eps_actual" class="text-emerald-400 font-bold">公佈: {{ ec.eps_actual }}</span>
                                 </div>
                                 <div class="flex items-center space-x-1.5 ml-auto">
                                     <a v-if="ec.presentation_url" :href="ec.presentation_url" target="_blank"
-                                       class="px-2 py-0.5 rounded text-[11px] font-bold text-amber-400 hover:text-amber-300 border flex items-center space-x-0.5"
+                                       class="px-2 py-0.5 rounded text-xs font-bold text-amber-400 hover:text-amber-300 border flex items-center space-x-0.5"
                                        :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200'">
                                         <span class="material-symbols-outlined text-[13px] leading-none">description</span>
                                         <span>簡報</span>
                                     </a>
                                     <a v-if="ec.webcast_url" :href="ec.webcast_url" target="_blank"
-                                       class="px-2 py-0.5 rounded text-[11px] font-bold text-sky-400 hover:text-sky-300 border flex items-center space-x-0.5"
+                                       class="px-2 py-0.5 rounded text-xs font-bold text-sky-400 hover:text-sky-300 border flex items-center space-x-0.5"
                                        :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-slate-200'">
                                         <span class="material-symbols-outlined text-[13px] leading-none">videocam</span>
                                         <span>影音</span>
@@ -2322,7 +2346,7 @@
                                     <span class="material-symbols-outlined text-[12px] leading-none">open_in_new</span>
                                 </a>
                             </div>
-                            <p v-if="expandedDrawerData.company_network.address" class="text-[11px]" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
+                            <p v-if="expandedDrawerData.company_network.address" class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                                 登記地址: {{ expandedDrawerData.company_network.address }}
                             </p>
                         </div>
@@ -2334,7 +2358,7 @@
                                 <div class="flex items-center space-x-1.5 text-xs font-bold text-indigo-400">
                                     <span class="material-symbols-outlined text-[15px] leading-none">arrow_upward</span>
                                     <span>上游母公司 / 控股法人</span>
-                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-500/20 text-indigo-300">
+                                    <span class="px-1.5 py-0.2 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300">
                                         {{ (expandedDrawerData.company_network.relationships?.upstream || []).length }}
                                     </span>
                                 </div>
@@ -2347,7 +2371,7 @@
                                          :class="isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200'">
                                         <span class="font-medium" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ up.name }}</span>
                                         <button v-if="up.code" @click="searchTickerHistory(up.ticker || up.code)"
-                                                class="px-1.5 py-0.2 rounded text-[11px] font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
+                                                class="px-1.5 py-0.2 rounded text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">
                                             {{ up.code }} ↗
                                         </button>
                                     </div>
@@ -2359,7 +2383,7 @@
                                 <div class="flex items-center space-x-1.5 text-xs font-bold text-emerald-400">
                                     <span class="material-symbols-outlined text-[15px] leading-none">arrow_downward</span>
                                     <span>下游轉投資與核心關係企業</span>
-                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
+                                    <span class="px-1.5 py-0.2 rounded-full text-xs font-mono bg-emerald-500/20 text-emerald-300">
                                         {{ (expandedDrawerData.company_network.relationships?.downstream || []).length }}
                                     </span>
                                 </div>
@@ -2374,7 +2398,7 @@
                                             {{ down.name }}
                                         </span>
                                         <button v-if="down.code" @click="searchTickerHistory(down.ticker || down.code)"
-                                                class="px-1.5 py-0.2 rounded text-[11px] font-mono font-bold shrink-0 transition-all"
+                                                class="px-1.5 py-0.2 rounded text-xs font-mono font-bold shrink-0 transition-all"
                                                 :class="isDark ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40' : 'bg-emerald-200 text-emerald-900 hover:bg-emerald-300'"
                                                 title="點擊載入此標的歷史走勢">
                                             {{ down.code }} ↗
@@ -2790,7 +2814,7 @@
                                     {{ day.call_date }} <span v-if="day.weekday" class="font-bold text-amber-500 ml-1">{{ day.weekday }}</span>
                                 </h3>
                                 <span v-if="day.call_date === calendarTodayStr"
-                                      class="px-2 py-0.5 rounded-md text-[11px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse flex items-center space-x-1">
+                                      class="px-2 py-0.5 rounded-md text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse flex items-center space-x-1">
                                     <span class="material-symbols-outlined text-[12px]">local_fire_department</span>
                                     <span>今日進行中</span>
                                 </span>
@@ -2815,14 +2839,14 @@
                                  :class="isDark ? 'bg-[#12141A] border-[#22242B] hover:border-amber-500/50' : 'bg-white border-slate-200 hover:border-amber-400 shadow-sm'">
                                 <div class="flex items-center space-x-2.5 truncate mr-2">
                                     <!-- Initials Avatar Badge -->
-                                    <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-[10px] font-mono shrink-0 shadow-sm"
+                                    <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs font-mono shrink-0 shadow-sm"
                                          :class="call.market === 'TW' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : (call.market === 'US' ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : (call.market === 'JP' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : (call.market === 'KR' ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-slate-700 text-slate-300')))">
                                         {{ (call.ticker.split('.')[0] || call.ticker).slice(0, 4) }}
                                     </div>
 
                                     <div class="space-y-0.5 truncate">
                                         <div class="flex items-center space-x-1.5">
-                                            <span class="px-1.5 py-0.2 rounded text-[10px] font-black uppercase"
+                                            <span class="px-1.5 py-0.2 rounded text-xs font-black uppercase"
                                                   :class="call.market === 'TW' ? (isDark ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60' : 'bg-emerald-100 text-emerald-800 border border-emerald-300') : (call.market === 'US' ? (isDark ? 'bg-sky-950/70 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-300') : (call.market === 'JP' ? (isDark ? 'bg-rose-950/70 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-300') : (call.market === 'KR' ? (isDark ? 'bg-purple-950/70 text-purple-400 border border-purple-800/60' : 'bg-purple-100 text-purple-800 border border-purple-300') : (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'))))">
                                                 {{ call.market }}
                                             </span>
@@ -2836,10 +2860,10 @@
                                             </span>
                                             <span v-if="call.is_weight_stock" class="material-symbols-outlined text-[13px] text-amber-400" title="重量級權值股">star</span>
                                         </div>
-                                        <div class="text-[11px] truncate font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
+                                        <div class="text-xs truncate font-medium" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                             {{ call.remarks || call.financial_period || '法人說明會' }}
                                         </div>
-                                        <div class="text-[10px] flex items-center space-x-2 pt-0.5" :class="isDark ? 'text-slate-500' : 'text-slate-400'">
+                                        <div class="text-xs flex items-center space-x-2 pt-0.5" :class="isDark ? 'text-slate-500' : 'text-slate-400'">
                                             <span>{{ calendarTimezone === 'EST' ? (call.call_time_est || call.call_time || '02:00') : (call.call_time_cst || call.call_time || '14:00') }} ({{ calendarTimezone }})</span>
                                             <span v-if="call.presentation_url">
                                                 <a :href="call.presentation_url" target="_blank" class="text-amber-400 hover:underline font-semibold flex items-center space-x-0.5" title="下載官方法說會簡報 PDF">

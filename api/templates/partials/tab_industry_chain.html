@@ -31,7 +31,7 @@
             <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <div class="px-3.5 py-2 rounded-xl border text-center min-w-[80px]"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B]'">
-                    <div class="text-[11px] font-bold tracking-tight text-sky-400">上游</div>
+                    <div class="text-xs font-bold tracking-tight text-sky-400">上游</div>
                     <div class="text-lg font-black font-mono leading-none mt-0.5"
                          :class="isDark ? 'text-white' : 'text-[#2B251A]'">
                         {{ industryGraphData.summary ? industryGraphData.summary.upstream_count : 0 }}
@@ -39,7 +39,7 @@
                 </div>
                 <div class="px-3.5 py-2 rounded-xl border text-center min-w-[80px]"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B]'">
-                    <div class="text-[11px] font-bold tracking-tight text-amber-500">中游</div>
+                    <div class="text-xs font-bold tracking-tight text-amber-500">中游</div>
                     <div class="text-lg font-black font-mono leading-none mt-0.5"
                          :class="isDark ? 'text-white' : 'text-[#2B251A]'">
                         {{ industryGraphData.summary ? industryGraphData.summary.midstream_count : 0 }}
@@ -47,7 +47,7 @@
                 </div>
                 <div class="px-3.5 py-2 rounded-xl border text-center min-w-[80px]"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B]'">
-                    <div class="text-[11px] font-bold tracking-tight text-purple-400">下游</div>
+                    <div class="text-xs font-bold tracking-tight text-purple-400">下游</div>
                     <div class="text-lg font-black font-mono leading-none mt-0.5"
                          :class="isDark ? 'text-white' : 'text-[#2B251A]'">
                         {{ industryGraphData.summary ? industryGraphData.summary.downstream_count : 0 }}
@@ -55,7 +55,7 @@
                 </div>
                 <div class="px-3.5 py-2 rounded-xl border text-center min-w-[80px]"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B]'">
-                    <div class="text-[11px] font-bold tracking-tight text-emerald-400">傳導連線</div>
+                    <div class="text-xs font-bold tracking-tight text-emerald-400">傳導連線</div>
                     <div class="text-lg font-black font-mono leading-none mt-0.5"
                          :class="isDark ? 'text-white' : 'text-[#2B251A]'">
                         {{ industryGraphData.summary ? industryGraphData.summary.edge_count : 0 }}
@@ -82,7 +82,7 @@
                             ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-md scale-105'
                             : (isDark ? 'bg-[#16181D] border border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-[#FFFDF7] border border-[#DDC58B] text-[#2B251A] hover:bg-[#FFF0CC]')">
                     <span>{{ t.name }}</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono opacity-80"
+                    <span class="px-1.5 py-0.2 rounded-full text-xs font-mono opacity-80"
                           :class="selectedTheme === t.id ? 'bg-[#2B251A] text-[#FFB010]' : (isDark ? 'bg-[#262626] text-slate-400' : 'bg-[#EFE3C3] text-[#2B251A]')">
                         {{ t.count }}
                     </span>
@@ -200,7 +200,7 @@
                     已聚焦 {{ formatTicker(selectedNodeTicker) }}
                     <span v-if="getSelectedNodeCompany()">({{ getSelectedNodeCompany() }})</span>
                 </span>
-                <span class="px-2 py-0.5 rounded-full font-extrabold text-[11px]"
+                <span class="px-2 py-0.5 rounded-full font-extrabold text-xs"
                       :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-200 text-amber-950 border border-amber-300'">
                     直連鏈路共 {{ highlightedNodes.length }} 檔
                 </span>
@@ -296,7 +296,7 @@
                          :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
                         <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
                         <div class="font-bold">{{ selectedNodeTicker ? '上游無直連供應商' : '暫無符合條件之節點' }}</div>
-                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                        <div class="text-xs opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
                     </div>
 
                     <div v-for="node in industryGraphData.upstream_nodes" :key="node.ticker"
@@ -310,7 +310,7 @@
                         <!-- Top Row: Ticker, Name, Market & History Link -->
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono border"
+                                <span class="px-1.5 py-0.5 rounded text-xs font-black font-mono border"
                                       :class="node.market === 'TW'
                                           ? (isDark ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' : 'bg-blue-100 text-blue-900 border-blue-400 font-extrabold')
                                           : (node.market === 'JP'
@@ -329,11 +329,11 @@
 
                                 <!-- Explicit Status Badges for Colorblind Clarity -->
                                 <span v-if="selectedNodeTicker === node.ticker"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
                                     聚焦中
                                 </span>
                                 <span v-else-if="highlightedNodes.includes(node.ticker)"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
                                     直連
                                 </span>
                             </div>
@@ -351,7 +351,7 @@
                              :title="node.role">
                             {{ node.role }}
                         </div>
-                        <div v-if="node.key_focus" class="mt-0.5 text-[11px] line-clamp-1 font-mono font-medium"
+                        <div v-if="node.key_focus" class="mt-0.5 text-xs line-clamp-1 font-mono font-medium"
                              :class="isDark ? 'text-slate-400' : 'text-[#473B25]'"
                              :title="node.key_focus">
                             {{ node.key_focus }}
@@ -368,7 +368,7 @@
                                     {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
-                                      class="font-extrabold px-1.5 py-0.2 rounded text-[11px] border"
+                                      class="font-extrabold px-1.5 py-0.2 rounded text-xs border"
                                       :class="node.change_pct >= 0
                                           ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')">
@@ -379,7 +379,7 @@
                             <!-- Badges: Timestral / TimesFM / Inst Streak -->
                             <div class="flex items-center gap-1 flex-wrap">
                                 <span v-if="node.timestral_potential !== null && node.timestral_potential !== undefined"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="node.timestral_potential >= 0
                                           ? (isDark ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-sky-100 text-sky-950 border-sky-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')"
@@ -387,7 +387,7 @@
                                     T {{ (Number(node.timestral_potential) >= 0 ? '+' : '') + Number(node.timestral_potential).toFixed(1) }}%
                                 </span>
                                 <span v-if="node.institutional_streak"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-100 text-amber-950 border-amber-500 font-bold'">
                                     {{ node.institutional_streak }}
                                 </span>
@@ -424,7 +424,7 @@
                          :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
                         <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
                         <div class="font-bold">{{ selectedNodeTicker ? '中游無直連夥伴' : '暫無符合條件之節點' }}</div>
-                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                        <div class="text-xs opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
                     </div>
 
                     <div v-for="node in industryGraphData.midstream_nodes" :key="node.ticker"
@@ -438,7 +438,7 @@
                         <!-- Top Row: Ticker, Name, Market & History Link -->
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono border"
+                                <span class="px-1.5 py-0.5 rounded text-xs font-black font-mono border"
                                       :class="node.market === 'TW'
                                           ? (isDark ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' : 'bg-blue-100 text-blue-900 border-blue-400 font-extrabold')
                                           : (node.market === 'JP'
@@ -457,11 +457,11 @@
 
                                 <!-- Explicit Status Badges for Colorblind Clarity -->
                                 <span v-if="selectedNodeTicker === node.ticker"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
                                     聚焦中
                                 </span>
                                 <span v-else-if="highlightedNodes.includes(node.ticker)"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
                                     直連
                                 </span>
                             </div>
@@ -479,7 +479,7 @@
                              :title="node.role">
                             {{ node.role }}
                         </div>
-                        <div v-if="node.key_focus" class="mt-0.5 text-[11px] line-clamp-1 font-mono font-medium"
+                        <div v-if="node.key_focus" class="mt-0.5 text-xs line-clamp-1 font-mono font-medium"
                              :class="isDark ? 'text-slate-400' : 'text-[#473B25]'"
                              :title="node.key_focus">
                             {{ node.key_focus }}
@@ -496,7 +496,7 @@
                                     {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
-                                      class="font-extrabold px-1.5 py-0.2 rounded text-[11px] border"
+                                      class="font-extrabold px-1.5 py-0.2 rounded text-xs border"
                                       :class="node.change_pct >= 0
                                           ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')">
@@ -507,12 +507,12 @@
                             <!-- Badges: Timestral / TimesFM / Inst Streak -->
                             <div class="flex items-center gap-1 flex-wrap">
                                 <span v-if="node.dual_model_consensus"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40"
                                       title="雙時序基礎模型看漲共振">
                                     共振
                                 </span>
                                 <span v-if="node.timestral_potential !== null && node.timestral_potential !== undefined"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="node.timestral_potential >= 0
                                           ? (isDark ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-sky-100 text-sky-950 border-sky-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')"
@@ -520,7 +520,7 @@
                                     T {{ (Number(node.timestral_potential) >= 0 ? '+' : '') + Number(node.timestral_potential).toFixed(1) }}%
                                 </span>
                                 <span v-if="node.institutional_streak"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-100 text-amber-950 border-amber-500 font-bold'">
                                     {{ node.institutional_streak }}
                                 </span>
@@ -557,7 +557,7 @@
                          :class="isDark ? 'border-[#262626] text-slate-500 bg-[#0D0E11]/40' : 'border-[#DDC58B] text-[#8C7B5D] bg-[#FFF9E8]/40'">
                         <span class="material-symbols-outlined text-[24px] block opacity-60">link_off</span>
                         <div class="font-bold">{{ selectedNodeTicker ? '下游無直連客戶' : '暫無符合條件之節點' }}</div>
-                        <div class="text-[11px] opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
+                        <div class="text-xs opacity-75" v-if="selectedNodeTicker">可點擊頂部「展開全圖」查看全市場</div>
                     </div>
 
                     <div v-for="node in industryGraphData.downstream_nodes" :key="node.ticker"
@@ -571,7 +571,7 @@
                         <!-- Top Row: Ticker, Name, Market & History Link -->
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-black font-mono border"
+                                <span class="px-1.5 py-0.5 rounded text-xs font-black font-mono border"
                                       :class="node.market === 'TW'
                                           ? (isDark ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' : 'bg-blue-100 text-blue-900 border-blue-400 font-extrabold')
                                           : (node.market === 'JP'
@@ -590,11 +590,11 @@
 
                                 <!-- Explicit Status Badges for Colorblind Clarity -->
                                 <span v-if="selectedNodeTicker === node.ticker"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-amber-500 text-slate-950 shadow-sm flex items-center gap-0.5">
                                     聚焦中
                                 </span>
                                 <span v-else-if="highlightedNodes.includes(node.ticker)"
-                                      class="px-1.5 py-0.2 rounded text-[10px] font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
+                                      class="px-1.5 py-0.2 rounded text-xs font-black bg-sky-600 text-white shadow-sm flex items-center gap-0.5">
                                     直連
                                 </span>
                             </div>
@@ -612,7 +612,7 @@
                              :title="node.role">
                             {{ node.role }}
                         </div>
-                        <div v-if="node.key_focus" class="mt-0.5 text-[11px] line-clamp-1 font-mono font-medium"
+                        <div v-if="node.key_focus" class="mt-0.5 text-xs line-clamp-1 font-mono font-medium"
                              :class="isDark ? 'text-slate-400' : 'text-[#473B25]'"
                              :title="node.key_focus">
                             {{ node.key_focus }}
@@ -629,7 +629,7 @@
                                     {{ node.current_price ? (node.market === 'US' ? '$' : (node.market === 'JP' ? '¥' : 'NT$')) + formatNumber(node.current_price, (node.market === 'JP' ? (Number.isInteger(Number(node.current_price)) ? 0 : 1) : 2)) : '—' }}
                                 </span>
                                 <span v-if="node.change_pct !== null && node.change_pct !== undefined"
-                                      class="font-extrabold px-1.5 py-0.2 rounded text-[11px] border"
+                                      class="font-extrabold px-1.5 py-0.2 rounded text-xs border"
                                       :class="node.change_pct >= 0
                                           ? (isDark ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')">
@@ -640,7 +640,7 @@
                             <!-- Badges: Timestral / TimesFM / Inst Streak -->
                             <div class="flex items-center gap-1 flex-wrap">
                                 <span v-if="node.timestral_potential !== null && node.timestral_potential !== undefined"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="node.timestral_potential >= 0
                                           ? (isDark ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-sky-100 text-sky-950 border-sky-400 font-bold')
                                           : (isDark ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-rose-100 text-rose-950 border-rose-400 font-bold')"
@@ -648,7 +648,7 @@
                                     T {{ (Number(node.timestral_potential) >= 0 ? '+' : '') + Number(node.timestral_potential).toFixed(1) }}%
                                 </span>
                                 <span v-if="node.institutional_streak"
-                                      class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border"
+                                      class="px-1.5 py-0.5 rounded text-xs font-extrabold border"
                                       :class="isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-amber-100 text-amber-950 border-amber-500 font-bold'">
                                     {{ node.institutional_streak }}
                                 </span>
@@ -676,28 +676,28 @@
                 <svg class="w-8 h-3 shrink-0" viewBox="0 0 32 12">
                     <line x1="0" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="3" :class="isDark ? 'text-sky-400' : 'text-sky-600'" />
                 </svg>
-                <span class="font-extrabold px-1.5 py-0.5 rounded text-[11px]" :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-sky-100 text-sky-900 border border-sky-300'">實線 ──</span>
+                <span class="font-extrabold px-1.5 py-0.5 rounded text-xs" :class="isDark ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-sky-100 text-sky-900 border border-sky-300'">實線 ──</span>
                 <span :class="isDark ? 'text-slate-200' : 'text-[#1E1B18] font-bold'">產業鏈 (關鍵零組件 ➔ 系統代工)</span>
             </div>
             <div class="flex items-center gap-2">
                 <svg class="w-8 h-3 shrink-0" viewBox="0 0 32 12">
                     <line x1="0" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="3" stroke-dasharray="7 4" :class="isDark ? 'text-emerald-400' : 'text-emerald-700'" />
                 </svg>
-                <span class="font-extrabold px-1.5 py-0.5 rounded text-[11px]" :class="isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'">長虛線 ╌╌</span>
+                <span class="font-extrabold px-1.5 py-0.5 rounded text-xs" :class="isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'">長虛線 ╌╌</span>
                 <span :class="isDark ? 'text-slate-200' : 'text-[#1E1B18] font-bold'">資本開支 (雲端巨頭 CapEx 驅動)</span>
             </div>
             <div class="flex items-center gap-2">
                 <svg class="w-8 h-3 shrink-0" viewBox="0 0 32 12">
                     <line x1="0" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="3" stroke-dasharray="7 3 2 3" :class="isDark ? 'text-amber-400' : 'text-amber-700'" />
                 </svg>
-                <span class="font-extrabold px-1.5 py-0.5 rounded text-[11px]" :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-100 text-amber-900 border border-amber-400'">點劃線 ╍·</span>
+                <span class="font-extrabold px-1.5 py-0.5 rounded text-xs" :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-100 text-amber-900 border border-amber-400'">點劃線 ╍·</span>
                 <span :class="isDark ? 'text-slate-200' : 'text-[#1E1B18] font-bold'">大客戶依賴 (SEC 10-K >10% 營收披露)</span>
             </div>
             <div class="flex items-center gap-2">
                 <svg class="w-8 h-3 shrink-0" viewBox="0 0 32 12">
                     <line x1="0" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="3" stroke-dasharray="3 3" :class="isDark ? 'text-purple-400' : 'text-purple-700'" />
                 </svg>
-                <span class="font-extrabold px-1.5 py-0.5 rounded text-[11px]" :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-900 border border-purple-300'">密點線 ··</span>
+                <span class="font-extrabold px-1.5 py-0.5 rounded text-xs" :class="isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-900 border border-purple-300'">密點線 ··</span>
                 <span :class="isDark ? 'text-slate-200' : 'text-[#1E1B18] font-bold'">主題關聯 (架構授權 / 戰略生態)</span>
             </div>
         </div>

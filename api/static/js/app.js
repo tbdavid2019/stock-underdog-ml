@@ -2388,7 +2388,10 @@ export const app = createApp({
         },
         stripEmojis(str) {
             if (!str) return '';
-            return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();
+            return String(str)
+                .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}\u{1FA00}-\u{1FAFF}\p{Extended_Pictographic}]/gu, '')
+                .replace(/[⚡⚖📈📊💡👑🏆🔮⭐👀🚀🛡🤖]/gu, '')
+                .trim();
         },
         cleanRegimeName(str) {
             if (!str) return this.currentLocale === 'en' ? 'Evaluating…' : '評估中…';
@@ -2419,10 +2422,7 @@ export const app = createApp({
             if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振') || s.includes('多模型共振')) {
                 return '綜合優選';
             }
-            if (s.includes('三大模型共振') || s.includes('三模型看漲') || s.includes('三模型共振')) {
-                return '三模型看漲';
-            }
-            if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲') || s.includes('雙維共振')) {
+            if (/(?:[23二三兩]大?模型|雙(?:大?模型|ML|時序|AI|維))(?:看漲|共振)/.test(s)) {
                 return '多模型看漲';
             }
             if (s.toLowerCase().includes('moirai')) {
@@ -2433,7 +2433,9 @@ export const app = createApp({
         parseTags(tags) {
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
-            return list.map(rawTag => {
+            const seen = new Set();
+            const result = [];
+            for (const rawTag of list) {
                 let cleanLabel = this.stripEmojis(rawTag)
                     .replace(/\((?:Google|Mistral|Salesforce|888|本地規則)\)/gi, '')
                     .replace(/Google\s+|Mistral\s+|Salesforce\s+/gi, '')
@@ -2450,32 +2452,21 @@ export const app = createApp({
                 if (cleanLabel.includes('玄鐵重劍') || cleanLabel.includes('玄鐵買點') || cleanLabel.includes('玄鐵')) {
                     cleanLabel = cleanLabel.replace(/玄鐵重劍|玄鐵買點|玄鐵/g, '季線支撐');
                 }
-                if (/四重共振|三重共振|多維共振|雙重共振|多模型共振/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/四重共振|三重共振|多維共振|雙重共振|多模型共振/g, '綜合優選');
+
+                // 徹底排除「三模型看漲 / 雙模型共識 / 多模型共振 / 全共振」等假大空硬編碼分類
+                if (/三模型|三大模型|雙大模型|雙ML|雙時序|雙模型|雙AI|雙維|四重共振|三重共振|多維共振|雙重共振|多模型共振|3重符合|2重符合|全共振|共振/.test(cleanLabel)) {
+                    continue;
                 }
-                if (/三大模型共振|三模型看漲|三模型共振/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/三大模型共振|三模型看漲|三模型共振/g, '三模型看漲');
-                }
-                if (/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲|雙維共振/.test(cleanLabel)) {
-                    cleanLabel = cleanLabel.replace(/雙大模型共振|雙ML共振|雙時序共振|雙模型共振|雙AI看漲|雙維共振/g, '多模型看漲');
-                }
+
+                if (!cleanLabel) continue;
+                if (seen.has(cleanLabel)) continue;
+                seen.add(cleanLabel);
+
                 let icon = null;
                 let badgeType = 'default';
-
                 let tooltip = cleanLabel;
-                if (cleanLabel.includes('綜合優選')) {
-                    icon = 'military_tech';
-                    badgeType = 'resonance_triple';
-                    tooltip = '多模型同步看漲 · 具備支撐或籌碼優勢';
-                } else if (cleanLabel.includes('三模型看漲')) {
-                    icon = 'psychology';
-                    badgeType = 'resonance_triple';
-                    tooltip = '三大時序模型同步看漲';
-                } else if (cleanLabel.includes('雙模型看漲') || cleanLabel.includes('多模型看漲') || cleanLabel.includes('雙AI看漲')) {
-                    icon = 'psychology';
-                    badgeType = 'resonance_ml';
-                    tooltip = '多模型同步看漲';
-                } else if (cleanLabel.includes('土洋合買')) {
+
+                if (cleanLabel.includes('土洋合買') || cleanLabel.includes('外資投信合買') || cleanLabel.includes('法人合買')) {
                     icon = 'handshake';
                     badgeType = 'institutional';
                     tooltip = '外資投信同步買超';
@@ -2521,29 +2512,29 @@ export const app = createApp({
                     tooltip = '強勢主流板塊';
                 }
 
-                return {
+                result.push({
                     raw: rawTag,
                     label: cleanLabel,
                     icon: icon,
                     type: badgeType,
                     tooltip: tooltip
-                };
-            });
+                });
+            }
+            return result;
         },
         getTagClass(tag) {
             if (!tag) return '';
             const t = tag.type || 'default';
             if (this.isDark) {
                 switch (t) {
-                    case 'resonance_quad':
-                        return 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold';
-                    case 'resonance_triple':
-                        return 'bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold';
-                    case 'resonance_double':
-                    case 'resonance_multi':
-                        return 'bg-amber-500/10 text-amber-400 border-amber-500/25 font-bold';
-                    case 'resonance_ml':
-                        return 'bg-purple-950/50 text-purple-300 border-purple-800/40 font-bold';
+                    case 'ai_bullish':
+                        return 'bg-emerald-950/40 text-emerald-300 border-emerald-800/40 font-bold';
+                    case 'ai_bearish':
+                        return 'bg-rose-950/40 text-rose-300 border-rose-800/40 font-bold';
+                    case 'ai_strong':
+                        return 'bg-amber-950/40 text-amber-300 border-amber-800/40 font-bold';
+                    case 'fundamental':
+                        return 'bg-indigo-950/40 text-indigo-300 border-indigo-800/40 font-medium';
                     case 'institutional':
                         return 'bg-emerald-950/50 text-emerald-300 border-emerald-800/40 font-semibold';
                     case 'technical':
@@ -2565,15 +2556,14 @@ export const app = createApp({
                 }
             } else {
                 switch (t) {
-                    case 'resonance_quad':
+                    case 'ai_bullish':
+                        return 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold';
+                    case 'ai_bearish':
+                        return 'bg-rose-50 text-rose-800 border-rose-200 font-bold';
+                    case 'ai_strong':
                         return 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                    case 'resonance_triple':
-                        return 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
-                    case 'resonance_double':
-                    case 'resonance_multi':
-                        return 'bg-amber-50 text-amber-800 border-amber-200 font-bold';
-                    case 'resonance_ml':
-                        return 'bg-purple-50 text-purple-800 border-purple-200 font-bold';
+                    case 'fundamental':
+                        return 'bg-indigo-50 text-indigo-800 border-indigo-200 font-medium';
                     case 'institutional':
                         return 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold';
                     case 'technical':
@@ -3227,7 +3217,10 @@ window.getMarketLabel = globalGetMarketLabel;
 
 const globalStripEmojis = (str) => {
     if (!str) return '';
-    return String(str).replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}]/gu, '').trim();
+    return String(str)
+        .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}-\u{2B55}\u{FE00}-\u{FE0F}\u{1FA00}-\u{1FAFF}\p{Extended_Pictographic}]/gu, '')
+        .replace(/[⚡⚖📈📊💡👑🏆🔮⭐👀🚀🛡🤖]/gu, '')
+        .trim();
 };
 app.config.globalProperties.stripEmojis = globalStripEmojis;
 window.stripEmojis = globalStripEmojis;
@@ -3261,14 +3254,11 @@ const globalFormatStrategyName = (str) => {
     if (s.includes('玄鐵重劍') || s.includes('玄鐵買點') || s.includes('玄鐵')) {
         return '季線支撐';
     }
-    if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振')) {
+    if (s.includes('四重共振') || s.includes('三重共振') || s.includes('多維共振') || s.includes('雙重共振') || s.includes('多模型共振')) {
         return '綜合優選';
     }
-    if (s.includes('三大模型共振') || s.includes('三模型看漲') || s.includes('三模型共振')) {
-        return '三模型看漲';
-    }
-    if (s.includes('雙大模型共振') || s.includes('雙ML共振') || s.includes('雙時序共振') || s.includes('雙模型共振') || s.includes('雙AI看漲') || s.includes('雙模型看漲')) {
-        return '雙模型看漲';
+    if (/(?:[23二三兩]大?模型|雙(?:大?模型|ML|時序|AI|維))(?:看漲|共振)/.test(s)) {
+        return '多模型看漲';
     }
     if (s.toLowerCase().includes('moirai')) {
         return 'MOIRAI-2';
