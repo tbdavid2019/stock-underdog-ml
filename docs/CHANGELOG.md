@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-11-04 (v2.4.66)
+
+### Resilience, Historical Backfill & Architecture Lifecycle Standardization
+- **Yahoo Finance 429 速率限制協變量平滑降級 (`pipeline/orchestrator.py`)**：
+  - 當 Yahoo Finance 觸發 429 速率限制導致外生變數與特徵矩陣不可用時，在非 `STRICT_COVARIATE_MODE` 下自動平滑降級為 `price_only` 純價格時序推論模式。
+  - 降級時自動清理 `past_covariates` 與 `feature_snapshot`，徹底避免模型因缺少協變量而全數放棄推論（符合條件: 0 支）的致命架構缺陷。
+- **Salesforce MOIRAI-2 歷史預測回填工具 (`scripts/backfill_moirai_predictions.py`)**：
+  - 提供針對過去交易日的回溯推論與 DuckDB 回填工具，依無前瞻偏差之歷史收盤截斷重現預測，補齊 `moirai_predicted_price`, `moirai_potential`, `moirai_p10`, `moirai_p90` 及獨立 `MOIRAI-2` 策略列，徹底解決歷史對決表與 PK 成績單空缺問題。
+  - 支援聚合 `GROUP BY ticker, dt` 消除跨指數重複推論與 N+1 連線爭用，並顯式清理日 K 線時區與補齊 `tags` 欄位。
+- **全鏈路模型生命週期與熱插拔架構規範 (`docs/MODEL_LIFECYCLE_GUIDE.md`)**：
+  - 詳盡梳理全鏈路 14 層改動盤點（模型、策略、註冊、授權、管線、共振、DuckDB、Supabase、驗證庫、推播、MCP、API、前端 client、前端 UI）。
+  - 規劃「大象底座（通用時序引擎 + 泛型 JSONB 存儲 + 平滑降級）」與「金魚插件（輕量自描述適配器 + YAML 市場動態參數覆寫 + 前端自適應渲染）」之模型熱插拔架構 RFC。
+  - 明訂新增 7 步與刪除 3 步標準 SOP 及 8 大踩坑防範清單。
+- **前端資源緩存更新 (`api/static/js/app.js`)**：
+  - 更新內部模組引用版本號至 `v=2.4.66`，杜絕瀏覽器緩存舊版 client。
+
+---
+
 ## 2026-11-04 (v2.4.65)
 
 ### Bug Fixes & Code Review Hardening (OpenCode & Codex Dual Review Fixes)

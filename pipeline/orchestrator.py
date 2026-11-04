@@ -133,17 +133,35 @@ class PipelineOrchestrator:
                 matrices = (build_market_features(list(contexts), decision_time, lookback=128, profile=profile)
                             if profile != "price_only" else {})
             except Exception:
-                logger.exception("市場協變量準備失敗，模型將回報資料不足")
+                logger.exception("市場協變量準備失敗，自動降級為 price_only 純時序預測")
                 matrices = {}
-            if matrices:
-                attach_market_features(contexts, matrices)
-            elif profile != "price_only":
+
+            ready_matrices = {
+                t: m for t, m in matrices.items()
+                if getattr(m, "status", None) in {"ready", "full_features"}
+            } if matrices else {}
+
+            import os
+            strict_covariates = os.getenv("STRICT_COVARIATE_MODE", "false").lower() in ("true", "1")
+
+            if ready_matrices:
+                attach_market_features(contexts, ready_matrices)
+                if not strict_covariates:
+                    for ticker, ctx in contexts.items():
+                        if ctx.metadata.get("feature_status") == "features_unavailable":
+                            logger.info(f"   ℹ️ {ticker} 協變量缺失，降級為 price_only 純時序預測")
+                            ctx.metadata.update(feature_profile="price_only", feature_status="price_only")
+                            ctx.metadata.pop("past_covariates", None)
+            elif profile != "price_only" and strict_covariates:
                 for ctx in contexts.values():
                     ctx.metadata.update(feature_profile=profile, feature_status="features_unavailable",
                                         feature_reason="covariate_pipeline_failure")
             else:
+                if profile != "price_only":
+                    logger.warning("⚠️ 市場協變量不可用或未就緒，自動平滑降級為 price_only 純時序預測模式以確保決策不中斷。")
                 for ctx in contexts.values():
                     ctx.metadata.update(feature_profile="price_only", feature_status="price_only")
+                    ctx.metadata.pop("past_covariates", None)
 
         logger.info(f"✅ 成功載入 {len(contexts)}/{len(stock_list)} 支股票數據\n")
 
