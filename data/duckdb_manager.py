@@ -61,7 +61,7 @@ class DuckDBManager:
         retry_delay: float = 0.2,
         allow_downgrade: bool = False
     ) -> duckdb.DuckDBPyConnection:
-        """建立或取得 DuckDB 連線，支援唯讀模式與並發鎖衝突指數退避重試"""
+        """建立或取得 DuckDB 連線，支援唯讀模式與並發鎖衝突/配置衝突指數退避重試"""
         if self.db_path != ":memory:" and not os.path.exists(self.db_path):
             with self._INIT_LOCK:
                 if self.db_path != ":memory:" and not os.path.exists(self.db_path):
@@ -70,13 +70,33 @@ class DuckDBManager:
         for attempt in range(max_retries + 1):
             try:
                 return duckdb.connect(self.db_path, read_only=read_only)
-            except duckdb.IOException as exc:
+            except (duckdb.IOException, duckdb.ConnectionException, Exception) as exc:
                 err_msg = str(exc).lower()
-                is_lock_conflict = any(k in err_msg for k in ("conflicting lock", "could not set lock", "unique file handle"))
-                if not is_lock_conflict or attempt >= max_retries:
-                    if not read_only and is_lock_conflict and allow_downgrade:
+                is_diff_config = ("different configuration" in err_msg) or ("different config" in err_msg)
+                if is_diff_config:
+                    if read_only:
                         logger.warning(
-                            "⚠️ DuckDB 取得寫入連線逾時 (鎖衝突)，嘗試降級為唯讀模式以保障查詢: %s", exc
+                            "⚠️ DuckDB 唯讀連線配置衝突 (已有寫入連線開啟)，透明回退為 read_only=False 以匹配既有連線: %s", exc
+                        )
+                        try:
+                            return duckdb.connect(self.db_path, read_only=False)
+                        except Exception as fb_exc:
+                            logger.warning("⚠️ DuckDB read_only=False 回退亦失敗: %s", fb_exc)
+                    else:
+                        if allow_downgrade:
+                            logger.warning(
+                                "⚠️ DuckDB 寫入連線配置衝突 (已有唯讀連線開啟)，嘗試降級為 read_only=True: %s", exc
+                            )
+                            try:
+                                return duckdb.connect(self.db_path, read_only=True)
+                            except Exception as fb_exc:
+                                logger.warning("⚠️ DuckDB read_only=True 降級亦失敗: %s", fb_exc)
+
+                is_lock_conflict = any(k in err_msg for k in ("conflicting lock", "could not set lock", "unique file handle", "resource temporarily unavailable"))
+                if (not is_lock_conflict and not is_diff_config) or attempt >= max_retries:
+                    if not read_only and (is_lock_conflict or is_diff_config) and allow_downgrade:
+                        logger.warning(
+                            "⚠️ DuckDB 取得寫入連線逾時 (鎖/配置衝突)，嘗試降級為唯讀模式以保障查詢: %s", exc
                         )
                         try:
                             return duckdb.connect(self.db_path, read_only=True)
@@ -85,7 +105,7 @@ class DuckDBManager:
                     raise
                 sleep_sec = retry_delay * (2 ** attempt)
                 logger.warning(
-                    "⚠️ DuckDB 檔案鎖衝突 (attempt %d/%d, read_only=%s)，將於 %.2fs 後重試: %s",
+                    "⚠️ DuckDB 連線異常 (attempt %d/%d, read_only=%s)，將於 %.2fs 後重試: %s",
                     attempt + 1, max_retries, read_only, sleep_sec, exc
                 )
                 time.sleep(sleep_sec)
@@ -991,6 +1011,30 @@ class DuckDBManager:
             return None
         return val
 
+    @classmethod
+    def _parse_index_names(cls, index_name: Optional[str]) -> List[str]:
+        """清洗並標準化市場指數名稱，支援逗號分隔多選（例如 '台灣50,SP500'），將 ALL/全部市場安全排除"""
+        if not index_name:
+            return []
+        cleaned_str = str(index_name).replace("，", ",")
+        parts = [p.strip() for p in cleaned_str.split(",") if p.strip()]
+        valid = []
+        for p in parts:
+            if p.upper() not in ("ALL", "NONE", "NULL", "全部", "全部市場"):
+                valid.append(p)
+        return valid
+
+    @classmethod
+    def _build_index_filter_clause(cls, index_names: List[str], prefix: str = "") -> Tuple[str, List[str]]:
+        """動態生成 index_name 篩選 SQL 與參數"""
+        if not index_names:
+            return "", []
+        col = f"{prefix}index_name" if prefix else "index_name"
+        if len(index_names) == 1:
+            return f"{col} = ?", [index_names[0]]
+        placeholders = ", ".join(["?"] * len(index_names))
+        return f"{col} IN ({placeholders})", list(index_names)
+
     def get_latest_predictions(
         self, 
         index_name: Optional[str] = None, 
@@ -1004,7 +1048,7 @@ class DuckDBManager:
         預設 (batch_only=True) 僅鎖定最新執行批次（例如 24 小時內或最新批次日期），
         並計算 analysis_date, data_as_of, age_hours, is_stale。
         """
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         now = datetime.datetime.now(TZ_TAIPEI)
 
         where_clauses = [
@@ -1014,9 +1058,10 @@ class DuckDBManager:
             "model_name NOT LIKE '%DEBUG%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
         if model_name:
             where_clauses.append("model_name = ?")
             params.append(model_name)
@@ -1057,7 +1102,7 @@ class DuckDBManager:
             batch_date = str(latest_ts)[:10]
 
         if batch_only:
-            if index_name:
+            if parsed_indices:
                 where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (TRY_CAST(? AS TIMESTAMP) - INTERVAL 12 HOUR)")
                 params.append(latest_ts)
             else:
@@ -1114,21 +1159,29 @@ class DuckDBManager:
 
     def get_resonance_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得多策略重合 / 雙重符合 / 🏆 三重共振股票 (鎖定指定指數之最新批次快照，排序前嚴格過濾共振列並排除看跌防守)"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            base_where.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            base_where.append(idx_clause)
+            params.extend(idx_params)
 
         base_where_sql = f"WHERE {' AND '.join(base_where)}"
-        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_idx_clause, p_idx_params = self._build_index_filter_clause(parsed_indices, prefix="p.")
+        p_where_clauses = [
+            "p.index_name NOT LIKE '%TEST%'",
+            "p.index_name NOT LIKE '%DEBUG%'",
+            "p.index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        if p_idx_clause:
+            p_where_clauses.append(p_idx_clause)
         p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
-        full_params = list(params) + list(params) + [limit]
+        full_params = list(params) + list(p_idx_params) + [limit]
 
         sql = f"""
         WITH latest_ts AS (
@@ -1162,21 +1215,29 @@ class DuckDBManager:
 
     def get_tri_bullish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得 3 模型同步看漲標的 (TimesFM ∩ Timestral ∩ MOIRAI-2 全數潛力 > 0)"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            base_where.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            base_where.append(idx_clause)
+            params.extend(idx_params)
 
         base_where_sql = f"WHERE {' AND '.join(base_where)}"
-        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_idx_clause, p_idx_params = self._build_index_filter_clause(parsed_indices, prefix="p.")
+        p_where_clauses = [
+            "p.index_name NOT LIKE '%TEST%'",
+            "p.index_name NOT LIKE '%DEBUG%'",
+            "p.index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        if p_idx_clause:
+            p_where_clauses.append(p_idx_clause)
         p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
-        full_params = list(params) + list(params) + [limit]
+        full_params = list(params) + list(p_idx_params) + [limit]
 
         sql = f"""
         WITH latest_ts AS (
@@ -1213,21 +1274,29 @@ class DuckDBManager:
 
     def get_dual_bullish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得雙模型以上看漲標的 (任 2 個時序大模型潛力 > 0)"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            base_where.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            base_where.append(idx_clause)
+            params.extend(idx_params)
 
         base_where_sql = f"WHERE {' AND '.join(base_where)}"
-        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_idx_clause, p_idx_params = self._build_index_filter_clause(parsed_indices, prefix="p.")
+        p_where_clauses = [
+            "p.index_name NOT LIKE '%TEST%'",
+            "p.index_name NOT LIKE '%DEBUG%'",
+            "p.index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        if p_idx_clause:
+            p_where_clauses.append(p_idx_clause)
         p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
-        full_params = list(params) + list(params) + [limit]
+        full_params = list(params) + list(p_idx_params) + [limit]
 
         sql = f"""
         WITH latest_ts AS (
@@ -1269,21 +1338,29 @@ class DuckDBManager:
 
     def get_dual_bearish_candidates(self, index_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """取得綜合避險標的 (≥2 個時序大模型預測跌幅 < 0 或共振防守破底)"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            base_where.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            base_where.append(idx_clause)
+            params.extend(idx_params)
 
         base_where_sql = f"WHERE {' AND '.join(base_where)}"
-        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_idx_clause, p_idx_params = self._build_index_filter_clause(parsed_indices, prefix="p.")
+        p_where_clauses = [
+            "p.index_name NOT LIKE '%TEST%'",
+            "p.index_name NOT LIKE '%DEBUG%'",
+            "p.index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        if p_idx_clause:
+            p_where_clauses.append(p_idx_clause)
         p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
-        full_params = list(params) + list(params) + [limit]
+        full_params = list(params) + list(p_idx_params) + [limit]
 
         sql = f"""
         WITH latest_ts AS (
@@ -1345,19 +1422,28 @@ class DuckDBManager:
         多維量化自訂篩選器 (Multi-Factor Quant Screener)
         依交易方向、AI 時序預測模型多選、本益比估值、預期空間與核心量化因子進行高效率列式篩選。
         """
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         base_where = [
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
-        params = []
-        if index_name:
-            base_where.append("index_name = ?")
-            params.append(index_name)
+        ts_params = []
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            base_where.append(idx_clause)
+            ts_params.extend(idx_params)
 
         base_where_sql = f"WHERE {' AND '.join(base_where)}"
-        p_where_clauses = [f"p.{clause}" for clause in base_where]
+        p_idx_clause, p_idx_params = self._build_index_filter_clause(parsed_indices, prefix="p.")
+        p_where_clauses = [
+            "p.index_name NOT LIKE '%TEST%'",
+            "p.index_name NOT LIKE '%DEBUG%'",
+            "p.index_name NOT LIKE '%SERVICE_KEY%'"
+        ]
+        if p_idx_clause:
+            p_where_clauses.append(p_idx_clause)
+        p_params = list(p_idx_params)
 
         is_bearish = (direction or "").strip().lower() == "bearish"
 
@@ -1366,12 +1452,12 @@ class DuckDBManager:
             p_where_clauses.append("p.potential < 0")
             if min_potential is not None:
                 p_where_clauses.append("p.potential <= ?")
-                params.append(-abs(float(min_potential)))
+                p_params.append(-abs(float(min_potential)))
         else:
             p_where_clauses.append("p.potential > 0")
             if min_potential is not None:
                 p_where_clauses.append("p.potential >= ?")
-                params.append(abs(float(min_potential)))
+                p_params.append(abs(float(min_potential)))
 
         # 模型多選條件 (所有選中模型皆須符合方向，且僅限支援的模型欄位以防 SQL 異常)
         MODEL_COL_MAP = {
@@ -1416,8 +1502,7 @@ class DuckDBManager:
         order_direction = "ASC" if is_bearish else "DESC"
         p_where_sql = f"AND {' AND '.join(p_where_clauses)}"
 
-        ts_params = [index_name] if index_name else []
-        full_params = ts_params + params + [limit, offset]
+        full_params = ts_params + p_params + [limit, offset]
 
         sql = f"""
         WITH latest_ts AS (
@@ -1453,7 +1538,7 @@ class DuckDBManager:
         limit: int = 50
     ) -> List[Dict[str, Any]]:
         """取得玄鐵重劍技術買點 (MA60/120 回調) 股票"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "(model_name = '玄鐵重劍' OR strategy_type = '玄鐵重劍' OR pullback_type IS NOT NULL)",
             "index_name NOT LIKE '%TEST%'",
@@ -1461,9 +1546,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
         if pullback_type:
             where_clauses.append("pullback_type LIKE ?")
             params.append(f"%{pullback_type}%")
@@ -1488,7 +1574,7 @@ class DuckDBManager:
 
     def get_timestral_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 Timestral 預測漲幅最大 TOP N 標的 (Mistral AI 209M)"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'Timestral'",
@@ -1497,9 +1583,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1521,7 +1608,7 @@ class DuckDBManager:
 
     def get_timestral_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 Timestral 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'Timestral'",
@@ -1530,9 +1617,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1559,7 +1647,7 @@ class DuckDBManager:
         if timestral_res:
             return timestral_res
 
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "(model_name = 'Timestral' OR model_name = 'LSTM')",
@@ -1568,9 +1656,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1596,7 +1685,7 @@ class DuckDBManager:
         if timestral_res:
             return timestral_res
 
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "(model_name = 'Timestral' OR model_name = 'LSTM')",
@@ -1605,9 +1694,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1629,7 +1719,7 @@ class DuckDBManager:
 
     def get_timesfm_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測漲幅最大 TOP N 標的"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'TimesFM'",
@@ -1638,9 +1728,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1662,7 +1753,7 @@ class DuckDBManager:
 
     def get_timesfm_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
             "model_name = 'TimesFM'",
@@ -1671,9 +1762,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1695,7 +1787,7 @@ class DuckDBManager:
 
     def get_moirai_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 MOIRAI-2 預測漲幅最大 TOP N 標的"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
             "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
@@ -1704,9 +1796,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""
@@ -1730,7 +1823,7 @@ class DuckDBManager:
 
     def get_moirai_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 MOIRAI-2 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        index_name = self._clean_index_name(index_name)
+        parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
             "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
@@ -1739,9 +1832,10 @@ class DuckDBManager:
             "index_name NOT LIKE '%SERVICE_KEY%'"
         ]
         params = []
-        if index_name:
-            where_clauses.append("index_name = ?")
-            params.append(index_name)
+        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
+        if idx_clause:
+            where_clauses.append(idx_clause)
+            params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
         sql = f"""

@@ -264,7 +264,7 @@
                     <!-- AI Importance Badge (Clef / JEV System One / Local Rules) -->
                     <span v-if="ep.importance_score"
                           :title="'市場催化重要性評級: ' + ep.importance_score + ' 分'"
-                          class="px-2.5 py-1 rounded-lg text-xs font-bold flex items-center space-x-1 border"
+                          class="px-2.5 py-1 rounded-lg text-[13px] sm:text-sm font-bold flex items-center space-x-1 border"
                           :class="ep.importance_level === 'heavyweight' 
                               ? (isDark ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20' : 'bg-amber-100 text-amber-900 border-amber-300 font-black') 
                               : (ep.importance_level === 'important' 
@@ -273,15 +273,15 @@
                         <span class="material-symbols-outlined text-[13px] leading-none">
                             {{ ep.importance_level === 'heavyweight' ? 'workspace_premium' : (ep.importance_level === 'important' ? 'bolt' : 'article') }}
                         </span>
-                        <span>{{ ep.importance_badge || (ep.importance_score + ' 分') }}</span>
+                        <span>{{ (ep.importance_badge || (ep.importance_score + ' 分')).replace(/\s*\(本地規則\)/g, '') }}</span>
                     </span>
 
-                    <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold flex items-center space-x-1"
+                    <span class="px-2.5 py-1 rounded-lg text-[13px] sm:text-sm font-mono font-semibold flex items-center space-x-1"
                           :class="isDark ? 'bg-[#16181D] text-slate-300 border border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border border-[#E5E7EB]'">
                         <span class="material-symbols-outlined text-[13px] leading-none align-text-bottom">schedule</span>
                         <span>{{ ep.duration_formatted || '1h+' }}</span>
                     </span>
-                    <span class="px-2 py-1 rounded-lg text-xs font-black uppercase"
+                    <span class="px-2 py-1 rounded-lg text-[13px] sm:text-sm font-black uppercase"
                           :class="ep.language === 'zh' ? (isDark ? 'bg-rose-950/60 text-rose-400 border border-rose-800/60' : 'bg-rose-100 text-rose-800 border border-rose-200') : (isDark ? 'bg-sky-950/60 text-sky-400 border border-sky-800/60' : 'bg-sky-100 text-sky-800 border border-sky-200')">
                         {{ ep.language }}
                     </span>
@@ -326,7 +326,6 @@
                         <span class="material-symbols-outlined text-[18px] leading-none">smart_toy</span>
                         <span>重點觀點精煉 (TL;DR)</span>
                     </span>
-                    <span class="text-xs num-font text-slate-400">Gemini 2.5 Flash</span>
                 </div>
                 <p class="text-base leading-relaxed font-normal">
                     {{ ep.tldr_zh_tw }}

@@ -37,6 +37,16 @@ def _set_in_cache(key: str, value: PredictionResponse, max_size: int = _MAX_CACH
         _PRED_CACHE[key] = (now, value)
 
 
+def _normalize_index_name(index_name: Optional[str]) -> Optional[str]:
+    if not index_name:
+        return None
+    parts = sorted(list(dict.fromkeys(
+        p.strip() for p in str(index_name).split(",") 
+        if p.strip() and p.strip().upper() not in ("ALL", "NONE", "NULL", "全部", "全部市場")
+    )))
+    return ",".join(parts) if parts else None
+
+
 def _enrich_records_with_name(records: List[Dict[str, Any]], db: Optional[DuckDBManager] = None) -> List[Dict[str, Any]]:
     if not records or not db or not getattr(db, "enabled", False):
         return records
@@ -117,7 +127,7 @@ def get_latest_predictions(
     """
     查詢最新量化批次運算結果。預設 (batch_only=True) 僅回傳最新成功執行批次之標的，並附帶 batch_date, data_as_of, age_hours 與 is_stale 狀態。
     """
-    cache_key = f"latest_{index_name}_{model_name}_{batch_only}_{limit}_{offset}"
+    cache_key = f"latest_{_normalize_index_name(index_name)}_{model_name}_{batch_only}_{limit}_{offset}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -151,7 +161,7 @@ def get_resonance_candidates(
     篩選同時符合「技術面均線買點 ∩ Google TimesFM 看漲 ∩ Mistral Timestral 看漲 ∩ 投信/法人鎖碼」的雙時序大模型共振股票。
     目標價由 TimesFM 與 Timestral P50 中位數加權合成，提供極致穩健的預測視野。
     """
-    cache_key = f"resonance_{index_name}_{limit}"
+    cache_key = f"resonance_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -171,7 +181,7 @@ def get_tri_bullish_candidates(
     """
     篩選 Google TimesFM、Mistral Timestral-209M、Salesforce MOIRAI-2 三大時序模型同步看漲標的。
     """
-    cache_key = f"tri_bullish_{index_name}_{limit}"
+    cache_key = f"tri_bullish_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -191,7 +201,7 @@ def get_dual_bullish_candidates(
     """
     篩選任 2 個時序大模型同步預測隔日漲幅大於 0 之潛力標的。
     """
-    cache_key = f"dual_bullish_{index_name}_{limit}"
+    cache_key = f"dual_bullish_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -211,7 +221,7 @@ def get_dual_bearish_candidates(
     """
     篩選至少 2 個時序大模型同步預測下跌，或具備看跌共振訊號之避險防守標的。
     """
-    cache_key = f"dual_bearish_{index_name}_{limit}"
+    cache_key = f"dual_bearish_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -242,7 +252,7 @@ def screen_quant_candidates(
     """
     model_list = sorted([m.strip().lower() for m in models.split(",") if m.strip()]) if models else None
     norm_models = ",".join(model_list) if model_list else ""
-    cache_key = f"screen_{direction}_{norm_models}_{pe_range}_{min_potential}_{risk_reward}_{ma60}_{institutional}_{index_name}_{limit}_{offset}"
+    cache_key = f"screen_{direction}_{norm_models}_{pe_range}_{min_potential}_{risk_reward}_{ma60}_{institutional}_{_normalize_index_name(index_name)}_{limit}_{offset}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -274,7 +284,7 @@ def get_xuantie_candidates(
     """
     篩選處於中長期多頭趨勢且當前股價剛好回踩 MA60 季線或 MA120 半年線之支撐買點標的。
     """
-    cache_key = f"xuantie_{index_name}_{pullback_type}_{limit}"
+    cache_key = f"xuantie_{_normalize_index_name(index_name)}_{pullback_type}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -382,7 +392,7 @@ def get_moirai_top_bullish(
     """
     依據 Salesforce MOIRAI-2 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
     """
-    cache_key = f"moirai_bullish_{index_name}_{limit}"
+    cache_key = f"moirai_bullish_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached
@@ -402,7 +412,7 @@ def get_moirai_top_bearish(
     """
     依據 Salesforce MOIRAI-2 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
-    cache_key = f"moirai_bearish_{index_name}_{limit}"
+    cache_key = f"moirai_bearish_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)
     if cached is not None:
         return cached

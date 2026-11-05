@@ -314,17 +314,15 @@ class PodcastService:
             else:
                 score_num = float(imp_score)
                 ep["importance_score"] = score_num
-                dec_slot = ep.get("decision_slot") or "clef_primary"
-                slot_suffix = "(本地規則)" if dec_slot == "local_rules" else ""
                 if score_num >= 4.2:
                     ep["importance_level"] = "heavyweight"
-                    ep["importance_badge"] = f"⭐ 5星重磅{slot_suffix}"
+                    ep["importance_badge"] = "⭐ 5星重磅"
                 elif score_num >= 3.4:
                     ep["importance_level"] = "important"
-                    ep["importance_badge"] = f"⚡ 4星重要{slot_suffix}"
+                    ep["importance_badge"] = "⚡ 4星重要"
                 else:
                     ep["importance_level"] = "watch"
-                    ep["importance_badge"] = f"📰 3星關注{slot_suffix}"
+                    ep["importance_badge"] = "📰 3星關注"
                 ep["ticker_sentiments"] = ticker_sentiments
 
             # 5. 股票行情 Badge 結合決策多空立場

@@ -64,6 +64,32 @@ class TestQuantScreenerAPI(unittest.TestCase):
         data = resp.json()
         self.assertTrue(data["success"])
 
+    def test_screen_predictions_with_multi_market_index_name(self):
+        """驗證支援多選市場 (逗號分隔，例如 '台灣50,SP500') 查詢"""
+        resp = self.client.get("/api/v1/predictions/screen?direction=bullish&index_name=台灣50,SP500&limit=5")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+
+    def test_latest_predictions_with_multi_market_index_name(self):
+        """驗證 /latest 支援逗號分隔多選市場指數"""
+        resp = self.client.get("/api/v1/predictions/latest?index_name=台灣50,日經225&limit=10")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+
+    def test_duckdb_manager_parse_index_names(self):
+        """驗證 DuckDBManager._parse_index_names 多市場解析與安全過濾"""
+        from data.duckdb_manager import DuckDBManager
+        self.assertEqual(DuckDBManager._parse_index_names(None), [])
+        self.assertEqual(DuckDBManager._parse_index_names("ALL"), [])
+        self.assertEqual(DuckDBManager._parse_index_names("全部市場"), [])
+        self.assertEqual(DuckDBManager._parse_index_names("台灣50"), ["台灣50"])
+        self.assertEqual(DuckDBManager._parse_index_names("台灣50,SP500, ALL"), ["台灣50", "SP500"])
+        clause, params = DuckDBManager._build_index_filter_clause(["台灣50", "SP500"])
+        self.assertEqual(clause, "index_name IN (?, ?)")
+        self.assertEqual(params, ["台灣50", "SP500"])
+
     def test_screen_predictions_with_moirai_alias_and_invalid_model(self):
         """驗證帶有 moirai-2 別名或未知模型時不引發 BinderException，安全過濾"""
         resp = self.client.get("/api/v1/predictions/screen?direction=bullish&models=moirai-2,unknown_xyz&limit=5")
@@ -79,6 +105,26 @@ class TestQuantScreenerAPI(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["success"])
+
+
+    def test_all_strategy_endpoints_with_multi_market(self):
+        """驗證所有策略端點皆支援逗號分隔多選市場指數"""
+        endpoints = [
+            "/api/v1/predictions/resonance?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/tri-bullish?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/dual-bullish?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/dual-bearish?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/xuantie?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/timestral/top-bullish?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/timesfm/top-bullish?index_name=台灣50,SP500&limit=5",
+            "/api/v1/predictions/moirai/top-bullish?index_name=台灣50,SP500&limit=5"
+        ]
+        for ep in endpoints:
+            with self.subTest(endpoint=ep):
+                resp = self.client.get(ep)
+                self.assertEqual(resp.status_code, 200)
+                data = resp.json()
+                self.assertTrue(data.get("success", True))
 
 
 if __name__ == "__main__":

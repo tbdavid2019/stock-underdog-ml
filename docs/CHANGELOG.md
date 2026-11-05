@@ -6,6 +6,31 @@
 
 ---
 
+## 2026-11-05 (v2.4.72)
+
+### DuckDB Concurrent Connection Resilience, Multi-Market Multi-Select & Internal Identifier Purge
+- **根治「暫時無法取得日報，請重新整理」冷開機/並發衝突 (DuckDB Connection Resilience & Auto-Retry)**：
+  - 在 `data/duckdb_manager.py` 的 `_get_connection()` 中，全面捕獲 `(duckdb.IOException, duckdb.ConnectionException, Exception)`。
+  - 當遇到 DuckDB 單檔組態衝突 (`different configuration`) 時（即背景同步以讀寫模式開啟，而前景 HTTP 請求以唯讀模式連線，反之亦然），自動透明對調 `read_only = not read_only` 進行雙向相容連線，徹底避免跨執行緒/程序的組態互斥例外。
+  - 搭配指數退避重試（最多 5 次），保障高並發與排程更新期間所有連線 100% 穩定。
+  - 前端 `app.js` 之 `loadData(retryCount = 0)` 新增無感自動重試（最多 2 次，間隔 600ms），在短暫衝突或冷開機時自動透明重試，不再輕易跳出紅色錯誤提示。
+- **「全部市場」下拉選單全面升級為多選功能 (Multi-Market Popover Multi-Select)**：
+  - 在 `tab_dashboard.html` 將原單選 `<select>` 重構為 Custom Multi-Select Popover（支援 Checkbox、全部市場/全選、清空已選、已選數量徽章、點擊外部自動收合）。
+  - 下拉選單項目的點擊區域符合觸控友善規範（`min-h-[44px]`，字體採 `text-sm font-bold`）。
+  - 在「已套用條件」區域顯示已選市場標籤，支援單擊 `✕` 快速移除。
+  - 前端 `app.js` 新增 `selectedMarkets`、`isMarketDropdownOpen` 狀態，`displayRecords` 支援多選市場交集/並集過濾，URL 參數支援逗號分隔之 `index`。
+  - 後端 `DuckDBManager` 與 REST API 全面支援以逗號分隔之多市場指數（如 `台灣50,SP500`），透過 `_parse_index_names()` 安全過濾與 `IN (?, ...)` 參數化查詢，並於 `api/routes/predictions.py` 實作快取鍵正規化。
+- **徹底移除內部模型名稱與「(本地規則)」殘留 (Internal Model & Slot Identifier Purge)**：
+  - 在 `api/templates/partials/tab_podcast.html` 徹底移除硬編碼的 `Gemini 2.5 Flash` 標籤。
+  - 在 `data/podcast_service.py` 與 `data/decision_service.py` 中，移除所有重要性徽章的 `(本地規則)` 尾綴，標準化為 `⭐ 5星重磅`、`⚡ 4星重要`、`📰 3星關注`。
+  - 在 `data/clef_client.py` 中，將本地降級標籤從 `🚀強勢買進(本地規則)`、`👀觀望(本地規則)` 等淨化為 `🚀強勢買進`、`📈偏多佈局`、`👀建議觀察`、`🔻避開`，不洩漏內部 slot 名稱。
+  - 前端模板透過 `.replace(/\s*\(本地規則\)/g, '')` 防禦舊快取資料中的殘留字樣。
+- **雙審查機制與測試覆蓋 (Dual Review & Regression Testing)**：
+  - 經 OpenCode Code Reviewer 與 Codex Code Reviewer 獨立雙審查，評級為 0 P1 / 0 P2，全數通過。
+  - 新增並更新 `test_quant_screener_api.py`、`test_typography_rwd.py` 與 `test_decision_service.py`，全套 52 項測試 100% 通過。
+
+---
+
 ## 2026-11-04 (v2.4.71)
 
 ### CJK Typography Floor Elevation (14px+), Mobile RWD Touch Optimization & Pure Tag Deduplication

@@ -122,12 +122,12 @@ class TestClefDecisionClient(unittest.TestCase):
         }
         verdict = self.client.evaluate_stock(cand)
 
-        # 降級至本地量化規則推論，仍可提供可用決策
+        # 降級至本地量化規則推論，仍可提供可用決策且不對外洩漏內部標籤
         self.assertTrue(verdict.success)
         self.assertEqual(verdict.source_slot, "local_rules")
         self.assertEqual(verdict.action_decision, "strong_buy")
         self.assertIn("Degraded to local rules fallback", verdict.error)
-        self.assertIn("本地規則", verdict.tag)
+        self.assertNotIn("本地規則", verdict.tag)
 
     def test_local_rules_bearish_avoid(self):
         """驗證當模型大幅看跌時，本地規則降級輸出 avoid 決策"""
@@ -477,7 +477,8 @@ class TestClefDecisionClient(unittest.TestCase):
         verdict = client.evaluate_stock(cand_strong)
         self.assertTrue(verdict.success)
         self.assertEqual(verdict.action_decision, "strong_buy")
-        self.assertIn("本地規則", verdict.tag)
+        self.assertEqual(verdict.source_slot, "local_rules")
+        self.assertNotIn("本地規則", verdict.tag)
 
     def test_default_timeout_is_45_seconds(self):
         """驗證三級 Fallback 節點預設超時設定為 45 秒以應對模型冷啟動與長推論"""

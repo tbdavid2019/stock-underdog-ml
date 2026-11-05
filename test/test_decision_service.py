@@ -81,11 +81,12 @@ class TestDecisionService(unittest.TestCase):
 
         verdict = self.service.evaluate_podcast_episode(episode)
 
-        # 核心驗證：必須成功，且明確標註 source_slot 為 local_rules
+        # 核心驗證：必須成功，且明確標註 source_slot 為 local_rules，且 importance_badge 不得洩漏內部規則字樣
         self.assertTrue(verdict.success)
         self.assertEqual(verdict.source_slot, "local_rules")
         self.assertGreaterEqual(verdict.importance_score, 3.5)
-        self.assertIn("本地規則", verdict.importance_badge)
+        self.assertTrue(any(s in verdict.importance_badge for s in ("星重磅", "星重要", "星關注")))
+        self.assertNotIn("本地規則", verdict.importance_badge)
         self.assertIn("2330.TW", verdict.ticker_sentiments)
         self.assertIn("NVDA", verdict.ticker_sentiments)
         # 關鍵詞包含「突破新高、看好、增長」，本地情緒詞典應判定為看多

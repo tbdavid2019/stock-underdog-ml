@@ -41,6 +41,17 @@ export const app = createApp({
             selectedInstBuyOnly: false,
 
             selectedIndex: '',
+            selectedMarkets: [],
+            isMarketDropdownOpen: false,
+            marketOptions: [
+                { id: '台灣50', name: '台灣50', sub: 'TW0050' },
+                { id: '台灣中型100', name: '台灣中型100', sub: 'TW0051' },
+                { id: '台股活躍精選', name: '台股活躍精選', sub: 'TW-Active 850' },
+                { id: '台股1000', name: '台股全市場1000', sub: 'TW1000' },
+                { id: 'SP500', name: 'S&P 500', sub: '美股標普 500' },
+                { id: '日經225', name: '日經225', sub: 'Nikkei 225' },
+                { id: '太空概念 (SpaceX)', name: '太空概念', sub: 'SpaceX' }
+            ],
             viewMode: savedViewMode, // 'table' | 'card'
             expandedDrawerTicker: null,
             expandedDrawerData: null,
@@ -359,6 +370,27 @@ export const app = createApp({
         };
     },
     computed: {
+        availableMarketOptions() {
+            return [
+                { id: '台灣50', label: '台灣50', code: 'TW0050' },
+                { id: '台灣中型100', label: '台灣中型100', code: 'TW0051' },
+                { id: '台股活躍精選', label: '台股活躍精選', code: 'TW-Active 850' },
+                { id: '台股1000', label: '台股全市場1000', code: 'TW1000' },
+                { id: 'SP500', label: 'S&P 500', code: '美股標普 500' },
+                { id: '日經225', label: '日經225', code: 'Nikkei 225' },
+                { id: '太空概念 (SpaceX)', label: '太空概念', code: 'SpaceX' }
+            ];
+        },
+        marketTriggerLabel() {
+            if (!this.selectedMarkets || this.selectedMarkets.length === 0 || this.selectedMarkets.includes('ALL')) {
+                return '全部市場 (All)';
+            }
+            if (this.selectedMarkets.length === 1) {
+                const opt = this.availableMarketOptions.find(o => o.id === this.selectedMarkets[0]);
+                return opt ? `${opt.label} (${opt.code})` : this.selectedMarkets[0];
+            }
+            return `已選 ${this.selectedMarkets.length} 個市場`;
+        },
         currentStrategyMeta() {
             return this.strategyOptions.find(s => s.id === this.selectedStrategy) || this.strategyOptions[0];
         },
@@ -452,6 +484,11 @@ export const app = createApp({
                     const instBuy = tagsStr.includes('合買') || tagsStr.includes('法人') || tagsStr.includes('投信') ||
                         ((Number(r.trust_net_5d) > 0) && (Number(r.foreign_net_5d) > 0));
                     if (!instBuy) return false;
+                }
+
+                // 8. 多選市場篩選 (Markets Multi-Select)
+                if (this.selectedMarkets && this.selectedMarkets.length > 0 && !this.selectedMarkets.includes('ALL')) {
+                    if (!this.selectedMarkets.includes(r.index_name)) return false;
                 }
 
                 seenTickers.add(tk);
@@ -1058,13 +1095,16 @@ export const app = createApp({
                 this.instSyncing = false;
             }
         },
-        async loadData() {
+        async loadData(retryCount = 0) {
             this.loading = true;
             this.loadError = '';
             try {
+                const targetIndex = (this.selectedMarkets && this.selectedMarkets.length > 0)
+                    ? this.selectedMarkets.filter(m => m !== 'ALL').join(',')
+                    : this.selectedIndex;
                 const data = await ApiClient.getPredictions({
                     strategy: this.selectedStrategy,
-                    indexName: this.selectedIndex,
+                    indexName: targetIndex,
                     limit: 60
                 });
                 this.records = data.data || [];
@@ -1079,6 +1119,11 @@ export const app = createApp({
                 this.batchDate = data.batch_date || (effectiveTs ? effectiveTs.substring(0, 10) : '');
                 this.batchStale = Boolean(data.is_stale || this.records.some(r => r.is_stale));
             } catch (e) {
+                if (retryCount < 2) {
+                    console.warn(`[loadData] 遇到暫時性連線異常，將於 600ms 後進行第 ${retryCount + 1}/2 次自動重試...`, e);
+                    await new Promise(r => setTimeout(r, 600));
+                    return this.loadData(retryCount + 1);
+                }
                 this.records = [];
                 this.batchDate = '';
                 this.batchTimestamp = '';
@@ -2043,6 +2088,58 @@ export const app = createApp({
             this.selectedRiskRewardOnly = false;
             this.selectedMa60Only = false;
             this.selectedInstBuyOnly = false;
+            this.selectedMarkets = [];
+            this.selectedIndex = '';
+            this.updateUrl();
+            this.loadData();
+        },
+        getMarketDisplayLabel(mId) {
+            const opt = this.availableMarketOptions.find(o => o.id === mId);
+            return opt ? `${opt.label} (${opt.code})` : mId;
+        },
+        removeMarketTag(mId) {
+            this.toggleMarket(mId);
+        },
+        isMarketSelected(mId) {
+            if (mId === 'ALL') {
+                return !this.selectedMarkets || this.selectedMarkets.length === 0 || this.selectedMarkets.includes('ALL');
+            }
+            return this.selectedMarkets && this.selectedMarkets.includes(mId);
+        },
+        toggleMarket(marketId) {
+            if (marketId === 'ALL') {
+                this.selectedMarkets = [];
+                this.selectedIndex = '';
+                this.setIndex();
+                return;
+            }
+            this.selectedMarkets = (this.selectedMarkets || []).filter(m => m !== 'ALL');
+            const idx = this.selectedMarkets.indexOf(marketId);
+            if (idx > -1) {
+                this.selectedMarkets.splice(idx, 1);
+            } else {
+                this.selectedMarkets.push(marketId);
+            }
+            this.selectedIndex = this.selectedMarkets.join(',');
+            this.setIndex();
+        },
+        selectAllMarkets() {
+            this.selectedMarkets = [];
+            this.selectedIndex = '';
+            this.setIndex();
+        },
+        clearSelectedMarkets() {
+            this.selectedMarkets = [];
+            this.selectedIndex = '';
+            this.setIndex();
+        },
+        clearMarkets() {
+            this.selectedMarkets = [];
+            this.selectedIndex = '';
+            this.setIndex();
+        },
+        closeMarketDropdown() {
+            this.isMarketDropdownOpen = false;
         },
         async fetchAvailableModels() {
             try {
@@ -2074,7 +2171,10 @@ export const app = createApp({
                     if (this.selectedStrategy && this.selectedStrategy !== 'resonance') {
                         params.set('strategy', this.selectedStrategy);
                     }
-                    if (this.selectedIndex) {
+                    const validMarkets = (this.selectedMarkets || []).filter(m => m && m !== 'ALL');
+                    if (validMarkets.length > 0) {
+                        params.set('index', validMarkets.join(','));
+                    } else if (this.selectedIndex && this.selectedIndex !== 'ALL') {
                         params.set('index', this.selectedIndex);
                     }
                 } else if (this.activeTab === 'institutional') {
@@ -2160,7 +2260,13 @@ export const app = createApp({
                 }
 
                 const idx = params.get('index');
-                this.selectedIndex = (idx && idx !== 'ALL') ? idx : '';
+                if (idx && idx !== 'ALL') {
+                    this.selectedIndex = idx;
+                    this.selectedMarkets = idx.split(',').map(s => s.trim()).filter(Boolean);
+                } else {
+                    this.selectedIndex = '';
+                    this.selectedMarkets = [];
+                }
 
                 const sub = params.get('sub');
                 this.instSubTab = (sub && ['three_inst', 'broker'].includes(sub)) ? sub : 'three_inst';
@@ -3172,6 +3278,13 @@ export const app = createApp({
 
         window.addEventListener('popstate', () => {
             this.syncStateFromUrl();
+        });
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('market-multiselect-dropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                this.isMarketDropdownOpen = false;
+            }
         });
 
         window.addEventListener('resize', () => {

@@ -461,22 +461,22 @@ class ClefDecisionClient:
             action = "avoid"
             conviction = 1.0
             prob = {"strong_buy": 0.0, "buy": 0.05, "hold_watch": 0.25, "avoid": 0.70}
-            tag = "🔻避開(本地規則)"
+            tag = "🔻避開"
         elif composite_score >= 85.0 and (primary_pot > 3.0 or tfm_pot > 3.0 or is_sync_buy):
             action = "strong_buy"
             conviction = 4.5
             prob = {"strong_buy": 0.65, "buy": 0.25, "hold_watch": 0.08, "avoid": 0.02}
-            tag = "🚀強勢買進(本地規則)"
+            tag = "🚀強勢買進"
         elif composite_score >= 70.0 and (primary_pot > 0.0 or tfm_pot > 0.0 or has_pullback or is_sync_buy):
             action = "buy"
             conviction = 3.5
             prob = {"strong_buy": 0.20, "buy": 0.60, "hold_watch": 0.15, "avoid": 0.05}
-            tag = "📈偏多佈局(本地規則)"
+            tag = "📈偏多佈局"
         else:
             action = "hold_watch"
             conviction = 2.5
             prob = {"strong_buy": 0.05, "buy": 0.20, "hold_watch": 0.65, "avoid": 0.10}
-            tag = "👀觀望(本地規則)"
+            tag = "👀建議觀察"
 
         favorable_entry = 0.85 if ((action in ("strong_buy", "buy")) and (rr >= 1.5 or has_pullback)) else 0.15
 

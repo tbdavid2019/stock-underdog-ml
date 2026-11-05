@@ -555,19 +555,80 @@
             </div>
 
             <div class="flex items-center space-x-2.5 shrink-0">
-                <!-- Market Index Dropdown -->
-                <select v-model="selectedIndex" @change="setIndex()"
-                        class="border text-sm font-bold rounded-xl px-3 py-1.5 focus:outline-none transition-all font-sans cursor-pointer"
-                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
-                    <option value="">全部市場 (All)</option>
-                    <option value="台灣50">台灣50 (TW0050)</option>
-                    <option value="台灣中型100">台灣中型100 (TW0051)</option>
-                    <option value="台股活躍精選">台股活躍精選 (TW-Active 850)</option>
-                    <option value="台股1000">台股全市場1000 (TW1000)</option>
-                    <option value="SP500">S&P 500 (美股標普 500)</option>
-                    <option value="日經225">日經225 (Nikkei 225)</option>
-                    <option value="太空概念 (SpaceX)">太空概念 (SpaceX)</option>
-                </select>
+                <!-- Custom Multi-Select Market Dropdown -->
+                <div id="market-multiselect-dropdown" class="relative" @click.stop>
+                    <button type="button"
+                            @click="isMarketDropdownOpen = !isMarketDropdownOpen"
+                            class="min-h-[44px] border text-sm font-bold rounded-xl px-3.5 py-2 flex items-center space-x-2 focus:outline-none transition-all cursor-pointer"
+                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-white hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] text-slate-800 hover:border-amber-400 shadow-sm'"
+                            aria-haspopup="listbox"
+                            :aria-expanded="isMarketDropdownOpen">
+                        <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0">public</span>
+                        <span class="truncate max-w-[130px] sm:max-w-[180px]">{{ marketTriggerLabel }}</span>
+                        <span v-if="selectedMarkets.length > 1 && !selectedMarkets.includes('ALL')"
+                              class="px-1.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-black">
+                            {{ selectedMarkets.length }}
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200 text-slate-400 shrink-0"
+                             :class="{ 'rotate-180 text-amber-500': isMarketDropdownOpen }"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+
+                    <!-- Popover Panel -->
+                    <div v-show="isMarketDropdownOpen"
+                         class="absolute right-0 sm:left-0 sm:right-auto mt-2 w-72 sm:w-80 rounded-2xl border shadow-xl z-50 p-3 space-y-2 backdrop-blur-md transition-all"
+                         :class="isDark ? 'bg-[#16181D]/95 border-[#2E323B] text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'">
+                        <!-- Header & Quick Actions -->
+                        <div class="flex items-center justify-between pb-2 border-b"
+                             :class="isDark ? 'border-[#262626]' : 'border-slate-100'">
+                            <span class="text-xs font-black uppercase tracking-wider text-slate-400">市場選擇 (可多選)</span>
+                            <div class="flex items-center space-x-1.5 text-xs font-bold">
+                                <button type="button" @click="selectAllMarkets()"
+                                        class="px-2 py-1 rounded-md transition-colors cursor-pointer text-amber-500 hover:bg-amber-500/10">
+                                    全部
+                                </button>
+                                <span class="text-slate-400">|</span>
+                                <button type="button" @click="clearSelectedMarkets()"
+                                        class="px-2 py-1 rounded-md transition-colors cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-slate-700/20">
+                                    清空
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Market Options List -->
+                        <div class="max-h-60 overflow-y-auto space-y-1 pr-1 font-sans text-sm">
+                            <!-- Option: 全部市場 (All) -->
+                            <div @click="toggleMarket('ALL')"
+                                 class="min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+                                 :class="isMarketSelected('ALL') ? (isDark ? 'bg-amber-500/20 text-amber-300 font-bold' : 'bg-amber-50 text-amber-900 font-bold') : (isDark ? 'hover:bg-[#20232B] text-slate-300' : 'hover:bg-slate-100 text-slate-700')">
+                                <span class="flex items-center space-x-2">
+                                    <span class="material-symbols-outlined text-[18px]">travel_explore</span>
+                                    <span>全部市場 (All)</span>
+                                </span>
+                                <svg v-if="isMarketSelected('ALL')" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+
+                            <!-- Options: Specific Markets -->
+                            <div v-for="opt in availableMarketOptions" :key="opt.id"
+                                 @click="toggleMarket(opt.id)"
+                                 class="min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+                                 :class="isMarketSelected(opt.id) ? (isDark ? 'bg-amber-500/20 text-amber-300 font-bold' : 'bg-amber-50 text-amber-900 font-bold') : (isDark ? 'hover:bg-[#20232B] text-slate-300' : 'hover:bg-slate-100 text-slate-700')">
+                                <span class="flex items-center space-x-2">
+                                    <span class="w-2 h-2 rounded-full" :class="isMarketSelected(opt.id) ? 'bg-amber-400' : 'bg-slate-500'"></span>
+                                    <span>{{ opt.label }}</span>
+                                    <span class="text-xs font-mono opacity-70">({{ opt.code }})</span>
+                                </span>
+                                <svg v-if="isMarketSelected(opt.id)" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- View Mode Switcher -->
                 <div class="inline-flex rounded-xl border p-0.5"
@@ -735,6 +796,15 @@
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <div class="flex flex-wrap items-center gap-2">
                 <span class="font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-500'">已套用條件:</span>
+                <template v-if="selectedMarkets && selectedMarkets.length && !selectedMarkets.includes('ALL')">
+                    <span v-for="mId in selectedMarkets" :key="'market-' + mId"
+                          class="px-2.5 py-1 rounded-md text-sm font-bold border flex items-center space-x-1.5 bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40">
+                        <span>市場: {{ getMarketDisplayLabel(mId) }}</span>
+                        <button type="button" @click.stop="removeMarketTag(mId)"
+                                class="hover:text-amber-500 focus:outline-none cursor-pointer text-xs font-black ml-1 leading-none"
+                                title="移除此市場篩選">✕</button>
+                    </span>
+                </template>
                 <span class="px-3 py-1 rounded-md text-sm font-bold border"
                       :class="selectedDirection === 'bullish' ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40' : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40'">
                     {{ selectedDirection === 'bullish' ? '多方看漲' : '空方避險' }}

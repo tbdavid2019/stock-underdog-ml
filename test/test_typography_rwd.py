@@ -322,6 +322,72 @@ class TestTypographyAndRWD(unittest.TestCase):
         app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
         self.assertNotIn("'三模型看漲'", app_js, "app.js must not output '三模型看漲'")
 
+    def test_multi_market_dropdown_structure_and_touch_target(self):
+        """
+        Verify multi-market dropdown in tab_dashboard.html meets touch targets (>=44px),
+        includes accessible floating popover, and displays active market tags in Dimension 6.
+        """
+        dash_html = Path("api/templates/partials/tab_dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('id="market-multiselect-dropdown"', dash_html)
+        self.assertIn('min-h-[44px]', dash_html)
+        self.assertIn('marketTriggerLabel', dash_html)
+        self.assertIn('selectAllMarkets()', dash_html)
+        self.assertIn('clearSelectedMarkets()', dash_html)
+        self.assertIn('toggleMarket(', dash_html)
+        self.assertIn('市場: {{ getMarketDisplayLabel(mId) }}', dash_html)
+
+    def test_podcast_no_gemini_or_local_rule_leaks(self):
+        """
+        Verify that internal LLM model names (Gemini 2.5 Flash) and internal slot labels (本地規則)
+        never leak to user-facing UI in tab_podcast.html and decision services.
+        """
+        podcast_html = Path("api/templates/partials/tab_podcast.html").read_text(encoding="utf-8")
+        self.assertNotIn("Gemini 2.5 Flash", podcast_html, "Internal model name Gemini 2.5 Flash must not leak to user UI")
+        self.assertIn("replace(/\\s*\\(本地規則\\)/g, '')", podcast_html, "Cached (本地規則) must be filtered in tab_podcast.html")
+
+        podcast_svc = Path("data/podcast_service.py").read_text(encoding="utf-8")
+        self.assertNotIn("⭐ 5星重磅(本地規則)", podcast_svc)
+        self.assertNotIn("⚡ 4星重要(本地規則)", podcast_svc)
+
+        decision_svc = Path("data/decision_service.py").read_text(encoding="utf-8")
+        self.assertNotIn("⭐ 5星重磅(本地規則)", decision_svc)
+        self.assertNotIn("⚡ 4星重要(本地規則)", decision_svc)
+
+        clef_code = Path("data/clef_client.py").read_text(encoding="utf-8")
+        self.assertNotIn("(本地規則)", clef_code, "ClefDecisionClient tags must not contain '(本地規則)'")
+
+    def test_duckdb_connection_different_configuration_fallback(self):
+        """
+        Verify DuckDBManager handles 'different configuration' exception gracefully,
+        falling back between read_only=True and read_only=False seamlessly.
+        """
+        import os
+        import tempfile
+        import duckdb
+        from data.duckdb_manager import DuckDBManager
+
+        db_file = tempfile.mktemp(suffix=".duckdb")
+        try:
+            mgr = DuckDBManager(db_path=db_file)
+            # 模擬背景排程開啟了 read_write 連線
+            rw_conn = duckdb.connect(db_file, read_only=False)
+            try:
+                # 測試 _get_connection(read_only=True) 在遇到配置衝突時透明回退
+                ro_conn = mgr._get_connection(read_only=True)
+                self.assertIsNotNone(ro_conn)
+                # 驗證連線可安全執行 SELECT 查詢
+                res = ro_conn.execute("SELECT 1").fetchall()
+                self.assertEqual(res, [(1,)])
+                ro_conn.close()
+            finally:
+                rw_conn.close()
+        finally:
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                except Exception:
+                    pass
+
 
 if __name__ == "__main__":
     unittest.main()

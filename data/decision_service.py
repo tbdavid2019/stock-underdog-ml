@@ -497,15 +497,15 @@ class DecisionService:
         # Assign Level & Badge
         if importance_score >= 4.2:
             level = "heavyweight"
-            badge = "⭐ 5星重磅(本地規則)"
+            badge = "⭐ 5星重磅"
             catalyst = "high_impact"
         elif importance_score >= 3.4:
             level = "important"
-            badge = "⚡ 4星重要(本地規則)"
+            badge = "⚡ 4星重要"
             catalyst = "sector_trend"
         else:
             level = "watch"
-            badge = "📰 3星關注(本地規則)"
+            badge = "📰 3星關注"
             catalyst = "general_discussion"
 
         # 5. Ticker Sentiment via Window Keyword Lexicon
