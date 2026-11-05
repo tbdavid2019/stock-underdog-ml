@@ -376,9 +376,9 @@ export const app = createApp({
                 { id: '台灣中型100', label: '台灣中型100', code: 'TW0051' },
                 { id: '台股活躍精選', label: '台股活躍精選', code: 'TW-Active 850' },
                 { id: '台股1000', label: '台股全市場1000', code: 'TW1000' },
-                { id: 'SP500', label: 'S&P 500', code: '美股標普 500' },
-                { id: '日經225', label: '日經225', code: 'Nikkei 225' },
-                { id: '太空概念 (SpaceX)', label: '太空概念', code: 'SpaceX' }
+                { id: 'SP500', label: 'S&P 500 (美股)', code: '美股標普 500' },
+                { id: '日經225', label: '日經225 (日股)', code: 'Nikkei 225' },
+                { id: '太空概念 (SpaceX)', label: '太空概念 (SpaceX)', code: 'SpaceX' }
             ];
         },
         marketTriggerLabel() {
@@ -2124,8 +2124,8 @@ export const app = createApp({
             this.setIndex();
         },
         selectAllMarkets() {
-            this.selectedMarkets = [];
-            this.selectedIndex = '';
+            this.selectedMarkets = this.availableMarketOptions.map(o => o.id);
+            this.selectedIndex = this.selectedMarkets.join(',');
             this.setIndex();
         },
         clearSelectedMarkets() {
@@ -2490,7 +2490,17 @@ export const app = createApp({
         isTwStock(ticker) {
             if (!ticker) return false;
             const t = String(ticker).toUpperCase();
-            return t.endsWith('.TW') || t.endsWith('.TWO') || /^\d{4,5}$/.test(t);
+            return t.endsWith('.TW') || t.endsWith('.TWO') || /^\d{4,6}$/.test(t);
+        },
+        isTaiwanStock(item) {
+            if (!item) return false;
+            const ticker = (typeof item === 'string' ? item : (item.ticker || '')).toUpperCase();
+            const indexName = item.index_name || '';
+            if (indexName === 'SP500' || indexName.includes('日經') || indexName.includes('美股') || indexName.includes('日股')) return false;
+            if (indexName.includes('台灣') || indexName.includes('台股')) return true;
+            if (ticker.endsWith('.TW') || ticker.endsWith('.TWO')) return true;
+            if (/^\d{4,6}$/.test(ticker)) return true;
+            return false;
         },
         stripEmojis(str) {
             if (!str) return '';
@@ -2651,8 +2661,6 @@ export const app = createApp({
                         return 'bg-purple-950/40 text-purple-300 border-purple-800/40 font-medium';
                     case 'ai_moirai':
                         return 'bg-sky-950/40 text-sky-300 border-sky-800/40 font-medium';
-                    case 'ai_lstm':
-                        return 'bg-blue-950/30 text-blue-300 border-blue-800/30 font-medium';
                     case 'risk_reward':
                         return 'bg-teal-950/40 text-teal-300 border-teal-800/40 font-semibold';
                     case 'defense':
@@ -2680,8 +2688,6 @@ export const app = createApp({
                         return 'bg-purple-50 text-purple-800 border-purple-200 font-medium';
                     case 'ai_moirai':
                         return 'bg-sky-50 text-sky-800 border-sky-200 font-medium';
-                    case 'ai_lstm':
-                        return 'bg-blue-50 text-blue-800 border-blue-200 font-medium';
                     case 'risk_reward':
                         return 'bg-teal-50 text-teal-800 border-teal-200 font-semibold';
                     case 'defense':
@@ -3279,14 +3285,6 @@ export const app = createApp({
         window.addEventListener('popstate', () => {
             this.syncStateFromUrl();
         });
-
-        this._clickOutsideDropdown = (e) => {
-            const dropdown = document.getElementById('market-multiselect-dropdown');
-            if (dropdown && !dropdown.contains(e.target)) {
-                this.isMarketDropdownOpen = false;
-            }
-        };
-        document.addEventListener('click', this._clickOutsideDropdown);
 
         window.addEventListener('resize', () => {
             if (this.activeTab === 'industry_chain') {

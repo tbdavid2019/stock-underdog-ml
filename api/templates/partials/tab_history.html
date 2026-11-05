@@ -1462,7 +1462,7 @@
                         </div>
                         <div class="num-font" :class="isDark ? 'text-slate-400' : 'text-slate-500'">
                             PE: {{ row.pe ? Number(row.pe).toFixed(1) : '-' }} · PB: {{ row.pb ? Number(row.pb).toFixed(1) : '-' }}
-                            <span v-if="row.trust_net_5d !== null || row.foreign_net_5d !== null" class="ml-1">
+                            <span v-if="isTaiwanStock(row) && (row.trust_net_5d !== null || row.foreign_net_5d !== null)" class="ml-1">
                                 (投:{{ row.trust_net_5d || 0 }} / 外:{{ row.foreign_net_5d || 0 }})
                             </span>
                         </div>

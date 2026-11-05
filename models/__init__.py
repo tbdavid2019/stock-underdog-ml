@@ -12,7 +12,7 @@ except Exception:
     pass
 
 try:
-    from . import lstm
+    from . import moirai_model
 except Exception:
     pass
 
@@ -21,4 +21,4 @@ try:
 except Exception:
     pass
 
-__all__ = ['timestral_model', 'timesfm_model', 'lstm', 'plugins']
+__all__ = ['timestral_model', 'timesfm_model', 'moirai_model', 'plugins']

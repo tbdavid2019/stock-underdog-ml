@@ -807,51 +807,6 @@ class DuckDBManager:
                 "tri_model_consensus": False,
             })
 
-        # 2.8 舊版 LSTM 預測結果 (Legacy Deprecated Fallback)
-        lstm_results = results.get("lstm_results", [])
-        for r in lstm_results:
-            t = r["ticker"]
-            cand = candidates_map.get(t, {})
-            inst = inst_summaries.get(t, {})
-            cand_tags = cand.get("tags")
-            default_lstm_tag = "LSTM看漲" if float(r["potential"]) > 0 else "LSTM看跌"
-            tags_str = " | ".join(cand_tags) if cand_tags else default_lstm_tag
-
-            all_data.append({
-                "index_name": index_name,
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
-                "ticker": t,
-                "current_price": float(r["current_price"]),
-                "predicted_price": float(r["predicted_price"]),
-                "potential": float(r["potential"]),
-                "ma5": None, "ma10": None, "ma60": None, "ma120": None, "ma250": None,
-                "pullback_type": None,
-                "pe": float(r.get("pe")) if r.get("pe") and not pd.isna(r.get("pe")) else None,
-                "pb": float(r.get("pb")) if r.get("pb") and not pd.isna(r.get("pb")) else None,
-                "forward_pe": float(r.get("forward_pe")) if r.get("forward_pe") and not pd.isna(r.get("forward_pe")) else None,
-                "ev_ebitda": float(r.get("ev_ebitda")) if r.get("ev_ebitda") and not pd.isna(r.get("ev_ebitda")) else None,
-                "period": period,
-                "timestamp": timestamp,
-                "macro_regime": macro_regime_str,
-                "trust_net_5d": inst.get("trust_net_5d"),
-                "foreign_net_5d": inst.get("foreign_net_5d"),
-                "tags": tags_str,
-                "composite_score": float(cand.get("composite_score")) if cand.get("composite_score") is not None and not pd.isna(cand.get("composite_score")) else None,
-                "timestral_predicted_price": None,
-                "timestral_potential": None,
-                "timestral_p10": None,
-                "timestral_p90": None,
-                "timesfm_predicted_price": None,
-                "timesfm_potential": None,
-                "moirai_predicted_price": None,
-                "moirai_potential": None,
-                "moirai_p10": None,
-                "moirai_p90": None,
-                "dual_model_consensus": False,
-                "tri_model_consensus": False,
-            })
-
         # 3. 雙重/多維共振符合結果 (Multi-Model Consensus & Resonance)
         overlap_df = results.get("overlap_results", pd.DataFrame())
         if isinstance(overlap_df, pd.DataFrame) and not overlap_df.empty:
@@ -1640,7 +1595,7 @@ class DuckDBManager:
         return self._clean_df_records(df)
 
     def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """取得預測漲幅最大 TOP N 標的 (優先 Timestral，向下相容 LSTM)"""
+        """取得預測漲幅最大 TOP N 標的 (以 Timestral 為主)"""
         # 優先查詢 Timestral
         timestral_res = self.get_timestral_top_bullish(index_name=index_name, limit=limit)
         if timestral_res:
@@ -1649,7 +1604,7 @@ class DuckDBManager:
         parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
-            "(model_name = 'Timestral' OR model_name = 'LSTM')",
+            "model_name = 'Timestral'",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -1679,7 +1634,7 @@ class DuckDBManager:
         return self._clean_df_records(df)
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """取得預測跌幅最大 / 潛在做空 TOP N 標的 (優先 Timestral，向下相容 LSTM)"""
+        """取得預測跌幅最大 / 潛在做空 TOP N 標的 (以 Timestral 為主)"""
         timestral_res = self.get_timestral_top_bearish(index_name=index_name, limit=limit)
         if timestral_res:
             return timestral_res
@@ -1687,7 +1642,7 @@ class DuckDBManager:
         parsed_indices = self._parse_index_names(index_name)
         where_clauses = [
             "potential IS NOT NULL", 
-            "(model_name = 'Timestral' OR model_name = 'LSTM')",
+            "model_name = 'Timestral'",
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
             "index_name NOT LIKE '%SERVICE_KEY%'"
@@ -1886,7 +1841,7 @@ class DuckDBManager:
     def get_latest_candidate_snapshot(self, ticker: str) -> Optional[Dict[str, Any]]:
         """
         取得特定股票最新批次之完整策略合併快照。
-        將同批次中的玄鐵、LSTM、TimesFM、多維共振與法人籌碼資料合併為單一完整候選字典。
+        將同批次中的玄鐵、TimesFM、Timestral、MOIRAI-2、多維共振與法人籌碼資料合併為單一完整候選字典。
         """
         import re
         ts_sql = """
@@ -1936,7 +1891,6 @@ class DuckDBManager:
             "moirai_predicted_price": None,
             "moirai_p10": None,
             "moirai_p90": None,
-            "lstm_potential": None,
             "potential": None,
             "predicted_price": None,
             "dual_model_consensus": False,
@@ -2035,12 +1989,6 @@ class DuckDBManager:
                     cand["dual_model_consensus"] = bool(r["dual_model_consensus"])
                 if r.get("tri_model_consensus") is not None:
                     cand["tri_model_consensus"] = bool(r["tri_model_consensus"])
-            elif "LSTM" in m_name or "LSTM" in s_type:
-                if pot is not None:
-                    cand["lstm_potential"] = float(pot)
-                if pred is not None and cand["predicted_price"] is None:
-                    cand["predicted_price"] = float(pred)
-
             # Composite score (preserve valid 0.0 scores from macro risk control)
             c_score = r.get("composite_score")
             if c_score is not None and not pd.isna(c_score):
@@ -2055,8 +2003,6 @@ class DuckDBManager:
                 cand["potential"] = cand["timesfm_potential"]
             elif cand["moirai_potential"] is not None:
                 cand["potential"] = cand["moirai_potential"]
-            else:
-                cand["potential"] = cand["lstm_potential"]
 
         cand["score"] = cand["composite_score"]
         cand["tags"] = list(merged_tags)

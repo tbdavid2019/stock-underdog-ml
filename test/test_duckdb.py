@@ -25,8 +25,8 @@ class TestDuckDBManager(unittest.TestCase):
     def test_schema_and_batch_insert(self):
         sample_records = [{
             "index_name": "台灣50",
-            "model_name": "LSTM",
-            "strategy_type": "LSTM預測",
+            "model_name": "Timestral",
+            "strategy_type": "Timestral",
             "ticker": "2330.TW",
             "current_price": 1000.0,
             "predicted_price": 1050.0,
@@ -34,7 +34,7 @@ class TestDuckDBManager(unittest.TestCase):
             "period": "6mo",
             "timestamp": "2026-09-01T10:00:00",
             "macro_regime": "全面多頭",
-            "tags": ["LSTM看漲", "低PE"]
+            "tags": ["Timestral看漲", "低PE"]
         }]
         inserted = self.mgr.save_predictions_batch(sample_records)
         self.assertEqual(inserted, 1)
@@ -51,16 +51,16 @@ class TestDuckDBManager(unittest.TestCase):
         xuantie_df = pd.DataFrame([{
             "ticker": "2330.TW", "current_price": 1000.0, "ma60": 980.0, "pullback_type": "MA60 (+2.0%)", "pe": 22.0, "pb": 5.0
         }])
-        lstm_results = [{
+        timestral_results = [{
             "ticker": "2330.TW", "current_price": 1000.0, "predicted_price": 1050.0, "potential": 5.0, "pe": 22.0, "pb": 5.0
         }]
         overlap_df = pd.DataFrame([{
-            "ticker": "2330.TW", "current_price": 1000.0, "predicted_price": 1050.0, "lstm_potential": 5.0, "pullback_type": "MA60 (+2.0%)", "ma60": 980.0, "pe": 22.0, "pb": 5.0
+            "ticker": "2330.TW", "current_price": 1000.0, "predicted_price": 1050.0, "timestral_potential": 5.0, "pullback_type": "MA60 (+2.0%)", "ma60": 980.0, "pe": 22.0, "pb": 5.0
         }])
 
         results_dict = {
             "xuantie_results": xuantie_df,
-            "lstm_results": lstm_results,
+            "timestral_results": timestral_results,
             "overlap_results": overlap_df
         }
 
@@ -111,8 +111,8 @@ class TestDuckDBManager(unittest.TestCase):
         sample_records = [
             {
                 "index_name": "SP500",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "AAPL",
                 "current_price": 200.0,
                 "predicted_price": 210.0,
@@ -121,7 +121,7 @@ class TestDuckDBManager(unittest.TestCase):
                 # UTC 時間：2026-09-09 16:30 UTC -> 台北時間 2026-09-10 00:30 (剛跨過台北午夜)
                 "timestamp": "2026-09-09T16:30:00Z",
                 "macro_regime": "全面多頭",
-                "tags": ["LSTM看漲"]
+                "tags": ["Timestral看漲"]
             }
         ]
         self.mgr.save_predictions_batch(sample_records)
@@ -133,7 +133,7 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertGreaterEqual(res["records"][0]["age_hours"], 0.0)
 
     def test_get_latest_candidate_snapshot_merges_strategies(self):
-        """驗證同一批次中玄鐵、LSTM、TimesFM、多維共振列能完整合併為單一 snapshot"""
+        """驗證同一批次中玄鐵、Timestral、TimesFM、多維共振列能完整合併為單一 snapshot"""
         ts = "2026-10-08T10:00:00"
         records = [
             {
@@ -151,14 +151,14 @@ class TestDuckDBManager(unittest.TestCase):
             },
             {
                 "index_name": "台灣50",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "2330.TW",
                 "current_price": 1000.0,
                 "predicted_price": 1055.0,
                 "potential": 5.5,
                 "timestamp": ts,
-                "tags": "LSTM看漲 | 科技龍頭"
+                "tags": "Timestral看漲 | 科技龍頭"
             },
             {
                 "index_name": "台灣50",
@@ -191,7 +191,7 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertIsNotNone(snap)
         self.assertEqual(snap["ticker"], "2330.TW")
         self.assertEqual(snap["current_price"], 1000.0)
-        self.assertEqual(snap["lstm_potential"], 5.5)
+        self.assertEqual(snap["timestral_potential"], 5.5)
         self.assertEqual(snap["timesfm_potential"], 4.8)
         self.assertEqual(snap["pullback_type"], "MA60 (+2.0%)")
         self.assertEqual(snap["ma60"], 980.0)
@@ -210,14 +210,14 @@ class TestDuckDBManager(unittest.TestCase):
         records = [
             {
                 "index_name": "台灣50",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "2330.TW",
                 "current_price": 1000.0,
                 "potential": 15.0,
                 "composite_score": 0.0,  # 宏觀曝險為 0 時的風控歸零結果
                 "timestamp": ts,
-                "tags": "LSTM看漲"
+                "tags": "Timestral看漲"
             }
         ]
         self.mgr.save_predictions_batch(records)
@@ -230,13 +230,13 @@ class TestDuckDBManager(unittest.TestCase):
         ts = "2026-10-08T10:00:00"
         self.mgr.save_predictions_batch([{
             "index_name": "台灣50",
-            "model_name": "LSTM",
-            "strategy_type": "LSTM預測",
+            "model_name": "Timestral",
+            "strategy_type": "Timestral",
             "ticker": "2330.TW",
             "current_price": 1000.0,
             "potential": 5.0,
             "timestamp": ts,
-            "tags": "LSTM看漲"
+            "tags": "Timestral看漲"
         }])
 
         snap = self.mgr.get_latest_candidate_snapshot("2330.TW")
@@ -288,7 +288,7 @@ class TestDuckDBManager(unittest.TestCase):
         self.assertNotIn("STALE", tickers, "轉為防守的 STALE 標的不應入榜，且不應回溯取得前一天的共振記錄")
 
     def test_get_resonance_candidates_multiple_strategy_rows_in_batch(self):
-        """驗證當最新批次中包含同一標的之非共振策略列 (如玄鐵、LSTM) 與共振列時，共振篩選優先於排序，不會漏失標的"""
+        """驗證當最新批次中包含同一標的之非共振策略列 (如玄鐵、Timestral) 與共振列時，共振篩選優先於排序，不會漏失標的"""
         ts = "2026-10-08T12:00:00"
         records = [
             {
@@ -303,13 +303,13 @@ class TestDuckDBManager(unittest.TestCase):
             },
             {
                 "index_name": "台灣50",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "2454.TW",
                 "current_price": 1200.0,
                 "potential": 6.0,
                 "timestamp": ts,
-                "tags": "LSTM看漲"
+                "tags": "Timestral看漲"
             },
             {
                 "index_name": "台灣50",
@@ -372,8 +372,8 @@ class TestDuckDBManager(unittest.TestCase):
             # 生產環境記錄
             {
                 "index_name": "台灣50",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "2330.TW",
                 "current_price": 1000.0,
                 "potential": 4.5,
@@ -396,7 +396,7 @@ class TestDuckDBManager(unittest.TestCase):
         snap = self.mgr.get_latest_candidate_snapshot("2330.TW")
         self.assertIsNotNone(snap)
         self.assertEqual(snap["current_price"], 1000.0)
-        self.assertEqual(snap["lstm_potential"], 4.5)
+        self.assertEqual(snap["timestral_potential"], 4.5)
         self.assertIsNone(snap["timesfm_potential"])
         self.assertIn("PROD_TAG", snap["tags"])
         self.assertNotIn("DEBUG_TAG", snap["tags"])

@@ -543,7 +543,7 @@
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-4 sm:p-5 rounded-2xl border flex flex-col space-y-4">
 
-        <!-- Top Header & Global Controls (市場選擇、檢視模式、重新整理) -->
+        <!-- Top Header & Global Controls (檢視模式、重新整理) -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <div class="flex items-center space-x-2">
@@ -555,81 +555,6 @@
             </div>
 
             <div class="flex items-center space-x-2.5 shrink-0">
-                <!-- Custom Multi-Select Market Dropdown -->
-                <div id="market-multiselect-dropdown" class="relative" @click.stop @keydown.esc="closeMarketDropdown()">
-                    <button type="button"
-                            @click="isMarketDropdownOpen = !isMarketDropdownOpen"
-                            class="min-h-[44px] border text-sm font-bold rounded-xl px-3.5 py-2 flex items-center space-x-2 focus:outline-none transition-all cursor-pointer"
-                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-white hover:border-amber-500/50' : 'bg-white border-[#E5E7EB] text-slate-800 hover:border-amber-400 shadow-sm'"
-                            aria-haspopup="listbox"
-                            :aria-expanded="isMarketDropdownOpen">
-                        <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0">public</span>
-                        <span class="truncate max-w-[130px] sm:max-w-[180px]">{{ marketTriggerLabel }}</span>
-                        <span v-if="selectedMarkets.length > 1 && !selectedMarkets.includes('ALL')"
-                              class="px-1.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-black">
-                            {{ selectedMarkets.length }}
-                        </span>
-                        <svg class="w-4 h-4 transition-transform duration-200 text-slate-400 shrink-0"
-                             :class="{ 'rotate-180 text-amber-500': isMarketDropdownOpen }"
-                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="6 9 12 15 18 9"/>
-                        </svg>
-                    </button>
-
-                    <!-- Popover Panel -->
-                    <div v-show="isMarketDropdownOpen"
-                         class="absolute right-0 sm:left-0 sm:right-auto mt-2 w-72 sm:w-80 rounded-2xl border shadow-xl z-50 p-3 space-y-2 backdrop-blur-md transition-all"
-                         :class="isDark ? 'bg-[#16181D]/95 border-[#2E323B] text-slate-200' : 'bg-white/95 border-slate-200 text-slate-800'">
-                        <!-- Header & Quick Actions -->
-                        <div class="flex items-center justify-between pb-2 border-b"
-                             :class="isDark ? 'border-[#262626]' : 'border-slate-100'">
-                            <span class="text-xs font-black uppercase tracking-wider text-slate-400">市場選擇 (可多選)</span>
-                            <div class="flex items-center space-x-1.5 text-xs font-bold">
-                                <button type="button" @click="selectAllMarkets()"
-                                        class="px-2 py-1 rounded-md transition-colors cursor-pointer text-amber-500 hover:bg-amber-500/10">
-                                    全部
-                                </button>
-                                <span class="text-slate-400">|</span>
-                                <button type="button" @click="clearSelectedMarkets()"
-                                        class="px-2 py-1 rounded-md transition-colors cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-slate-700/20">
-                                    清空
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Market Options List -->
-                        <div class="max-h-60 overflow-y-auto space-y-1 pr-1 font-sans text-sm">
-                            <!-- Option: 全部市場 (All) -->
-                            <div @click="toggleMarket('ALL')"
-                                 class="min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
-                                 :class="isMarketSelected('ALL') ? (isDark ? 'bg-amber-500/20 text-amber-300 font-bold' : 'bg-amber-50 text-amber-900 font-bold') : (isDark ? 'hover:bg-[#20232B] text-slate-300' : 'hover:bg-slate-100 text-slate-700')">
-                                <span class="flex items-center space-x-2">
-                                    <span class="material-symbols-outlined text-[18px]">travel_explore</span>
-                                    <span>全部市場 (All)</span>
-                                </span>
-                                <svg v-if="isMarketSelected('ALL')" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                            </div>
-
-                            <!-- Options: Specific Markets -->
-                            <div v-for="opt in availableMarketOptions" :key="opt.id"
-                                 @click="toggleMarket(opt.id)"
-                                 class="min-h-[40px] px-3 py-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
-                                 :class="isMarketSelected(opt.id) ? (isDark ? 'bg-amber-500/20 text-amber-300 font-bold' : 'bg-amber-50 text-amber-900 font-bold') : (isDark ? 'hover:bg-[#20232B] text-slate-300' : 'hover:bg-slate-100 text-slate-700')">
-                                <span class="flex items-center space-x-2">
-                                    <span class="w-2 h-2 rounded-full" :class="isMarketSelected(opt.id) ? 'bg-amber-400' : 'bg-slate-500'"></span>
-                                    <span>{{ opt.label }}</span>
-                                    <span class="text-xs font-mono opacity-70">({{ opt.code }})</span>
-                                </span>
-                                <svg v-if="isMarketSelected(opt.id)" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- View Mode Switcher -->
                 <div class="inline-flex rounded-xl border p-0.5"
                      :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
@@ -658,10 +583,62 @@
             </div>
         </div>
 
-        <!-- Dimension 1: 交易方向 (Direction) -->
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <!-- Dimension 1: 標的市場 (Markets - Multi-select Chips/Pills) -->
+        <div id="market-multiselect-chips" class="flex flex-col sm:flex-row sm:items-start gap-2">
+            <span class="text-sm font-bold w-28 shrink-0 pt-2.5 flex items-center space-x-1.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                <span>1. 標的市場:</span>
+            </span>
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- 全部市場 (All) -->
+                <button type="button"
+                        @click="toggleMarket('ALL')"
+                        class="min-h-[44px] px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer"
+                        :class="isMarketSelected('ALL') ? (isDark ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-black shadow-sm' : 'bg-amber-50 border-amber-400 text-amber-900 font-black shadow-sm') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        aria-label="全部市場"
+                        :aria-pressed="isMarketSelected('ALL')">
+                    <svg v-if="isMarketSelected('ALL')" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span v-else class="material-symbols-outlined text-[18px] text-amber-500/70 shrink-0">travel_explore</span>
+                    <span>全部市場</span>
+                </button>
+
+                <!-- Specific Markets from availableMarketOptions -->
+                <button v-for="opt in availableMarketOptions" :key="opt.id"
+                        type="button"
+                        @click="toggleMarket(opt.id)"
+                        class="min-h-[44px] px-3.5 py-2 rounded-xl border text-sm transition-all flex items-center space-x-1.5 cursor-pointer"
+                        :class="isMarketSelected(opt.id) ? (isDark ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-sm' : 'bg-amber-50 border-amber-400 text-amber-900 font-bold shadow-sm') : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-white border-[#E5E7EB] text-slate-700 hover:bg-[#F4F4F6]')"
+                        :aria-label="opt.label"
+                        :aria-pressed="isMarketSelected(opt.id)">
+                    <svg v-if="isMarketSelected(opt.id)" class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span v-else class="w-2 h-2 rounded-full shrink-0" :class="isDark ? 'bg-slate-600' : 'bg-slate-400'"></span>
+                    <span>{{ opt.label }}</span>
+                </button>
+
+                <div class="flex items-center space-x-1.5 text-xs font-bold pl-1 self-center">
+                    <button type="button" @click="selectAllMarkets()"
+                            class="px-2.5 py-1.5 min-h-[36px] sm:min-h-[40px] inline-flex items-center rounded-lg transition-colors cursor-pointer text-amber-500 hover:bg-amber-500/10"
+                            title="選取全部市場 (包含海外)">
+                        全選
+                    </button>
+                    <span class="text-slate-400">|</span>
+                    <button type="button" @click="clearSelectedMarkets()"
+                            class="px-2.5 py-1.5 min-h-[36px] sm:min-h-[40px] inline-flex items-center rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-slate-700/20"
+                            title="清空為預設全部市場">
+                        清空
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimension 2: 交易方向 (Direction) -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t"
+             :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <span class="text-sm font-bold w-28 shrink-0 flex items-center space-x-1.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                <span>1. 交易方向:</span>
+                <span>2. 交易方向:</span>
             </span>
             <div class="inline-flex rounded-xl border p-0.5"
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB]'">
@@ -682,11 +659,11 @@
             </div>
         </div>
 
-        <!-- Dimension 2: AI 時序預測模型 (Models - User directly multi-selects) -->
+        <!-- Dimension 3: AI 時序預測模型 (Models - User directly multi-selects) -->
         <div class="flex flex-col sm:flex-row sm:items-start gap-2 pt-2 border-t"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <span class="text-sm font-bold w-28 shrink-0 pt-2" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                <span>2. AI 預測模型:</span>
+                <span>3. AI 預測模型:</span>
             </span>
             <div class="flex flex-wrap items-center gap-2">
                 <button v-for="m in (availableModels && availableModels.length ? availableModels : [{id: 'timesfm', display_name: 'TimesFM (Google)'}, {id: 'timestral', display_name: 'Timestral (Mistral)'}, {id: 'moirai', display_name: 'MOIRAI-2 (Salesforce)'}])"
@@ -701,11 +678,11 @@
             </div>
         </div>
 
-        <!-- Dimension 3: 本益比估值 PE (Valuation) -->
+        <!-- Dimension 4: 本益比估值 PE (Valuation) -->
         <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <span class="text-sm font-bold w-28 shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                <span>3. 本益比估值:</span>
+                <span>4. 本益比估值:</span>
             </span>
             <div class="flex flex-wrap items-center gap-1.5">
                 <button @click="selectedPeRange = 'all'"
@@ -731,11 +708,11 @@
             </div>
         </div>
 
-        <!-- Dimension 4: 預期潛力空間 (Potential) -->
+        <!-- Dimension 5: 預期潛力空間 (Potential) -->
         <div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <span class="text-sm font-bold w-28 shrink-0" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                <span>4. 預期潛力空間:</span>
+                <span>5. 預期潛力空間:</span>
             </span>
             <div class="flex flex-wrap items-center gap-1.5">
                 <button @click="selectedMinPotential = 0"
@@ -761,11 +738,11 @@
             </div>
         </div>
 
-        <!-- Dimension 5: 核心量化因子 (Core Factors) -->
+        <!-- Dimension 6: 核心量化因子 (Core Factors) -->
         <div class="flex flex-col sm:flex-row sm:items-start gap-2 pt-2 border-t"
              :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
             <span class="text-sm font-bold w-28 shrink-0 pt-2" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
-                <span>5. 核心量化因子:</span>
+                <span>6. 核心量化因子:</span>
             </span>
             <div class="flex flex-wrap items-center gap-2">
                 <button @click="selectedRiskRewardOnly = !selectedRiskRewardOnly"
@@ -965,13 +942,16 @@
                         <span class="mx-1 opacity-40">|</span>
                         PB: <span class="font-bold text-amber-500">{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                     </div>
-                    <div v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1.5 num-font font-bold">
-                        <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-500' : 'text-slate-400'">
-                            投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
+                    <div v-if="isTaiwanStock(item) && (item.trust_net_5d !== null || item.foreign_net_5d !== null)" class="space-x-1.5 num-font font-bold">
+                        <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.trust_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
+                            投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ Number(item.trust_net_5d).toLocaleString() }}
                         </span>
-                        <span v-if="item.foreign_net_5d !== null" :class="item.foreign_net_5d > 0 ? 'text-emerald-500' : 'text-slate-400'">
-                            外:{{ item.foreign_net_5d > 0 ? '+' : '' }}{{ item.foreign_net_5d }}
+                        <span v-if="item.foreign_net_5d !== null" :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.foreign_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
+                            外:{{ item.foreign_net_5d > 0 ? '+' : '' }}{{ Number(item.foreign_net_5d).toLocaleString() }}
                         </span>
+                    </div>
+                    <div v-else-if="!isTaiwanStock(item)" class="text-xs text-slate-400 font-medium" :title="'外資/投信5日買賣超僅適用於台股市場（美股/日股無此數據）'">
+                        — (海外市場不適用)
                     </div>
                 </div>
 
@@ -1220,15 +1200,15 @@
                     <thead :class="isDark ? 'bg-[#16181D] text-slate-300 border-b border-[#262626]' : 'bg-[#F4F4F6] text-slate-700 border-b border-[#E5E7EB]'">
                         <tr>
                             <th class="py-3 px-2 font-bold num-font text-center w-8 whitespace-nowrap text-sm" title="排序名次">#</th>
-                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
+                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm w-36 sm:w-44" title="股票代號與公司名稱（點擊代號可快速跳轉歷史走勢查詢）">標的 / 名稱</th>
                             <th class="py-3 px-2 font-bold text-center whitespace-nowrap text-sm" title="標的所屬市場指數（台灣50、台灣中型100、S&P 500、太空概念）">市場</th>
                             <th class="py-3 px-2 font-bold text-center whitespace-nowrap text-sm" title="產生該推薦之量化策略或時序神經網路模型（如綜合優選、Timestral、TimesFM、季線支撐）">策略模型</th>
                             <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="資料庫最新收盤價或最新撮合即時成交價">現價</th>
                             <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="時序基礎模型預測目標價 (P50) 或季線支撐價格 (MA60/MA120)">目標價 / 均線</th>
                             <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="相較現價之預期潛在報酬空間百分比（目標價 vs 現價）">潛力</th>
-                            <th class="py-3 px-2 font-bold text-center num-font whitespace-nowrap text-sm" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
+                            <th class="py-3 px-1.5 font-bold text-center num-font whitespace-nowrap text-xs sm:text-sm w-16 sm:w-20" title="本益比 (PE) 與股價淨值比 (PB) 估值水位">PE / PB</th>
                             <th class="py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm" title="近 5 個交易日投信法人與外資法人累積買賣超張數（主力籌碼動向）">5日籌碼 (張)</th>
-                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm" title="多維量化條件交集狀態（綜合優選、季線支撐、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略標籤</th>
+                            <th class="py-3 px-2 font-bold whitespace-nowrap text-sm min-w-[160px] max-w-[280px]" title="多維量化條件交集狀態（綜合優選、季線支撐、土洋合買、投信連買等，滑鼠移至標籤可見完整定義）">策略標籤</th>
                             <th class="py-3 px-2 font-bold text-center whitespace-nowrap sticky right-0 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] text-sm"
                                 :class="isDark ? 'bg-[#16181D]' : 'bg-[#F4F4F6]'"
                                 title="點擊展開技術指標與深度分析抽屜">操作</th>
@@ -1237,18 +1217,19 @@
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                     <template v-for="(item, idx) in displayRecords" :key="item.ticker + (item.model_name || '') + idx">
                         <!-- Primary Row -->
-                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer h-12"
+                        <tr class="transition-colors hover:bg-amber-500/5 cursor-pointer min-h-[48px]"
                             :class="expandedDrawerTicker === item.ticker ? (isDark ? 'bg-[#16181D]' : 'bg-amber-50/50') : ''"
                             @click="toggleRowDrawer(item.ticker)">
                             <td class="py-3 px-2 font-black num-font text-center opacity-60 whitespace-nowrap text-sm">{{ idx + 1 }}</td>
-                            <td class="py-3 px-2 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
+                            <td class="py-3 px-2 whitespace-nowrap max-w-[150px] sm:max-w-[175px]"
+                                :title="formatTicker(item.ticker) + ' ' + (item.name || companyProfileCache[item.ticker]?.name || '')">
+                                <div class="flex items-center space-x-1.5 overflow-hidden">
                                     <button @click.stop="searchTickerHistory(item.ticker)"
                                             class="font-black num-font hover:underline transition-colors text-amber-500 text-sm sm:text-base shrink-0"
                                             :title="'點擊速查 ' + formatTicker(item.ticker) + ' 歷史走勢'">
                                         {{ formatTicker(item.ticker) }}
                                     </button>
-                                    <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm truncate max-w-[140px]" :class="isDark ? 'text-slate-300' : 'text-slate-700'" :title="item.name || companyProfileCache[item.ticker]?.name">
+                                    <span v-if="item.name || companyProfileCache[item.ticker]?.name" class="font-bold text-sm truncate" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                                         {{ item.name || companyProfileCache[item.ticker]?.name }}
                                     </span>
                                 </div>
@@ -1277,26 +1258,34 @@
                                 </span>
                                 <span v-else class="text-sm text-slate-400">-</span>
                             </td>
-                            <td class="py-3 px-2 text-center num-font text-sm whitespace-nowrap">
-                                <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }} / {{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
+                            <td class="py-3 px-1.5 text-center whitespace-nowrap w-16 sm:w-20 tabular-nums font-mono text-xs sm:text-sm"
+                                :title="'本益比 PE: ' + (item.pe ? Number(item.pe).toFixed(1) : '無') + ' | 股價淨值比 PB: ' + (item.pb ? Number(item.pb).toFixed(1) : '無')">
+                                <span>{{ item.pe ? Number(item.pe).toFixed(1) : '-' }}/{{ item.pb ? Number(item.pb).toFixed(1) : '-' }}</span>
                             </td>
                             <td class="py-3 px-2 text-right num-font text-sm whitespace-nowrap">
-                                <span v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null" class="space-x-1 font-bold">
-                                    <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
-                                        投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ item.trust_net_5d }}
+                                <template v-if="isTaiwanStock(item) && (item.trust_net_5d !== null || item.foreign_net_5d !== null)">
+                                    <span class="space-x-1 font-bold">
+                                        <span v-if="item.trust_net_5d !== null" :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.trust_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
+                                            投:{{ item.trust_net_5d > 0 ? '+' : '' }}{{ Number(item.trust_net_5d).toLocaleString() }}
+                                        </span>
+                                        <span v-if="item.foreign_net_5d !== null" :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.foreign_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
+                                            外:{{ item.foreign_net_5d > 0 ? '+' : '' }}{{ Number(item.foreign_net_5d).toLocaleString() }}
+                                        </span>
                                     </span>
-                                    <span v-if="item.foreign_net_5d !== null" :class="item.foreign_net_5d > 0 ? 'text-emerald-400' : 'text-slate-400'">
-                                        外:{{ item.foreign_net_5d > 0 ? '+' : '' }}{{ item.foreign_net_5d }}
-                                    </span>
-                                </span>
-                                <span v-else class="text-slate-400">-</span>
+                                </template>
+                                <template v-else-if="!isTaiwanStock(item)">
+                                    <span class="text-slate-400 cursor-help" :title="'外資/投信5日買賣超僅適用於台股市場（美股/日股無此數據）'">—</span>
+                                </template>
+                                <template v-else>
+                                    <span class="text-slate-400">-</span>
+                                </template>
                             </td>
-                            <td class="py-3 px-2 whitespace-nowrap">
-                                <div class="flex items-center gap-1.5 flex-nowrap" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
-                                    <span v-for="tag in parseTags(item.tags).slice(0, 2)" :key="tag.label"
+                            <td class="py-2.5 px-2 min-w-[160px] max-w-[280px]">
+                                <div class="flex flex-wrap items-center gap-1.5 py-0.5" :title="parseTags(item.tags).map(t => t.label).join(' · ')">
+                                    <span v-for="tag in parseTags(item.tags)" :key="tag.label"
                                           :title="tag.tooltip || tag.label"
                                           :class="getTagClass(tag)"
-                                          class="px-2 py-1 text-[13px] sm:text-sm font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm cursor-help">
+                                          class="px-2 py-0.5 text-xs sm:text-[13px] font-semibold rounded-md border font-sans tracking-tight inline-flex items-center space-x-1 shrink-0 whitespace-nowrap shadow-sm cursor-help">
                                         <svg v-if="tag.icon === 'trending_up'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                                         <svg v-else-if="tag.icon === 'trending_down'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
                                         <svg v-else-if="tag.icon === 'bolt'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -1305,12 +1294,6 @@
                                         <svg v-else-if="tag.icon === 'show_chart'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.48 12H2"/></svg>
                                         <svg v-else-if="tag.icon === 'equalizer'" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
                                         <span>{{ tag.label }}</span>
-                                    </span>
-                                    <span v-if="parseTags(item.tags).length > 2"
-                                          class="px-2 py-1 text-[13px] font-bold rounded-md border shrink-0 cursor-help transition-colors whitespace-nowrap shadow-sm"
-                                          :class="isDark ? 'bg-[#16181D] text-amber-400 border-[#262626] hover:border-amber-500/50' : 'bg-slate-100 text-amber-600 border-slate-200 hover:border-amber-400'"
-                                          :title="'其餘標籤: ' + parseTags(item.tags).slice(2).map(t => t.label).join(', ')">
-                                        +{{ parseTags(item.tags).length - 2 }}
                                     </span>
                                 </div>
                             </td>
@@ -2078,19 +2061,27 @@
                 </div>
 
                 <!-- Chips Row -->
-                <div v-if="item.trust_net_5d !== null || item.foreign_net_5d !== null"
+                <div v-if="isTaiwanStock(item) && (item.trust_net_5d !== null || item.foreign_net_5d !== null)"
                      class="flex items-center justify-between flex-wrap gap-1 pb-1.5 border-b text-xs sm:text-sm"
                      :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
                     <span class="font-medium">法人籌碼 (5日):</span>
                     <span class="num-font font-semibold text-xs sm:text-sm flex items-center flex-wrap gap-x-2">
                         <span v-if="item.trust_net_5d !== null"
-                              :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-400'">
+                              :class="item.trust_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.trust_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
                             投信 {{ item.trust_net_5d > 0 ? '+' : '' }}{{ Number(item.trust_net_5d).toLocaleString() }}張
                         </span>
                         <span v-if="item.foreign_net_5d !== null"
-                              :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : 'text-slate-400'">
+                              :class="item.foreign_net_5d > 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold') : (item.foreign_net_5d < 0 ? (isDark ? 'text-rose-400 font-bold' : 'text-rose-700 font-bold') : 'text-slate-400')">
                             外資 {{ item.foreign_net_5d > 0 ? '+' : '' }}{{ Number(item.foreign_net_5d).toLocaleString() }}張
                         </span>
+                    </span>
+                </div>
+                <div v-else-if="!isTaiwanStock(item)"
+                     class="flex items-center justify-between flex-wrap gap-1 pb-1.5 border-b text-xs sm:text-sm"
+                     :class="isDark ? 'border-[#262626] text-[#9CA3AF]' : 'border-[#E5E7EB] text-slate-500'">
+                    <span class="font-medium">法人籌碼 (5日):</span>
+                    <span class="text-xs text-slate-400 font-medium" :title="'外資/投信5日買賣超僅適用於台股市場（美股/日股無此數據）'">
+                        — (海外市場不適用)
                     </span>
                 </div>
 

@@ -32,10 +32,6 @@ try:
     import strategies.moirai
 except Exception:
     pass
-try:
-    import strategies.lstm
-except Exception:
-    pass
 
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
 from evaluators.ai_narrative import AINarrativeEngine
@@ -190,8 +186,6 @@ class PipelineOrchestrator:
                         strat_key = getattr(p, "plugin_id", p_name.lower())
                         matched = True
                         break
-                if not matched and "lstm" in strat.name.lower():
-                    strat_key = "lstm"
 
             logger.info(f"   ▶ 正在執行策略: {strat.name} ({strat.category})...")
             results = strat.evaluate_batch(contexts)

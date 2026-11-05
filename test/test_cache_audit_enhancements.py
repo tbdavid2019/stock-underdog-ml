@@ -95,11 +95,11 @@ class TestCacheAuditEnhancements(unittest.TestCase):
         candidate = {
             "ticker": "2454.TW",
             "composite_score": 88.0,
-            "lstm_potential": 5.2,
+            "timestral_potential": 5.2,
             "timesfm_potential": 4.1,
             "risk_reward_ratio": 2.1,
             "is_sync_buy": True,
-            "strategy_type": ["玄鐵重劍", "LSTM", "土洋合買"]
+            "strategy_type": ["玄鐵重劍", "Timestral", "土洋合買"]
         }
 
         call_count = 0
@@ -252,7 +252,7 @@ class TestCacheAuditEnhancements(unittest.TestCase):
 
         # Seed data
         with self.db._get_connection() as con:
-            con.execute("INSERT INTO predictions (index_name, model_name, ticker, potential, timestamp) VALUES ('台灣50', 'LSTM', '2330.TW', 5.0, '2026-10-15 14:00:00');")
+            con.execute("INSERT INTO predictions (index_name, model_name, ticker, potential, timestamp) VALUES ('台灣50', 'Timestral', '2330.TW', 5.0, '2026-10-15 14:00:00');")
 
         r1 = get_market_statistics(db=self.db)
         self.assertIsNotNone(r1)

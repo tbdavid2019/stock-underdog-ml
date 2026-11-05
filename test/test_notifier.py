@@ -19,8 +19,8 @@ class TestNotifierDual(unittest.TestCase):
                     "current_price": 1005.0,
                     "composite_score": 92.0,
                     "resonance_tier": "👑四重共振",
-                    "tags": ["👑四重共振", "玄鐵買點", "LSTM看漲", "TimesFM看漲"],
-                    "lstm_potential": 5.2,
+                    "tags": ["👑四重共振", "玄鐵買點", "Timestral看漲", "TimesFM看漲"],
+                    "timestral_potential": 5.2,
                     "timesfm_potential": 4.1,
                     "pullback_type": "MA60 (+2.0%)",
                     "pe": 22.0,
@@ -30,7 +30,7 @@ class TestNotifierDual(unittest.TestCase):
             "xuantie_results": pd.DataFrame([
                 {"ticker": "2330.TW", "current_price": 1005.0, "pullback_type": "MA60 (+2.0%)", "pe": 22.0, "pb": 5.0}
             ]),
-            "lstm_results": [
+            "timestral_results": [
                 {"ticker": "2330.TW", "potential": 5.2, "current_price": 1005.0, "predicted_price": 1057.26}
             ],
             "timesfm_results": [

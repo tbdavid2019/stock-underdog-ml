@@ -6,6 +6,68 @@
 
 ---
 
+## 2026-11-05 (v2.4.74)
+
+### Quant Dashboard UI/UX Overhaul: Multi-Market Pills, Wrapping Tags & Overseas Institutional Data Guard
+- **標的市場選擇器升級為行內多選按鈕（Inline Chips/Pills）**：
+  - 移除頂部 Header 懸浮式 popover 下拉選單（原 `#market-multiselect-dropdown`），讓頂部 Header 保持乾淨精緻（僅保留左側篩選器標題與右側「表格/卡片」切換鈕 + 重新整理鈕）。
+  - 在自訂篩選器卡片的第一列（維度 1：標的市場），新增整排行內多選 Chip 按鈕：
+    - `全部市場`：點擊呼叫 `toggleMarket('ALL')`，當無勾選或選中全部時呈現高對比琥珀金啟用態與打勾圖示。
+    - 各市場標籤遍歷：`台灣50`、`台灣中型100`、`台股活躍精選`、`台股全市場1000`、`S&P 500 (美股)`、`日經225 (日股)`、`太空概念 (SpaceX)`，點擊呼叫 `toggleMarket(opt.id)`，支援任意多選組合。
+    - 具備 `min-h-[44px]` 符合 WCAG 觸控無障礙標準，並提供「全選 / 清空」輔助快捷鈕。
+    - 篩選器下方「已套用條件」持續同步選取的市場標籤，支援點擊 ✕ 個別移除。
+- **策略標籤改為自然折行排列（Wrapping Tags without Truncation）**：
+  - 桌機版表格之「策略標籤」欄位去除 `whitespace-nowrap`，限制儲存格寬度為 `min-w-[160px] max-w-[280px]`。
+  - 標籤容器改為 `flex flex-wrap items-center gap-1.5 py-0.5`，完整渲染 `parseTags(item.tags)` 中的所有標籤。
+  - 多標籤時自然換行排列，不再強制截斷為 `...` 或隱藏在 `+1` 之後。
+- **標的 / 名稱欄位縮窄與完整 Hover Tooltip**：
+  - 表頭與儲存格寬度縮窄為 `w-36 sm:w-44` 與 `max-w-[150px] sm:max-w-[175px]`。
+  - 於儲存格加上 `:title="formatTicker(item.ticker) + ' ' + (item.name || companyProfileCache[item.ticker]?.name || '')"`。
+  - 股票代號維持琥珀金粗體，公司名稱維持 `truncate`，滑鼠移至儲存格任一處時，原生 Tooltip 顯示完整代號與公司名稱。
+- **PE / PB 欄位進一步縮窄（Compact Valuation Column）**：
+  - 表頭與內容儲存格縮窄為 `w-16 sm:w-20 px-1.5`，文字居中，使用 `tabular-nums font-mono text-xs sm:text-sm`，視覺緊湊精鍊。
+- **5日籌碼欄位優化（海外市場美股、日經不適用處理）**：
+  - `api/static/js/app.js` 新增 `isTaiwanStock(item)` 方法，精確辨識標的所屬市場（美股 SP500、日經225 等海外標的自動排除三大法人買賣超判讀）。
+  - 桌機表格：海外標的顯示優雅的 `—` 並帶有「外資/投信5日買賣超僅適用於台股市場（美股/日股無此數據）」原生說明；台股有籌碼資料時依買賣超方向呈現紅綠分色（買超綠色、賣超紅色）。
+  - 手機卡片與卡片檢視：海外標的清晰標註為 `— (海外市場不適用)`，避免海外標的誤顯「投:0 外:0」誤導交易者。
+- **測試回歸**：
+  - 更新 `test/test_typography_rwd.py` 中對市場選擇器的斷言（新增 `test_multi_market_chips_structure_and_touch_target`、`test_table_and_chips_ux_enhancements`、`test_is_taiwan_stock_js_method`），全數 33 項量化與視覺排版測試 100% 通過。
+
+---
+
+## 2026-11-05 (v2.4.73)
+
+### Legacy Forecasting Models Clean-up (LSTM, Chronos, Prophet Purge)
+- **連根拔除早期廢棄預測模型（LSTM / Chronos / Prophet）**：
+  - **檔案移除**：刪除 `models/lstm.py`、`strategies/lstm.py` 及舊策略測試 `test/test_lstm_strategy.py`。
+  - **模組導入與註冊淨化**：
+    - `models/__init__.py` 移除 `lstm` 模組引用與 `__all__` 註冊。
+    - `strategies/__init__.py` 移除 `strategies.lstm` 導入與警告日誌。
+    - `pipeline/orchestrator.py` 移除 `strategies.lstm` 導入及動態策略比對中的 `lstm` fallback 分支。
+  - **評估器與排版工具淨化**：
+    - `evaluators/composite_evaluator.py`：移除 `EvaluationReport` dataclass 中的 `lstm_results` 欄位；在 `evaluate()` 內移除 `lstm_results_legacy`、`active_weights["lstm"] = 0.0`、`lstm_res`、`LSTM看多` 標籤追加、`hit_lstm` 引用、目標價 fallback 與輸出字典之 `lstm_potential`。
+    - `evaluators/formatter.py`：移除模型名稱映射中的 `"lstm": "LSTM"`，更新熱插拔時序大模型說明 docstring。
+  - **資料庫與決策客戶端淨化**：
+    - `data/duckdb_manager.py`：在 `save_daily_results` 移除 `lstm_results` 儲存邏輯；`get_top_bullish` 與 `get_top_bearish` 查詢條件由 `(model_name = 'Timestral' OR model_name = 'LSTM')` 改為純粹的 `model_name = 'Timestral'`；在 `get_latest_candidate_snapshot` 移除 `lstm_potential` 欄位與 `elif "LSTM"` 分支。
+    - `data/clef_client.py`：移除 `format_stock_state` 中的 `lstm_pot` 欄位與 fallback；`_evaluate_local_rules` 移除對 `lstm_potential` 的依賴，以 `timestral_potential` 為 primary potential。
+  - **API 路由、Schemas 與 FastMCP 工具移除**：
+    - `api/routes/predictions.py`：徹底刪除 `@router.get("/lstm/top-bullish")` 與 `@router.get("/lstm/top-bearish")` 兩個廢棄端點；更新 `model_name` query 參數說明。
+    - `mcp_server.py`：徹底刪除 `get_lstm_top_predictions` FastMCP 工具函式。
+    - `api/schemas.py`：移除 `model_name` 中的 `LSTM` 說明；移除已廢棄之 `lstm_potential` 欄位。
+  - **前端視覺與 API 客戶端升級**：
+    - `api/static/js/chart-manager.js`：移除 `extractSeriesData` 中的 `lstm` 鍵值處理、`dataLstm`、`colorLstm`、`lstmMarkers` 與 Chart.js 的 `key: 'lstm'` dataset。
+    - `api/static/js/api-client.js`：`getTopPredictions` 移除對 `/lstm/*` 的 fallback，全面升級為 `/timestral/*`。
+    - `api/static/js/app.js`：移除 `getTagClass` 中的 `case 'ai_lstm':`。
+    - `api/static/brand-mark.svg`：將標題副標從「LSTM 預測」升級為「時序大模型」。
+  - **單元測試全面升級與同步**：
+    - `test/test_api.py`：移除廢棄 `/api/v1/predictions/lstm/*` 端點測試，測試資料升級為 `Timestral`。
+    - `test/test_duckdb.py`：將所有測試案例中的 `LSTM` 記錄升級為 `Timestral`。
+    - `test/test_composite_evaluator.py`：所有多策略與共振測試案例由 `lstm` 升級為現代基礎大模型 `timestral`。
+    - `test/test_clef_client.py`、`test/test_formatter.py`、`test/test_ai_narrative.py`、`test/test_notifier.py`、`test/test_cache_audit_enhancements.py`：全面清理 `lstm_results` 與 `lstm_potential`，升級斷言為現代時序大模型欄位。
+  - **架構純化**：代碼庫徹底純化，全面奠基於以現代三大時序基礎大模型（Google TimesFM、Mistral Timestral、Salesforce MOIRAI-2）為核心的高精度預測架構。
+
+---
+
 ## 2026-11-05 (v2.4.72)
 
 ### DuckDB Concurrent Connection Resilience, Multi-Market Multi-Select & Internal Identifier Purge

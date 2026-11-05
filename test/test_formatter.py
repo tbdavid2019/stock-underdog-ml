@@ -41,8 +41,8 @@ class TestFormatter(unittest.TestCase):
                 "current_price": 1005.0,
                 "composite_score": 92.5,
                 "resonance_tier": "👑四重共振",
-                "tags": ["👑四重共振", "玄鐵買點", "LSTM看漲", "TimesFM看漲", "高盈虧比", "土洋合買", "主流板塊(半導體)", "低PE"],
-                "lstm_potential": 5.2,
+                "tags": ["👑四重共振", "玄鐵買點", "Timestral看漲", "TimesFM看漲", "高盈虧比", "土洋合買", "主流板塊(半導體)", "低PE"],
+                "timestral_potential": 5.2,
                 "timesfm_potential": 4.1,
                 "risk_reward_ratio": 2.5,
                 "pullback_type": "MA60 (+2.0%)",
@@ -54,8 +54,8 @@ class TestFormatter(unittest.TestCase):
                 "current_price": 26.8,
                 "composite_score": 84.0,
                 "resonance_tier": "🏆三重共振",
-                "tags": ["🏆三重共振", "玄鐵買點", "LSTM看漲", "投信連買3天", "低PE", "低PB"],
-                "lstm_potential": 4.1,
+                "tags": ["🏆三重共振", "玄鐵買點", "Timestral看漲", "投信連買3天", "低PE", "低PB"],
+                "timestral_potential": 4.1,
                 "timesfm_potential": 0.7,
                 "risk_reward_ratio": 1.2,
                 "pullback_type": "MA60 (+4.1%)",
@@ -67,8 +67,8 @@ class TestFormatter(unittest.TestCase):
                 "current_price": 112.5,
                 "composite_score": 78.0,
                 "resonance_tier": "🔮雙ML共振",
-                "tags": ["🔮雙ML共振", "LSTM看漲", "TimesFM看漲", "投信買超"],
-                "lstm_potential": 2.9,
+                "tags": ["🔮雙ML共振", "Timestral看漲", "TimesFM看漲", "投信買超"],
+                "timestral_potential": 2.9,
                 "timesfm_potential": 1.8,
                 "risk_reward_ratio": 1.5,
                 "pullback_type": "",
@@ -82,7 +82,7 @@ class TestFormatter(unittest.TestCase):
             {"ticker": "2603.TW", "current_price": 195.0, "pullback_type": "MA60 (+3.4%)", "pe": 9.4, "pb": 0.9}
         ])
 
-        self.lstm_results = [
+        self.timestral_results = [
             {"ticker": "2330.TW", "potential": 5.2, "current_price": 1005.0, "predicted_price": 1057.26},
             {"ticker": "5880.TW", "potential": 4.1, "current_price": 26.8, "predicted_price": 27.90}
         ]
@@ -95,7 +95,7 @@ class TestFormatter(unittest.TestCase):
         self.report_dict = {
             "overlap_candidates": self.candidates,
             "xuantie_results": self.xuantie_df,
-            "lstm_results": self.lstm_results,
+            "timestral_results": self.timestral_results,
             "timesfm_results": self.timesfm_results,
             "macro_state": self.macro,
             "ai_summary": "今日盤勢處於全面多頭，優先聚焦 2330.TW 與 5880.TW。"
@@ -141,7 +141,7 @@ class TestFormatter(unittest.TestCase):
         # 驗證個股卡片內容與網站連結
         self.assertIn("2330.TW 台積電", msg)
         self.assertIn("<code>1,005.00</code>", msg)
-        self.assertIn("LSTM <b>+5.2%</b>", msg)
+        self.assertIn("Timestral <b>+5.2%</b>", msg)
         self.assertIn("TimesFM <b>+4.1%</b> (2.5x)", msg)
         self.assertIn("土洋合買", msg)
         self.assertIn("https://stockdata.david888.com/?tab=history&ticker=2330.TW", msg)
@@ -240,7 +240,7 @@ class TestFormatter(unittest.TestCase):
         # 驗證模型預測區塊
         self.assertIn("TimesFM:", html_msg)
         self.assertIn("+4.1%", html_msg)
-        self.assertIn("LSTM:", html_msg)
+        self.assertIn("Timestral:", html_msg)
         self.assertIn("+5.2%", html_msg)
 
         # 驗證底部進入操盤看板大按鈕
@@ -309,7 +309,7 @@ class TestFormatter(unittest.TestCase):
         empty_results = {
             "overlap_candidates": [],
             "xuantie_results": pd.DataFrame(),
-            "lstm_results": [],
+            "timestral_results": [],
             "timesfm_results": [],
             "macro_state": self.macro
         }

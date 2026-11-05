@@ -15,18 +15,18 @@ class TestCompositeEvaluator(unittest.TestCase):
         macro = MacroState(regime_name="全面多頭 (Bullish)", exposure=1.0, vix=15.0)
 
         # 構造 4 種策略輸出
-        # 1. 2330: XuanTie is_hit + LSTM is_hit + Institutional is_hit (Triple Resonance)
-        # 2. 2317: XuanTie is_hit + LSTM not hit
-        # 3. 2454: LSTM is_hit only
+        # 1. 2330: XuanTie is_hit + Timestral is_hit + Institutional is_hit (Triple Resonance)
+        # 2. 2317: XuanTie is_hit + Timestral not hit
+        # 3. 2454: Timestral is_hit only
         strategy_outputs = {
             "xuantie": [
                 StrategyResult(ticker="2330.TW", strategy_name="玄鐵重劍", is_hit=True, score=80.0, current_price=1000.0, metrics={"ma60": 980.0, "pe": 22.0, "pb": 5.0}, signals={"pullback_type": "MA60 (+2.0%)"}),
                 StrategyResult(ticker="2317.TW", strategy_name="玄鐵重劍", is_hit=True, score=70.0, current_price=200.0, metrics={"ma60": 195.0, "pe": 15.0, "pb": 2.0}, signals={"pullback_type": "MA60 (+2.5%)"})
             ],
-            "lstm": [
-                StrategyResult(ticker="2330.TW", strategy_name="LSTM", is_hit=True, score=85.0, current_price=1000.0, predicted_price=1050.0, potential=5.0),
-                StrategyResult(ticker="2317.TW", strategy_name="LSTM", is_hit=False, score=40.0, current_price=200.0, predicted_price=198.0, potential=-1.0),
-                StrategyResult(ticker="2454.TW", strategy_name="LSTM", is_hit=True, score=90.0, current_price=1200.0, predicted_price=1300.0, potential=8.3)
+            "timestral": [
+                StrategyResult(ticker="2330.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=1000.0, predicted_price=1050.0, potential=5.0),
+                StrategyResult(ticker="2317.TW", strategy_name="Timestral", is_hit=False, score=40.0, current_price=200.0, predicted_price=198.0, potential=-1.0),
+                StrategyResult(ticker="2454.TW", strategy_name="Timestral", is_hit=True, score=90.0, current_price=1200.0, predicted_price=1300.0, potential=8.3)
             ],
             "institutional": [
                 StrategyResult(ticker="2330.TW", strategy_name="三大法人籌碼", is_hit=True, score=80.0, current_price=1000.0, metadata={"trust_streak": 4, "is_trust_streak": True, "is_sync_buy": True, "trust_net_5d": 3000}),
@@ -49,7 +49,7 @@ class TestCompositeEvaluator(unittest.TestCase):
         # 驗證 2330.TW 是否獲得模型與因子標籤
         top_cand = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
         self.assertIsNotNone(top_cand)
-        self.assertIn("LSTM看多", top_cand["tags"])
+        self.assertIn("Timestral看多", top_cand["tags"])
         self.assertIn("土洋合買", top_cand["tags"])
         self.assertIn("主流板塊(半導體與IC設計)", top_cand["tags"])
         print("2330.TW Tags:", top_cand["tags"])
@@ -81,9 +81,6 @@ class TestCompositeEvaluator(unittest.TestCase):
             "xuantie": [
                 StrategyResult(ticker="2330.TW", strategy_name="玄鐵重劍", is_hit=True, score=85.0, current_price=1000.0, metrics={"ma60": 980.0, "pe": 20.0, "pb": 4.5}, signals={"pullback_type": "MA60 (+2.0%)"})
             ],
-            "lstm": [
-                StrategyResult(ticker="2330.TW", strategy_name="LSTM", is_hit=True, score=88.0, current_price=1000.0, predicted_price=1050.0, potential=5.0)
-            ],
             "timesfm": [
                 StrategyResult(ticker="2330.TW", strategy_name="TimesFM", is_hit=True, score=92.0, current_price=1000.0, predicted_price=1060.0, potential=6.0, signals={"risk_reward_ratio": 2.5, "horizon_predicted_price": 1060.0}, metrics={"pe": 20.0, "pb": 4.5}),
                 StrategyResult(ticker="2454.TW", strategy_name="TimesFM", is_hit=True, score=80.0, current_price=1200.0, predicted_price=1250.0, potential=4.17, signals={"risk_reward_ratio": 1.8, "horizon_predicted_price": 1250.0})
@@ -99,7 +96,6 @@ class TestCompositeEvaluator(unittest.TestCase):
         # 驗證動態模型標籤
         cand = next((c for c in report.overlap_candidates if c["ticker"] == "2330.TW"), None)
         self.assertIsNotNone(cand)
-        self.assertIn("LSTM看多", cand["tags"])
         self.assertIn("TimesFM看多", cand["tags"])
         self.assertIn("土洋合買", cand["tags"])
 
@@ -128,15 +124,15 @@ class TestCompositeEvaluator(unittest.TestCase):
                 # 2891: 玄鐵買點，但雙 ML 看跌
                 StrategyResult(ticker="2891.TW", strategy_name="玄鐵重劍", is_hit=True, score=70.0, current_price=35.0, metrics={"ma60": 34.0}, signals={"pullback_type": "MA60 (+2.9%)"}),
             ],
-            "lstm": [
-                # 5880: LSTM 看漲 +4.1%
-                StrategyResult(ticker="5880.TW", strategy_name="LSTM", is_hit=True, score=85.0, current_price=26.0, predicted_price=27.06, potential=4.1),
-                # 1303 (南亞): LSTM 大幅看跌 -34.4%
-                StrategyResult(ticker="1303.TW", strategy_name="LSTM", is_hit=False, score=0.0, current_price=50.0, predicted_price=32.8, potential=-34.4),
-                # 8046 (南電): LSTM 看跌 -19.9%
-                StrategyResult(ticker="8046.TW", strategy_name="LSTM", is_hit=False, score=0.0, current_price=200.0, predicted_price=160.2, potential=-19.9),
-                # 2891 (中信金): LSTM 看跌 -6.9%
-                StrategyResult(ticker="2891.TW", strategy_name="LSTM", is_hit=False, score=0.0, current_price=35.0, predicted_price=32.58, potential=-6.9),
+            "timestral": [
+                # 5880: Timestral 看漲 +4.1%
+                StrategyResult(ticker="5880.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=26.0, predicted_price=27.06, potential=4.1),
+                # 1303 (南亞): Timestral 大幅看跌 -34.4%
+                StrategyResult(ticker="1303.TW", strategy_name="Timestral", is_hit=False, score=0.0, current_price=50.0, predicted_price=32.8, potential=-34.4),
+                # 8046 (南電): Timestral 看跌 -19.9%
+                StrategyResult(ticker="8046.TW", strategy_name="Timestral", is_hit=False, score=0.0, current_price=200.0, predicted_price=160.2, potential=-19.9),
+                # 2891 (中信金): Timestral 看跌 -6.9%
+                StrategyResult(ticker="2891.TW", strategy_name="Timestral", is_hit=False, score=0.0, current_price=35.0, predicted_price=32.58, potential=-6.9),
             ],
             "timesfm": [
                 # 5880: TimesFM 看漲 +0.7%
@@ -186,9 +182,9 @@ class TestCompositeEvaluator(unittest.TestCase):
     def test_triple_resonance_strict_combinations(self):
         """
         驗證三重共振必須具備技術面 (玄鐵) 或籌碼面 (法人) 的實質支撐：
-        - 僅有 板塊 + 雙ML (sector + lstm + timesfm) 不得判定為 🏆三重共振 (應為 🔮雙ML共振)。
-        - 具備 玄鐵 + 法人 + LSTM 應判定為 🏆三重共振。
-        - 具備 板塊 + 玄鐵 + LSTM 應判定為 🏆三重共振。
+        - 僅有 板塊 + 雙時序大模型 (sector + timestral + timesfm) 不得判定為 🏆三重共振。
+        - 具備 玄鐵 + 法人 + Timestral 應判定為 🏆三重共振。
+        - 具備 板塊 + 玄鐵 + Timestral 應判定為 🏆三重共振。
         """
         evaluator = CompositeEvaluator()
         macro = MacroState(regime_name="全面多頭 (Bullish)", exposure=1.0, vix=15.0)
@@ -200,13 +196,13 @@ class TestCompositeEvaluator(unittest.TestCase):
                 # 2454: XuanTie hit
                 StrategyResult(ticker="2454.TW", strategy_name="玄鐵重劍", is_hit=True, score=80.0, current_price=1200.0, metrics={"ma60": 1180.0}),
             ],
-            "lstm": [
-                # 2330: LSTM hit
-                StrategyResult(ticker="2330.TW", strategy_name="LSTM", is_hit=True, score=85.0, current_price=1000.0, predicted_price=1050.0, potential=5.0),
-                # 2454: LSTM hit
-                StrategyResult(ticker="2454.TW", strategy_name="LSTM", is_hit=True, score=85.0, current_price=1200.0, predicted_price=1260.0, potential=5.0),
-                # 3008: LSTM hit
-                StrategyResult(ticker="3008.TW", strategy_name="LSTM", is_hit=True, score=85.0, current_price=2500.0, predicted_price=2600.0, potential=4.0),
+            "timestral": [
+                # 2330: Timestral hit
+                StrategyResult(ticker="2330.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=1000.0, predicted_price=1050.0, potential=5.0),
+                # 2454: Timestral hit
+                StrategyResult(ticker="2454.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=1200.0, predicted_price=1260.0, potential=5.0),
+                # 3008: Timestral hit
+                StrategyResult(ticker="3008.TW", strategy_name="Timestral", is_hit=True, score=85.0, current_price=2500.0, predicted_price=2600.0, potential=4.0),
             ],
             "timesfm": [
                 # 3008: TimesFM hit
@@ -219,7 +215,7 @@ class TestCompositeEvaluator(unittest.TestCase):
             "sector_rotation": [
                 # 2454: Sector hit
                 StrategyResult(ticker="2454.TW", strategy_name="板塊輪動", is_hit=True, score=75.0, current_price=1200.0, metadata={"is_top_sector": True, "sector": "半導體"}),
-                # 3008: Sector hit (3008 only has Sector + LSTM + TimesFM, NO xuantie or inst!)
+                # 3008: Sector hit (3008 only has Sector + Timestral + TimesFM, NO xuantie or inst!)
                 StrategyResult(ticker="3008.TW", strategy_name="板塊輪動", is_hit=True, score=75.0, current_price=2500.0, metadata={"is_top_sector": True, "sector": "光電"}),
             ]
         }
@@ -230,17 +226,17 @@ class TestCompositeEvaluator(unittest.TestCase):
         cand_2454 = next((c for c in report.overlap_candidates if c["ticker"] == "2454.TW"), None)
         cand_3008 = next((c for c in report.overlap_candidates if c["ticker"] == "3008.TW"), None)
 
-        # 2330 (XuanTie + Inst + LSTM) -> LSTM
+        # 2330 (XuanTie + Inst + Timestral) -> Timestral
         self.assertIsNotNone(cand_2330)
-        self.assertEqual(cand_2330["resonance_tier"], "LSTM")
+        self.assertEqual(cand_2330["resonance_tier"], "Timestral")
 
-        # 2454 (Sector + XuanTie + LSTM) -> LSTM
+        # 2454 (Sector + XuanTie + Timestral) -> Timestral
         self.assertIsNotNone(cand_2454)
-        self.assertEqual(cand_2454["resonance_tier"], "LSTM")
+        self.assertEqual(cand_2454["resonance_tier"], "Timestral")
 
-        # 3008 (Sector + LSTM + TimesFM) -> TimesFM, LSTM
+        # 3008 (Sector + Timestral + TimesFM) -> TimesFM, Timestral
         self.assertIsNotNone(cand_3008)
-        self.assertEqual(cand_3008["resonance_tier"], "TimesFM, LSTM")
+        self.assertEqual(cand_3008["resonance_tier"], "TimesFM, Timestral")
 
     def test_dual_foundation_model_confluence_and_synthesis(self):
         """驗證 Google TimesFM 與 Mistral Timestral 雙大模型共振與合成目標價"""

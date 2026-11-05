@@ -322,19 +322,72 @@ class TestTypographyAndRWD(unittest.TestCase):
         app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
         self.assertNotIn("'三模型看漲'", app_js, "app.js must not output '三模型看漲'")
 
-    def test_multi_market_dropdown_structure_and_touch_target(self):
+    def test_multi_market_chips_structure_and_touch_target(self):
         """
-        Verify multi-market dropdown in tab_dashboard.html meets touch targets (>=44px),
-        includes accessible floating popover, and displays active market tags in Dimension 6.
+        Verify multi-market inline multi-select chips in tab_dashboard.html meet touch targets (>=44px),
+        support toggleMarket, selectAll, clear, and display active market tags in applied filters.
         """
         dash_html = Path("api/templates/partials/tab_dashboard.html").read_text(encoding="utf-8")
-        self.assertIn('id="market-multiselect-dropdown"', dash_html)
+        self.assertIn('id="market-multiselect-chips"', dash_html)
         self.assertIn('min-h-[44px]', dash_html)
-        self.assertIn('marketTriggerLabel', dash_html)
-        self.assertIn('selectAllMarkets()', dash_html)
-        self.assertIn('clearSelectedMarkets()', dash_html)
-        self.assertIn('toggleMarket(', dash_html)
+        self.assertIn("toggleMarket('ALL')", dash_html)
+        self.assertIn("toggleMarket(opt.id)", dash_html)
+        self.assertIn("isMarketSelected('ALL')", dash_html)
+        self.assertIn("isMarketSelected(opt.id)", dash_html)
+        self.assertIn("availableMarketOptions", dash_html)
+        self.assertIn("selectAllMarkets()", dash_html)
+        self.assertIn("clearSelectedMarkets()", dash_html)
+        self.assertIn('min-h-[36px] sm:min-h-[40px]', dash_html)
         self.assertIn('市場: {{ getMarketDisplayLabel(mId) }}', dash_html)
+        # Dropdown popover is removed from top header for a cleaner header
+        self.assertNotIn('id="market-multiselect-dropdown"', dash_html)
+
+        # Verify JS implementation difference between selectAllMarkets and clearSelectedMarkets
+        app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
+        self.assertIn("this.selectedMarkets = this.availableMarketOptions.map(o => o.id);", app_js)
+        self.assertIn("clearSelectedMarkets() {\n            this.selectedMarkets = [];", app_js)
+
+    def test_multi_market_dropdown_structure_and_touch_target(self):
+        """Backward compatibility alias for test_multi_market_chips_structure_and_touch_target"""
+        return self.test_multi_market_chips_structure_and_touch_target()
+
+    def test_table_and_chips_ux_enhancements(self):
+        """
+        Verify the table column narrowing, full hover tooltips, wrapping tags,
+        and 5-day institutional chips handling for TW vs overseas markets.
+        """
+        dash_html = Path("api/templates/partials/tab_dashboard.html").read_text(encoding="utf-8")
+
+        # 1. 標的 / 名稱 column narrowing and full tooltip
+        self.assertIn('w-36 sm:w-44', dash_html)
+        self.assertIn('max-w-[150px] sm:max-w-[175px]', dash_html)
+        self.assertIn(':title="formatTicker(item.ticker) + \' \' + (item.name || companyProfileCache[item.ticker]?.name || \'\')"', dash_html)
+
+        # 2. PE / PB column narrowing
+        self.assertIn('w-16 sm:w-20', dash_html)
+        self.assertIn('tabular-nums font-mono text-xs sm:text-sm', dash_html)
+
+        # 3. Strategy tags wrapping without truncation
+        self.assertIn('min-w-[160px] max-w-[280px]', dash_html)
+        self.assertIn('flex flex-wrap items-center gap-1.5 py-0.5', dash_html)
+        self.assertIn('v-for="tag in parseTags(item.tags)"', dash_html)
+
+        # 4. 5-day institutional chips handling for TW vs overseas markets
+        self.assertIn('isTaiwanStock(item)', dash_html)
+        self.assertIn('— (海外市場不適用)', dash_html)
+        self.assertIn(':title="\'外資/投信5日買賣超僅適用於台股市場（美股/日股無此數據）\'"', dash_html)
+
+    def test_is_taiwan_stock_js_method(self):
+        """
+        Verify app.js implements isTaiwanStock method correctly distinguishing
+        TW stocks from US/JP overseas stocks.
+        """
+        app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
+        self.assertIn('isTaiwanStock(item)', app_js)
+        self.assertIn("SP500", app_js)
+        self.assertIn("日經", app_js)
+        self.assertIn("美股", app_js)
+        self.assertIn(".endsWith('.TW')", app_js)
 
     def test_podcast_no_gemini_or_local_rule_leaks(self):
         """

@@ -9,6 +9,6 @@
   <text x="250" y="220" fill="#141413" font-family="Arial, sans-serif" font-size="68" font-weight="800">888 Stock Quant</text>
   <text x="254" y="290" fill="#737067" font-family="Arial, sans-serif" font-size="30">多維量化決策平台</text>
   <rect x="254" y="350" width="360" height="6" rx="3" fill="#D97757"/>
-  <text x="254" y="414" fill="#141413" font-family="Arial, sans-serif" font-size="27">技術面 · LSTM 預測 · 法人籌碼</text>
+  <text x="254" y="414" fill="#141413" font-family="Arial, sans-serif" font-size="27">技術面 · 時序大模型 · 法人籌碼</text>
   <text x="254" y="462" fill="#737067" font-family="Arial, sans-serif" font-size="23">Stockdata.david888.com</text>
 </svg>

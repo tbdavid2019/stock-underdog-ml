@@ -59,7 +59,7 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表 (22 大標準 FastMCP / WebMCP 工具)
+## 4. MCP Tools 快速對照表 (21 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
@@ -68,7 +68,6 @@ graph TD
 | `get_xuantie_pullback_stocks` | `index_name`, `pullback_type`, `limit` | 玄鐵重劍 MA60/MA120 回調買點清單 |
 | `get_timestral_top_predictions` | `index_name`, `direction`, `limit` | Mistral Timestral-209M 時序大模型預測漲跌幅排行、P10/P90 蒙地卡羅風控區間 |
 | `get_timesfm_top_predictions` | `index_name`, `direction`, `limit` | Google TimesFM 時序大模型漲跌幅排行與盈虧比 (Risk/Reward) |
-| `get_lstm_top_predictions` | `index_name`, `direction`, `limit` | [Deprecated] 舊版 LSTM 預測工具，維持向下相容透明回傳 Timestral |
 | `get_stock_history` | `ticker`, `limit` | 指定代號之歷史時序量化預測與指標軌跡 |
 | `get_latest_market_snapshot` | `index_name`, `limit` | 當日最新完整日報批次數據快照 |
 | `get_top_institutional_flows` | `order_by`, `sort_dir`, `market`, `limit` | 三大法人（外資、投信、自營商）買賣超排行榜 |

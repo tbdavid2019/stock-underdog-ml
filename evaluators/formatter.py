@@ -78,7 +78,7 @@ def _extract_candidates(results: dict, overlap_df: pd.DataFrame) -> List[dict]:
 def get_candidate_model_potentials(cand: dict) -> List[Dict[str, Any]]:
     """
     動態抓取 candidate 中所有模型的時序預測，絕不寫死單一模型名稱。
-    未來熱拔插任何新模型（如 Chronos、TiDE），自動識別並輸出。
+    未來熱插拔任何新時序大模型，自動識別並輸出。
     """
     results = []
     seen_names = set()
@@ -100,7 +100,6 @@ def get_candidate_model_potentials(cand: dict) -> List[Dict[str, Any]]:
         "timesfm": "TimesFM",
         "timestral": "Timestral",
         "moirai": "MOIRAI-2",
-        "lstm": "LSTM",
     }
     for k, v in std_map.items():
         if k not in plugin_name_map:

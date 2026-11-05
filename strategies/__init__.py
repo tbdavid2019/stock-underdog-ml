@@ -25,10 +25,4 @@ except Exception as e:
     import logging
     logging.getLogger("stock_app.strategies").warning(f"⚠️ moirai strategy import skipped: {e}")
 
-try:
-    import strategies.lstm
-except Exception as e:
-    import logging
-    logging.getLogger("stock_app.strategies").warning(f"⚠️ legacy lstm strategy import skipped: {e}")
-
 __all__ = ["StockContext", "StrategyResult", "BaseStrategy"]

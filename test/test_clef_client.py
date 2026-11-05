@@ -17,12 +17,12 @@ class TestClefDecisionClient(unittest.TestCase):
             "ticker": "2330.TW",
             "current_price": 1020.0,
             "composite_score": 85.0,
-            "hit_strategies": ["xuantie", "lstm"],
+            "hit_strategies": ["xuantie", "timestral"],
             "tags": ["🏆三重共振", "玄鐵買點"],
             "fundamentals": {"pe": 21.5, "pb": 4.5},
             "ma60": 1000.0,
             "pullback_type": "MA60",
-            "lstm_potential": 5.2,
+            "timestral_potential": 5.2,
             "timesfm_potential": 3.1,
             "risk_reward_ratio": 2.2,
             "institutional": {
@@ -35,7 +35,7 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(state["ticker"], "2330.TW")
         self.assertEqual(state["macro_regime"], "bull")
         self.assertEqual(state["valuation"]["pe"], 21.5)
-        self.assertEqual(state["models"]["lstm_potential"], 5.2)
+        self.assertEqual(state["models"]["timestral_potential"], 5.2)
         self.assertTrue(state["institutional"]["is_sync_buy"])
 
     @patch("requests.post")
@@ -115,7 +115,7 @@ class TestClefDecisionClient(unittest.TestCase):
         cand = {
             "ticker": "2330.TW",
             "composite_score": 88.0,
-            "lstm_potential": 4.5,
+            "timestral_potential": 4.5,
             "timesfm_potential": 3.2,
             "risk_reward_ratio": 2.1,
             "institutional": {"is_sync_buy": True}
@@ -134,7 +134,7 @@ class TestClefDecisionClient(unittest.TestCase):
         bearish_cand = {
             "ticker": "1303.TW",
             "composite_score": 40.0,
-            "lstm_potential": -12.0,
+            "timestral_potential": -12.0,
             "timesfm_potential": -2.0,
             "risk_reward_ratio": 0.5
         }
@@ -164,7 +164,7 @@ class TestClefDecisionClient(unittest.TestCase):
             {
                 "ticker": "2330.TW",
                 "composite_score": 88.0,
-                "lstm_potential": 4.5,
+                "timestral_potential": 4.5,
                 "timesfm_potential": 3.0,
                 "risk_reward_ratio": 2.0,
                 "institutional": {"is_sync_buy": True}
@@ -172,7 +172,7 @@ class TestClefDecisionClient(unittest.TestCase):
             {
                 "ticker": "1303.TW",
                 "composite_score": 35.0,
-                "lstm_potential": -10.0,
+                "timestral_potential": -10.0,
                 "timesfm_potential": -1.5,
                 "risk_reward_ratio": 0.5
             }
@@ -195,7 +195,7 @@ class TestClefDecisionClient(unittest.TestCase):
             "ticker": "2330.TW",
             "composite_score": "not_a_number",
             "models": {
-                "lstm_potential": "N/A",
+                "timestral_potential": "N/A",
                 "timesfm_potential": None,
                 "risk_reward_ratio": "invalid"
             }
@@ -212,6 +212,7 @@ class TestClefDecisionClient(unittest.TestCase):
             "ticker": "2317.TW",
             "current_price": 205.0,
             "score": 82.5,
+            "timestral_potential": 4.8,
             "potential": 4.8,
             "pe": 16.2,
             "pb": 2.1,
@@ -229,7 +230,7 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(state["composite_score"], 82.5)
         self.assertEqual(state["valuation"]["pe"], 16.2)
         self.assertEqual(state["valuation"]["pb"], 2.1)
-        self.assertEqual(state["models"]["lstm_potential"], 4.8)
+        self.assertEqual(state["models"]["timestral_potential"], 4.8)
         self.assertEqual(state["institutional"]["trust_streak"], 5)
         self.assertTrue(state["institutional"]["is_sync_buy"])
         self.assertIn("土洋合買", state["tags"])
@@ -323,17 +324,17 @@ class TestClefDecisionClient(unittest.TestCase):
         self.assertEqual(verdict.action_decision, "strong_buy")
         self.assertEqual(verdict.conviction_score, 4.5)
 
-    def test_format_stock_state_timesfm_only_does_not_pollute_lstm(self):
-        """驗證當候選只有 TimesFM 預測時，不會把 TimesFM 潛力誤拷貝給 LSTM 造成虛假雙模型共振"""
+    def test_format_stock_state_timesfm_only_does_not_pollute_timestral(self):
+        """驗證當候選只有 TimesFM 預測時，不會把 TimesFM 潛力誤拷貝給 Timestral 造成虛假雙模型共振"""
         cand = {
             "ticker": "2330.TW",
             "current_price": 1000.0,
             "timesfm_potential": 4.0,
             "potential": 4.0,
-            "lstm_potential": None
+            "timestral_potential": None
         }
         state = ClefDecisionClient.format_stock_state(cand)
-        self.assertIsNone(state["models"]["lstm_potential"])
+        self.assertIsNone(state["models"]["timestral_potential"])
         self.assertEqual(state["models"]["timesfm_potential"], 4.0)
 
     @patch("requests.post")

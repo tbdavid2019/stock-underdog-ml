@@ -47,8 +47,8 @@ class TestFastAPIService(unittest.TestCase):
             },
             {
                 "index_name": "台灣50",
-                "model_name": "LSTM",
-                "strategy_type": "LSTM預測",
+                "model_name": "Timestral",
+                "strategy_type": "Timestral",
                 "ticker": "2454.TW",
                 "current_price": 3900.0,
                 "predicted_price": 3600.0,
@@ -57,7 +57,7 @@ class TestFastAPIService(unittest.TestCase):
                 "period": "6mo",
                 "timestamp": now_ts,
                 "macro_regime": "全面多頭",
-                "tags": "LSTM看跌"
+                "tags": "Timestral看跌"
             },
             {
                 "index_name": "台灣50",
@@ -139,15 +139,6 @@ class TestFastAPIService(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["success"])
-
-    def test_lstm_top_bullish_and_bearish(self):
-        bull_resp = self.client.get("/api/v1/predictions/lstm/top-bullish?limit=5")
-        self.assertEqual(bull_resp.status_code, 200)
-        self.assertIn("x-deprecation-warning", bull_resp.headers)
-        
-        bear_resp = self.client.get("/api/v1/predictions/lstm/top-bearish?limit=5")
-        self.assertEqual(bear_resp.status_code, 200)
-        self.assertIn("x-deprecation-warning", bear_resp.headers)
 
     def test_timestral_top_bullish_and_bearish(self):
         bull_resp = self.client.get("/api/v1/predictions/timestral/top-bullish?limit=5")

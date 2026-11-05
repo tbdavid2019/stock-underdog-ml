@@ -13,7 +13,7 @@ class TestAINarrativeEngine(unittest.TestCase):
         macro = MacroState(regime_name="全面多頭 (Strong Bull)", exposure=1.0, vix=15.2)
         sample_report = {
             "xuantie_results": [{"ticker": "2330.TW"}],
-            "lstm_results": [{"ticker": "2330.TW"}],
+            "timestral_results": [{"ticker": "2330.TW"}],
             "overlap_results": [{
                 "ticker": "2330.TW",
                 "potential": 5.5,
@@ -35,7 +35,7 @@ class TestAINarrativeEngine(unittest.TestCase):
         macro = MacroState(regime_name="多頭回調 (Bull Pullback)", exposure=0.85, vix=17.5)
         sample_report = {
             "xuantie_results": [],
-            "lstm_results": [],
+            "timestral_results": [],
             "overlap_results": []
         }
         # 使用 mock 確保單元測試在 0.001 秒內極速完成且不受外網波動影響
@@ -50,14 +50,14 @@ class TestAINarrativeEngine(unittest.TestCase):
         macro = MacroState(regime_name="全面多頭 (Strong Bull)", exposure=1.0, vix=14.0)
         sample_report = {
             "xuantie_results": [{"ticker": "2330.TW"}],
-            "lstm_results": [{"ticker": "2330.TW", "potential": 4.5}],
+            "timestral_results": [{"ticker": "2330.TW", "potential": 4.5}],
             "timesfm_results": [
                 {"ticker": "2330.TW", "potential": 5.8, "risk_reward_ratio": 2.6},
                 {"ticker": "2454.TW", "potential": 3.9, "risk_reward_ratio": 1.9}
             ],
             "overlap_results": [{
                 "ticker": "2330.TW",
-                "lstm_potential": 4.5,
+                "timestral_potential": 4.5,
                 "timesfm_potential": 5.8,
                 "risk_reward_ratio": 2.6,
                 "tags": ["👑四重共振", "🔮雙ML共振", "高盈虧比"],
@@ -76,7 +76,7 @@ class TestAINarrativeEngine(unittest.TestCase):
         # 2. 驗證純程式規則模板是否包含雙 ML 預期
         template = engine._generate_template_narrative("台灣50", macro, sample_report)
         self.assertIn("2330.TW", template)
-        self.assertIn("LSTM +4.50% / TimesFM +5.80%", template)
+        self.assertIn("Timestral +4.50% / TimesFM +5.80%", template)
         self.assertIn("時序模型同步看多", template)
 
     def test_timestral_in_prompt_and_narrative(self):

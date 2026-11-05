@@ -361,24 +361,18 @@ class ClefDecisionClient:
         ma60 = tech.get("ma60") if tech else candidate.get("ma60")
         pullback_type = tech.get("pullback_type") if tech else candidate.get("pullback_type", "")
 
-        # Model potentials: preserve explicit None and avoid attributing TimesFM potential to LSTM
+        # Model potentials: preserve explicit None
         timestral_pot = models.get("timestral_potential") if models else candidate.get("timestral_potential")
-        lstm_pot = models.get("lstm_potential") if models else candidate.get("lstm_potential")
         timesfm_pot = models.get("timesfm_potential") if models else candidate.get("timesfm_potential")
         rr = models.get("risk_reward_ratio") if models else candidate.get("risk_reward_ratio")
 
         # Fallback to generic 'potential' ONLY if model-specific keys are absent and record identifies model
-        if timestral_pot is None and lstm_pot is None and timesfm_pot is None and candidate.get("potential") is not None:
+        if timestral_pot is None and timesfm_pot is None and candidate.get("potential") is not None:
             m_name = (candidate.get("model_name") or candidate.get("strategy_type") or "").upper()
             if "TIMESTRAL" in m_name:
                 timestral_pot = candidate.get("potential")
             elif "TIMESFM" in m_name:
                 timesfm_pot = candidate.get("potential")
-            elif "LSTM" in m_name:
-                lstm_pot = candidate.get("potential")
-            else:
-                # Default generic legacy potential to lstm_potential
-                lstm_pot = candidate.get("potential")
 
         # Institutional flows (check nested, then flat)
         f_net = inst.get("foreign_net_5d") if inst else candidate.get("foreign_net_5d")
@@ -414,7 +408,6 @@ class ClefDecisionClient:
             },
             "models": {
                 "timestral_potential": float(timestral_pot) if timestral_pot is not None and pd.notna(timestral_pot) else None,
-                "lstm_potential": float(lstm_pot) if lstm_pot is not None and pd.notna(lstm_pot) else None,
                 "timesfm_potential": float(timesfm_pot) if timesfm_pot is not None and pd.notna(timesfm_pot) else None,
                 "risk_reward_ratio": float(rr) if rr is not None and pd.notna(rr) else None
             },
@@ -449,9 +442,8 @@ class ClefDecisionClient:
         tags = state.get("tags") or []
         composite_score = _safe_float(state.get("composite_score"), 0.0)
 
-        tml_pot = _safe_float(models.get("timestral_potential"), _safe_float(models.get("lstm_potential"), 0.0))
+        primary_pot = _safe_float(models.get("timestral_potential"), 0.0)
         tfm_pot = _safe_float(models.get("timesfm_potential"), 0.0)
-        primary_pot = tml_pot if models.get("timestral_potential") is not None else _safe_float(models.get("lstm_potential"), 0.0)
         rr = _safe_float(models.get("risk_reward_ratio"), 0.0)
 
         is_sync_buy = bool(institutional.get("is_sync_buy") or "土洋合買" in tags)

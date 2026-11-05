@@ -143,9 +143,9 @@ export const ApiClient = {
         } else if (strategy === 'moirai_bearish') {
             url = '/api/v1/predictions/moirai/top-bearish?limit=' + limit;
         } else if (strategy === 'bullish') {
-            url = '/api/v1/predictions/lstm/top-bullish?limit=' + limit;
+            url = '/api/v1/predictions/timestral/top-bullish?limit=' + limit;
         } else if (strategy === 'bearish') {
-            url = '/api/v1/predictions/lstm/top-bearish?limit=' + limit;
+            url = '/api/v1/predictions/timestral/top-bearish?limit=' + limit;
         }
 
         if (indexName && indexName !== 'ALL' && indexName !== '全部市場') {

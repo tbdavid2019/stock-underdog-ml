@@ -9,7 +9,7 @@ from core.version import APP_VERSION
 
 class StockPredictionItem(BaseModel):
     index_name: Optional[str] = Field(None, description="指數名稱 (台灣50, 台灣中型100, S&P500 等)")
-    model_name: Optional[str] = Field(None, description="模型/策略名稱 (玄鐵重劍, LSTM, 多維共振)")
+    model_name: Optional[str] = Field(None, description="模型/策略名稱 (玄鐵重劍, Timestral, TimesFM, MOIRAI-2, 多維共振)")
     strategy_type: Optional[str] = Field(None, description="策略類別")
     ticker: str = Field(..., description="股票代號 (如 2330.TW, AAPL)")
     name: Optional[str] = Field(None, description="公司/股票名稱 (如 台積電, 智邦)")
@@ -49,7 +49,6 @@ class StockPredictionItem(BaseModel):
     moirai_p90: Optional[float] = Field(None, description="Salesforce MOIRAI-2 90% 樂觀分位數")
     dual_model_consensus: Optional[bool] = Field(None, description="時序大模型是否多模型看漲共振")
     tri_model_consensus: Optional[bool] = Field(None, description="TimesFM, Timestral 與 MOIRAI-2 三大模型是否同時看漲共振")
-    lstm_potential: Optional[float] = Field(None, description="[Deprecated] 舊版 LSTM 預期漲跌幅 (請改用 timestral_potential 或 potential)")
     forecast_id: Optional[str] = None
     forecast_session: Optional[str] = None
     target_date: Optional[str] = None

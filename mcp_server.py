@@ -137,42 +137,6 @@ def get_timestral_top_predictions(
 
 
 @mcp.tool(
-    name="get_lstm_top_predictions",
-    description="[Deprecated] 舊版 LSTM 預測工具。已全面升級為 Mistral Timestral-209M (get_timestral_top_predictions)。此工具維持向下相容，若 DuckDB 中無舊 LSTM 記錄則透明回傳 Timestral 預測。"
-)
-def get_lstm_top_predictions(
-    index_name: Optional[str] = None,
-    direction: str = "bullish",
-    limit: int = 10
-) -> Dict[str, Any]:
-    """
-    Query LSTM price prediction rankings (Deprecated, fallback to Timestral).
-
-    Args:
-        index_name: 指數名稱篩選 (如 '台灣50', '台灣中型100', 'SP500')
-        direction: 'bullish' (看漲排行) 或 'bearish' (看跌排行)
-        limit: 取得前 N 檔 (預設: 10)
-    """
-    if direction.lower() == "bearish":
-        records = db.get_top_bearish(index_name=index_name, limit=limit)
-        if not records:
-            records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
-    else:
-        records = db.get_top_bullish(index_name=index_name, limit=limit)
-        if not records:
-            records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
-
-    return {
-        "success": True,
-        "direction": direction,
-        "deprecated": True,
-        "warning": "get_lstm_top_predictions is deprecated; please use get_timestral_top_predictions instead.",
-        "count": len(records),
-        "data": records
-    }
-
-
-@mcp.tool(
     name="get_timesfm_top_predictions",
     description="查詢 Google Research TimesFM 時序大模型預測之漲幅 TOP N 潛力榜或跌幅 TOP N 避險榜。包含預測目標價、潛在漲跌幅 %、10%~90% 分位數風控區間與真實盈虧比 (Risk/Reward)。"
 )

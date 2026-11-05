@@ -9,7 +9,7 @@ export function buildVerifiedPriceChartData(historyRecords) {
     const points = new Map();
     let legacyCount = 0;
     const empty = date => ({date, price: null, ma60: null, timesfm: null, timestral: null, moirai: null,
-        timestralP10: null, timestralP90: null, resonance: null, lstm: null, meta: {}});
+        timestralP10: null, timestralP90: null, resonance: null, meta: {}});
     const ensure = date => {
         if (!points.has(date)) points.set(date, empty(date));
         return points.get(date);
@@ -32,7 +32,6 @@ export function buildVerifiedPriceChartData(historyRecords) {
         else if (name.includes('timestral')) key = 'timestral';
         else if (name.includes('timesfm')) key = 'timesfm';
         else if (name.includes('moirai')) key = 'moirai';
-        else if (name.includes('lstm')) key = 'lstm';
         const prediction = positive(row.predicted_price);
         if (!key || prediction === null || Number(row.horizon || 1) !== 1) continue;
         let target = validDate(row.target_date) ? String(row.target_date).slice(0, 10) : null;
@@ -57,8 +56,8 @@ export function buildVerifiedPriceChartData(historyRecords) {
     const meta = key => dates.map(date => points.get(date).meta[key] || null);
     return { dates, price: values('price'), ma60: values('ma60'), timesfm: values('timesfm'), moirai: values('moirai'),
         timestral: values('timestral'), timestralP10: values('timestralP10'),
-        timestralP90: values('timestralP90'), resonance: values('resonance'), lstm: values('lstm'),
-        meta: {timesfm: meta('timesfm'), timestral: meta('timestral'), moirai: meta('moirai'), resonance: meta('resonance'), lstm: meta('lstm')},
+        timestralP90: values('timestralP90'), resonance: values('resonance'),
+        meta: {timesfm: meta('timesfm'), timestral: meta('timestral'), moirai: meta('moirai'), resonance: meta('resonance')},
         legacy_count: legacyCount };
 }
 
@@ -357,7 +356,7 @@ export class ChartManager {
     }
 
     /**
-     * Render Stock Price vs AI Target Price (LSTM, TimesFM, Resonance, MA60) Trajectory Chart
+     * Render Stock Price vs AI Target Price (Timestral, TimesFM, MOIRAI-2, Resonance, MA60) Trajectory Chart
      * @param {HTMLCanvasElement|string} canvas - Canvas element or ID
      * @param {Array} historyRecords - Array of raw prediction history records
      * @param {boolean} isDark - Dark mode active flag
@@ -402,7 +401,6 @@ export class ChartManager {
         const dataTimesfm = series.timesfm;
         const dataMoirai = series.moirai;
         const dataResonance = series.resonance;
-        const dataLstm = series.lstm;
 
         // WCAG 2.1 Level AA & AAA Accessible Color System for Color Vision Deficiency (CVD):
         // 1. Real Price: High contrast Deep Navy Blue (#1D4ED8 light) / Sky Cobalt (#60A5FA dark) - Solid line, circle markers
@@ -419,7 +417,6 @@ export class ChartManager {
         const colorMoirai = isDark ? '#2DD4BF' : '#0F766E';
         const colorResonance = isDark ? '#2DD4BF' : '#0F766E';
         const colorMa60 = isDark ? '#94A3B8' : '#475569';
-        const colorLstm = isDark ? '#FB923C' : '#EA580C';
         const colorOpposite = isDark ? '#FB7185' : '#E11D48';
 
         /**
@@ -526,7 +523,6 @@ export class ChartManager {
         const timesfmMarkers = computeMarkerStyles(dataTimesfm, 'rectRot', colorTimesfm, 'timesfm');
         const moiraiMarkers = computeMarkerStyles(dataMoirai, 'circle', colorMoirai, 'moirai');
         const resonanceMarkers = computeMarkerStyles(dataResonance, 'triangle', colorResonance, 'resonance');
-        const lstmMarkers = computeMarkerStyles(dataLstm, 'circle', colorLstm, 'lstm');
 
         const chart = new Chart(el, {
             type: 'line',
@@ -649,19 +645,6 @@ export class ChartManager {
                         pointBackgroundColor: colorMa60,
                         spanGaps: false,
                         hidden: visibility.ma60 !== true
-                    },
-                    {
-                        key: 'lstm',
-                        label: 'LSTM 目標價 (舊版)',
-                        data: dataLstm,
-                        borderColor: colorLstm,
-                        backgroundColor: 'transparent',
-                        borderDash: [4, 4],
-                        borderWidth: 1.8,
-                        tension: 0.25,
-                        ...lstmMarkers,
-                        spanGaps: false,
-                        hidden: visibility.lstm !== true
                     }
                 ]
             },
