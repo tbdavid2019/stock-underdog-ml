@@ -126,8 +126,8 @@ class TestQuantScreenerAPI(unittest.TestCase):
                 data = resp.json()
                 self.assertTrue(data.get("success", True))
 
-    def test_screen_predictions_with_lstm_model(self):
-        """驗證當傳入 models=lstm 時映射到 potential 欄位，不引發 BinderException"""
+    def test_screen_predictions_with_deprecated_lstm_model(self):
+        """驗證當傳入已棄用的舊模型 models=lstm 時被安全忽略，不引發 BinderException 且回傳 200"""
         resp = self.client.get("/api/v1/predictions/screen?models=lstm")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()

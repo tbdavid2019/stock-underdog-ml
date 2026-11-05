@@ -1466,7 +1466,6 @@ class DuckDBManager:
             "moirai": "moirai_potential",
             "moirai-2": "moirai_potential",
             "moirai2": "moirai_potential",
-            "lstm": "potential",
         }
         if models:
             for m in models:
