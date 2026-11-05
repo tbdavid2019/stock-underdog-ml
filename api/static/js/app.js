@@ -1122,7 +1122,7 @@ export const app = createApp({
                 if (retryCount < 2) {
                     console.warn(`[loadData] 遇到暫時性連線異常，將於 600ms 後進行第 ${retryCount + 1}/2 次自動重試...`, e);
                     await new Promise(r => setTimeout(r, 600));
-                    return this.loadData(retryCount + 1);
+                    return await this.loadData(retryCount + 1);
                 }
                 this.records = [];
                 this.batchDate = '';
@@ -3280,12 +3280,13 @@ export const app = createApp({
             this.syncStateFromUrl();
         });
 
-        document.addEventListener('click', (e) => {
+        this._clickOutsideDropdown = (e) => {
             const dropdown = document.getElementById('market-multiselect-dropdown');
             if (dropdown && !dropdown.contains(e.target)) {
                 this.isMarketDropdownOpen = false;
             }
-        });
+        };
+        document.addEventListener('click', this._clickOutsideDropdown);
 
         window.addEventListener('resize', () => {
             if (this.activeTab === 'industry_chain') {
@@ -3303,6 +3304,11 @@ export const app = createApp({
         }, { passive: true });
 
         this.registerChromeWebMCP();
+    },
+    beforeUnmount() {
+        if (this._clickOutsideDropdown) {
+            document.removeEventListener('click', this._clickOutsideDropdown);
+        }
     }
 });
 

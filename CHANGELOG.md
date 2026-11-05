@@ -25,9 +25,14 @@
   - 在 `data/podcast_service.py` 與 `data/decision_service.py` 中，移除所有重要性徽章的 `(本地規則)` 尾綴，標準化為 `⭐ 5星重磅`、`⚡ 4星重要`、`📰 3星關注`。
   - 在 `data/clef_client.py` 中，將本地降級標籤從 `🚀強勢買進(本地規則)`、`👀觀望(本地規則)` 等淨化為 `🚀強勢買進`、`📈偏多佈局`、`👀建議觀察`、`🔻避開`，不洩漏內部 slot 名稱。
   - 前端模板透過 `.replace(/\s*\(本地規則\)/g, '')` 防禦舊快取資料中的殘留字樣。
-- **雙審查機制與測試覆蓋 (Dual Review & Regression Testing)**：
-  - 經 OpenCode Code Reviewer 與 Codex Code Reviewer 獨立雙審查，評級為 0 P1 / 0 P2，全數通過。
-  - 新增並更新 `test_quant_screener_api.py`、`test_typography_rwd.py` 與 `test_decision_service.py`，全套 52 項測試 100% 通過。
+- **雙審查機制與修復驗證 (Dual Review & Feedback Remediation)**：
+  - 經 OpenCode Code Reviewer 與 Codex Code Reviewer 獨立雙審查，發現並全數修復以下項目：
+    - **[Codex P2] 跨時區多市場篩選邊界**：當多選不同時區市場（例如台灣50與SP500）時，改採各市場獨立子查詢以自身最新批次時間為基準，避免美股因時差被 12 小時全局窗口誤殺。
+    - **[Codex P2] 前端重試狀態時序**：在 `app.js` 之 `loadData` 自動重試前補上 `await`，防止 `finally` 區塊提早將 `loading` 設為 `false`。
+    - **[OpenCode P1] 欄位安全映射**：修正 `MODEL_COL_MAP` 中 `lstm` 欄位不存在之問題，正確映射至 `p.potential` 欄位，徹底防止 DuckDB `BinderException` (HTTP 500)。
+    - **[OpenCode P2] 市場解析去重**：`_parse_index_names` 加入重複項去重，避免 SQL `IN` 條件佔位符膨脹。
+    - **[P3 規格與體驗提升]**：快取正規化支援全形逗號 `，`；多選下拉支援 ESC 鍵關閉；`mounted` 外部點擊事件監聽器於 `beforeUnmount` 完整解綁；Podcast 時長與語言標籤升級至 14px (`text-sm`)。
+  - 新增並更新 `test_quant_screener_api.py`、`test_clef_client.py`、`test_typography_rwd.py` 與 `test_decision_service.py`，全套測試 100% 通過。
 
 ---
 

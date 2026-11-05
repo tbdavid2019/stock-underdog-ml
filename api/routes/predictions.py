@@ -41,7 +41,7 @@ def _normalize_index_name(index_name: Optional[str]) -> Optional[str]:
     if not index_name:
         return None
     parts = sorted(list(dict.fromkeys(
-        p.strip() for p in str(index_name).split(",") 
+        p.strip() for p in str(index_name).replace("，", ",").split(",") 
         if p.strip() and p.strip().upper() not in ("ALL", "NONE", "NULL", "全部", "全部市場")
     )))
     return ",".join(parts) if parts else None

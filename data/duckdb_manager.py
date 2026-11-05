@@ -1020,7 +1020,7 @@ class DuckDBManager:
         parts = [p.strip() for p in cleaned_str.split(",") if p.strip()]
         valid = []
         for p in parts:
-            if p.upper() not in ("ALL", "NONE", "NULL", "全部", "全部市場"):
+            if p.upper() not in ("ALL", "NONE", "NULL", "全部", "全部市場") and p not in valid:
                 valid.append(p)
         return valid
 
@@ -1102,7 +1102,7 @@ class DuckDBManager:
             batch_date = str(latest_ts)[:10]
 
         if batch_only:
-            if parsed_indices:
+            if len(parsed_indices) == 1:
                 where_clauses.append("TRY_CAST(timestamp AS TIMESTAMP) >= (TRY_CAST(? AS TIMESTAMP) - INTERVAL 12 HOUR)")
                 params.append(latest_ts)
             else:
@@ -1466,7 +1466,7 @@ class DuckDBManager:
             "moirai": "moirai_potential",
             "moirai-2": "moirai_potential",
             "moirai2": "moirai_potential",
-            "lstm": "lstm_potential",
+            "lstm": "potential",
         }
         if models:
             for m in models:

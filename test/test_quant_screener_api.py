@@ -126,6 +126,13 @@ class TestQuantScreenerAPI(unittest.TestCase):
                 data = resp.json()
                 self.assertTrue(data.get("success", True))
 
+    def test_screen_predictions_with_lstm_model(self):
+        """驗證當傳入 models=lstm 時映射到 potential 欄位，不引發 BinderException"""
+        resp = self.client.get("/api/v1/predictions/screen?models=lstm")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success", True))
+
 
 if __name__ == "__main__":
     unittest.main()

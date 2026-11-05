@@ -556,7 +556,7 @@
 
             <div class="flex items-center space-x-2.5 shrink-0">
                 <!-- Custom Multi-Select Market Dropdown -->
-                <div id="market-multiselect-dropdown" class="relative" @click.stop>
+                <div id="market-multiselect-dropdown" class="relative" @click.stop @keydown.esc="closeMarketDropdown()">
                     <button type="button"
                             @click="isMarketDropdownOpen = !isMarketDropdownOpen"
                             class="min-h-[44px] border text-sm font-bold rounded-xl px-3.5 py-2 flex items-center space-x-2 focus:outline-none transition-all cursor-pointer"
