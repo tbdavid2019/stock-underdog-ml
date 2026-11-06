@@ -120,7 +120,8 @@ def _probe_yfinance(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[s
 
 def _probe_answerbook(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
     """answerbook 榜單上游金絲雀探針"""
-    url = "https://answerbook.david888.com/api/v1/rankings"
+    from core.config import config
+    url = getattr(config.api, "TW0050_URL", "https://answerbook.david888.com/TW0050")
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=timeout)
     if resp.status_code != 200:
@@ -128,28 +129,40 @@ def _probe_answerbook(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List
     try:
         data = resp.json()
         missing = []
-        if "data" not in data and "rankings" not in data and "items" not in data and not isinstance(data, list):
-            missing.append("rankings_or_data")
+        if "TW0050" not in data and "data" not in data and "rankings" not in data and not isinstance(data, list):
+            missing.append("TW0050")
         return resp.status_code, missing, None
     except Exception as e:
         return resp.status_code, ["valid_json_payload"], str(e)
 
 
 def _probe_investing(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
-    """Investing.com 總經與財經日曆金絲雀探針"""
-    url = "https://www.investing.com"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    resp = requests.get(url, headers=headers, timeout=timeout)
-    # Investing 可能對爬蟲回傳 403 / 429
-    if resp.status_code in (403, 429, 503):
-        return resp.status_code, [], f"Cloudflare / RateLimited: HTTP {resp.status_code}"
-    if resp.status_code != 200:
-        return resp.status_code, [], f"HTTP {resp.status_code}"
-    text = resp.text or ""
-    missing = []
-    if len(text) < 500:
-        missing.append("html_content_length")
-    return resp.status_code, missing, None
+    """Investing.com 總經與財經日曆 (2MD Proxy 通道) 金絲雀探針"""
+    target = "https://www.investing.com/central-banks/fed-rate-monitor"
+    hosts = ["https://2md.aiurl.tw", "https://create360.ai"]
+    key_raw = os.getenv("INVESTING_2MD_KEYS") or os.getenv("CREATE360_API_KEY") or ""
+    first_key = [k.strip() for k in key_raw.split(",") if k.strip()]
+    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    if first_key:
+        headers["Authorization"] = f"Bearer {first_key[0]}"
+
+    last_code = 503
+    last_err = "2MD proxy unreachable"
+    per_host_timeout = max(2.5, timeout / len(hosts))
+    for host in hosts:
+        try:
+            resp = requests.get(f"{host}/{target}", headers=headers, timeout=per_host_timeout)
+            last_code = resp.status_code
+            if resp.status_code == 200:
+                text = resp.text or ""
+                if len(text) >= 120 and "Just a moment..." not in text and "403 Forbidden" not in text:
+                    return 200, [], None
+                last_err = "Blocked or short markdown response"
+            else:
+                last_err = f"HTTP {resp.status_code}"
+        except Exception as e:
+            last_err = str(e)
+    return last_code, [], last_err
 
 
 def _probe_polymarket(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
@@ -175,10 +188,11 @@ def _probe_polymarket(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List
 
 def _probe_biggo_earnings(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
     """BigGo 法說會資訊金絲雀探針"""
-    url = "https://api.biggo.com/api/v1/finance/earnings-call/list?page=1&size=1"
+    url = "https://api.biggo.com/api/v1/finance/stock/earnings-calls/list?page=1&size=1"
     headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Site": "finance.biggo.com.tw"
+        "Accept": "application/json",
+        "Site": "finance.biggo.com.tw",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
     resp = requests.get(url, headers=headers, timeout=timeout)
     if resp.status_code != 200:
@@ -194,17 +208,28 @@ def _probe_biggo_earnings(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, 
 
 
 def _probe_arxiv(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
-    """arXiv 量化論文金絲雀探針"""
-    url = "https://export.arxiv.org/api/query?search_query=cat:q-fin.ST&max_results=1"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    resp = requests.get(url, headers=headers, timeout=timeout)
-    if resp.status_code != 200:
-        return resp.status_code, [], f"HTTP {resp.status_code}"
-    text = resp.text or ""
-    missing = []
-    if "<feed" not in text:
-        missing.append("xml_feed_tag")
-    return resp.status_code, missing, None
+    """arXiv 量化與 AI 論文金絲雀探針"""
+    headers = {"User-Agent": "StockQuantCanary/2.6 (+https://stockdata.david888.com)"}
+    urls = [
+        "https://rss.arxiv.org/rss/cs.AI",
+        "https://export.arxiv.org/api/query?search_query=cat:q-fin.ST&max_results=1",
+    ]
+    per_timeout = max(3.5, timeout / len(urls))
+    last_code = 503
+    last_err: Optional[str] = None
+    for url in urls:
+        try:
+            resp = requests.get(url, headers=headers, timeout=per_timeout)
+            last_code = resp.status_code
+            if resp.status_code == 200:
+                text = resp.text or ""
+                if "<rss" in text or "<feed" in text or "<rdf:RDF" in text:
+                    return 200, [], None
+                return 200, ["xml_feed_tag"], None
+            last_err = f"HTTP {resp.status_code}"
+        except Exception as e:
+            last_err = str(e)
+    return last_code, [], last_err or "arXiv probe failed"
 
 
 PROBE_REGISTRY: Dict[str, Callable[[float], Tuple[int, List[str], Optional[str]]]] = {
