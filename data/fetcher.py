@@ -9,6 +9,7 @@ import urllib.request
 import logging
 import requests
 import time
+from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
 import pandas as pd
 
@@ -88,6 +89,40 @@ FALLBACK_NIKKEI225_STOCKS = [
     "9202.T", "9432.T", "9433.T", "9434.T", "9501.T", "9502.T", "9503.T", "9531.T", "9532.T", "9602.T",
     "9735.T", "9766.T", "9843.T", "9983.T", "9984.T"
 ]
+
+
+def _sync_to_global_daily_bars(ticker: str, data: pd.DataFrame):
+    """將海外調整後日 K 棒資料非阻塞容錯同步寫入 DuckDB global_daily_bars"""
+    if data is None or data.empty:
+        return
+    t_clean = str(ticker).strip().upper()
+    if t_clean.endswith(".TW") or t_clean.endswith(".TWO"):
+        return
+    try:
+        from data.duckdb_manager import DuckDBManager
+        market = "JP" if t_clean.endswith(".T") else ("HK" if t_clean.endswith(".HK") else "US")
+        currency = "JPY" if t_clean.endswith(".T") else ("HKD" if t_clean.endswith(".HK") else "USD")
+
+        bars = []
+        for idx, row in data.iterrows():
+            d_str = idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)[:10]
+            bars.append({
+                "ticker": t_clean,
+                "market": market,
+                "currency": currency,
+                "date": d_str,
+                "open": float(row.get("Open", 0.0) or 0.0),
+                "high": float(row.get("High", 0.0) or 0.0),
+                "low": float(row.get("Low", 0.0) or 0.0),
+                "close": float(row.get("Close", 0.0) or 0.0),
+                "volume": float(row.get("Volume", 0.0) or 0.0),
+                "is_adjusted": True,
+                "updated_at": datetime.now()
+            })
+        if bars:
+            DuckDBManager().upsert_global_daily_bars(bars)
+    except Exception as e:
+        logger.debug(f"同步海外日 K 棒至 global_daily_bars 略過: {e}")
 
 
 class StockFetcher:
@@ -468,9 +503,10 @@ class StockFetcher:
                 if col not in data.columns:
                     data[col] = 0.0
 
-            # Save raw data to cache
+            # Save raw data to cache and sync foreign bars to DuckDB
             if use_cache:
                 CacheManager.set_stock_data(ticker, period, data)
+            _sync_to_global_daily_bars(ticker, data)
 
             return add_base_indicators(data)
 
@@ -552,6 +588,7 @@ class StockFetcher:
                         if not df.empty:
                             if use_cache:
                                 CacheManager.set_stock_data(tk, period, df)
+                            _sync_to_global_daily_bars(tk, df)
                             results[tk] = add_base_indicators(df)
                     else:
                         for tk in chunk:
@@ -564,6 +601,7 @@ class StockFetcher:
                                                 sub_df[col] = 0.0
                                         if use_cache:
                                             CacheManager.set_stock_data(tk, period, sub_df)
+                                        _sync_to_global_daily_bars(tk, sub_df)
                                         results[tk] = add_base_indicators(sub_df)
                             except Exception as e:
                                 logger.debug(f"處理批次股票 {tk} 時出錯: {e}")

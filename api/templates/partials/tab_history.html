@@ -1907,6 +1907,7 @@
                                     <th scope="col" class="py-2.5 px-3 font-bold">可信下界</th>
                                     <th scope="col" class="py-2.5 px-3 font-bold">平均誤差</th>
                                     <th scope="col" class="py-2.5 px-3 font-bold">較持平基準</th>
+                                    <th scope="col" class="py-2.5 px-3 font-bold">統計顯著性</th>
                                     <th scope="col" class="py-2.5 px-3 font-bold">樣本／覆蓋</th>
                                 </tr>
                             </thead>
@@ -1930,6 +1931,28 @@
                                     <td class="py-2.5 px-3 num-font">{{ formatPerformancePercent(row.wilson_95_lower) }}</td>
                                     <td class="py-2.5 px-3 num-font">{{ formatPerformancePercent(row.mape, 2) }}</td>
                                     <td class="py-2.5 px-3 num-font">{{ formatPerformancePercent(row.baseline_improvement) }}</td>
+                                    <td class="py-2.5 px-3">
+                                        <span v-if="row.is_statistically_significant"
+                                              class="px-2 py-0.5 rounded font-bold text-xs inline-flex items-center"
+                                              :class="isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'"
+                                              :title="'Bootstrap Sharpe 95% CI: [' + (row.sharpe_ci_low !== null && row.sharpe_ci_low !== undefined ? row.sharpe_ci_low : '—') + ', ' + (row.sharpe_ci_high !== null && row.sharpe_ci_high !== undefined ? row.sharpe_ci_high : '—') + '] · p=' + (row.p_value_return !== null && row.p_value_return !== undefined ? row.p_value_return : '—')">
+                                            p &lt; 0.05 顯著
+                                        </span>
+                                        <span v-else-if="row.validation_status === 'insufficient_samples'"
+                                              class="px-2 py-0.5 rounded text-xs bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                                            樣本累積中
+                                        </span>
+                                        <span v-else-if="row.validation_status === 'degenerate_zero_variance'"
+                                              class="px-2 py-0.5 rounded text-xs bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                                            零變異
+                                        </span>
+                                        <span v-else-if="row.p_value_return !== null && row.p_value_return !== undefined"
+                                              class="px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                              :title="'Bootstrap Sharpe 95% CI: [' + (row.sharpe_ci_low !== null && row.sharpe_ci_low !== undefined ? row.sharpe_ci_low : '—') + ', ' + (row.sharpe_ci_high !== null && row.sharpe_ci_high !== undefined ? row.sharpe_ci_high : '—') + ']'">
+                                            未達顯著 (p={{ row.p_value_return }})
+                                        </span>
+                                        <span v-else class="text-slate-500 text-xs">—</span>
+                                    </td>
                                     <td class="py-2.5 px-3 num-font">
                                         {{ row.sample_count }} 筆
                                         <span class="block text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">

@@ -792,6 +792,58 @@ def get_signal_alignment(ticker: str) -> Dict[str, Any]:
     }
 
 
+@mcp.tool(
+    name="get_portfolio_risk_xray",
+    description="查詢多市場標的組合風險 X 光片 (Portfolio Risk X-Ray)。以純本地離線日 K 矩陣計算全組合與風險槽雙口徑年化波動率、階梯式 95%/99% VaR 與 CVaR、支援負對沖值之歐拉波動貢獻拆解 (Euler PCV) 與企業行為異常跳空過濾。為唯讀安全工具。"
+)
+def get_portfolio_risk_xray(tickers: List[str], window: int = 252, as_of_date: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Query portfolio tail risk, dual-basis volatility, and Euler risk contributions.
+    """
+    from backtest.risk_xray import calculate_portfolio_risk_xray
+    clean_tks = list(dict.fromkeys(str(t).strip().upper() for t in tickers if str(t).strip()))
+    if not clean_tks:
+        return {"success": False, "error": "tickers cannot be empty"}
+    clamped_window = max(30, min(504, window))
+    bars_data = db.load_local_close_series(clean_tks[:100], as_of_date=as_of_date, lookback_bars=clamped_window)
+    res = calculate_portfolio_risk_xray(
+        series_map=bars_data["series"],
+        price_adjustment_modes=bars_data["price_adjustment_modes"],
+        currencies=bars_data["currencies"],
+        unavailable_tickers=bars_data["unavailable_tickers"],
+    )
+    return {
+        "success": True,
+        "data": res
+    }
+
+
+@mcp.tool(
+    name="get_canary_loader_health",
+    description="取得上游 8 大資料源 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv) 隔離金絲雀健康巡檢快照。僅讀取本地已遮罩快照 (data/cache/canary_health_latest.json)，零生產 DuckDB 連線、零即時外部連線風暴。為唯讀安全工具。"
+)
+def get_canary_loader_health() -> Dict[str, Any]:
+    """
+    Get cached health snapshot of upstream data sources.
+    """
+    import os
+    cache_path = os.path.join(os.path.dirname(__file__), "data", "cache", "canary_health_latest.json")
+    if not os.path.exists(cache_path):
+        return {
+            "success": True,
+            "data": {
+                "status": "not_initialized",
+                "sources": {},
+                "message": "Canary snapshot not yet initialized"
+            }
+        }
+    with open(cache_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return {
+        "success": True,
+        "data": data
+    }
+
 
 if __name__ == "__main__":
     # Standard FastMCP entrypoint

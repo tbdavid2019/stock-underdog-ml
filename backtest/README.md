@@ -49,6 +49,9 @@
 ### Python Scripts
 - `backtest.py` - **主要回測腳本**，下載實際價格並計算準確度
 - `analyze_backtest.py` - 分析回測結果，產生模型表現報告
+- `risk_xray.py` - **組合風險 X 光 (Wave 2)**：純收盤價矩陣計算，支援雙口徑波動率（全組合含現金稀釋 vs 風險槽正規化）、支援負對沖（`PCV < 0`）之歐拉波動貢獻拆解、階梯式 95%/99% VaR/CVaR 與除權息異常跳空守衛。
+- `statistical_validation.py` - **統計顯著性檢定 (Wave 2)**：Rademacher 符號翻轉檢定（`p_value_return`）、交易順序置換最大回撤檢定（`p_value_max_drawdown`）、Circular Block Bootstrap 年化 Sharpe 95% 信賴區間與零變異守衛。
+- `turnover_optimizer.py` - **非對稱換手率優化器 (Wave 2)**：純 NumPy ADMM 算法，支援台股賣方 0.3% 證交稅（`gamma_sell > gamma_buy`）、Dykstra 凸多面體約束投影與確定性可行裁剪。
 - `run_backtest.sh` - 自動化執行腳本（用於 cron）
 
 ---

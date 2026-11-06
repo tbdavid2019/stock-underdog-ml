@@ -1,0 +1,458 @@
+<!-- ================= QUANT PORTFOLIO RISK X-RAY MODAL ================= -->
+<div v-if="showRiskXrayModal"
+     class="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 md:p-10 flex items-start justify-center backdrop-blur-md bg-black/70 transition-opacity duration-150"
+     @click.self="closeRiskXrayModal"
+     @keydown.window.esc="closeRiskXrayModal"
+     role="dialog"
+     aria-modal="true"
+     aria-label="投資組合量化風險 X 光健檢中心">
+
+    <div class="relative w-full max-w-5xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200 my-4"
+         :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
+
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#DDC58B] bg-[#FFF9E8]'">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center border"
+                     :class="isDark ? 'bg-[#1F232B] border-amber-500/40 text-amber-400' : 'bg-[#FFB010]/20 border-amber-400 text-[#2B251A]'">
+                    <span class="material-symbols-outlined text-[24px]">radiology</span>
+                </div>
+                <div>
+                    <h3 class="text-base sm:text-lg font-black tracking-tight flex items-center space-x-2">
+                        <span>投資組合量化風險 X 光健檢</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
+                              :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] text-[#2B251A]'">
+                            Wave 2 Quant
+                        </span>
+                    </h3>
+                    <p class="text-xs mt-0.5" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                        雙口徑波動率、階梯式尾端 VaR/CVaR、歐拉風險貢獻 (支援負對沖) 與純 NumPy ADMM 稅務敏感換手優化
+                    </p>
+                </div>
+            </div>
+            <button @click="closeRiskXrayModal"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors cursor-pointer"
+                    :class="isDark ? 'border-[#374151] text-slate-400 hover:text-white hover:bg-[#262626]' : 'border-[#DDC58B] text-[#2B251A] hover:bg-[#FFF0CC]'"
+                    aria-label="關閉風險 X 光健檢中心">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Controls Bar -->
+        <div class="px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3 text-xs"
+             :class="isDark ? 'border-[#262626] bg-[#121316]' : 'border-[#EAE0C8] bg-[#F7F2E2]'">
+            <!-- Target Basket Selector / Source -->
+            <div class="flex items-center flex-wrap gap-2">
+                <span class="font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-700'">分析標的:</span>
+                <span class="px-2.5 py-1 rounded-lg font-mono font-bold border"
+                      :class="isDark ? 'bg-[#1F232B] border-[#374151] text-amber-300' : 'bg-white border-[#DDC58B] text-[#2B251A]'">
+                    自選股 ({{ riskXrayTickers.length }} 檔)
+                </span>
+                <!-- Lookback Window Buttons -->
+                <span class="font-bold ml-2" :class="isDark ? 'text-slate-400' : 'text-slate-700'">回測視窗:</span>
+                <div class="inline-flex rounded-lg border p-0.5"
+                     :class="isDark ? 'border-[#374151] bg-[#0D0E11]' : 'border-[#DDC58B] bg-white'">
+                    <button v-for="w in [60, 120, 252, 504]" :key="w"
+                            @click="changeRiskXrayWindow(w)"
+                            class="px-2 py-0.5 rounded text-xs font-bold transition-all cursor-pointer"
+                            :class="riskXrayWindow === w ? (isDark ? 'bg-amber-500/20 text-amber-300 font-black' : 'bg-[#FFB010] text-[#2B251A] font-black') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-black')">
+                        {{ w }} 日
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recalculate Button -->
+            <button @click="loadRiskXrayData()"
+                    :disabled="riskXrayLoading || riskXrayTickers.length === 0"
+                    class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                    :class="isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] hover:bg-[#e09b0b] text-[#2B251A]'">
+                <span class="material-symbols-outlined text-[16px]" :class="riskXrayLoading ? 'animate-spin' : ''">refresh</span>
+                <span>{{ riskXrayLoading ? '運算中...' : '重新診斷' }}</span>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
+
+            <!-- 1. Loading State -->
+            <div v-if="riskXrayLoading" class="py-16 text-center space-y-3">
+                <div class="inline-block p-3 rounded-2xl border"
+                     :class="isDark ? 'bg-[#1F232B] border-amber-500/30 text-amber-400' : 'bg-[#FFF9E8] border-amber-400 text-amber-800'">
+                    <span class="material-symbols-outlined text-[32px] animate-spin">data_saver_on</span>
+                </div>
+                <div class="text-sm font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                    正在自 DuckDB 載入歷史收盤價並建構協方差矩陣...
+                </div>
+                <p class="text-xs text-slate-400">執行純收盤價矩陣計算、階梯式 VaR/CVaR 樣本校驗與歐拉風險拆解</p>
+            </div>
+
+            <!-- 2. Error State -->
+            <div v-else-if="riskXrayError"
+                 class="p-4 rounded-xl border space-y-2"
+                 :class="isDark ? 'bg-rose-950/40 border-rose-800 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-900'"
+                 role="alert">
+                <div class="flex items-center space-x-2 font-bold text-sm">
+                    <span class="material-symbols-outlined text-[20px] text-rose-500">error</span>
+                    <span>風險健檢運算失敗</span>
+                </div>
+                <p class="text-xs leading-relaxed">{{ riskXrayError }}</p>
+                <div class="pt-2">
+                    <button @click="loadRiskXrayData()"
+                            class="px-3 py-1 rounded-lg text-xs font-black transition-colors"
+                            :class="isDark ? 'bg-rose-900 hover:bg-rose-800 text-white' : 'bg-rose-200 hover:bg-rose-300 text-rose-950'">
+                        重試運算
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Empty Basket State -->
+            <div v-else-if="riskXrayTickers.length === 0"
+                 class="py-12 text-center space-y-3 rounded-xl border border-dashed"
+                 :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-slate-300 bg-slate-50'">
+                <span class="material-symbols-outlined text-[36px] text-amber-500/70">playlist_add</span>
+                <div class="text-sm font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">
+                    目前自選股清單為空
+                </div>
+                <p class="text-xs text-slate-400 max-w-sm mx-auto">
+                    請先在主表將感興趣的標的點擊「★ 加自選」，或直接載入預設熱門組合進行診斷。
+                </p>
+                <button @click="loadDefaultBasketForRiskXray()"
+                        class="px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm"
+                        :class="isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] hover:bg-[#e09b0b] text-[#2B251A]'">
+                    載入台股核心 5 檔範例診斷
+                </button>
+            </div>
+
+            <!-- 4. Insufficient History Basket State -->
+            <div v-else-if="riskXrayData && riskXrayData.status === 'insufficient_history'"
+                 class="p-4 rounded-xl border space-y-2"
+                 :class="isDark ? 'bg-amber-950/30 border-amber-800 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-900'">
+                <div class="flex items-center space-x-2 font-bold text-sm">
+                    <span class="material-symbols-outlined text-[20px] text-amber-500">warning</span>
+                    <span>共同歷史日 K 交易日不足 (N = {{ riskXrayData.effective_bars }} &lt; 30)</span>
+                </div>
+                <p class="text-xs leading-relaxed">
+                    選取的標的在指定視窗內重疊交易日少於 30 日，無法建立具有統計可靠度之共變異矩陣。請嘗試縮短或延長回測天數，或移除剛上市新股。
+                </p>
+            </div>
+
+            <!-- 5. Main Results View -->
+            <div v-else-if="riskXrayData" class="space-y-6">
+
+                <!-- 5.1 Dual-Basis Volatility & Tail Risk Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Card 1: Annualized Volatility Total -->
+                    <div class="p-3.5 rounded-xl border space-y-1"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                        <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                            <span>年化波動率 (全組合)</span>
+                            <span class="material-symbols-outlined text-[14px]">query_stats</span>
+                        </div>
+                        <div class="text-lg sm:text-xl font-black num-font tabular-nums text-amber-500">
+                            {{ formatRiskPercent(riskXrayData.annualized_volatility_total) }}
+                        </div>
+                        <div class="text-xs text-slate-400">含現金稀釋口徑</div>
+                    </div>
+
+                    <!-- Card 2: Annualized Volatility Risk Sleeve -->
+                    <div class="p-3.5 rounded-xl border space-y-1"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                        <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                            <span>年化波動率 (風險槽)</span>
+                            <span class="material-symbols-outlined text-[14px]">shield</span>
+                        </div>
+                        <div class="text-lg sm:text-xl font-black num-font tabular-nums"
+                             :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                            {{ formatRiskPercent(riskXrayData.annualized_volatility_risk_sleeve) }}
+                        </div>
+                        <div class="text-xs text-slate-400">正規化 100% 權重</div>
+                    </div>
+
+                    <!-- Card 3: 95% Daily VaR & CVaR -->
+                    <div class="p-3.5 rounded-xl border space-y-1"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                        <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                            <span>95% VaR (1日 / 20日)</span>
+                            <span class="material-symbols-outlined text-[14px]">trending_down</span>
+                        </div>
+                        <div v-if="riskXrayData.tail_95_status === 'insufficient_tail_samples'" class="pt-1">
+                            <span class="text-xs px-2 py-0.5 rounded font-bold"
+                                  :class="isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'">
+                                樣本累積中 (N &lt; 60)
+                            </span>
+                        </div>
+                        <div v-else>
+                            <div class="text-base sm:text-lg font-black num-font tabular-nums text-rose-500">
+                                {{ formatRiskPercent(riskXrayData.var_95_1d) }}
+                                <span class="text-xs font-normal text-slate-400">/ {{ formatRiskPercent(riskXrayData.var_95_20d) }}</span>
+                            </div>
+                            <div class="text-xs text-slate-400">CVaR: {{ formatRiskPercent(riskXrayData.cvar_95_1d) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: 99% Daily VaR & CVaR -->
+                    <div class="p-3.5 rounded-xl border space-y-1"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                        <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                            <span>99% VaR (1日 / 20日)</span>
+                            <span class="material-symbols-outlined text-[14px]">warning</span>
+                        </div>
+                        <div v-if="riskXrayData.tail_99_status === 'insufficient_tail_samples'" class="pt-1">
+                            <span class="text-xs px-2 py-0.5 rounded font-bold"
+                                  :class="isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'">
+                                樣本需 N &ge; 100
+                            </span>
+                        </div>
+                        <div v-else>
+                            <div class="text-base sm:text-lg font-black num-font tabular-nums text-rose-500">
+                                {{ formatRiskPercent(riskXrayData.var_99_1d) }}
+                                <span class="text-xs font-normal text-slate-400">/ {{ formatRiskPercent(riskXrayData.var_99_20d) }}</span>
+                            </div>
+                            <div class="text-xs text-slate-400">CVaR: {{ formatRiskPercent(riskXrayData.cvar_99_1d) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5.2 Basket Concentration & Effective N -->
+                <div class="p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 text-xs"
+                     :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-[18px] text-amber-500">pie_chart</span>
+                        <span class="font-bold">持倉集中度:</span>
+                        <span>風險槽 HHI <strong class="num-font text-amber-500">{{ riskXrayData.hhi_risk_sleeve ? riskXrayData.hhi_risk_sleeve.toFixed(4) : '—' }}</strong></span>
+                        <span class="text-slate-400">·</span>
+                        <span>有效分散檔數 (Effective N): <strong class="num-font text-amber-500">{{ riskXrayData.effective_n_risk_sleeve ? riskXrayData.effective_n_risk_sleeve.toFixed(1) : '—' }}</strong> / {{ riskXrayData.available_tickers.length }} 檔</span>
+                    </div>
+                    <div class="text-slate-400">
+                        有效交易日樣本: <strong class="num-font font-bold" :class="isDark ? 'text-slate-200' : 'text-slate-800'">{{ riskXrayData.effective_bars }}</strong> 棒
+                    </div>
+                </div>
+
+                <!-- 5.3 Warnings & Corporate Actions Guard Alert -->
+                <div v-if="riskXrayData.currency_mode === 'local_currency_return_proxy' || (riskXrayData.corporate_action_suspects && riskXrayData.corporate_action_suspects.length > 0) || (riskXrayData.unavailable_tickers && riskXrayData.unavailable_tickers.length > 0)"
+                     class="space-y-2">
+                    <!-- Cross-Currency Notice -->
+                    <div v-if="riskXrayData.currency_mode === 'local_currency_return_proxy'"
+                         class="p-3 rounded-xl border text-xs flex items-start space-x-2"
+                         :class="isDark ? 'bg-amber-950/20 border-amber-800/40 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-900'">
+                        <span class="material-symbols-outlined text-[16px] text-amber-500 shrink-0 mt-0.5">currency_exchange</span>
+                        <div>
+                            <strong>跨幣別投資組合提示:</strong> 本組合包含多幣別標的，歷史報酬以本幣報酬代理計算（未包含即期匯率波動對沖，且不同市場休市日已取交集）。
+                        </div>
+                    </div>
+
+                    <!-- Corporate Action Guard Alert -->
+                    <div v-if="riskXrayData.corporate_action_suspects && riskXrayData.corporate_action_suspects.length > 0"
+                         class="p-3 rounded-xl border text-xs flex items-start space-x-2"
+                         :class="isDark ? 'bg-sky-950/30 border-sky-800/40 text-sky-200' : 'bg-sky-50 border-sky-300 text-sky-900'">
+                        <span class="material-symbols-outlined text-[16px] text-sky-400 shrink-0 mt-0.5">info</span>
+                        <div>
+                            <strong>除權息/企業拆股防呆守衛已生效:</strong> 偵測到單日異常跳空並已自動自歷史共變異矩陣排除：
+                            <span v-for="c in riskXrayData.corporate_action_suspects" :key="c.ticker + c.date" class="font-mono ml-1 font-bold">
+                                {{ c.ticker }} ({{ c.date }}: {{ (c.raw_return * 100).toFixed(1) }}%)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Missing Local Bars Notice -->
+                    <div v-if="riskXrayData.unavailable_tickers && riskXrayData.unavailable_tickers.length > 0"
+                         class="p-3 rounded-xl border text-xs flex items-start space-x-2"
+                         :class="isDark ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-300 text-slate-700'">
+                        <span class="material-symbols-outlined text-[16px] text-slate-400 shrink-0 mt-0.5">cloud_off</span>
+                        <div>
+                            <strong>部分標的無本地日 K:</strong>
+                            <span v-for="t in riskXrayData.unavailable_tickers" :key="t" class="font-mono ml-1 font-bold">
+                                {{ t }}
+                            </span>
+                            （本功能嚴格遵循 100% 離線本地價位運算，未連線外部網路）。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5.4 Euler Risk Contribution Breakdown Table (Supports PCV < 0 Hedging!) -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs sm:text-sm font-black flex items-center space-x-1.5"
+                            :class="isDark ? 'text-white' : 'text-slate-900'">
+                            <span class="material-symbols-outlined text-[18px] text-amber-500">bar_chart</span>
+                            <span>歐拉波動貢獻拆解 (Euler Risk Contribution)</span>
+                        </h4>
+                        <span class="text-xs text-slate-400">滿足歐拉均齊定理: &Sigma; PCV = 100%</span>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border"
+                         :class="isDark ? 'border-[#262626]' : 'border-[#EAE0C8]'">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead :class="isDark ? 'bg-[#0D0E11] text-slate-300' : 'bg-[#FFF9E8] text-[#2B251A]'">
+                                <tr>
+                                    <th class="py-2.5 px-3 font-bold">標的代號</th>
+                                    <th class="py-2.5 px-3 font-bold text-right">權重</th>
+                                    <th class="py-2.5 px-3 font-bold text-right">個股波動率</th>
+                                    <th class="py-2.5 px-3 font-bold text-right">波動貢獻 (CV)</th>
+                                    <th class="py-2.5 px-3 font-bold text-right">風險貢獻比 (PCV)</th>
+                                    <th class="py-2.5 px-4 font-bold min-w-[140px]">風險分佈視覺化</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y" :class="isDark ? 'divide-[#262626]' : 'divide-[#F0E6D2]'">
+                                <tr v-for="item in riskXrayData.assets" :key="item.ticker"
+                                    class="hover:bg-amber-500/5 transition-colors">
+                                    <td class="py-2 px-3 font-mono font-bold flex items-center space-x-1.5">
+                                        <span class="text-amber-500">{{ item.ticker }}</span>
+                                        <span v-if="item.percentage_contribution < 0"
+                                              class="px-1.5 py-0.5 text-xs rounded font-sans font-bold"
+                                              :class="isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'">
+                                            對沖避險
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-3 text-right num-font tabular-nums">
+                                        {{ formatRiskPercent(item.weight) }}
+                                    </td>
+                                    <td class="py-2 px-3 text-right num-font tabular-nums text-slate-400">
+                                        {{ formatRiskPercent(item.annualized_volatility) }}
+                                    </td>
+                                    <td class="py-2 px-3 text-right num-font tabular-nums"
+                                        :class="item.marginal_contribution < 0 ? (isDark ? 'text-emerald-400 font-bold' : 'text-emerald-800 font-bold') : (isDark ? 'text-slate-200' : 'text-slate-800')">
+                                        {{ formatRiskPercent(item.component_volatility) }}
+                                    </td>
+                                    <td class="py-2 px-3 text-right num-font tabular-nums font-bold"
+                                        :class="item.percentage_contribution < 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-800') : (isDark ? 'text-amber-400' : 'text-amber-800')">
+                                        {{ formatRiskPercent(item.percentage_contribution) }}
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <!-- Visual Contribution Bar -->
+                                        <div class="w-full bg-slate-700/20 rounded-full h-2 overflow-hidden flex items-center">
+                                            <div v-if="item.percentage_contribution >= 0"
+                                                 class="h-full rounded-full transition-all duration-300"
+                                                 :class="item.percentage_contribution > 0.4 ? 'bg-rose-500' : 'bg-amber-500'"
+                                                 :style="{ width: Math.min(100, Math.max(2, item.percentage_contribution * 100)) + '%' }">
+                                            </div>
+                                            <div v-else
+                                                 class="h-full bg-emerald-400 rounded-full transition-all duration-300"
+                                                 :style="{ width: Math.min(100, Math.abs(item.percentage_contribution * 100)) + '%' }"
+                                                 title="負相關風險減縮貢獻">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5.5 High Correlation Alert Pairs -->
+                <div class="p-3.5 rounded-xl border space-y-2 text-xs"
+                     :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#EAE0C8]'">
+                    <div class="font-bold flex items-center space-x-1.5"
+                         :class="isDark ? 'text-slate-300' : 'text-slate-800'">
+                        <span class="material-symbols-outlined text-[16px] text-amber-500">link</span>
+                        <span>高相關性警示標的對 (|&rho;| &ge; 0.75)</span>
+                    </div>
+                    <div v-if="riskXrayData.high_correlation_pairs && riskXrayData.high_correlation_pairs.length > 0"
+                         class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div v-for="pair in riskXrayData.high_correlation_pairs" :key="pair.ticker_a + pair.ticker_b"
+                             class="p-2 rounded-lg border flex items-center justify-between"
+                             :class="isDark ? 'bg-[#16181D] border-[#374151]' : 'bg-[#FFF9E8] border-[#DDC58B]'">
+                            <span class="font-mono font-bold">{{ pair.ticker_a }} &harr; {{ pair.ticker_b }}</span>
+                            <span class="font-mono font-black" :class="pair.correlation > 0 ? (isDark ? 'text-rose-400' : 'text-rose-700') : (isDark ? 'text-emerald-400' : 'text-emerald-800')">
+                                &rho; = {{ pair.correlation > 0 ? '+' : '' }}{{ pair.correlation.toFixed(2) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div v-else class="text-slate-400 py-1">
+                        &check; 本組合內各標的之間無 |&rho;| &ge; 0.75 之高度同向連動警示，資產分散性良好。
+                    </div>
+                </div>
+
+                <!-- 5.6 Tax-Aware Optimal Allocation Panel (ADMM Pure NumPy) -->
+                <div class="p-4 rounded-xl border space-y-4"
+                     :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFFDF7] border-[#DDC58B]'">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="material-symbols-outlined text-[20px] text-amber-500">tune</span>
+                            <h4 class="text-sm font-black" :class="isDark ? 'text-white' : 'text-slate-900'">
+                                稅務敏感最佳化權重試算 (純 NumPy ADMM)
+                            </h4>
+                        </div>
+                        <button @click="runWeightOptimization()"
+                                :disabled="optimizingWeights"
+                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                :class="isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] hover:bg-[#e09b0b] text-[#2B251A]'">
+                            <span class="material-symbols-outlined text-[15px]" :class="optimizingWeights ? 'animate-spin' : ''">calculate</span>
+                            <span>{{ optimizingWeights ? '計算中...' : '求解最佳權重' }}</span>
+                        </button>
+                    </div>
+
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        在多頭無槓桿與單股上限約束下，考量台股賣方 0.3% 證交稅（非對稱換手懲罰 &gamma;<sub>sell</sub> &gt; &gamma;<sub>buy</sub>），求解最小化調倉摩擦成本後之最佳配比。
+                    </p>
+
+                    <!-- Optimization Results Table -->
+                    <div v-if="optimizedResults" class="space-y-3 pt-2">
+                        <div class="overflow-x-auto rounded-xl border"
+                             :class="isDark ? 'border-[#262626]' : 'border-[#EAE0C8]'">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead :class="isDark ? 'bg-[#16181D] text-slate-300' : 'bg-[#FFF9E8] text-[#2B251A]'">
+                                    <tr>
+                                        <th class="py-2 px-3 font-bold">標的代號</th>
+                                        <th class="py-2 px-3 font-bold text-right">目前權重</th>
+                                        <th class="py-2 px-3 font-bold text-right">優化目標權重</th>
+                                        <th class="py-2 px-3 font-bold text-right">建議調倉 (&Delta;w)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y" :class="isDark ? 'divide-[#262626]' : 'divide-[#F0E6D2]'">
+                                    <tr v-for="tk in riskXrayData.available_tickers" :key="'opt-' + tk">
+                                        <td class="py-2 px-3 font-mono font-bold text-amber-500">{{ tk }}</td>
+                                        <td class="py-2 px-3 text-right num-font tabular-nums">
+                                            {{ ((riskXrayData.weights && riskXrayData.weights[tk]) ? (riskXrayData.weights[tk] * 100).toFixed(1) : (100 / riskXrayData.available_tickers.length).toFixed(1)) }}%
+                                        </td>
+                                        <td class="py-2 px-3 text-right num-font tabular-nums font-bold"
+                                            :class="isDark ? 'text-sky-300' : 'text-sky-700'">
+                                            {{ ((optimizedResults.optimal_weights && optimizedResults.optimal_weights[tk]) ? (optimizedResults.optimal_weights[tk] * 100).toFixed(1) : '0.0') }}%
+                                        </td>
+                                        <td class="py-2 px-3 text-right num-font tabular-nums font-bold"
+                                            :class="getWeightDelta(tk) > 0.001 ? (isDark ? 'text-rose-400' : 'text-rose-700') : (getWeightDelta(tk) < -0.001 ? (isDark ? 'text-emerald-400' : 'text-emerald-800') : (isDark ? 'text-slate-400' : 'text-slate-600'))">
+                                            {{ getWeightDelta(tk) > 0 ? '+' : '' }}{{ (getWeightDelta(tk) * 100).toFixed(1) }}%
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Turnover Summary -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 text-xs p-2.5 rounded-lg border"
+                             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFF9E8] border-[#EAE0C8]'">
+                            <span>單向換手率 (Turnover): <strong class="num-font text-amber-500 font-bold">{{ (optimizedResults.turnover * 100).toFixed(2) }}%</strong></span>
+                            <span>現金保留部位: <strong class="num-font font-bold" :class="isDark ? 'text-emerald-400' : 'text-emerald-800'">{{ ((optimizedResults.cash_weight ?? 0) * 100).toFixed(1) }}%</strong></span>
+                            <span>ADMM 收斂迭代: <strong class="num-font font-bold">{{ optimizedResults.iterations }}</strong> 輪</span>
+                            <span>約束殘差: <strong class="num-font font-bold">&le; 1e-8</strong> (Feasible)</span>
+                        </div>
+
+                        <!-- 100% Cash Defense Alert if needed -->
+                        <div v-if="optimizedResults.cash_weight >= 0.999" class="p-3 rounded-lg border text-xs"
+                             :class="isDark ? 'bg-amber-950/40 border-amber-800 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-900'">
+                            <span class="font-bold">⚠️ 全現金避險防禦：</span>依當前預期報酬與非對稱摩擦成本評估，持有現金報酬風險比優於股票曝險，建議部位 100% 停泊於現金。
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t flex items-center justify-between text-xs"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11] text-slate-400' : 'border-[#DDC58B] bg-[#FFF9E8] text-slate-600'">
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>100% 離線日 K 矩陣運算 · 零外部網路連線</span>
+            </div>
+            <button @click="closeRiskXrayModal"
+                    class="px-4 py-1.5 rounded-xl font-black transition-colors cursor-pointer"
+                    :class="isDark ? 'bg-[#262626] hover:bg-[#333333] text-white' : 'bg-[#EAE0C8] hover:bg-[#DDC58B] text-[#2B251A]'">
+                關閉
+            </button>
+        </div>
+
+    </div>
+</div>

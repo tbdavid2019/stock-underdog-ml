@@ -461,6 +461,9 @@ python scripts/check_env.py --json
 #### 🛡️ 系統韌性與並發安全底座 (Resilience & Concurrency Architecture)
 - **DuckDB 跨進程檔案鎖（`core/duckdb_lock.py`）**：生產環境常駐之 `stock-ml-api` 與排程 `stock-ml-cron` 共享相同 DuckDB 儲存卷，透過同目錄 `<db_path>.write.lock` 之 `fcntl.flock` 實現跨進程寫入排他序列化，徹底防範寫入衝突死鎖；唯讀連線強制維持 `read_only=True` 隔離，遇鎖忙碌指數退避重試並可回傳 HTTP 503。
 - **共用上游守護模組（`core/upstream_guard.py`）**：支援逗號分隔多金鑰輪詢池（Key Pool Rotation）、單 Key 併發限制（`BoundedSemaphore`）與 60 秒失敗熔斷冷卻（`RecentFailureCooldownError`），杜絕外部 API 限流掛起或重複錯誤洗版。
+- **上游金絲雀隔離探測道（`data/loader_canary.py` / `scripts/check_loader_health.py`）**：30 分鐘冷卻保護與 4-Worker 平行線程池探測 8 大外部來源，三態健康標記（healthy / ratelimited / parse_error），原子遮罩快照，排程與前端 API 100% 零外網連線依賴。
+- **組合量化風險 X 光與純 NumPy ADMM 換手率優化器（`backtest/risk_xray.py` / `backtest/turnover_optimizer.py`）**：純收盤價矩陣計算，支援雙口徑波動率、負對沖（`PCV < 0`）歐拉風險貢獻拆解、階梯式 95%/99% VaR/CVaR、除權息異常跳空守衛，以及台股賣方 0.3% 證交稅非對稱換手懲罰凸優化。
+- **統計顯著性檢定（`backtest/statistical_validation.py`）**：Rademacher 符號翻轉檢定、交易順序置換最大回撤檢定與 Circular Block Bootstrap 年化 Sharpe 95% 信賴區間，協助操盤者區分真實策略 Alpha 與隨機運氣。
 - **Fail-Closed 寫入防護**：生產環境（`DEPLOYMENT_MODE="production"`）強制要求有效 `WATCHLIST_API_KEY`，未設定或未授權時全面鎖定寫入端點，公開訪客自動以 `localStorage` 雙軌運作。
 
 #### 🐳 A. 直接拉取 Docker Hub 官方映像檔

@@ -47,22 +47,23 @@ class DuckDBManager:
             with duckdb_write_lock(self.db_path, timeout=timeout):
                 yield
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, init_schema: bool = True):
         self.db_path = db_path or config.db.DUCKDB_PATH
         self.enabled = config.db.ENABLE_DUCKDB
-        self._ensure_storage_dir()
-        if self.enabled:
-            needs_init = (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path)
-            if needs_init:
-                with self._INIT_LOCK:
-                    if (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path):
-                        try:
-                            if self._init_schema():
-                                self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
-                        except DuckDBBusyError:
-                            logger.warning("DuckDB busy during __init__ schema initialization; will retry upon connection")
-                        except Exception as e:
-                            logger.warning("DuckDB schema init deferred due to exception: %s", e)
+        if init_schema:
+            self._ensure_storage_dir()
+            if self.enabled:
+                needs_init = (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path)
+                if needs_init:
+                    with self._INIT_LOCK:
+                        if (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path):
+                            try:
+                                if self._init_schema():
+                                    self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+                            except DuckDBBusyError:
+                                logger.warning("DuckDB busy during __init__ schema initialization; will retry upon connection")
+                            except Exception as e:
+                                logger.warning("DuckDB schema init deferred due to exception: %s", e)
 
     def _ensure_storage_dir(self):
         storage_dir = os.path.dirname(self.db_path)
@@ -590,6 +591,22 @@ class DuckDBManager:
                     created_at TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS idx_alerts_profile_ticker ON quant_price_alerts (profile_id, canonical_ticker);
+
+                CREATE TABLE IF NOT EXISTS global_daily_bars (
+                    ticker VARCHAR,
+                    market VARCHAR,
+                    currency VARCHAR,
+                    date VARCHAR,
+                    open DOUBLE,
+                    high DOUBLE,
+                    low DOUBLE,
+                    close DOUBLE,
+                    volume DOUBLE,
+                    is_adjusted BOOLEAN DEFAULT TRUE,
+                    updated_at TIMESTAMP,
+                    PRIMARY KEY (ticker, date)
+                );
+                CREATE INDEX IF NOT EXISTS idx_global_daily_bars_ticker_date ON global_daily_bars (ticker, date);
                 """);
 
                 # Schema migration for existing installations
@@ -2337,6 +2354,236 @@ class DuckDBManager:
                     return 0
             return 0
 
+    def upsert_global_daily_bars(self, bars: List[Dict[str, Any]]) -> int:
+        """寫入或更新海外離線日 K 棒資料 (global_daily_bars)
+
+        寫入強制走 self._write_lock() + read_only=False。
+        """
+        if not self.enabled or not bars:
+            return 0
+
+        df = pd.DataFrame(bars)
+        required_cols = ["ticker", "market", "currency", "date", "open", "high", "low", "close", "volume"]
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"upsert_global_daily_bars 缺少必要欄位: {col}")
+
+        if "is_adjusted" not in df.columns:
+            df["is_adjusted"] = True
+        if "updated_at" not in df.columns:
+            df["updated_at"] = datetime.datetime.now()
+
+        df["date"] = df["date"].astype(str).str.slice(0, 10)
+        cols = ["ticker", "market", "currency", "date", "open", "high", "low", "close", "volume", "is_adjusted", "updated_at"]
+
+        with self._write_lock():
+            for attempt in range(3):
+                try:
+                    with self._get_connection(read_only=False) as con:
+                        con.register("temp_global_bars_df", df[cols])
+                        con.execute("""
+                        INSERT OR REPLACE INTO global_daily_bars
+                        SELECT 
+                            CAST(ticker AS VARCHAR),
+                            CAST(market AS VARCHAR),
+                            CAST(currency AS VARCHAR),
+                            CAST(date AS VARCHAR),
+                            CAST(open AS DOUBLE),
+                            CAST(high AS DOUBLE),
+                            CAST(low AS DOUBLE),
+                            CAST(close AS DOUBLE),
+                            CAST(volume AS DOUBLE),
+                            COALESCE(CAST(is_adjusted AS BOOLEAN), TRUE) AS is_adjusted,
+                            COALESCE(TRY_CAST(updated_at AS TIMESTAMP), CURRENT_TIMESTAMP) AS updated_at
+                        FROM temp_global_bars_df;
+                        """)
+                        con.unregister("temp_global_bars_df")
+                    return len(df)
+                except duckdb.IOException as e:
+                    err_msg = str(e).lower()
+                    if ("conflicting lock" in err_msg or "could not set lock" in err_msg or "unique file handle" in err_msg) and attempt < 2:
+                        time.sleep(0.15 * (attempt + 1))
+                        continue
+                    logger.error(f"❌ 寫入 global_daily_bars 失敗: {e}", exc_info=True)
+                    return 0
+                except Exception as e:
+                    logger.error(f"❌ 寫入 global_daily_bars 失敗: {e}", exc_info=True)
+                    return 0
+            return 0
+
+    def load_local_close_series(
+        self,
+        tickers: List[str],
+        as_of_date: Optional[str] = None,
+        lookback_bars: int = 252
+    ) -> Dict[str, Any]:
+        """唯讀載入多市場收盤價歷史序列 (100% 零外部網路 I/O)
+
+        查詢強制使用 `WHERE ... AND date <= ? ORDER BY date DESC LIMIT ?` 取最近視窗後反轉為 `date ASC`。
+        依序查:
+        1. tw_daily_bars (price_adjustment_mode="raw_close", currency="TWD")
+        2. global_daily_bars (price_adjustment_mode="adjusted_close", currency from table)
+        3. CacheManager.get_stock_data(ticker, period="1y"/"2y", max_age_hours=None) 本地磁碟快取備援
+        資料不足或查無日 K 之標的列入 unavailable_tickers。
+        """
+        result_series: Dict[str, pd.Series] = {}
+        price_adjustment_modes: Dict[str, str] = {}
+        currencies: Dict[str, str] = {}
+        unavailable_tickers: List[str] = []
+        available_tickers: List[str] = []
+
+        clean_as_of = str(as_of_date).strip()[:10] if as_of_date else None
+
+        for raw_ticker in tickers:
+            if not raw_ticker:
+                continue
+            tk = str(raw_ticker).strip().upper()
+            loaded = False
+
+            # 1. 查詢 tw_daily_bars
+            clean_code = tk.split(".")[0]
+            try:
+                with self._get_connection(read_only=True) as con:
+                    if clean_as_of:
+                        sql = """
+                        SELECT date, close
+                        FROM tw_daily_bars
+                        WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+                          AND close > 0
+                          AND date <= ?
+                        ORDER BY date DESC
+                        LIMIT ?;
+                        """
+                        params = [tk, clean_code, f"{clean_code}.%", clean_as_of, lookback_bars]
+                    else:
+                        sql = """
+                        SELECT date, close
+                        FROM tw_daily_bars
+                        WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
+                          AND close > 0
+                        ORDER BY date DESC
+                        LIMIT ?;
+                        """
+                        params = [tk, clean_code, f"{clean_code}.%", lookback_bars]
+                    rows = con.execute(sql, params).fetchall()
+                    if rows:
+                        rows.reverse()
+                        dates = [str(r[0])[:10] for r in rows]
+                        closes = [float(r[1]) for r in rows]
+                        s = pd.Series(data=closes, index=dates, name="close")
+                        s = s[~s.index.duplicated(keep="last")]
+                        if len(s) > 0:
+                            result_series[raw_ticker] = s
+                            price_adjustment_modes[raw_ticker] = "raw_close"
+                            currencies[raw_ticker] = "TWD"
+                            available_tickers.append(raw_ticker)
+                            loaded = True
+            except Exception as e:
+                logger.debug(f"tw_daily_bars 查詢 {tk} 失敗: {e}")
+
+            if loaded:
+                continue
+
+            # 2. 查詢 global_daily_bars
+            try:
+                with self._get_connection(read_only=True) as con:
+                    if clean_as_of:
+                        sql_g = """
+                        SELECT date, close, currency, is_adjusted
+                        FROM global_daily_bars
+                        WHERE ticker = ?
+                          AND close > 0
+                          AND date <= ?
+                        ORDER BY date DESC
+                        LIMIT ?;
+                        """
+                        params_g = [tk, clean_as_of, lookback_bars]
+                    else:
+                        sql_g = """
+                        SELECT date, close, currency, is_adjusted
+                        FROM global_daily_bars
+                        WHERE ticker = ?
+                          AND close > 0
+                        ORDER BY date DESC
+                        LIMIT ?;
+                        """
+                        params_g = [tk, lookback_bars]
+                    rows = con.execute(sql_g, params_g).fetchall()
+                    if rows:
+                        rows.reverse()
+                        dates = [str(r[0])[:10] for r in rows]
+                        closes = [float(r[1]) for r in rows]
+                        curr = str(rows[0][2]) if rows[0][2] else ("JPY" if tk.endswith(".T") else "USD")
+                        is_adj = bool(rows[0][3]) if rows[0][3] is not None else True
+                        s = pd.Series(data=closes, index=dates, name="close")
+                        s = s[~s.index.duplicated(keep="last")]
+                        if len(s) > 0:
+                            result_series[raw_ticker] = s
+                            price_adjustment_modes[raw_ticker] = "adjusted_close" if is_adj else "raw_close"
+                            currencies[raw_ticker] = curr
+                            available_tickers.append(raw_ticker)
+                            loaded = True
+            except Exception as e:
+                logger.debug(f"global_daily_bars 查詢 {tk} 失敗: {e}")
+
+            if loaded:
+                continue
+
+            # 3. 本地磁碟 CacheManager 快取備援 (100% 零外部網路 I/O)
+            try:
+                from data.cache import CacheManager
+                cached_df = CacheManager.get_stock_data(tk, "1y", max_age_hours=None)
+                if cached_df is None or cached_df.empty:
+                    cached_df = CacheManager.get_stock_data(tk, "2y", max_age_hours=None)
+                if cached_df is None or cached_df.empty:
+                    cached_df = CacheManager.get_stock_data(raw_ticker, "1y", max_age_hours=None)
+
+                if cached_df is not None and not cached_df.empty:
+                    df_c = cached_df.copy()
+                    col_close = "Close" if "Close" in df_c.columns else ("close" if "close" in df_c.columns else None)
+                    if col_close:
+                        if not isinstance(df_c.index, pd.DatetimeIndex) and "date" in df_c.columns:
+                            df_c["Date"] = pd.to_datetime(df_c["date"])
+                            df_c.set_index("Date", inplace=True)
+                        elif not isinstance(df_c.index, pd.DatetimeIndex) and "Date" in df_c.columns:
+                            df_c["Date"] = pd.to_datetime(df_c["Date"])
+                            df_c.set_index("Date", inplace=True)
+
+                        df_c = df_c.sort_index(ascending=False)
+                        if clean_as_of:
+                            as_of_ts = pd.to_datetime(clean_as_of)
+                            df_c = df_c[df_c.index <= as_of_ts]
+                        df_c = df_c.head(lookback_bars)
+                        df_c = df_c.sort_index(ascending=True)
+
+                        if not df_c.empty:
+                            dates = [d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)[:10] for d in df_c.index]
+                            closes = df_c[col_close].astype(float).tolist()
+                            s = pd.Series(data=closes, index=dates, name="close")
+                            s = s[~s.index.duplicated(keep="last")]
+                            if len(s) > 0:
+                                is_tw = tk.endswith(".TW") or tk.endswith(".TWO")
+                                result_series[raw_ticker] = s
+                                price_adjustment_modes[raw_ticker] = "raw_close" if is_tw else "adjusted_close"
+                                currencies[raw_ticker] = "TWD" if is_tw else ("JPY" if tk.endswith(".T") else "USD")
+                                available_tickers.append(raw_ticker)
+                                loaded = True
+            except Exception as e:
+                logger.debug(f"CacheManager 讀取 {tk} 失敗: {e}")
+
+            if not loaded:
+                unavailable_tickers.append(raw_ticker)
+
+        return {
+            "series": result_series,
+            "price_adjustment_modes": price_adjustment_modes,
+            "currencies": currencies,
+            "unavailable_tickers": unavailable_tickers,
+            "available_tickers": available_tickers,
+            "as_of_date": clean_as_of,
+            "lookback_bars": lookback_bars,
+        }
+
     def save_market_universe_snapshot(self, snapshot_date: str, records: List[Dict[str, Any]]) -> int:
         """Persist one validated source snapshot while retaining previous dates."""
         if not self.enabled or not records:
@@ -2639,17 +2886,25 @@ class DuckDBManager:
                 low AS Low,
                 close AS Close,
                 volume AS Volume
-            FROM tw_daily_bars
+            FROM global_daily_bars
             WHERE ticker = ?
               AND close > 0
-            ORDER BY date ASC
+            ORDER BY date DESC
             LIMIT ?;
             """
             try:
                 with self._get_connection(read_only=True) as con:
                     df = con.execute(sql, [t_upper, limit]).df()
+                    if df.empty:
+                        # Fallback to tw_daily_bars in case foreign ticker was stored there
+                        sql_fb = """
+                        SELECT date AS Date, open AS Open, high AS High, low AS Low, close AS Close, volume AS Volume
+                        FROM tw_daily_bars WHERE ticker = ? AND close > 0 ORDER BY date DESC LIMIT ?;
+                        """
+                        df = con.execute(sql_fb, [t_upper, limit]).df()
                     if not df.empty:
                         df["Date"] = pd.to_datetime(df["Date"])
+                        df.sort_values("Date", ascending=True, inplace=True)
                         df.set_index("Date", inplace=True)
                     return df
             except Exception as e:
@@ -2668,7 +2923,7 @@ class DuckDBManager:
         FROM tw_daily_bars
         WHERE (ticker = ? OR raw_code = ? OR ticker LIKE ?)
           AND close > 0
-        ORDER BY date ASC
+        ORDER BY date DESC
         LIMIT ?;
         """
         try:
@@ -2676,6 +2931,7 @@ class DuckDBManager:
                 df = con.execute(sql, [ticker, clean_code, f"{clean_code}.%", limit]).df()
                 if not df.empty:
                     df["Date"] = pd.to_datetime(df["Date"])
+                    df.sort_values("Date", ascending=True, inplace=True)
                     df.set_index("Date", inplace=True)
                 return df
         except Exception as e:

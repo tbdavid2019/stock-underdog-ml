@@ -207,13 +207,18 @@ class PaperLedger:
                 raise
 
     def get_account(self, account_id: str) -> dict[str, Any] | None:
-        with _LOCK, self._connect() as con:
-            row = con.execute("SELECT market,currency,initial_cash,cash FROM paper_accounts WHERE account_id=?", [account_id]).fetchone()
-            if row is None:
+        try:
+            with _LOCK, self._connect() as con:
+                row = con.execute("SELECT market,currency,initial_cash,cash FROM paper_accounts WHERE account_id=?", [account_id]).fetchone()
+                if row is None:
+                    return None
+                rows = con.execute("SELECT ticker,quantity,total_cost,realized_pnl,last_price,last_price_at FROM paper_positions WHERE account_id=? ORDER BY ticker", [account_id]).fetchall()
+            return {"account_id": account_id, "market": row[0], "currency": row[1], "initial_cash": row[2], "cash": row[3],
+                    "simulated": True, "positions": {r[0]: {"quantity": r[1], "total_cost": r[2], "realized_pnl": r[3], "last_price": r[4], "last_price_at": r[5]} for r in rows}}
+        except duckdb.CatalogException:
+            if self.read_only:
                 return None
-            rows = con.execute("SELECT ticker,quantity,total_cost,realized_pnl,last_price,last_price_at FROM paper_positions WHERE account_id=? ORDER BY ticker", [account_id]).fetchall()
-        return {"account_id": account_id, "market": row[0], "currency": row[1], "initial_cash": row[2], "cash": row[3],
-                "simulated": True, "positions": {r[0]: {"quantity": r[1], "total_cost": r[2], "realized_pnl": r[3], "last_price": r[4], "last_price_at": r[5]} for r in rows}}
+            raise
 
     def get_orders(self, account_id: str) -> list[dict[str, Any]]:
         with _LOCK, self._connect() as con:

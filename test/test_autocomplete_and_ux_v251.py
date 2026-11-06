@@ -222,6 +222,150 @@ class TestAutocompleteAndUxV251(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=f"Node error: {proc.stderr}")
         self.assertIn("SUCCESS", proc.stdout)
 
+    def test_table_sort_toggle_two_way(self):
+        js_code = """
+        const state = {
+            tableSortKey: null,
+            tableSortOrder: null,
+            toggleTableSort(key) {
+                const defaultOrder = (key === 'ticker' || key === 'index_name' || key === 'model_name' || key === 'pe') ? 'asc' : 'desc';
+                if (this.tableSortKey !== key) {
+                    this.tableSortKey = key;
+                    this.tableSortOrder = defaultOrder;
+                } else {
+                    this.tableSortOrder = (this.tableSortOrder === 'desc') ? 'asc' : 'desc';
+                }
+            },
+            resetTableSort() {
+                this.tableSortKey = null;
+                this.tableSortOrder = null;
+            },
+            getSortColumnLabel(key) {
+                switch (key) {
+                    case 'ticker': return '標的';
+                    case 'index_name': return '市場';
+                    case 'model_name': return '策略模型';
+                    case 'current_price': return '現價';
+                    case 'predicted_price': return '目標價';
+                    case 'potential': return '潛力';
+                    case 'pe': return 'PE';
+                    default: return key || '';
+                }
+            }
+        };
+
+        // 1. Click current_price 3 times -> desc -> asc -> desc
+        state.toggleTableSort('current_price');
+        if (state.tableSortKey !== 'current_price' || state.tableSortOrder !== 'desc') {
+            throw new Error('Click 1 current_price failed: ' + state.tableSortOrder);
+        }
+        state.toggleTableSort('current_price');
+        if (state.tableSortKey !== 'current_price' || state.tableSortOrder !== 'asc') {
+            throw new Error('Click 2 current_price failed: ' + state.tableSortOrder);
+        }
+        state.toggleTableSort('current_price');
+        if (state.tableSortKey !== 'current_price' || state.tableSortOrder !== 'desc') {
+            throw new Error('Click 3 current_price failed: ' + state.tableSortOrder);
+        }
+
+        // 2. Click pe 2 times -> asc -> desc
+        state.toggleTableSort('pe');
+        if (state.tableSortKey !== 'pe' || state.tableSortOrder !== 'asc') {
+            throw new Error('Click 1 pe failed: ' + state.tableSortOrder);
+        }
+        state.toggleTableSort('pe');
+        if (state.tableSortKey !== 'pe' || state.tableSortOrder !== 'desc') {
+            throw new Error('Click 2 pe failed: ' + state.tableSortOrder);
+        }
+
+        // 3. Click ticker 2 times -> asc -> desc
+        state.toggleTableSort('ticker');
+        if (state.tableSortKey !== 'ticker' || state.tableSortOrder !== 'asc') {
+            throw new Error('Click 1 ticker failed: ' + state.tableSortOrder);
+        }
+        state.toggleTableSort('ticker');
+        if (state.tableSortKey !== 'ticker' || state.tableSortOrder !== 'desc') {
+            throw new Error('Click 2 ticker failed: ' + state.tableSortOrder);
+        }
+
+        // 4. Test resetTableSort
+        state.resetTableSort();
+        if (state.tableSortKey !== null || state.tableSortOrder !== null) {
+            throw new Error('resetTableSort failed: ' + state.tableSortKey + ', ' + state.tableSortOrder);
+        }
+
+        // 5. Test getSortColumnLabel
+        if (state.getSortColumnLabel('current_price') !== '現價') throw new Error('Label failed');
+        if (state.getSortColumnLabel('pe') !== 'PE') throw new Error('Label failed');
+        if (state.getSortColumnLabel('ticker') !== '標的') throw new Error('Label failed');
+
+        console.log('SUCCESS');
+        """
+        proc = subprocess.run(
+            ["node", "-e", js_code],
+            capture_output=True,
+            text=True
+        )
+        self.assertEqual(proc.returncode, 0, msg=f"Node error: {proc.stderr}")
+        self.assertIn("SUCCESS", proc.stdout)
+
+    def test_parse_sortable_number_and_advanced_sorting(self):
+        js_code = """
+        const parseSortableNumber = (val) => {
+            if (val === null || val === undefined || typeof val === 'boolean') return null;
+            if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+            const s = String(val).replace(/[$,¥%\\s,]/g, '').trim();
+            if (!s) return null;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        };
+
+        // Assert empty string does NOT become 0
+        if (parseSortableNumber('') !== null) throw new Error('Empty string became non-null');
+        if (parseSortableNumber('   ') !== null) throw new Error('Whitespace became non-null');
+        if (parseSortableNumber(null) !== null) throw new Error('null became non-null');
+        if (parseSortableNumber(undefined) !== null) throw new Error('undefined became non-null');
+        if (parseSortableNumber(false) !== null) throw new Error('false became non-null');
+
+        // Assert formatted numbers parse correctly
+        if (parseSortableNumber('$1,050.50') !== 1050.5) throw new Error('Currency parse failed');
+        if (parseSortableNumber('  25.4% ') !== 25.4) throw new Error('Percentage parse failed');
+        if (parseSortableNumber('12,345') !== 12345) throw new Error('Thousand comma parse failed');
+
+        // Test sorting predicted_price with fallback to ma60/ma120 even when predicted_price is empty string
+        const records = [
+            { ticker: 'A', predicted_price: 100 },
+            { ticker: 'B', predicted_price: null, ma60: 120 },
+            { ticker: 'C', predicted_price: '', ma60: 90, ma120: 80 },
+            { ticker: 'D', predicted_price: null, ma60: null, ma120: null }
+        ];
+
+        const order = -1; // desc
+        const sorted = [...records].sort((a, b) => {
+            const na = parseSortableNumber(a.predicted_price) ?? parseSortableNumber(a.ma60) ?? parseSortableNumber(a.ma120);
+            const nb = parseSortableNumber(b.predicted_price) ?? parseSortableNumber(b.ma60) ?? parseSortableNumber(b.ma120);
+            if (na === null && nb === null) return 0;
+            if (na === null) return 1;
+            if (nb === null) return -1;
+            return (na - nb) * order;
+        });
+
+        const tickers = sorted.map(r => r.ticker);
+        // Desc: B(120), A(100), C(90), D(null)
+        if (tickers[0] !== 'B' || tickers[1] !== 'A' || tickers[2] !== 'C' || tickers[3] !== 'D') {
+            throw new Error('Predicted price sort order incorrect: ' + JSON.stringify(tickers));
+        }
+
+        console.log('SUCCESS');
+        """
+        proc = subprocess.run(
+            ["node", "-e", js_code],
+            capture_output=True,
+            text=True
+        )
+        self.assertEqual(proc.returncode, 0, msg=f"Node error: {proc.stderr}")
+        self.assertIn("SUCCESS", proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

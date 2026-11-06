@@ -6,6 +6,38 @@
 
 ---
 
+## 2026-11-06 (v2.6.0)
+
+### Part A: 主表欄位動態排序直覺切換與快取防呆
+- **`api/static/js/app.js` — 雙向切換排序與還原按鈕**：
+  - 表頭點擊排序全面改為直覺雙向切換（`desc <-> asc`），首點依欄位性質智慧預設（代碼/市場/策略/PE 預設 `asc`，現價/目標價/潛力預設 `desc`），嚴禁點擊表頭時意外跳回未排序。
+  - 新增 `resetTableSort()` 與 `getSortColumnLabel(key)`。
+  - 排序比較器強化：新增嚴謹數值解析 helper（排除千分位逗號、貨幣符號、百分比，修正空字串誤判為 0 的陷阱），空值與負/零 PE 於升降冪時一律固定沉底。
+- **`api/templates/partials/tab_dashboard.html` — 視覺回饋**：
+  - 排序啟用時於「共篩選出 X 檔標的」旁顯示膠囊按鈕：`排序中：[欄位] [方向] · ↺ 還原預設排名`，支援一鍵還原綜合推薦排名。
+  - 當前排序之 `<th>` 具備細緻主題高亮底色（深色 `#1F232B`、淺色 `#EBE1C5`）。
+- **`api/main.py` — Cloudflare 靜態快取防呆**：
+  - `/static/` 下的 `.js` 與 `.css` 設定 `Cache-Control: no-cache, no-store, must-revalidate`，避免 Cloudflare 邊緣快取覆寫為 4 小時。
+
+### Part B: Wave 2 Quant Risk & Validation System (`vibe-trading-quant-risk-and-validation`)
+- **Phase 1: 本地價格底座與三大純量化核心模組**：
+  - `data/duckdb_manager.py`：新增離線 `global_daily_bars` 表與 `load_local_close_series()`，採 `WHERE ... AND date <= ? ORDER BY date DESC LIMIT ?` 反轉為 ASC，100% 離線唯讀運算、零外部連線；批次抓取時容錯寫入海外日 K。
+  - `backtest/risk_xray.py`：純收盤價矩陣計算，實作雙口徑波動率（全組合含現金稀釋 vs 風險槽正規化）、支援負對沖（`PCV < 0`）之歐拉波動貢獻拆解（`sum(PCV) == 1.0` 且 `sum(CV) == sigma_total`）、風險槽 HHI、分位數階梯樣本門檻（`N < 60` 隱藏 95% 尾端指標，`N < 100` 隱藏 99% 尾端指標）、單日分割異常跳空防呆（台股 >25%、海外 >60%）、跨幣別警示與 `allow_nan=False`。
+  - `backtest/statistical_validation.py`：純函式統計檢定模組（固定種子位元級重現性），實作對數日報酬 Rademacher 符號翻轉檢定（`p_value_return`）、交易順序置換最大回撤檢定（`p_value_max_drawdown`）、Circular Block Bootstrap 年化 Sharpe 95% 信賴區間，以及零變異守衛。
+  - `backtest/turnover_optimizer.py`：純 NumPy ADMM 換手率優化器（無 cvxpy/scipy 外部求解器依賴），實作收縮共變異數、非對稱買賣軟閾值（支援台股 0.3% 賣方證交稅）、Dykstra 凸多面體約束投影與確定性可行裁剪（殘差 <= 1e-8，支援 `risk_aversion = 0`）。
+- **Phase 2: 具冷卻與平行保護之隔離金絲雀探測道**：
+  - `data/loader_canary.py` & `scripts/check_loader_health.py`：以 4-Worker 平行線程池與單源 8 秒逾時隔離探測 8 大來源（TWSE、TPEx、yfinance、answerbook、Investing、Polymarket、BigGo 法說會、arXiv），30 分鐘冷卻保護，三態分類，憑證/內網 IP 100% 遮罩，原子寫入 `data/cache/canary_health_latest.json`，DuckDB 可寫連線數恆為 0。
+  - `run_daily.sh`：非阻塞整合 Step 0 金絲雀探測。
+- **Phase 3: 唯讀與受保護服務層 & FastMCP 工具**：
+  - `api/routes/risk.py`：新增受每 IP 限流與 `BoundedSemaphore(2)` 保護之 `POST /api/v1/risk/xray`（<= 100 檔）、`GET /api/v1/watchlist/risk-xray`、`POST /api/v1/risk/optimize-weights`（<= 50 檔），以及強制 API Key 認證與正則檢驗之私有 `GET /api/v1/paper/accounts/{account_id}/risk-xray`。
+  - `api/routes/stats.py`：新增只讀快照之 `GET /api/v1/stats/canary-health`。
+  - `mcp_server.py`：註冊 `get_portfolio_risk_xray` 與 `get_canary_loader_health` FastMCP 工具，同步註冊至 `bridge.js`、`mcp.json` 與 `llms.txt`。
+- **Phase 4: 操盤介面風險 X 光健檢面板與統計顯著性標章**：
+  - `api/templates/partials/risk_xray_panel.html` & `api/static/js/risk-xray.js`：提供投資組合風險 X 光健檢 Modal，支援雙口徑波動率、階梯式 VaR/CVaR、負對沖歐拉橫條、集中度 HHI、高相關標的對警示與純 NumPy ADMM 稅務敏感換手試算；嚴格遵守 WCAG AA/AAA（嚴禁白字疊琥珀金 `#FFB010`）。
+  - `api/templates/partials/tab_dashboard.html`：新增「★ 組合風險 X 光」按鈕，並於模型篩選區與歷史榜單呈現統計顯著性標章（Bootstrap Sharpe 95% CI、`p < 0.05 顯著`）。
+
+---
+
 ## 2026-11-06 (v2.5.1)
 
 ### Operator Suite Acceptance Fixes & Quant UX Enhancements (實機線上驗收緊急修補與操盤體驗強化)

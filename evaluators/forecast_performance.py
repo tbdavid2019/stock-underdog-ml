@@ -193,15 +193,18 @@ def _summarize(rows: list[dict[str, Any]], query: PerformanceQuery) -> dict[str,
         # Score return errors so the metric is comparable across price levels.
         predicted_return = (predicted - current) / current
         actual_return = (actual - current) / current
+        strat_ret = actual_return if pdir > 0 else (-actual_return if pdir < 0 else 0.0)
         daily.setdefault(row["target_date"], []).append((int(pdir == adir),
             abs(predicted - actual), abs(current - actual), (predicted_return - actual_return) ** 2,
-            actual_return ** 2, abs(predicted - actual) / actual))
+            actual_return ** 2, abs(predicted - actual) / actual, strat_ret))
     # First average stocks within each session, then weight each session equally.
     day_values = []
     day_hits = []
-    for values in daily.values():
+    session_returns = []
+    for _, values in sorted(daily.items()):
         day_values.append(tuple(sum(v[i] for v in values) / len(values) for i in range(1, 6)))
         day_hits.append(sum(v[0] for v in values) / len(values))
+        session_returns.append(sum(v[6] for v in values) / len(values))
     sessions = len(day_values)
     mae = sum(v[0] for v in day_values) / sessions if sessions else None
     baseline_mae = sum(v[1] for v in day_values) / sessions if sessions else 0
@@ -209,6 +212,20 @@ def _summarize(rows: list[dict[str, Any]], query: PerformanceQuery) -> dict[str,
     sq_baseline = sum(v[3] for v in day_values) / sessions if sessions else 0
     mape = sum(v[4] for v in day_values) / sessions if sessions else None
     successes = sum(hit >= 0.5 for hit in day_hits)
+
+    stat_val = {}
+    try:
+        from backtest.statistical_validation import validate_returns_significance
+        stat_val = validate_returns_significance(daily_returns=session_returns)
+    except Exception:
+        stat_val = {
+            "status": "insufficient_samples",
+            "p_value_return": None,
+            "sharpe_ci_low": None,
+            "sharpe_ci_high": None,
+            "is_statistically_significant": False
+        }
+
     return {
         "sample_count": n,
         "session_count": sessions,
@@ -221,6 +238,11 @@ def _summarize(rows: list[dict[str, Any]], query: PerformanceQuery) -> dict[str,
         "oos_r2_zero_return": 1 - sq_error / sq_baseline if sq_error is not None and sq_baseline else None,
         "direction_threshold": query.flat_threshold,
         "flat_rule": "absolute_return_lte_threshold_is_flat",
+        "p_value_return": stat_val.get("p_value_return"),
+        "sharpe_ci_low": stat_val.get("sharpe_ci_low"),
+        "sharpe_ci_high": stat_val.get("sharpe_ci_high"),
+        "is_statistically_significant": bool(stat_val.get("is_statistically_significant", False)),
+        "validation_status": stat_val.get("status", "insufficient_samples"),
     }
 
 

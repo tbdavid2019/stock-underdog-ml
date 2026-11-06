@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance, watchlist
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance, watchlist, risk
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
@@ -69,7 +69,7 @@ async def add_static_cache_control(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if path.startswith("/static/") and (path.endswith(".js") or path.endswith(".css")):
-        response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
 # 掛載業務路由
@@ -86,6 +86,7 @@ app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(industry_chain.router, prefix="/api/v1")
 app.include_router(watchlist.router, prefix="/api/v1")
 app.include_router(watchlist.alerts_router, prefix="/api/v1")
+app.include_router(risk.router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -97,7 +98,7 @@ try:
     class NoCacheStaticFiles(StaticFiles):
         def file_response(self, *args, **kwargs):
             resp = super().file_response(*args, **kwargs)
-            resp.headers["Cache-Control"] = "no-cache, must-revalidate, max-age=0"
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             resp.headers["Pragma"] = "no-cache"
             resp.headers["Expires"] = "0"
             return resp
@@ -313,7 +314,9 @@ def mcp_root_endpoint():
             "get_model_performance_scorecard",
             "get_watchlist",
             "get_market_live_sessions",
-            "get_signal_alignment"
+            "get_signal_alignment",
+            "get_portfolio_risk_xray",
+            "get_canary_loader_health"
         ]
     })
 
@@ -377,7 +380,9 @@ def get_webmcp_manifest():
             "get_model_performance_scorecard",
             "get_watchlist",
             "get_market_live_sessions",
-            "get_signal_alignment"
+            "get_signal_alignment",
+            "get_portfolio_risk_xray",
+            "get_canary_loader_health"
         ]
     })
 
@@ -419,6 +424,9 @@ def get_llms_txt():
 - [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡、均線排列與法人籌碼歷程
 - [Resolve Stock Symbol](/api/v1/predictions/resolve/台積電): 將中英文股票名稱（台積電、聯發科、NVDA、Tesla）模糊解析為標準代號
 - [Watchlist Items](/api/v1/watchlist): 查詢使用者持久化自選股清單（支援公開訪客本地與管理員雲端雙軌）
+- [Portfolio Risk X-Ray](/api/v1/risk/xray): 輸入自選或持股籃子計算雙口徑波動率、階梯式 95%/99% VaR/CVaR、歐拉波動貢獻 (PCV) 與企業行為異常跳空過濾
+- [Turnover-Aware Weight Optimization](/api/v1/risk/optimize-weights): ADMM 非對稱換手率（台股 0.3% 證交稅感知）部位權重優化
+- [Upstream Canary Health Snapshot](/api/v1/stats/canary-health): 查詢 8 大資料源隔離金絲雀三態健康巡檢快照
 - [Live Market Sessions](/api/v1/market/calendar/sessions): 查詢台股、美股與日股即時五態交易時段與東京 11:30–12:30 午休倒數
 - [Signal Alignment](/api/v1/predictions/alignment/2330.TW): 多源量化訊號一致度與共識合成（模型、籌碼、情報、前沿雷達）
 - [Public Stock Dossier](/s/2330.TW): 免登入公開個股量化檔案 (SSR & 結構化 JSON-LD)
@@ -462,7 +470,7 @@ def get_llms_txt():
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 30 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 32 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `screen_quant_stocks`: 多維量化自訂篩選器（方向、時序模型多選、PE估值、潛力門檻、核心量化因子）。
 - `get_triple_resonance_stocks`: 查詢多模型共識與多策略交集焦點股。
@@ -493,6 +501,8 @@ def get_llms_txt():
 - `get_watchlist`: 查詢使用者本地 DuckDB 持久化之自選股清單（Watchlist）與預測潛力摘要。
 - `get_market_live_sessions`: 查詢台美日即時五態交易時段與東京 11:30–12:30 午休倒數。
 - `get_signal_alignment`: 查詢個股多源訊號一致度卡（聚合時序基礎模型、台股籌碼、近30日情報姿態與前沿雷達）。
+- `get_portfolio_risk_xray`: 查詢多市場標的組合風險 X 光片 (雙口徑波動率、階梯式 95%/99% VaR/CVaR、歐拉 PCV 拆解)。
+- `get_canary_loader_health`: 查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv)。
 
 ## Agent & Developer Discovery Standards
 
@@ -647,7 +657,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (30 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`, `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`.
+- Tools (32 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`, `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`, `get_portfolio_risk_xray`, `get_canary_loader_health`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -1039,6 +1049,27 @@ def get_webmcp_bridge():
             execute: async (args) => {
                 return JSON.stringify(await (await fetch('/api/v1/predictions/alignment/' + encodeURIComponent(args.ticker))).json());
             }
+        },
+        {
+            name: 'get_portfolio_risk_xray',
+            description: '查詢多市場標的組合風險 X 光片 (雙口徑波動率、階梯式 VaR/CVaR、歐拉 PCV 拆解)',
+            inputSchema: { type: 'object', properties: { tickers: { type: 'array', items: { type: 'string' } }, window: { type: 'integer' }, as_of_date: { type: 'string' } }, required: ['tickers'] },
+            execute: async (args) => {
+                const body = { tickers: args?.tickers || [], window: args?.window || 252 };
+                if (args?.as_of_date) body.as_of_date = args.as_of_date;
+                const resp = await fetch('/api/v1/risk/xray', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                return JSON.stringify(await resp.json());
+            }
+        },
+        {
+            name: 'get_canary_loader_health',
+            description: '查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv)',
+            inputSchema: { type: 'object', properties: {} },
+            execute: async () => JSON.stringify(await (await fetch('/api/v1/stats/canary-health')).json())
         }
     ];
 
@@ -1064,7 +1095,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 30 大原生 MCP 量化工具與 WebMCP 協議。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 32 大原生 MCP 量化工具與 WebMCP 協議。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"

@@ -90,6 +90,25 @@ class TestMCPTools(unittest.TestCase):
         self.assertIn("alignment_status", res["data"])
         self.assertIn("dimensions", res["data"])
 
+    def test_get_portfolio_risk_xray_tool(self):
+        """驗證 get_portfolio_risk_xray FastMCP 工具執行正常"""
+        from mcp_server import get_portfolio_risk_xray
+        res = get_portfolio_risk_xray(tickers=["2330.TW", "NVDA"], window=60)
+        self.assertIsInstance(res, dict)
+        self.assertTrue(res.get("success"))
+        self.assertIn("data", res)
+        self.assertIn("status", res["data"])
+        self.assertIn("euler_contributions", res["data"])
+
+    def test_get_canary_loader_health_tool(self):
+        """驗證 get_canary_loader_health FastMCP 工具執行正常"""
+        from mcp_server import get_canary_loader_health
+        res = get_canary_loader_health()
+        self.assertIsInstance(res, dict)
+        self.assertTrue(res.get("success"))
+        self.assertIn("data", res)
+        self.assertIn("status", res["data"])
+
 
 if __name__ == "__main__":
     unittest.main()

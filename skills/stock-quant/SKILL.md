@@ -59,7 +59,7 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表 (30 大標準 FastMCP / WebMCP 工具)
+## 4. MCP Tools 快速對照表 (32 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
@@ -93,6 +93,8 @@ graph TD
 | `get_watchlist` | `profile_id` | 查詢使用者本地 DuckDB 持久化之自選股清單（Watchlist），包含個股代號、市場別、備註、自訂排序及最新量化預測潛力摘要 (唯讀安全) |
 | `get_market_live_sessions` | 無 | 查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 即時交易時段五態狀態（pre_market, regular, lunch_break, after_hours, closed），包含東京 11:30–12:30 午休與美股夏冬令感知倒數 (唯讀安全) |
 | `get_signal_alignment` | `ticker` | 查詢指定個股代號之多源量化訊號一致度卡（Signal Alignment），聚合時序基礎模型、台股法人籌碼、近 30 日 Podcast 情報多空姿態與前沿雷達四維度共識 (唯讀安全) |
+| `get_portfolio_risk_xray` | `tickers`, `window`, `as_of_date` | 查詢多市場標的組合風險 X 光片 (雙口徑波動率、階梯式 95%/99% VaR/CVaR、歐拉 PCV 拆解與除權息分割跳空過濾，唯讀安全) |
+| `get_canary_loader_health` | 無 | 查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv，唯讀安全) |
 
 ---
 
@@ -100,11 +102,15 @@ graph TD
 
 - `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
 - `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (30 大原生量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (32 大原生量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
 - `GET /api/v1/watchlist` - 查詢使用者本地 DuckDB 持久化自選股清單與最新預測
 - `POST /api/v1/watchlist` - 新增自選股（需 WATCHLIST_API_KEY 金鑰驗證）
 - `DELETE /api/v1/watchlist/{ticker}` - 刪除自選股（需 WATCHLIST_API_KEY 金鑰驗證）
+- `POST /api/v1/risk/xray` - 查詢自選/持股籃子之多市場組合風險 X 光片 (雙口徑波動率、階梯式 VaR/CVaR、歐拉 PCV)
+- `GET /api/v1/watchlist/risk-xray` - 查詢 DuckDB 自選股組合風險 X 光片
+- `POST /api/v1/risk/optimize-weights` - 計算非對稱換手率（台股 0.3% 證交稅感知）權重配置 (純 NumPy ADMM)
+- `GET /api/v1/stats/canary-health` - 查詢 8 大資料源隔離金絲雀健康快照
 - `GET /api/v1/market/calendar/sessions` - 跨市場即時交易時段五態狀態（含日股午休）
 - `GET /api/v1/predictions/alignment/{ticker}` - 多源量化訊號一致度卡與共識合成
 - `GET /api/v1/alerts` - 查詢量化價位與動態分位數告警清單

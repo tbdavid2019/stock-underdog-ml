@@ -85,6 +85,7 @@ python scripts/verification/verify_predictions_extended.py
 
 ### 環境與安全健檢
 - **check_env.py** - 系統與環境變數健檢工具（支援 `--json` 格式化輸出、必填/選填降級說明、已棄用變數警告、Fail-Closed 金鑰提示與 100% 敏感值遮罩）
+- **check_loader_health.py** - 外部資料源金絲雀健康探測工具 (Wave 2)（支援 `--json`、`--sources`、`--force`、`--timeout`，預設 30 分鐘冷卻保護，隔離探測 8 大來源並原子寫入白名單遮罩快照）
 
 ### 回測相關
 - **backfill_historical.py** - 回填歷史預測的實際價格用於驗證
@@ -101,6 +102,9 @@ python scripts/verification/verify_predictions_extended.py
 ```bash
 # 執行系統與環境變數健檢（支援 --json）
 python scripts/check_env.py
+
+# 執行外部上游資料源金絲雀健康探測（支援 --json / --force）
+python scripts/check_loader_health.py
 
 # 檢查資料庫
 python scripts/check_db_contents.py

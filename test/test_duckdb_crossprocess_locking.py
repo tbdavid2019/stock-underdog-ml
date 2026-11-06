@@ -73,14 +73,14 @@ class TestDuckDBCrossprocessLocking(unittest.TestCase):
         err_queue = mp.Queue()
         res_queue = mp.Queue()
 
-        # 進程 1 持鎖 1.2 秒
-        p1 = mp.Process(target=_hold_lock_worker, args=(self.db_path, 1.2, started, err_queue))
+        # 進程 1 持鎖 2.0 秒
+        p1 = mp.Process(target=_hold_lock_worker, args=(self.db_path, 2.0, started, err_queue))
         p1.start()
 
         self.assertTrue(started.wait(timeout=5.0))
 
-        # 進程 2 嘗試以 0.1 秒逾時獲取，預期 BUSY
-        p2 = mp.Process(target=_try_lock_worker, args=(self.db_path, 0.1, res_queue))
+        # 進程 2 嘗試以 0.05 秒逾時獲取，預期 BUSY
+        p2 = mp.Process(target=_try_lock_worker, args=(self.db_path, 0.05, res_queue))
         p2.start()
         p2.join(timeout=5.0)
         self.assertEqual(res_queue.get(timeout=2.0), "BUSY")

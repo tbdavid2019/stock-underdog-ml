@@ -618,6 +618,17 @@
                     </span>
                 </button>
 
+                <!-- ★ 組合風險 X 光 (Watchlist Risk X-Ray Modal Trigger) -->
+                <button type="button"
+                        @click="openRiskXrayModal()"
+                        class="min-h-[44px] px-3.5 py-2 rounded-xl border text-sm font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm"
+                        :class="isDark ? 'bg-[#1F232B] hover:bg-[#282E39] border-amber-500/40 text-amber-400' : 'bg-[#FFF9E8] hover:bg-[#FFF0CC] border-amber-400 text-[#2B251A]'"
+                        aria-label="開啟投資組合風險 X 光健檢"
+                        title="分析自選組合雙口徑波動率、VaR/CVaR 與風險貢獻">
+                    <span class="material-symbols-outlined text-[18px] text-amber-500">radiology</span>
+                    <span>組合風險 X 光</span>
+                </button>
+
                 <!-- Specific Markets from availableMarketOptions -->
                 <button v-for="opt in availableMarketOptions" :key="opt.id"
                         type="button"
@@ -690,6 +701,28 @@
                     <span>{{ m.display_name || m.name }}</span>
                 </button>
                 <span class="text-xs text-slate-400 self-center pl-1">(勾選多個模型代表需全數一致同向)</span>
+            </div>
+
+            <!-- Model Statistical Significance Badges (Bootstrap Sharpe CI & Rademacher p-value) -->
+            <div v-if="performanceModels && performanceModels.data && performanceModels.data.length > 0"
+                 class="w-full flex flex-wrap items-center gap-2 pt-1 sm:pl-28 text-xs">
+                <span class="text-slate-400 font-bold text-xs flex items-center space-x-1">
+                    <span class="material-symbols-outlined text-[14px] text-amber-500">verified</span>
+                    <span>統計顯著性驗證:</span>
+                </span>
+                <div v-for="pm in performanceModels.data" :key="'sig-' + pm.model_name"
+                     class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg border text-xs transition-colors"
+                     :class="pm.is_statistically_significant ? (isDark ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-900') : (pm.validation_status === 'insufficient_samples' ? (isDark ? 'bg-slate-900 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-300 text-slate-600') : (isDark ? 'bg-amber-950/30 border-amber-800 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'))"
+                     :title="'Bootstrap Sharpe 95% CI: [' + (pm.sharpe_ci_low !== null && pm.sharpe_ci_low !== undefined ? pm.sharpe_ci_low : '—') + ', ' + (pm.sharpe_ci_high !== null && pm.sharpe_ci_high !== undefined ? pm.sharpe_ci_high : '—') + '] · p-value=' + (pm.p_value_return !== null && pm.p_value_return !== undefined ? pm.p_value_return : '—')">
+                    <span class="font-bold">{{ pm.model_name }}:</span>
+                    <span v-if="pm.is_statistically_significant" class="font-black" :class="isDark ? 'text-emerald-400' : 'text-emerald-800'">p &lt; 0.05 顯著</span>
+                    <span v-else-if="pm.validation_status === 'insufficient_samples'" class="text-slate-400">檢定中 / 樣本累積中</span>
+                    <span v-else-if="pm.validation_status === 'degenerate_zero_variance'" class="text-slate-400">零變異</span>
+                    <span v-else :class="isDark ? 'text-amber-400' : 'text-amber-800'">未達顯著 (p={{ pm.p_value_return }})</span>
+                    <span v-if="pm.sharpe_ci_low !== null && pm.sharpe_ci_low !== undefined" class="num-font text-xs text-slate-400">
+                        [CI: {{ pm.sharpe_ci_low }}, {{ pm.sharpe_ci_high }}]
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -860,7 +893,17 @@
             <span v-if="batchTimestamp" class="num-font">運算時間: {{ batchTimestamp }}</span>
             <span v-if="batchStale" class="font-bold text-amber-500">資料需更新</span>
         </div>
-        <div>共篩選出 <strong class="num-font font-bold text-amber-500">{{ displayRecords.length }}</strong> 檔標的</div>
+        <div class="flex items-center space-x-2">
+            <button v-if="tableSortKey"
+                    @click="resetTableSort()"
+                    class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all shadow-sm"
+                    :class="isDark ? 'bg-[#1F232B] text-amber-400 border border-amber-500/40 hover:bg-[#282E39]' : 'bg-[#FFB010] text-[#2B251A] hover:bg-[#e09b0b]'"
+                    title="點擊還原為預設綜合推薦排名">
+                <span>排序中：{{ getSortColumnLabel(tableSortKey) }} {{ tableSortOrder === 'asc' ? '▲' : '▼' }}</span>
+                <span class="opacity-80">· ↺ 還原預設排名</span>
+            </button>
+            <div>共篩選出 <strong class="num-font font-bold text-amber-500">{{ displayRecords.length }}</strong> 檔標的</div>
+        </div>
     </div>
 
     <!-- 3. Loading & Error States -->
@@ -1240,7 +1283,7 @@
                                 title="排序名次">#</th>
                             <th @click="toggleTableSort('ticker')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold whitespace-nowrap text-sm w-36 sm:w-44 select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'ticker' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'ticker' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依股票代號排序">
                                 <div class="flex items-center space-x-1">
                                     <span>標的 / 名稱</span>
@@ -1251,7 +1294,7 @@
                             </th>
                             <th @click="toggleTableSort('index_name')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold text-center whitespace-nowrap text-sm select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'index_name' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'index_name' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依所屬市場排序">
                                 <div class="inline-flex items-center space-x-1">
                                     <span>市場</span>
@@ -1262,7 +1305,7 @@
                             </th>
                             <th @click="toggleTableSort('model_name')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold text-center whitespace-nowrap text-sm select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'model_name' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'model_name' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依策略模型排序">
                                 <div class="inline-flex items-center space-x-1">
                                     <span>策略模型</span>
@@ -1273,7 +1316,7 @@
                             </th>
                             <th @click="toggleTableSort('current_price')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'current_price' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'current_price' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依現價排序">
                                 <div class="inline-flex items-center justify-end space-x-1 w-full">
                                     <span>現價</span>
@@ -1284,7 +1327,7 @@
                             </th>
                             <th @click="toggleTableSort('predicted_price')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'predicted_price' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'predicted_price' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依目標價排序">
                                 <div class="inline-flex items-center justify-end space-x-1 w-full">
                                     <span>目標價 / 均線</span>
@@ -1295,7 +1338,7 @@
                             </th>
                             <th @click="toggleTableSort('potential')"
                                 class="quant-sticky-th z-20 py-3 px-2 font-bold text-right num-font whitespace-nowrap text-sm select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'potential' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'potential' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依潛在預期報酬排序">
                                 <div class="inline-flex items-center justify-end space-x-1 w-full">
                                     <span>潛力</span>
@@ -1306,7 +1349,7 @@
                             </th>
                             <th @click="toggleTableSort('pe')"
                                 class="quant-sticky-th z-20 py-3 px-1.5 font-bold text-center num-font whitespace-nowrap text-xs sm:text-sm w-16 sm:w-20 select-none cursor-pointer transition-colors"
-                                :class="isDark ? 'bg-[#16181D] hover:text-amber-400' : 'bg-[#F4EFE0] hover:text-amber-800'"
+                                :class="isDark ? (tableSortKey === 'pe' ? 'bg-[#1F232B] hover:text-amber-400' : 'bg-[#16181D] hover:text-amber-400') : (tableSortKey === 'pe' ? 'bg-[#EBE1C5] hover:text-amber-800' : 'bg-[#F4EFE0] hover:text-amber-800')"
                                 title="點擊依本益比估值排序">
                                 <div class="inline-flex items-center space-x-1">
                                     <span>PE / PB</span>

@@ -3,8 +3,9 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.5.1';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.5.1';
+import { ApiClient } from '/static/js/api-client.js?v=2.6.0';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.6.0';
+import { fetchPortfolioRiskXray, fetchOptimizedWeights, formatRiskPercent } from '/static/js/risk-xray.js?v=2.6.0';
 
 const { createApp } = Vue;
 
@@ -102,6 +103,16 @@ export const app = createApp({
             alertsModalNewThreshold: null,
             alertsModalApiKey: (typeof localStorage !== 'undefined' ? (localStorage.getItem('sq_watchlist_api_key_v1') || '') : ''),
             alertsListError: '',
+
+            // Quantitative Portfolio Risk X-Ray & Tax-Aware Allocation (Wave 2)
+            showRiskXrayModal: false,
+            riskXrayTickers: [],
+            riskXrayWindow: 252,
+            riskXrayLoading: false,
+            riskXrayError: '',
+            riskXrayData: null,
+            optimizingWeights: false,
+            optimizedResults: null,
 
             strategyOptions: [
                 // 多方看漲策略
@@ -553,15 +564,26 @@ export const app = createApp({
             if (this.tableSortKey && this.tableSortOrder) {
                 const key = this.tableSortKey;
                 const order = this.tableSortOrder === 'asc' ? 1 : -1;
+                const parseSortableNumber = (val) => {
+                    if (val === null || val === undefined || typeof val === 'boolean') return null;
+                    if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+                    const s = String(val).replace(/[$,¥%\s,]/g, '').trim();
+                    if (!s) return null;
+                    const n = Number(s);
+                    return Number.isFinite(n) ? n : null;
+                };
+
                 const sorted = [...filtered];
                 sorted.sort((a, b) => {
                     if (key === 'ticker') {
-                        const sa = (a.ticker || '').toString().trim().toUpperCase();
-                        const sb = (b.ticker || '').toString().trim().toUpperCase();
+                        const rawA = this.formatTicker ? this.formatTicker(a.ticker) : (a.ticker || '');
+                        const rawB = this.formatTicker ? this.formatTicker(b.ticker) : (b.ticker || '');
+                        const sa = (rawA || '').toString().trim();
+                        const sb = (rawB || '').toString().trim();
                         if (!sa && !sb) return 0;
                         if (!sa) return 1;
                         if (!sb) return -1;
-                        return sa.localeCompare(sb) * order;
+                        return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: 'base' }) * order;
                     }
                     if (key === 'model_name') {
                         const sa = this.formatStrategyName ? this.formatStrategyName(a.strategy_type || a.model_name || '') : (a.model_name || '');
@@ -581,18 +603,26 @@ export const app = createApp({
                         if (!sb) return -1;
                         return sa.localeCompare(sb) * order;
                     }
-                    const va = a[key];
-                    const vb = b[key];
-                    const na = (va === null || va === undefined || isNaN(Number(va))) ? null : Number(va);
-                    const nb = (vb === null || vb === undefined || isNaN(Number(vb))) ? null : Number(vb);
+                    if (key === 'predicted_price') {
+                        const na = parseSortableNumber(a.predicted_price) ?? parseSortableNumber(a.ma60) ?? parseSortableNumber(a.ma120);
+                        const nb = parseSortableNumber(b.predicted_price) ?? parseSortableNumber(b.ma60) ?? parseSortableNumber(b.ma120);
+                        if (na === null && nb === null) return 0;
+                        if (na === null) return 1;
+                        if (nb === null) return -1;
+                        return (na - nb) * order;
+                    }
                     if (key === 'pe') {
-                        const badA = na === null || na <= 0;
-                        const badB = nb === null || nb <= 0;
+                        const na = parseSortableNumber(a.pe);
+                        const nb = parseSortableNumber(b.pe);
+                        const badA = (na === null || na <= 0);
+                        const badB = (nb === null || nb <= 0);
                         if (badA && badB) return 0;
                         if (badA) return 1;
                         if (badB) return -1;
                         return (na - nb) * order;
                     }
+                    const na = parseSortableNumber(a[key]);
+                    const nb = parseSortableNumber(b[key]);
                     if (na === null && nb === null) return 0;
                     if (na === null) return 1;
                     if (nb === null) return -1;
@@ -3920,16 +3950,30 @@ export const app = createApp({
 
         // ==================== TABLE DYNAMIC SORTING ====================
         toggleTableSort(key) {
+            const defaultOrder = (key === 'ticker' || key === 'index_name' || key === 'model_name' || key === 'pe') ? 'asc' : 'desc';
             if (this.tableSortKey !== key) {
                 this.tableSortKey = key;
-                this.tableSortOrder = (key === 'potential' || key === 'current_price' || key === 'predicted_price') ? 'desc' : 'asc';
-            } else if (this.tableSortOrder === 'desc') {
-                this.tableSortOrder = 'asc';
-            } else if (this.tableSortOrder === 'asc') {
-                this.tableSortKey = null;
-                this.tableSortOrder = null;
+                this.tableSortOrder = defaultOrder;
             } else {
-                this.tableSortOrder = 'desc';
+                this.tableSortOrder = (this.tableSortOrder === 'desc') ? 'asc' : 'desc';
+            }
+        },
+
+        resetTableSort() {
+            this.tableSortKey = null;
+            this.tableSortOrder = null;
+        },
+
+        getSortColumnLabel(key) {
+            switch (key) {
+                case 'ticker': return '標的';
+                case 'index_name': return '市場';
+                case 'model_name': return '策略模型';
+                case 'current_price': return '現價';
+                case 'predicted_price': return '目標價';
+                case 'potential': return '潛力';
+                case 'pe': return 'PE';
+                default: return key || '';
             }
         },
 
@@ -4070,6 +4114,111 @@ export const app = createApp({
             } finally {
                 this.alertsModalChecking = false;
             }
+        },
+
+        // ==================== QUANT PORTFOLIO RISK X-RAY MODAL ====================
+        openRiskXrayModal(customTickers = null) {
+            this.showRiskXrayModal = true;
+            this.riskXrayError = '';
+            this.optimizedResults = null;
+
+            if (Array.isArray(customTickers) && customTickers.length > 0) {
+                this.riskXrayTickers = [...new Set(customTickers.map(t => String(t).trim().toUpperCase()))];
+            } else if (Array.isArray(this.watchlistTickers) && this.watchlistTickers.length > 0) {
+                this.riskXrayTickers = [...new Set(this.watchlistTickers.map(t => String(t).trim().toUpperCase()))];
+            } else {
+                // If watchlist empty, default to core sample basket
+                this.riskXrayTickers = ['2330.TW', '2317.TW', '2454.TW', '2308.TW', '2382.TW'];
+            }
+
+            this.loadRiskXrayData();
+        },
+
+        closeRiskXrayModal() {
+            this.showRiskXrayModal = false;
+        },
+
+        changeRiskXrayWindow(w) {
+            if (this.riskXrayWindow !== w) {
+                this.riskXrayWindow = w;
+                this.optimizedResults = null;
+                this.loadRiskXrayData();
+            }
+        },
+
+        loadDefaultBasketForRiskXray() {
+            this.riskXrayTickers = ['2330.TW', '2317.TW', '2454.TW', '2308.TW', '2382.TW'];
+            this.loadRiskXrayData();
+        },
+
+        async loadRiskXrayData() {
+            if (!this.riskXrayTickers || this.riskXrayTickers.length === 0) {
+                this.riskXrayData = null;
+                return;
+            }
+
+            this.riskXrayLoading = true;
+            this.riskXrayError = '';
+
+            try {
+                const res = await fetchPortfolioRiskXray({
+                    tickers: this.riskXrayTickers,
+                    window: this.riskXrayWindow,
+                });
+                this.riskXrayData = res;
+            } catch (err) {
+                this.riskXrayError = err.message || '投資組合風險運算異常，請稍後重試';
+                this.riskXrayData = null;
+            } finally {
+                this.riskXrayLoading = false;
+            }
+        },
+
+        async runWeightOptimization() {
+            if (!this.riskXrayData || !this.riskXrayData.available_tickers || this.riskXrayData.available_tickers.length === 0) {
+                this.showToast('無可用標的進行權重優化');
+                return;
+            }
+
+            this.optimizingWeights = true;
+            try {
+                const currentWeights = {};
+                const n = this.riskXrayData.available_tickers.length;
+                for (const tk of this.riskXrayData.available_tickers) {
+                    currentWeights[tk] = (this.riskXrayData.weights && this.riskXrayData.weights[tk] !== undefined)
+                        ? this.riskXrayData.weights[tk]
+                        : (1.0 / n);
+                }
+
+                const adaptiveMaxSingle = Math.min(1.0, Math.max(0.15, Number((1.8 / Math.max(1, n)).toFixed(2))));
+                const res = await fetchOptimizedWeights({
+                    tickers: this.riskXrayData.available_tickers,
+                    currentWeights: currentWeights,
+                    gammaBuy: 0.001425,
+                    gammaSell: 0.004425,
+                    riskAversion: 1.0,
+                    maxSingleWeight: adaptiveMaxSingle,
+                    window: this.riskXrayWindow,
+                });
+                this.optimizedResults = res;
+            } catch (err) {
+                this.showToast('權重優化運算失敗: ' + (err.message || ''));
+            } finally {
+                this.optimizingWeights = false;
+            }
+        },
+
+        getWeightDelta(tk) {
+            if (!this.optimizedResults || !this.optimizedResults.optimal_weights || !this.riskXrayData) return 0;
+            const target = this.optimizedResults.optimal_weights[tk] || 0;
+            const current = (this.riskXrayData.weights && this.riskXrayData.weights[tk] !== undefined)
+                ? this.riskXrayData.weights[tk]
+                : (1.0 / (this.riskXrayData.available_tickers?.length || 1));
+            return target - current;
+        },
+
+        formatRiskPercent(val, decimals = 2) {
+            return formatRiskPercent(val, decimals);
         }
     },
     mounted() {
@@ -4094,6 +4243,7 @@ export const app = createApp({
         this.applyTheme();
         this.parseUrlParams();
         this.fetchAvailableModels();
+        this.loadPerformance();
         this.loadMacro();
         this.loadStats();
         this.loadMarketStats();
@@ -4306,6 +4456,12 @@ const globalFormatNumber = (val, decimals = 2) => {
 };
 app.config.globalProperties.formatNumber = globalFormatNumber;
 window.formatNumber = globalFormatNumber;
+
+const globalFormatRiskPercent = (val, decimals = 2) => {
+    return formatRiskPercent(val, decimals);
+};
+app.config.globalProperties.formatRiskPercent = globalFormatRiskPercent;
+window.formatRiskPercent = globalFormatRiskPercent;
 
 // Auto-mount on load
 app.mount('#app');
