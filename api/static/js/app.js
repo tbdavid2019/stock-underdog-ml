@@ -3,8 +3,8 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.4.68';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.4.68';
+import { ApiClient } from '/static/js/api-client.js?v=2.5.1';
+import { ChartManager } from '/static/js/chart-manager.js?v=2.5.1';
 
 const { createApp } = Vue;
 
@@ -64,9 +64,14 @@ export const app = createApp({
             activeCommandIndex: 0,
             isSearchingCommand: false,
             commandSearchTimer: null,
+            commandAbortController: null,
 
             // Workspace Bar & Recent Tickers (sq_recent_tickers_v1)
             recentTickers: [],
+
+            // Main Table Dynamic Sorting & Sticky Header State
+            tableSortKey: null,
+            tableSortOrder: null,
 
             // Watchlist Dual-Track Reactive State (sq_local_watchlist_v1 + Cloud)
             watchlistTickers: [],
@@ -76,6 +81,7 @@ export const app = createApp({
             // Live Cross-Market Trading Sessions Clock
             marketSessions: null,
             marketSessionsTimer: null,
+            marketSessionsError: false,
 
             // Quant Price Alerts & Alignment Drawer State (Phase 3)
             drawerSignalAlignment: null,
@@ -84,6 +90,18 @@ export const app = createApp({
             newAlertTargetPrice: null,
             newAlertConditionType: 'above_price',
             newAlertDirection: 'bullish',
+
+            // Global Alerts Center Modal State
+            showAlertsModal: false,
+            alertsModalList: [],
+            alertsModalLoading: false,
+            alertsModalCreating: false,
+            alertsModalChecking: false,
+            alertsModalNewTicker: '',
+            alertsModalNewRule: 'above_price',
+            alertsModalNewThreshold: null,
+            alertsModalApiKey: (typeof localStorage !== 'undefined' ? (localStorage.getItem('sq_watchlist_api_key_v1') || '') : ''),
+            alertsListError: '',
 
             strategyOptions: [
                 // 多方看漲策略
@@ -457,7 +475,7 @@ export const app = createApp({
             }
 
             const seenTickers = new Set();
-            return list.filter(r => {
+            const filtered = list.filter(r => {
                 const tk = r.ticker;
                 if (!tk || seenTickers.has(tk)) return false;
 
@@ -530,6 +548,60 @@ export const app = createApp({
                 seenTickers.add(tk);
                 return true;
             });
+
+            // 10. 動態欄位排序 (Dynamic Table Sorting)
+            if (this.tableSortKey && this.tableSortOrder) {
+                const key = this.tableSortKey;
+                const order = this.tableSortOrder === 'asc' ? 1 : -1;
+                const sorted = [...filtered];
+                sorted.sort((a, b) => {
+                    if (key === 'ticker') {
+                        const sa = (a.ticker || '').toString().trim().toUpperCase();
+                        const sb = (b.ticker || '').toString().trim().toUpperCase();
+                        if (!sa && !sb) return 0;
+                        if (!sa) return 1;
+                        if (!sb) return -1;
+                        return sa.localeCompare(sb) * order;
+                    }
+                    if (key === 'model_name') {
+                        const sa = this.formatStrategyName ? this.formatStrategyName(a.strategy_type || a.model_name || '') : (a.model_name || '');
+                        const sb = this.formatStrategyName ? this.formatStrategyName(b.strategy_type || b.model_name || '') : (b.model_name || '');
+                        const ssa = (sa || '').toString().trim();
+                        const ssb = (sb || '').toString().trim();
+                        if (!ssa && !ssb) return 0;
+                        if (!ssa) return 1;
+                        if (!ssb) return -1;
+                        return ssa.localeCompare(ssb) * order;
+                    }
+                    if (key === 'index_name') {
+                        const sa = (a.index_name || '').toString().trim();
+                        const sb = (b.index_name || '').toString().trim();
+                        if (!sa && !sb) return 0;
+                        if (!sa) return 1;
+                        if (!sb) return -1;
+                        return sa.localeCompare(sb) * order;
+                    }
+                    const va = a[key];
+                    const vb = b[key];
+                    const na = (va === null || va === undefined || isNaN(Number(va))) ? null : Number(va);
+                    const nb = (vb === null || vb === undefined || isNaN(Number(vb))) ? null : Number(vb);
+                    if (key === 'pe') {
+                        const badA = na === null || na <= 0;
+                        const badB = nb === null || nb <= 0;
+                        if (badA && badB) return 0;
+                        if (badA) return 1;
+                        if (badB) return -1;
+                        return (na - nb) * order;
+                    }
+                    if (na === null && nb === null) return 0;
+                    if (na === null) return 1;
+                    if (nb === null) return -1;
+                    return (na - nb) * order;
+                });
+                return sorted;
+            }
+
+            return filtered;
         },
         uniqueDiscoveryCandidates() {
             return this.deduplicateCandidates(this.discoveryCandidates || []);
@@ -970,7 +1042,7 @@ export const app = createApp({
             if (this.performanceRevision.trim()) params.set('model_revision', this.performanceRevision.trim());
             return params;
         },
-        async loadPerformance() {
+        async loadPerformance(retryOn503 = true) {
             const requestId = ++this.performanceRequestId;
             this.performanceLoading = true;
             this.performanceError = '';
@@ -980,6 +1052,11 @@ export const app = createApp({
                     fetch(`/api/v1/performance/stocks?${params}`),
                     fetch(`/api/v1/performance/models?${params}`)
                 ]);
+                if (retryOn503 && (stocks.status === 503 || models.status === 503)) {
+                    await new Promise(r => setTimeout(r, 600));
+                    if (requestId !== this.performanceRequestId) return;
+                    return await this.loadPerformance(false);
+                }
                 if (!stocks.ok || !models.ok) throw new Error('目前無法讀取已驗證的預測資料');
                 const [stockData, modelData] = await Promise.all([stocks.json(), models.json()]);
                 if (requestId !== this.performanceRequestId) return;
@@ -995,13 +1072,18 @@ export const app = createApp({
                 if (requestId === this.performanceRequestId) this.performanceLoading = false;
             }
         },
-        async loadHistoryPerformance(ticker, requestId) {
+        async loadHistoryPerformance(ticker, requestId, retryOn503 = true) {
             this.historyPerformance = null;
             this.historyPerformanceError = '';
             const market = /\.(TW|TWO)$/i.test(ticker) || /^\d+$/.test(ticker) ? 'TW'
                 : (/\.T$/i.test(ticker) ? 'JP' : 'US');
             try {
-                const response = await fetch(`/api/v1/performance/tickers/${encodeURIComponent(ticker)}?${this.performanceParams(market)}`);
+                let response = await fetch(`/api/v1/performance/tickers/${encodeURIComponent(ticker)}?${this.performanceParams(market)}`);
+                if (retryOn503 && response.status === 503) {
+                    await new Promise(r => setTimeout(r, 600));
+                    if (requestId !== this.historyRequestId) return;
+                    response = await fetch(`/api/v1/performance/tickers/${encodeURIComponent(ticker)}?${this.performanceParams(market)}`);
+                }
                 if (!response.ok) throw new Error('performance unavailable');
                 const data = await response.json();
                 if (requestId === this.historyRequestId) this.historyPerformance = data;
@@ -2598,6 +2680,7 @@ export const app = createApp({
             if (!tags) return [];
             const list = Array.isArray(tags) ? tags : String(tags).split('|').map(t => t.trim()).filter(t => t.length > 0);
             const seen = new Set();
+            const familySeen = new Set();
             const result = [];
             for (const rawTag of list) {
                 let cleanLabel = this.stripEmojis(rawTag)
@@ -2622,8 +2705,33 @@ export const app = createApp({
                     continue;
                 }
 
+                // 統一模型名稱大小寫與關鍵詞語意
+                cleanLabel = cleanLabel
+                    .replace(/MOIRAI(?:-?2)?/gi, 'MOIRAI-2')
+                    .replace(/timesfm/gi, 'TimesFM')
+                    .replace(/timestral/gi, 'Timestral')
+                    .replace(/看漲/g, '看多')
+                    .replace(/看跌/g, '看空')
+                    .replace(/高風報比|風報比優/g, '高盈虧比');
+
                 if (!cleanLabel) continue;
                 if (seen.has(cleanLabel)) continue;
+
+                // 語意家族去重（每個家族最多 1 個）
+                let family = null;
+                if (/TimesFM/i.test(cleanLabel)) family = 'family_timesfm';
+                else if (/Timestral/i.test(cleanLabel)) family = 'family_timestral';
+                else if (/MOIRAI-2/i.test(cleanLabel)) family = 'family_moirai';
+                else if (/主流板塊/.test(cleanLabel)) family = 'family_sector';
+                else if (/偏多看好|偏多佈局|強勢買進|偏空保守|建議觀察|建議避開|中立觀望/.test(cleanLabel)) family = 'family_stance';
+                else if (/高盈虧比/.test(cleanLabel)) family = 'family_risk_reward';
+                else if (/土洋合買|外資投信合買|法人合買/.test(cleanLabel)) family = 'family_inst_both';
+
+                if (family) {
+                    if (familySeen.has(family)) continue;
+                    familySeen.add(family);
+                }
+
                 seen.add(cleanLabel);
 
                 let icon = null;
@@ -2684,7 +2792,22 @@ export const app = createApp({
                     tooltip: tooltip
                 });
             }
-            return result;
+
+            // Semantic post-filtering:
+            // 1. If specific model bullish tag exists, filter out generic '看多' / '多方看漲'
+            const hasModelBullish = result.some(item => /(?:TimesFM|Timestral|MOIRAI-2)看多/i.test(item.label));
+            // 2. If '土洋合買' / '法人合買' / '外資投信合買' exists, filter out generic '法人籌碼'
+            const hasInstBoth = result.some(item => /土洋合買|法人合買|外資投信合買/.test(item.label));
+
+            return result.filter(item => {
+                if (hasModelBullish && (item.label === '看多' || item.label === '多方看漲')) {
+                    return false;
+                }
+                if (hasInstBoth && (item.label === '法人籌碼' || item.label === '法人買超')) {
+                    return false;
+                }
+                return true;
+            });
         },
         getTagClass(tag) {
             if (!tag) return '';
@@ -3494,23 +3617,39 @@ export const app = createApp({
         openStockDrawer(ticker) {
             if (!ticker) return;
             this.addRecentTicker(ticker);
-            if (this.activeTab !== 'dashboard') {
-                this.activeTab = 'dashboard';
-                this.updateUrl();
+            const norm = this.normalizeTicker(ticker);
+            const inCurrentBatch = (this.displayRecords || []).some(r => this.normalizeTicker(r.ticker) === norm);
+
+            if (inCurrentBatch) {
+                if (this.activeTab !== 'dashboard') {
+                    this.activeTab = 'dashboard';
+                    this.updateUrl();
+                }
+                this.$nextTick(() => {
+                    this.toggleRowDrawer(ticker);
+                    const rowEl = document.getElementById(`row-${norm}`);
+                    if (rowEl) {
+                        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            } else {
+                this.searchTickerHistory(ticker);
             }
-            this.$nextTick(() => {
-                this.toggleRowDrawer(ticker);
-            });
         },
 
         // ==================== MARKET LIVE SESSIONS CLOCK ====================
         async loadMarketSessions() {
             try {
                 const res = await ApiClient.getMarketLiveSessions();
-                if (res && res.success && res.data) {
-                    this.marketSessions = res.data;
+                const payload = (res && res.data && res.data.sessions) ? res.data : res;
+                if (payload && payload.sessions) {
+                    this.marketSessions = payload;
+                    this.marketSessionsError = false;
+                } else {
+                    this.marketSessionsError = true;
                 }
             } catch (e) {
+                this.marketSessionsError = true;
                 console.debug('Failed to load market live sessions:', e.message);
             }
         },
@@ -3569,6 +3708,10 @@ export const app = createApp({
             if (this.commandSearchTimer) {
                 clearTimeout(this.commandSearchTimer);
             }
+            if (this.commandAbortController) {
+                this.commandAbortController.abort();
+                this.commandAbortController = null;
+            }
             const q = this.commandQuery.trim();
             if (!q) {
                 this.isSearchingCommand = false;
@@ -3578,15 +3721,21 @@ export const app = createApp({
 
             this.commandSearchTimer = setTimeout(async () => {
                 this.isSearchingCommand = true;
+                const controller = new AbortController();
+                this.commandAbortController = controller;
                 try {
                     const matched = [];
                     const qUpper = q.toUpperCase();
+                    const seen = new Set();
+
+                    // 1. In-memory dashboard records match
                     if (this.records && this.records.length > 0) {
                         for (const r of this.records) {
                             if (!r.ticker) continue;
                             const tUpper = r.ticker.toUpperCase();
                             const nUpper = String(r.name || '').toUpperCase();
                             if (tUpper.includes(qUpper) || nUpper.includes(qUpper)) {
+                                seen.add(r.ticker);
                                 matched.push({
                                     ticker: r.ticker,
                                     name: r.name || '',
@@ -3594,35 +3743,80 @@ export const app = createApp({
                                     potential: r.potential
                                 });
                             }
-                            if (matched.length >= 10) break;
                         }
                     }
 
-                    if (q.length >= 2 && matched.length < 5) {
-                        try {
-                            const res = await ApiClient.resolveTicker(q);
-                            if (res && res.success && res.data && res.data.ticker) {
-                                const found = res.data;
-                                if (!matched.some(m => m.ticker === found.ticker)) {
-                                    matched.unshift({
-                                        ticker: found.ticker,
-                                        name: found.name || found.company_name || '',
-                                        market: found.market || 'TW',
-                                        potential: null
+                    // 2. Query DuckDB backend autocomplete
+                    try {
+                        const autoRes = await ApiClient.autocompleteTickers(q, 15, controller.signal);
+                        if (autoRes && Array.isArray(autoRes.results)) {
+                            for (const item of autoRes.results) {
+                                if (!item.ticker) continue;
+                                if (!seen.has(item.ticker)) {
+                                    seen.add(item.ticker);
+                                    matched.push({
+                                        ticker: item.ticker,
+                                        name: item.name || '',
+                                        market: item.market || 'TW',
+                                        potential: item.potential !== undefined ? item.potential : null
                                     });
+                                } else {
+                                    const existing = matched.find(m => m.ticker === item.ticker);
+                                    if (existing) {
+                                        if (!existing.name && item.name) existing.name = item.name;
+                                        if (existing.potential === null && item.potential !== undefined) existing.potential = item.potential;
+                                    }
                                 }
                             }
-                        } catch (e) {
-                            console.debug('Resolve API fallback error:', e);
+                        }
+                    } catch (e) {
+                        if (e.name !== 'AbortError') {
+                            console.debug('Autocomplete search error:', e);
                         }
                     }
 
-                    this.commandResults = matched;
-                    this.activeCommandIndex = 0;
+                    // Fallback to resolveTicker if still empty and length >= 2
+                    if (matched.length === 0 && q.length >= 2) {
+                        try {
+                            const res = await ApiClient.resolveTicker(q);
+                            if (res && res.ticker && !seen.has(res.ticker)) {
+                                matched.push({
+                                    ticker: res.ticker,
+                                    name: res.name || res.company_name || '',
+                                    market: res.market || 'TW',
+                                    potential: null
+                                });
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+
+                    // Relevance scoring: exact > ticker prefix > name prefix > ticker contains > name contains
+                    const getScore = (item) => {
+                        const tUpper = (item.ticker || '').toUpperCase();
+                        const tBase = tUpper.split('.')[0];
+                        const nUpper = String(item.name || '').toUpperCase();
+                        if (tUpper === qUpper || tBase === qUpper || nUpper === qUpper) return 1;
+                        if (tUpper.startsWith(qUpper)) return 2;
+                        if (nUpper.startsWith(qUpper)) return 3;
+                        if (tUpper.includes(qUpper)) return 4;
+                        if (nUpper.includes(qUpper)) return 5;
+                        return 6;
+                    };
+                    matched.sort((a, b) => getScore(a) - getScore(b));
+
+                    if (!controller.signal.aborted) {
+                        this.commandResults = matched.slice(0, 12);
+                        this.activeCommandIndex = 0;
+                    }
                 } finally {
-                    this.isSearchingCommand = false;
+                    if (this.commandAbortController === controller) {
+                        this.isSearchingCommand = false;
+                        this.commandAbortController = null;
+                    }
                 }
-            }, 180);
+            }, 120);
         },
 
         selectNextCommand() {
@@ -3680,7 +3874,7 @@ export const app = createApp({
                 const res = await ApiClient.getAlerts();
                 if (res && res.alerts && Array.isArray(res.alerts)) {
                     const norm = this.normalizeTicker(ticker);
-                    this.drawerAlerts = res.alerts.filter(a => this.normalizeTicker(a.ticker) === norm);
+                    this.drawerAlerts = res.alerts.filter(a => this.normalizeTicker(a.canonical_ticker || a.ticker) === norm);
                 }
             } catch (e) {
                 console.debug('Failed to load price alerts:', e.message);
@@ -3722,9 +3916,181 @@ export const app = createApp({
             } catch (e) {
                 this.showToast(`刪除告警失敗：${e.message}`);
             }
+        },
+
+        // ==================== TABLE DYNAMIC SORTING ====================
+        toggleTableSort(key) {
+            if (this.tableSortKey !== key) {
+                this.tableSortKey = key;
+                this.tableSortOrder = (key === 'potential' || key === 'current_price' || key === 'predicted_price') ? 'desc' : 'asc';
+            } else if (this.tableSortOrder === 'desc') {
+                this.tableSortOrder = 'asc';
+            } else if (this.tableSortOrder === 'asc') {
+                this.tableSortKey = null;
+                this.tableSortOrder = null;
+            } else {
+                this.tableSortOrder = 'desc';
+            }
+        },
+
+        openRowAlerts(ticker) {
+            if (!ticker) return;
+            if (this.expandedDrawerTicker !== ticker) {
+                this.toggleRowDrawer(ticker, 'alerts');
+            } else {
+                this.drawerActiveSubTab = 'alerts';
+            }
+            this.loadDrawerAlerts(ticker);
+        },
+
+        // ==================== GLOBAL ALERTS CENTER MODAL ====================
+        openAlertsCenterModal() {
+            this.showAlertsModal = true;
+            this.alertsModalApiKey = localStorage.getItem('sq_watchlist_api_key_v1') || '';
+            this.loadAlertsModalList();
+        },
+
+        closeAlertsCenterModal() {
+            this.showAlertsModal = false;
+        },
+
+        onAlertsApiKeyChange() {
+            const val = (this.alertsModalApiKey || '').trim();
+            if (val) {
+                localStorage.setItem('sq_watchlist_api_key_v1', val);
+            } else {
+                localStorage.removeItem('sq_watchlist_api_key_v1');
+            }
+        },
+
+        getAlertRuleLabel(rule) {
+            switch (rule) {
+                case 'above_price': return '突破目標價';
+                case 'below_price': return '跌破警戒價';
+                case 'below_p10': return '跌破 P10 支撐';
+                case 'above_p50': return '突破 P50 目標價';
+                case 'pullback_ma60': return '回測季線支撐';
+                case 'pullback_ma120': return '回測半年線支撐';
+                default: return rule || '自訂規則';
+            }
+        },
+
+        formatAlertTime(ts) {
+            if (!ts) return '';
+            try {
+                const d = new Date(ts);
+                return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            } catch (_) {
+                return String(ts);
+            }
+        },
+
+        async loadAlertsModalList(silent = false) {
+            if (!silent) this.alertsModalLoading = true;
+            try {
+                const res = await ApiClient.getAlerts(this.alertsModalApiKey || null);
+                if (res && res.alerts && Array.isArray(res.alerts)) {
+                    this.alertsModalList = res.alerts;
+                    this.alertsListError = '';
+                } else {
+                    this.alertsModalList = [];
+                    this.alertsListError = '';
+                }
+            } catch (e) {
+                this.alertsModalList = [];
+                if (e.status === 401) {
+                    this.alertsListError = '查詢與管理告警需先於上方輸入有效的管理金鑰 (WATCHLIST_API_KEY)';
+                } else {
+                    this.alertsListError = '載入告警失敗：' + (e.message || '未知錯誤');
+                    if (!silent) {
+                        this.showToast(this.alertsListError);
+                    }
+                }
+            } finally {
+                if (!silent) this.alertsModalLoading = false;
+            }
+        },
+
+        async createAlertFromModal() {
+            const ticker = (this.alertsModalNewTicker || '').trim().toUpperCase();
+            if (!ticker) {
+                this.showToast('請輸入股票代號 (如 2330.TW)');
+                return;
+            }
+            const rule = this.alertsModalNewRule || 'above_price';
+            const isStatic = (rule === 'above_price' || rule === 'below_price');
+            if (isStatic && (!this.alertsModalNewThreshold || isNaN(this.alertsModalNewThreshold))) {
+                this.showToast('突破或跌破靜態價位告警請輸入門檻價格');
+                return;
+            }
+            if (this.alertsModalApiKey) {
+                localStorage.setItem('sq_watchlist_api_key_v1', this.alertsModalApiKey.trim());
+            }
+            this.alertsModalCreating = true;
+            try {
+                const payload = {
+                    ticker: this.normalizeTicker(ticker),
+                    rule_type: rule,
+                    threshold_value: this.alertsModalNewThreshold ? Number(this.alertsModalNewThreshold) : null,
+                    reference_model: 'auto',
+                    cooldown_minutes: 720
+                };
+                await ApiClient.createAlert(payload, this.alertsModalApiKey || null);
+                this.showToast(`已建立 ${ticker} 到價告警！`);
+                this.alertsModalNewTicker = '';
+                this.alertsModalNewThreshold = null;
+                await this.loadAlertsModalList();
+            } catch (e) {
+                this.showToast(`建立告警失敗：${e.message}`);
+            } finally {
+                this.alertsModalCreating = false;
+            }
+        },
+
+        async deleteAlertFromModal(alertId) {
+            if (!alertId) return;
+            try {
+                await ApiClient.deleteAlert(alertId, this.alertsModalApiKey || null);
+                this.showToast('已刪除到價告警');
+                await this.loadAlertsModalList();
+            } catch (e) {
+                this.showToast(`刪除告警失敗：${e.message}`);
+            }
+        },
+
+        async triggerAlertsCheckNow() {
+            this.alertsModalChecking = true;
+            try {
+                const res = await ApiClient.checkAlerts(this.alertsModalApiKey || null);
+                const count = res?.result?.triggered ?? res?.result?.triggered_count ?? 0;
+                this.showToast(`巡檢完成！共檢查告警並觸發 ${count} 筆通知`);
+                await this.loadAlertsModalList();
+            } catch (e) {
+                this.showToast(`告警巡檢失敗：${e.message}`);
+            } finally {
+                this.alertsModalChecking = false;
+            }
         }
     },
     mounted() {
+        // Dynamic Header Height calculation for Sticky Table Header
+        const updateHeaderHeight = () => {
+            const headerEl = document.querySelector('header');
+            if (headerEl) {
+                const h = headerEl.offsetHeight || 80;
+                document.documentElement.style.setProperty('--app-header-height', `${h}px`);
+            }
+        };
+        updateHeaderHeight();
+        window.addEventListener('resize', updateHeaderHeight);
+        const headerEl = document.querySelector('header');
+        if (headerEl && window.ResizeObserver) {
+            new ResizeObserver(() => updateHeaderHeight()).observe(headerEl);
+        }
+
+        // Preload alerts count silently
+        this.loadAlertsModalList(true);
+
         this.applyTheme();
         this.parseUrlParams();
         this.fetchAvailableModels();

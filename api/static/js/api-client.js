@@ -5,11 +5,22 @@
 
 export async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
+    let timedOut = false;
+    const id = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+    }, timeoutMs);
     try {
+        if (options.signal) {
+            if (options.signal.aborted) {
+                clearTimeout(id);
+                throw options.signal.reason || new DOMException('The user aborted a request.', 'AbortError');
+            }
+            options.signal.addEventListener('abort', () => controller.abort(options.signal.reason));
+        }
         const response = await fetch(url, {
             ...options,
-            signal: options.signal || controller.signal
+            signal: controller.signal
         });
         clearTimeout(id);
         if (!response.ok) {
@@ -30,6 +41,9 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
     } catch (err) {
         clearTimeout(id);
         if (err.name === 'AbortError') {
+            if (!timedOut && options.signal && options.signal.aborted) {
+                throw err;
+            }
             const timeoutError = new Error(`請求逾時 (${timeoutMs}ms)`);
             timeoutError.status = 408;
             throw timeoutError;
@@ -577,6 +591,18 @@ export const ApiClient = {
     },
 
     /**
+     * Autocomplete stock tickers and names (Taiwan & US markets)
+     */
+    async autocompleteTickers(query, limit = 12, signal = null) {
+        if (!query || !query.trim()) {
+            return { query: query || '', results: [] };
+        }
+        const params = new URLSearchParams({ q: query.trim(), limit: String(limit) });
+        const res = await fetchWithTimeout(`/api/v1/predictions/autocomplete?${params.toString()}`, { signal });
+        return await res.json();
+    },
+
+    /**
      * Get Signal Alignment score & factor breakdown
      */
     async getSignalAlignment(ticker) {
@@ -591,16 +617,8 @@ export const ApiClient = {
         const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
         const headers = {};
         if (key) headers['X-API-Key'] = key;
-        try {
-            const res = await fetchWithTimeout('/api/v1/alerts', { headers });
-            return await res.json();
-        } catch (err) {
-            if (err.status === 401) {
-                // Anonymous visitors gracefully treat cloud alerts as empty list
-                return { success: true, alerts: [], count: 0 };
-            }
-            throw err;
-        }
+        const res = await fetchWithTimeout('/api/v1/alerts', { headers });
+        return await res.json();
     },
 
     /**
@@ -627,6 +645,20 @@ export const ApiClient = {
         if (key) headers['X-API-Key'] = key;
         const res = await fetchWithTimeout(`/api/v1/alerts/${encodeURIComponent(alertId)}`, {
             method: 'DELETE',
+            headers
+        });
+        return await res.json();
+    },
+
+    /**
+     * Trigger evaluation and dispatch of pending quant price alerts
+     */
+    async checkAlerts(apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = { 'Content-Type': 'application/json' };
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout('/api/v1/alerts/check', {
+            method: 'POST',
             headers
         });
         return await res.json();

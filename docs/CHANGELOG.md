@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-11-06 (v2.5.1)
+
+### Operator Suite Acceptance Fixes & Quant UX Enhancements (實機線上驗收緊急修補與操盤體驗強化)
+
+- **修復 1：跨市場即時鐘狀態卡死與 ES Module 快取汙染根治**：
+  - `core/market_calendar.py`：回傳結構全面相容 `is_open`、`lunch_break`、`pre_market`、`status_label` 與 `countdown_formatted`。
+  - `api/main.py`：對 `/static/` 資源提供 `Cache-Control: public, max-age=0, must-revalidate`，終結瀏覽器強行快取舊版 ES Module 問題。
+  - `api/static/js/app.js`：更新內部 import 指紋為 `?v=2.5.1`，解構時兼顧頂層與 `.data` 物件結構，並具備離線徽章降級防護。
+- **修復 2：⌘K 標的即時自動補全與未在當日榜單標的智能導航**：
+  - `data/duckdb_manager.py` 與 `api/routes/predictions.py`：新增 `GET /api/v1/predictions/autocomplete`，支援台股與美股全市場代號與中英文名稱前綴與子字串相關度檢索。
+  - `api/static/js/app.js`：指令面板支援 1 字元起即時補全、120ms 防抖與 `AbortController` 請求防幽靈。當搜尋標的未在當前榜單時，自動優雅切換至該標的歷史走勢與量化共振視圖。
+- **修復 3：策略標籤語意家族重複去重與操作欄滾動完全不透光**：
+  - `parseTags`：統一 TimesFM、Timestral、MOIRAI-2 等模型大小寫與「看漲/看多」、「看跌/看空」、「高風報比/高盈虧比」標準語彙，同家族標籤保證至多 1 個，徹底掃除視覺雜訊。
+  - 主表右側固定操作欄改為 100% 不透明純色背景（曜石黑深色 `#16181D` / 復古米紙淺色 `#FFFDF7` 與 `#FFF3CC`），徹底解決橫向滾動時底層文字透光干擾。
+- **修復 4：主表移除「5日籌碼 (張)」欄位，精簡桌面空間**：
+  - 桌面主表移除籌碼欄位，讓出寶貴空間給「策略標籤」展開完整展示，抽屜欄位跨度 (`colspan`) 同步由 11 縮為 10。
+- **修復 5：DuckDB 跨進程鎖/配置衝突根治與前端 503 靜默自動重試**：
+  - `api/routes/market.py` 與 `data/podcast_service.py`：純查詢端點全面強制 `read_only=True`，徹底根除同進程不同連線配置的鎖爭奪。
+  - `core/duckdb_lock.py`：新增 `is_current_thread_holding_write_lock()`。
+  - `data/forecast_store.py`：`_connect()` 增加指數退避重試與 `DuckDBBusyError` 治理。
+  - `app.js`：成績榜與歷史查詢遇到 503 錯誤時自動延遲 600ms 靜默重試一次。
+- **追加 A：量化到價告警雙入口顯性化**：
+  - 頂部導覽列新增 `🔔 告警` 按鈕與已啟用告警計數徽章，點擊彈出全域「量化到價告警中心」Modal，支援新增規則、查看已建立規則、手動輸入 `WATCHLIST_API_KEY` 與一鍵巡檢測試。
+  - 主表每列右側操作欄新增 `🔔` 圖示快捷按鈕，一鍵直達該標的之告警子分頁。
+- **追加 B：桌面主表吸頂置頂 (Sticky Table Header)**：
+  - 透過動態計算 `--app-header-height`，配合 `[overflow-x:clip]` 與每列 `<th>` 純色吸頂，徹底解決桌面滾動時表頭無法吸頂之長年瀏覽痛點。
+- **追加 C：主表全欄位動態點擊排序**：
+  - 標的代號、所屬市場、策略模型、現價、目標價、潛力空間、PE/PB 均支援點擊三態動態排序（升冪/降冪/還原），數值空值始終沉底。
+
+---
+
 ## 2026-11-06 (v2.5.0)
 
 ### OpenStock-Inspired Operator Suite (Wave 1 Complete Release)

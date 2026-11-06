@@ -2154,6 +2154,109 @@ class DuckDBManager:
             return _cache_and_return({"query": query, "ticker": normalized, "name": None, "matched_by": "ticker"})
         return _cache_and_return(None)
 
+    def autocomplete_tickers(self, query: str, limit: int = 12) -> List[Dict[str, Any]]:
+        """
+        Cross-market ticker autocomplete search for Command Palette (⌘K) and search bars.
+        Matches tickers, local symbols, and Chinese/English company names.
+        Returns deduplicated, relevance-sorted list of tickers.
+        """
+        clean_q = (query or "").strip()[:64]
+        if not clean_q:
+            return []
+
+        limit = max(1, min(limit, 50))
+        q_upper = clean_q.upper()
+        like_upper = f"%{q_upper}%"
+        prefix_upper = f"{q_upper}%"
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                rows = con.execute("""
+                    WITH latest_preds AS (
+                        SELECT ticker, current_price, potential,
+                               ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+                        FROM predictions
+                        WHERE predicted_price IS NOT NULL OR current_price IS NOT NULL
+                    ),
+                    tw_names AS (
+                        SELECT ticker, name,
+                               ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) as rn
+                        FROM tw_daily_bars
+                        WHERE name IS NOT NULL AND name != ''
+                    ),
+                    all_symbols AS (
+                        SELECT normalized_symbol as ticker,
+                               COALESCE(name_local, name_en) as name,
+                               market
+                        FROM market_universe
+                        UNION
+                        SELECT ticker,
+                               name,
+                               CASE WHEN ticker LIKE '%.TW' OR ticker LIKE '%.TWO' THEN 'TW'
+                                    WHEN ticker LIKE '%.T' THEN 'JP'
+                                    WHEN ticker LIKE '%.HK' THEN 'HK'
+                                    ELSE 'US' END as market
+                        FROM tw_names WHERE rn = 1
+                        UNION
+                        SELECT ticker,
+                               NULL as name,
+                               CASE WHEN ticker LIKE '%.TW' OR ticker LIKE '%.TWO' THEN 'TW'
+                                    WHEN ticker LIKE '%.T' THEN 'JP'
+                                    WHEN ticker LIKE '%.HK' THEN 'HK'
+                                    ELSE 'US' END as market
+                        FROM latest_preds
+                    )
+                    SELECT s.ticker,
+                           COALESCE(MAX(tn.name), MAX(s.name), s.ticker) as name,
+                           MAX(s.market) as market,
+                           MAX(p.current_price) as current_price,
+                           MAX(p.potential) as potential,
+                           MIN(CASE
+                               WHEN UPPER(s.ticker) = ? OR SPLIT_PART(s.ticker, '.', 1) = ? THEN 1
+                               WHEN UPPER(s.ticker) LIKE ? THEN 2
+                               WHEN UPPER(s.ticker) LIKE ? THEN 3
+                               WHEN UPPER(COALESCE(tn.name, s.name, '')) LIKE ? THEN 4
+                               ELSE 5
+                           END) as rank_score
+                    FROM all_symbols s
+                    LEFT JOIN latest_preds p ON s.ticker = p.ticker AND p.rn = 1
+                    LEFT JOIN tw_names tn ON s.ticker = tn.ticker AND tn.rn = 1
+                    WHERE UPPER(s.ticker) LIKE ?
+                       OR UPPER(COALESCE(tn.name, s.name, '')) LIKE ?
+                    GROUP BY s.ticker
+                    ORDER BY rank_score ASC, (MAX(p.current_price) IS NOT NULL) DESC, MAX(s.market) = 'TW' DESC, s.ticker ASC
+                    LIMIT ?
+                """, [
+                    q_upper, q_upper,
+                    f"{q_upper}.%",
+                    prefix_upper,
+                    prefix_upper,
+                    like_upper,
+                    like_upper,
+                    limit
+                ]).fetchall()
+
+                results = []
+                seen = set()
+                for r in rows:
+                    tk = str(r[0])
+                    if tk in seen:
+                        continue
+                    seen.add(tk)
+                    results.append({
+                        "ticker": tk,
+                        "name": r[1] or tk,
+                        "market": r[2] or ("TW" if tk.endswith(".TW") else "US"),
+                        "current_price": float(r[3]) if r[3] is not None else None,
+                        "potential": round(float(r[4]), 2) if r[4] is not None else None,
+                    })
+                return results
+        except DuckDBBusyError:
+            raise
+        except Exception as exc:
+            logger.warning("autocomplete_tickers 查詢異常: %s", exc)
+            return []
+
     def get_db_stats(self) -> Dict[str, Any]:
         """取得 DuckDB 全局時序庫統計資訊 (已排除內部路徑與測試資料)"""
         try:
@@ -5164,6 +5267,7 @@ class DuckDBManager:
             "alert_id": alert_id,
             "profile_id": profile_id,
             "canonical_ticker": canonical,
+            "ticker": canonical,
             "rule_type": rule_type,
             "threshold_value": threshold_val,
             "reference_model": reference_model,
@@ -5193,6 +5297,7 @@ class DuckDBManager:
                     "alert_id": r[0],
                     "profile_id": r[1],
                     "canonical_ticker": r[2],
+                    "ticker": r[2],
                     "rule_type": r[3],
                     "threshold_value": r[4],
                     "reference_model": r[5],

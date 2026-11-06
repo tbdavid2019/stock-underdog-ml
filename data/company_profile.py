@@ -406,7 +406,7 @@ class CompanyProfileService:
             return None
         try:
             if hasattr(manager, "_get_connection"):
-                with manager._get_connection() as con:
+                with manager._get_connection(read_only=True) as con:
                     # 先查 market_universe 完整 Symbol
                     try:
                         row_u = con.execute(

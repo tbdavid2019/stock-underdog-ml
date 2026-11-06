@@ -186,9 +186,11 @@ graph TD
 * **桌面彭博寬表格**：平板與桌面端（`>= 768px`）提供專業級寬表格，賦予 `min-w-[980px]` 與所有欄位 `whitespace-nowrap`，保障橫向滑動體驗流暢穩固。
 
 ### 15. ⚡ 操盤手套件與全域指令面板 (Operator Suite & Command Palette)
-* **⌘K 全域指令面板 (Command Palette)**：免編譯原生 ES Module 實現 `⌘K / Ctrl+K / Esc` 快捷開啟、鍵盤上下箭頭導航、即時搜尋與代號解析。
-* **自選股 (Watchlist) 與量化告警 (Quant Alerts)**：訪客本地 `localStorage` 與管理員 DuckDB 跨設備同步雙軌架構；支援動態 P10/P50 與靜態價格告警及原子防洗版推播。
-* **跨市場即時交易時段五態狀態 (Live Market Sessions)**：台/美/日（東京 11:30–12:30 午間休市）即時開休市與夏冬令感知。
+* **⌘K 全域指令面板 (Command Palette)**：免編譯原生 ES Module 實現 `⌘K / Ctrl+K / Esc` 快捷開啟、1 字元起即時自動補全（DuckDB 大表 `GROUP BY` 前綴與相關度排序）、未在榜標的智能導航歷史視圖。
+* **桌面主表吸頂置頂 (Sticky Table Header)**：動態計算 `--app-header-height`，配合 `[overflow-x:clip]` 與每列 `<th>` 純色吸頂，徹底解決桌面滾動時表頭無法吸頂之瀏覽痛點。
+* **主表全欄位動態點擊排序 (Dynamic Table Sorting)**：標的代號、所屬市場、策略模型、現價、目標價、潛力空間、PE/PB 均支援點擊三態動態排序（升冪/降冪/還原），數值空值與無效 PE（`<= 0`）始終沉底。
+* **雙入口量化到價告警中心 (Quant Price Alerts Center)**：頂部導覽列全域告警管理中心 + 主表每列右側一鍵 🔔 告警；訪客本地 `localStorage` 與管理員 DuckDB 跨設備同步雙軌架構；支援動態 P10/P50 與靜態價格告警及原子防洗版推播。
+* **跨市場即時交易時段五態狀態 (Live Market Sessions)**：台/美/日（東京 11:30–12:30 午間休市）即時開休市、夏冬令感知與資料新鮮度（Freshness）校驗。
 * **多源訊號一致度卡 (Multi-Source Signal Alignment)**：聚合時序模型、籌碼、30日情報姿態與前沿雷達。
 * **公開個股 SEO 檔案與動態 Sitemap**：`/s/{ticker}` 免登入 SSR 頁面、安全防禦 XSS 之結構化 JSON-LD、`/sitemap.xml` 與 `/robots.txt`。
 

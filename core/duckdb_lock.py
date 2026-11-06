@@ -28,6 +28,17 @@ def get_lock_path(db_path: str) -> Optional[str]:
     return f"{db_path}.write.lock"
 
 
+def is_current_thread_holding_write_lock(db_path: str) -> bool:
+    """Return True if the calling thread currently holds the write lock for db_path."""
+    lock_path = get_lock_path(db_path)
+    if lock_path is None:
+        return False
+    real_path = os.path.realpath(lock_path)
+    if not hasattr(_THREAD_LOCK_STATE, "depths"):
+        return False
+    return _THREAD_LOCK_STATE.depths.get(real_path, 0) > 0
+
+
 @contextmanager
 def duckdb_write_lock(db_path: str, timeout: float = 15.0) -> Generator[None, None, None]:
     """

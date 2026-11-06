@@ -11,7 +11,7 @@ import re
 import threading
 import time
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
 from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance, watchlist
@@ -63,6 +63,14 @@ try:
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 except Exception:
     pass
+
+@app.middleware("http")
+async def add_static_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") and (path.endswith(".js") or path.endswith(".css")):
+        response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    return response
 
 # 掛載業務路由
 app.include_router(predictions.router, prefix="/api/v1")
@@ -317,8 +325,11 @@ def root():
     """
     content = _render_jinja_template("index.html")
     if content:
-        return HTMLResponse(content=content)
-    return HTMLResponse(content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>")
+        return HTMLResponse(content=content, headers={"Cache-Control": "no-cache"})
+    return HTMLResponse(
+        content="<h1>888 Stock Quant Platform API is running. Visit <a href='/docs'>/docs</a>.</h1>",
+        headers={"Cache-Control": "no-cache"}
+    )
 
 
 @app.api_route("/.well-known/mcp.json", methods=["GET", "HEAD"], include_in_schema=False)

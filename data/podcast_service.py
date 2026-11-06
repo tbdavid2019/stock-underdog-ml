@@ -360,7 +360,7 @@ class PodcastService:
         """
         target = None
         try:
-            with self.db._get_connection() as con:
+            with self.db._get_connection(read_only=True) as con:
                 df = con.execute("SELECT * FROM podcast_episodes WHERE id = ?", [str(episode_id)]).df()
                 if not df.empty:
                     target = df.iloc[0].to_dict()
@@ -399,7 +399,7 @@ class PodcastService:
         """批量評估尚未進行決策分析的單集"""
         evaluated_count = 0
         try:
-            with self.db._get_connection() as con:
+            with self.db._get_connection(read_only=True) as con:
                 df = con.execute("""
                     SELECT * FROM podcast_episodes
                     WHERE importance_score IS NULL
@@ -1074,7 +1074,7 @@ class PodcastService:
     def backfill_unevaluated_episodes(self, limit: int = 500) -> int:
         """為資料庫中尚未評估決策等級的單集進行確定性本地規則回填持久化"""
         try:
-            with self.db._get_connection() as con:
+            with self.db._get_connection(read_only=True) as con:
                 df = con.execute("""
                     SELECT * FROM podcast_episodes
                     WHERE importance_score IS NULL

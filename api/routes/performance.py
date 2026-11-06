@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from core.config import config
+from core.duckdb_lock import DuckDBBusyError
 from data.forecast_store import ForecastStore
 from evaluators.forecast_performance import PerformanceQuery, rank_models, rank_stocks
 
@@ -29,6 +30,8 @@ def _query(as_of, window, market, model_name, model_revision, feature_profile, h
 def _fetch(store, query):
     try:
         return store.query_records(as_of=query.as_of)
+    except DuckDBBusyError as exc:
+        raise HTTPException(status_code=503, detail="預測驗證資料庫正忙，請稍候重試") from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail="預測驗證資料目前無法讀取") from exc
 

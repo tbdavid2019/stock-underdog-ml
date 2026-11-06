@@ -323,6 +323,31 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
+        body {
+            overflow-x: clip !important;
+        }
+
+        @media (min-width: 1280px) {
+            .quant-table-wrap {
+                overflow-x: clip;
+            }
+            .quant-sticky-th {
+                position: sticky;
+                top: var(--app-header-height, 96px);
+            }
+        }
+
+        @media (max-width: 1279px) {
+            .quant-table-wrap {
+                overflow: auto;
+                max-height: calc(100vh - var(--app-header-height, 96px) - 1rem);
+            }
+            .quant-sticky-th {
+                position: sticky;
+                top: 0px;
+            }
+        }
+
         html {
             -webkit-text-size-adjust: 100%;
             text-size-adjust: 100%;
@@ -345,7 +370,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200 overflow-x-hidden">
+<body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200 overflow-x-hidden [overflow-x:clip]">
     <h1 class="sr-only">888 StockQuant 專業量化決策平台</h1>
     <h2 class="sr-only">今日量化訊號與跨市場情報</h2>
 
@@ -367,6 +392,7 @@
 
         <!-- ================= FOOTER & OVERLAYS ================= -->
         {% include 'partials/command_palette.html' %}
+        {% include 'partials/alerts_modal.html' %}
         {% include 'partials/footer.html' %}
 
     </div>

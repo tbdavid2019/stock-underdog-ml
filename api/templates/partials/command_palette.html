@@ -39,7 +39,7 @@
             </div>
 
             <!-- Empty Results -->
-            <div v-else-if="commandQuery.trim().length >= 2 && commandResults.length === 0" class="py-8 text-center text-sm text-slate-400">
+            <div v-else-if="commandQuery.trim().length >= 1 && commandResults.length === 0" class="py-8 text-center text-sm text-slate-400">
                 <span class="material-symbols-outlined text-[32px] text-slate-400 mb-1">sentiment_dissatisfied</span>
                 <p>查無匹配標的或代號「<span class="font-bold text-amber-500" v-text="commandQuery"></span>」</p>
                 <p class="text-xs text-slate-500 mt-1">請嘗試輸入完整代號 (如 2330.TW 或 NVDA)</p>
@@ -49,7 +49,7 @@
             <div v-else>
                 <!-- Section Header -->
                 <div class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span v-text="commandQuery.trim().length >= 2 ? '匹配標的' : (recentTickers.length > 0 ? '最近瀏覽與快捷標的' : '熱門標的推薦')"></span>
+                    <span v-text="commandQuery.trim().length >= 1 ? '匹配標的' : (recentTickers.length > 0 ? '最近瀏覽與快捷標的' : '熱門標的推薦')"></span>
                     <span class="text-xs lowercase text-slate-500">↑↓ 鍵導覽 · Enter 開啟</span>
                 </div>
 

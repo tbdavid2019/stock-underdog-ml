@@ -4,12 +4,15 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import random
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import duckdb
+from core.duckdb_lock import DuckDBBusyError
 
 _WRITE_LOCK = threading.RLock()
 
@@ -56,8 +59,25 @@ class ForecastStore:
                 event_id VARCHAR PRIMARY KEY, payload_json VARCHAR NOT NULL, status VARCHAR NOT NULL DEFAULT 'pending',
                 attempts INTEGER NOT NULL DEFAULT 0, last_error VARCHAR, created_at TIMESTAMPTZ DEFAULT current_timestamp)""")
 
-    def _connect(self):
-        return duckdb.connect(self.db_path, read_only=self.read_only)
+    def _connect(self, max_retries: int = 5, retry_delay: float = 0.15):
+        for attempt in range(max_retries + 1):
+            try:
+                return duckdb.connect(self.db_path, read_only=self.read_only)
+            except Exception as exc:
+                err_msg = str(exc).lower()
+                is_lock = any(k in err_msg for k in ("conflicting lock", "could not set lock", "unique file handle", "resource temporarily unavailable"))
+                is_diff_config = ("different configuration" in err_msg) or ("different config" in err_msg)
+                if is_diff_config:
+                    if attempt >= 2:
+                        raise DuckDBBusyError(f"ForecastStore DuckDB connection busy: {exc}") from exc
+                    time.sleep(0.08 * (attempt + 1) + random.uniform(0.005, 0.02))
+                    continue
+                if not is_lock or attempt >= max_retries:
+                    if is_lock:
+                        raise DuckDBBusyError(f"ForecastStore DuckDB connection busy: {exc}") from exc
+                    raise
+                sleep_dur = retry_delay * (2 ** attempt) + random.uniform(0.01, 0.05)
+                time.sleep(sleep_dur)
 
     @contextmanager
     def _lock(self):
@@ -302,6 +322,8 @@ class ForecastStore:
                 rows = con.execute("""SELECT f.payload_json,a.payload_json,a.status,a.verified_at,a.invalidated_at
                     FROM forecast_records f LEFT JOIN forecast_actuals a ON a.forecast_id=f.forecast_id
                     ORDER BY f.forecast_id,a.verified_at""").fetchall()
+        except DuckDBBusyError:
+            raise
         except (duckdb.CatalogException, duckdb.IOException):
             # A newly deployed service may precede the first forecast run. This
             # is an empty evidence set, not an application crash or fake score.

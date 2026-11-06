@@ -165,7 +165,7 @@ def get_market_statistics(db: DuckDBManager = Depends(get_duckdb)):
         return cached
 
     try:
-        with db._get_connection() as con:
+        with db._get_connection(read_only=True) as con:
             bars_cnt = con.execute("SELECT COUNT(*) FROM tw_daily_bars").fetchone()[0]
             inst_cnt = con.execute("SELECT COUNT(*) FROM tw_institutional_daily").fetchone()[0]
             
@@ -267,7 +267,7 @@ def get_top_institutional_flows(
     sort_order = "ASC" if sort_dir.lower() == "asc" else "DESC"
 
     try:
-        with db._get_connection() as con:
+        with db._get_connection(read_only=True) as con:
             # 若未提供日期，自動獲取最新日期
             if not date:
                 max_date = con.execute("SELECT MAX(date) FROM tw_institutional_daily").fetchone()[0]
@@ -322,7 +322,7 @@ def get_available_institutional_dates(
     回傳 DuckDB 中 tw_institutional_daily 所有歷史交易日期清單 (降冪排序)。
     """
     try:
-        with db._get_connection() as con:
+        with db._get_connection(read_only=True) as con:
             df = con.execute("SELECT DISTINCT date FROM tw_institutional_daily ORDER BY date DESC LIMIT ?", [limit]).df()
             return [str(d) for d in df["date"].tolist()]
     except Exception as e:
@@ -462,7 +462,7 @@ def get_ticker_broker_trend(
         return cached
 
     try:
-        with db._get_connection() as con:
+        with db._get_connection(read_only=True) as con:
             # 1. 取得最近 N 天日期
             dates_df = con.execute("""
                 SELECT DISTINCT date 
@@ -736,7 +736,7 @@ def get_market_calendar_holidays(
 
 
 @router.get("/calendar/sessions", summary="查詢台美日跨市場即時交易時段摘要與倒數")
-def get_market_calendar_sessions(request: Request) -> Dict[str, Any]:
+def get_market_calendar_sessions(request: Request, db: DuckDBManager = Depends(get_duckdb)) -> Dict[str, Any]:
     """
     查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 之即時交易階段狀態：
     支援 pre_market | regular | lunch_break | after_hours | closed 五態，
@@ -745,9 +745,15 @@ def get_market_calendar_sessions(request: Request) -> Dict[str, Any]:
     default_limiter.check(request)
     try:
         sessions = MarketCalendar.get_live_sessions_summary()
+        freshness = None
+        try:
+            freshness = db.check_market_freshness("TW")
+        except Exception as fe:
+            logger.debug(f"Freshness check fallback: {fe}")
         return {
             "success": True,
-            "sessions": sessions
+            "sessions": sessions,
+            "freshness": freshness
         }
     except Exception as e:
         logger.error(f"❌ 查詢跨市場即時時段失敗: {e}", exc_info=True)

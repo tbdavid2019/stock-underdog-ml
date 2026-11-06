@@ -1,0 +1,208 @@
+<!-- ================= QUANT PRICE ALERTS CENTER MODAL ================= -->
+<div v-if="showAlertsModal"
+     class="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 md:p-12 flex items-start justify-center backdrop-blur-md bg-black/60 transition-opacity duration-150"
+     @click.self="closeAlertsCenterModal"
+     @keydown.window.esc="closeAlertsCenterModal"
+     role="dialog"
+     aria-modal="true"
+     aria-label="量化到價告警管理中心">
+
+    <div class="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200"
+         :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
+
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#DDC58B] bg-[#FFF9E8]'">
+            <div class="flex items-center space-x-2.5">
+                <span class="material-symbols-outlined text-amber-500 text-[24px]">notifications_active</span>
+                <div>
+                    <h3 class="text-base sm:text-lg font-black tracking-tight flex items-center space-x-2">
+                        <span>量化到價告警中心</span>
+                        <span v-if="alertsModalList && alertsModalList.length > 0"
+                              class="text-xs px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500 text-black">
+                            {{ alertsModalList.length }}
+                        </span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">監控突破目標價、跌破 P10 支撐、季線均線回測等量化規則</p>
+                </div>
+            </div>
+            <button @click="closeAlertsCenterModal"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors cursor-pointer"
+                    :class="isDark ? 'border-[#374151] text-slate-400 hover:text-white hover:bg-[#262626]' : 'border-[#DDC58B] text-[#2B251A] hover:bg-[#FFF0CC]'"
+                    aria-label="關閉告警中心">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
+
+            <!-- 1. Quick Create Form -->
+            <div class="p-4 rounded-xl border space-y-3"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B]'">
+                <div class="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center justify-between">
+                    <span>新增價位告警規則</span>
+                    <span class="text-xs text-slate-400">觸發後發送即時推播</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <!-- Ticker Input -->
+                    <div>
+                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">股票代號</label>
+                        <input type="text"
+                               v-model="alertsModalNewTicker"
+                               @input="alertsModalNewTicker = alertsModalNewTicker.toUpperCase()"
+                               placeholder="如 2330.TW, NVDA"
+                               class="w-full px-3 py-2 text-sm rounded-lg border outline-none font-mono font-bold"
+                               :class="isDark ? 'bg-[#16181D] border-[#374151] text-white focus:border-amber-500' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#2B251A] focus:border-amber-600'" />
+                    </div>
+
+                    <!-- Condition Select -->
+                    <div>
+                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">觸發條件</label>
+                        <select v-model="alertsModalNewRule"
+                                class="w-full px-3 py-2 text-sm rounded-lg border outline-none font-medium cursor-pointer"
+                                :class="isDark ? 'bg-[#16181D] border-[#374151] text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#2B251A]'">
+                            <option value="above_price">突破目標價 (above_price)</option>
+                            <option value="below_price">跌破警戒價 (below_price)</option>
+                            <option value="below_p10">跌破 P10 支撐 (below_p10)</option>
+                            <option value="above_p50">突破 P50 目標價 (above_p50)</option>
+                            <option value="pullback_ma60">回測季線支撐 (pullback_ma60)</option>
+                            <option value="pullback_ma120">回測半年線支撐 (pullback_ma120)</option>
+                        </select>
+                    </div>
+
+                    <!-- Threshold Price Input -->
+                    <div>
+                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">
+                            門檻價格 {{ (alertsModalNewRule === 'above_price' || alertsModalNewRule === 'below_price') ? '(必填)' : '(選填)' }}
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               v-model="alertsModalNewThreshold"
+                               :placeholder="(alertsModalNewRule === 'above_price' || alertsModalNewRule === 'below_price') ? '輸入價格' : '自動計算'"
+                               class="w-full px-3 py-2 text-sm rounded-lg border outline-none font-mono"
+                               :class="isDark ? 'bg-[#16181D] border-[#374151] text-white focus:border-amber-500' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#2B251A] focus:border-amber-600'" />
+                    </div>
+                </div>
+
+                <!-- API Key (Stored in LocalStorage) -->
+                <div class="pt-1">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <label class="font-semibold" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">管理金鑰 (WATCHLIST_API_KEY)</label>
+                        <span class="text-slate-400 text-xs">雲端推播需填寫管理金鑰</span>
+                    </div>
+                    <input type="password"
+                           v-model="alertsModalApiKey"
+                           @change="onAlertsApiKeyChange"
+                           placeholder="若伺服器設定了 WATCHLIST_API_KEY 請在此輸入..."
+                           class="w-full px-3 py-1.5 text-xs rounded-lg border outline-none font-mono"
+                           :class="isDark ? 'bg-[#16181D] border-[#374151] text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#2B251A]'" />
+                </div>
+
+                <div class="flex justify-end pt-1">
+                    <button @click="createAlertFromModal"
+                            :disabled="alertsModalCreating || !alertsModalNewTicker"
+                            class="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg border transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :class="isDark ? 'bg-amber-500 text-black border-amber-500 hover:bg-amber-400' : 'bg-[#17324D] text-white border-[#17324D] hover:bg-[#1E4268]'">
+                        <span class="material-symbols-outlined text-[16px]">add_alert</span>
+                        <span>{{ alertsModalCreating ? '建立中...' : '建立告警' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Active Alerts List -->
+            <div class="space-y-2.5">
+                <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+                    <span>現有已啟用告警清單</span>
+                    <button @click="loadAlertsModalList"
+                            class="hover:text-amber-500 flex items-center space-x-1 cursor-pointer"
+                            title="重新整理告警清單">
+                        <span class="material-symbols-outlined text-[14px]">refresh</span>
+                        <span>重新整理</span>
+                    </button>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div v-if="alertsModalLoading" class="py-10 text-center text-sm text-slate-400 flex items-center justify-center space-x-2">
+                    <span class="material-symbols-outlined animate-spin text-[20px] text-amber-500">sync</span>
+                    <span>正在載入告警清單...</span>
+                </div>
+
+                <!-- Alerts Error State -->
+                <div v-if="alertsListError"
+                     class="p-4 rounded-xl border flex items-start space-x-3 text-xs font-semibold leading-relaxed"
+                     :class="isDark ? 'bg-amber-950/30 border-amber-800/50 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-900'">
+                    <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0 mt-0.5">info</span>
+                    <div class="flex-1">
+                        <p v-text="alertsListError"></p>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else-if="!alertsModalList || alertsModalList.length === 0"
+                     class="py-10 text-center rounded-xl border border-dashed p-6"
+                     :class="isDark ? 'border-[#374151] text-slate-400' : 'border-[#DDC58B] text-slate-600'">
+                    <span class="material-symbols-outlined text-[36px] text-slate-400 mb-2">notifications_off</span>
+                    <p class="font-bold text-sm">目前尚未建立任何價位告警</p>
+                    <p class="text-xs text-slate-400 mt-1">可在上方輸入標的代號建立，或在主表中點擊每列右側的 🔔 圖示一鍵設定！</p>
+                </div>
+
+                <!-- Alerts Cards -->
+                <div v-else class="space-y-2">
+                    <div v-for="a in alertsModalList"
+                         :key="a.alert_id"
+                         class="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
+                         :class="isDark ? 'bg-[#0D0E11] border-[#262626] hover:border-[#374151]' : 'bg-[#FFF9E8] border-[#DDC58B] hover:border-[#6B5B38]'">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                                 :class="isDark ? 'bg-[#16181D] border-[#374151] text-amber-400' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#17324D]'">
+                                <span class="material-symbols-outlined text-[18px]">notifications</span>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono font-black text-sm tracking-tight text-amber-500" v-text="a.canonical_ticker || a.ticker || '-'"></span>
+                                    <span class="text-xs px-2 py-0.5 rounded font-mono font-bold border"
+                                          :class="isDark ? 'bg-[#17324D] text-white border-blue-600' : 'bg-[#17324D] text-white border-[#17324D]'"
+                                          v-text="getAlertRuleLabel(a.rule_type)"></span>
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5 flex items-center space-x-2">
+                                    <span v-if="a.threshold_value">門檻價: <span class="font-mono font-bold" :class="isDark ? 'text-white' : 'text-[#2B251A]'">{{ a.threshold_value }}</span></span>
+                                    <span v-else>門檻價: 自動動態計算</span>
+                                    <span v-if="a.last_triggered_at" class="text-emerald-500">· 最近觸發: {{ formatAlertTime(a.last_triggered_at) }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2 shrink-0">
+                            <button @click="deleteAlertFromModal(a.alert_id)"
+                                    class="px-2.5 py-1 text-xs font-bold rounded-lg border text-rose-500 border-rose-500/40 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                    title="刪除此告警">
+                                刪除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t flex flex-wrap items-center justify-between gap-2"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11]/80' : 'border-[#DDC58B] bg-[#FFF9E8]/80'">
+            <div class="text-xs text-slate-400">
+                系統每日開盤前或定時執行巡檢，達成條件即時推送
+            </div>
+            <div class="flex items-center space-x-2">
+                <button @click="triggerAlertsCheckNow"
+                        :disabled="alertsModalChecking"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center space-x-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                        :class="isDark ? 'bg-[#262626] border-[#374151] text-amber-400 hover:text-amber-300' : 'bg-[#FFF0CC] border-[#DDC58B] text-[#2B251A] hover:bg-[#FFE6A3]'">
+                    <span class="material-symbols-outlined text-[16px]" :class="alertsModalChecking ? 'animate-spin' : ''">play_circle</span>
+                    <span>{{ alertsModalChecking ? '巡檢中...' : '立即巡檢測試' }}</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>

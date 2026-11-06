@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Tuple, Any
 from fastapi import APIRouter, Query, HTTPException, Depends, Response, Request
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
+from core.duckdb_lock import DuckDBBusyError
 from core.netlimiter import default_limiter
 from data.duckdb_manager import DuckDBManager
 from data.forecast_store import ForecastStore
@@ -441,6 +442,25 @@ def get_ticker_history(
     records.sort(key=lambda row: str(row.get("forecast_session") or row.get("timestamp") or ""), reverse=True)
     records = records[:limit]
     return PredictionResponse(count=len(records), data=records)
+
+
+@router.get("/autocomplete", summary="標的即時自動補全（股票代號、中英文名稱）")
+def autocomplete_stock_tickers(
+    request: Request,
+    q: str = Query("", max_length=64, description="查詢字串（如 2330, 台積, NVDA, TSMC）"),
+    limit: int = Query(12, ge=1, le=50, description="最多回傳結果數"),
+    db: DuckDBManager = Depends(get_duckdb)
+):
+    """即時檢索代號與名稱，回傳前綴或包含相符之標的清單。"""
+    default_limiter.check(request)
+    trimmed = (q or "").strip()
+    if not trimmed:
+        return {"query": q, "results": []}
+    try:
+        results = db.autocomplete_tickers(query=trimmed, limit=limit)
+    except DuckDBBusyError as exc:
+        raise HTTPException(status_code=503, detail="資料庫正忙，請稍後重試") from exc
+    return {"query": q, "results": results}
 
 
 @router.get("/resolve/{query}", response_model=TickerResolutionResponse, summary="解析股票代號或公司名稱")

@@ -94,6 +94,21 @@
                 <span class="hidden sm:inline font-mono text-xs opacity-75 font-bold">⌘K</span>
             </button>
 
+            <!-- Alerts Center Trigger Button (🔔 告警) -->
+            <button @click="openAlertsCenterModal()"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer relative"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
+                    title="量化到價告警管理中心"
+                    aria-label="開啟量化告警管理中心">
+                <span class="material-symbols-outlined text-[18px]">notifications</span>
+                <span class="hidden sm:inline font-sans text-xs font-bold">告警</span>
+                <span v-if="alertsModalList && alertsModalList.filter(a => a.enabled !== false).length > 0"
+                      class="absolute -top-1 -right-1 px-1.5 py-0.2 text-[10px] font-mono font-black rounded-full bg-amber-500 text-black leading-tight border"
+                      :class="isDark ? 'border-black' : 'border-white'">
+                    {{ alertsModalList.filter(a => a.enabled !== false).length }}
+                </span>
+            </button>
+
             <!-- Share URL Icon Button -->
             <button @click="copyShareLink()"
                     class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm hover:scale-105 active:scale-95"
@@ -147,6 +162,10 @@
                 </div>
             </div>
 
+            <div v-else-if="marketSessionsError" class="text-slate-400 text-xs flex items-center space-x-1.5 font-mono">
+                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                <span>跨市場即時狀態離線</span>
+            </div>
             <div v-else class="text-slate-400 text-xs flex items-center space-x-1">
                 <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
                 <span>市場狀態載入中...</span>

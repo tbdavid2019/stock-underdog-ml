@@ -811,6 +811,27 @@ class MarketCalendar:
 
         summary = {}
 
+        def _fmt_countdown(secs: int) -> str:
+            if not secs or secs <= 0:
+                return ""
+            if secs >= 3600:
+                h = secs // 3600
+                m = (secs % 3600) // 60
+                return f"{h}h {m:02d}m"
+            m = max(1, secs // 60)
+            return f"{m}m"
+
+        def _status_lbl(sess: str) -> str:
+            if sess == "regular":
+                return "開盤中"
+            elif sess == "lunch_break":
+                return "午休中"
+            elif sess == "pre_market":
+                return "盤前"
+            elif sess == "after_hours":
+                return "盤後"
+            return "已休市"
+
         # Markets: TW, US, JP
         for market, tz, conf in [
             ("TW", TZ_TAIPEI, {"name": "台股 (TWSE)", "close_hour": 13, "close_min": 30}),
@@ -844,7 +865,12 @@ class MarketCalendar:
                     "local_time": local_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     "next_transition_epoch": next_epoch,
                     "next_transition_iso": next_dt.isoformat(),
-                    "seconds_to_transition": secs
+                    "seconds_to_transition": secs,
+                    "is_open": False,
+                    "lunch_break": False,
+                    "pre_market": False,
+                    "status_label": _status_lbl("closed"),
+                    "countdown_formatted": _fmt_countdown(secs)
                 }
                 continue
 
@@ -942,7 +968,12 @@ class MarketCalendar:
                 "local_time": local_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 "next_transition_epoch": next_epoch,
                 "next_transition_iso": next_dt.isoformat(),
-                "seconds_to_transition": secs
+                "seconds_to_transition": secs,
+                "is_open": session == "regular",
+                "lunch_break": session == "lunch_break",
+                "pre_market": session == "pre_market",
+                "status_label": _status_lbl(session),
+                "countdown_formatted": _fmt_countdown(secs)
             }
 
         return summary
