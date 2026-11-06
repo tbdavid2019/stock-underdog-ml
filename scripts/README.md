@@ -53,6 +53,13 @@ python scripts/verification/verify_predictions_extended.py
 
 ## ✅ 驗證腳本 (Verification)
 
+### check_env.py (環境健檢與機密遮罩醫生)
+診斷系統環境變數設定、DuckDB 資料庫路徑與寫入鎖、LLM 備援池（Gemini / Groq）、Clef System One 決策金鑰及 `WATCHLIST_API_KEY`（在 production 下若未設定將防護性鎖定寫入）。嚴格遵守安全性規範，任何金鑰皆以 `[SET]` / `[MISSING]` 遮罩，絕不輸出明文。
+
+```bash
+python scripts/check_env.py
+```
+
 ### verify_predictions_extended.py
 驗證 `predictions` 表格包含所有雙軌策略欄位：
 - strategy_type
@@ -76,6 +83,9 @@ python scripts/verification/verify_predictions_extended.py
 - **check_db_contents.py** - 查看資料庫內容和統計
 - **check_cache.py** - 檢查快取狀態和有效期
 
+### 環境與安全健檢
+- **check_env.py** - 系統與環境變數健檢工具（支援 `--json` 格式化輸出、必填/選填降級說明、已棄用變數警告、Fail-Closed 金鑰提示與 100% 敏感值遮罩）
+
 ### 回測相關
 - **backfill_historical.py** - 回填歷史預測的實際價格用於驗證
 - **debug_backfill.py** - Debug 回填過程的問題
@@ -89,6 +99,9 @@ python scripts/verification/verify_predictions_extended.py
 ## 📝 常用命令
 
 ```bash
+# 執行系統與環境變數健檢（支援 --json）
+python scripts/check_env.py
+
 # 檢查資料庫
 python scripts/check_db_contents.py
 

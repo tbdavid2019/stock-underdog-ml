@@ -3,8 +3,9 @@ import threading
 import time
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Tuple, Any
-from fastapi import APIRouter, Query, HTTPException, Depends, Response
+from fastapi import APIRouter, Query, HTTPException, Depends, Response, Request
 from api.schemas import PredictionResponse, StockPredictionItem, TickerResolutionResponse
+from core.netlimiter import default_limiter
 from data.duckdb_manager import DuckDBManager
 from data.forecast_store import ForecastStore
 
@@ -449,3 +450,15 @@ def resolve_stock_ticker(query: str, db: DuckDBManager = Depends(get_duckdb)):
     if not resolved:
         raise HTTPException(status_code=404, detail=f"查無法辨識的股票或公司名稱：{query}")
     return resolved
+
+
+@router.get("/alignment/{ticker}", summary="取得多源量化訊號一致度卡與共振評估")
+def get_stock_signal_alignment(ticker: str, request: Request, db: DuckDBManager = Depends(get_duckdb)):
+    """
+    聚合時序基礎模型、台股法人籌碼、Podcast 情報姿態與前沿雷達標選四維度，
+    以確定性數值門檻合成多源訊號共振評估與背離警示。
+    """
+    default_limiter.check(request)
+    from data.signal_alignment import compute_signal_alignment
+    return compute_signal_alignment(ticker, db=db)
+

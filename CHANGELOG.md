@@ -6,6 +6,77 @@
 
 ---
 
+## 2026-11-06 (v2.5.0)
+
+### OpenStock-Inspired Operator Suite (Wave 1 Complete Release)
+
+- **Phase 1: DuckDB 跨進程檔案鎖、上游守護熔斷與機密遮罩環境醫生**：
+  - 新增 `core/duckdb_lock.py`：使用 `<db_path>.write.lock` 與 `fcntl.flock` 實現排他寫鎖及 `DuckDBBusyError` 逾時治理（`:memory:` 自動安全跳過檔案鎖）。
+  - 重構 `data/duckdb_manager.py`：移除 `read_only=True` 失敗時退回 `read_only=False` 之危險邏輯，所有寫入與 DDL 均受跨進程鎖保護。
+  - 新增 `core/upstream_guard.py`：支援多 Key 輪詢、單 Key 最大併發（`BoundedSemaphore`）與 60 秒失敗熔斷（`RecentFailureCooldownError`），金鑰日誌 100% 遮罩。
+  - 新增 `core/netlimiter.py`：標準化真實 IP 解析、滑動視窗限流與 Fail-Closed 金鑰安全驗證；防護 `api/routes/decision.py` 之 `/health` 端點。
+  - 新增 `scripts/check_env.py`：環境變數健檢工具，敏感憑證遮罩為 `[SET]` / `[MISSING]`，支援 `--json` 格式。
+
+- **Phase 2A: 後端自選股持久化與跨市場即時交易時段**：
+  - DDL 新增 `watchlist_items` 與 `quant_price_alerts` 表，受 DuckDB 跨進程檔案鎖保護。
+  - 新增 `api/routes/watchlist.py`：提供自選股 CRUD（`GET/POST/DELETE /api/v1/watchlist`），在生產環境下強制執行 Fail-Closed `WATCHLIST_API_KEY` 認證。
+  - 擴充 `core/market_calendar.py`：新增 `get_live_sessions_summary()`，精確支援台股、美股、日股五態交易時段（含東京證交所 11:30–12:30 午間休市與美股夏/冬令開收盤感知），掛載於 `GET /api/v1/market/calendar/sessions`。
+  - FastMCP 註冊唯讀工具 `get_watchlist` 與 `get_market_live_sessions`。
+
+- **Phase 2B: 免編譯全域指令面板 (⌘K)、釘選工作列與自選股雙軌體驗**：
+  - 新增 `api/templates/partials/command_palette.html`：免編譯原生 ES Module 實現 `⌘K / Ctrl+K / Esc` 快捷開啟、鍵盤上下箭頭導航、即時搜尋與代號解析。
+  - 升級頂部導覽列與工作列：提供跨市場開休市膠囊列（含日股午休狀態與倒數）、最近瀏覽 / 釘選個股列（`localStorage` 持久化，上限 10 檔）及自選股分享橫幅（`?watchlist_share=` 安全正則綁定）。
+  - 自選股雙軌架構：公開訪客使用本地 `localStorage`，持有管理員金鑰者自動雙向同步 DuckDB，在維度 1 篩選器新增 `★ 我的自選` 行內按鈕（支援一鍵篩選）。
+  - 全目錄資產指紋（`get_asset_fingerprint()`）：遞迴掃描靜態資源與 HTML 樣板最新 mtime，杜絕 CDN 與瀏覽器快取殘留。
+
+- **Phase 3: 確定性數值門檻多源訊號一致度卡與量化到價告警**：
+  - 新增 `data/signal_alignment.py`：聚合「時序基礎模型」、「台股籌碼」、「30日 Podcast 情報」與「前沿雷達」四維度，以確定性數值門檻標準化為 `+1/0/-1/None`（海外標的籌碼維度自動標記不適用排除分母），掛載於 `GET /api/v1/predictions/alignment/{ticker}`。
+  - 新增 `data/alert_evaluator.py`：支援靜態價格規則（`above_price`, `below_price`）與動態預測規則（`below_p10`, `above_p50`, `pullback_ma60`, `pullback_ma120`），實現**原子寫庫後推播防洗版**機制，掛載於 `GET/POST/DELETE /api/v1/alerts` 與 `POST /api/v1/alerts/check`，並整合至 `run_daily.sh`。
+  - 個股抽屜（Stock Drawer）整合「多源訊號一致度卡」與「量化價位告警設定面板」。
+
+- **Phase 4: 獨立 Autoescape 公開個股 SEO 檔案與動態 Sitemap**：
+  - 新增 `api/templates/ticker_seo.html`：獨立 Jinja2 環境（`autoescape=True`，標準 `{{ }}` 定界符），與 SPA 儀表板隔離。
+  - 掛載 `GET /s/{ticker:path}`：嚴格正則白名單驗證 `^[A-Za-z0-9.\-]{1,12}$`，查詢個股量化檔案與 4-6 檔 Peers 同業推薦；異常/未收錄代號回傳 HTTP 404 與 `X-Robots-Tag: noindex, nofollow`。
+  - 安全轉義 JSON-LD（`FinancialProduct` / `Corporation`）：將 `<`, `>`, `&` 轉義為 `\u003c`, `\u003e`, `\u0026` 阻絕 XSS 標籤閉合注入。
+  - 掛載 `GET /sitemap.xml`：1 小時記憶體快取，`<lastmod>` 取實際最新交易日。
+  - 掛載 `GET /robots.txt`：允許公開頁面與 LLM 規格，遮蔽內部 API 與 MCP 端點。
+
+- **Stage 4: 雙重獨立審查 (OpenCode GLM-5.3-Flash + Codex) 全量修復與韌性強化**：
+  - **DuckDB 跨進程鎖重入保護**：`core/duckdb_lock.py` 加入 `threading.local()` 巢狀重入深度計數（避免同執行緒巢狀持鎖自我死鎖），鎖檔案權限收緊至 `0o600`。
+  - **DuckDB 體外寫入者全量收斂**：將 `data/podcast_service.py`、`data/covariate_store.py` 與 `data/forecast_store.py` 的 DuckDB 寫入操作統一收斂至 `duckdb_write_lock`，避免繞過 `.write.lock` 引發衝突。
+  - **Fail-Closed 邊界強化與私人 Profile 隔離**：`core/netlimiter.py` 對 `DEPLOYMENT_MODE` 進行嚴格 `.strip().lower()` 正規化（防尾隨空白繞過）；新增 `verify_profile_read_access` 禁止未授權訪客枚舉或讀取非 `default` 之私人自選股；限流器內部增加 `threading.Lock()` 保護並發修剪。
+  - **量化告警原子 CAS 更新與多模型支持**：`data/duckdb_manager.py` 與 `data/alert_evaluator.py` 實作原子 CAS `UPDATE quant_price_alerts ... WHERE ... (last_triggered_at IS NULL OR last_triggered_at <= ?) RETURNING alert_id`，杜絕告警推播重複洗版；支援 `reference_model` (Timestral, TimesFM, Moirai, Auto) 映射評估；通知內容進行嚴格 `html.escape` 防止 XSS。
+  - **交易日感知新鮮度判定**：連接 `MarketCalendar.check_market_freshness()`，週末或國定連假不誤報過期；`data/signal_alignment.py` 實作 14 天模型/籌碼過期與 30 天題材過期保護，法人 5d 買賣超為空時自動回退至 1d 買賣超。
+  - **SSR 樣板單例快取與同業同儕完全去重**：`api/main.py` 實作 Jinja2 環境與資產指紋 60 秒記憶體快取；公開個股頁同業同儕以 `ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) = 1` 確保單一標的僅出現最新一筆。
+  - **Impeccable 前端工藝無障礙優化**：行動端 High-Density Quant Cards 卡片網格與展開抽屜的所有子頁籤、星號按鈕皆滿足 `>= 44px` 觸控熱區規範，通過 Impeccable 檢查（0 反模式違規）。
+
+- **MCP / Skill / LLM 發現體系全量同步**：
+  - `mcp_server.py`：註冊 30 大原生 FastMCP 工具（新增 `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`）。
+  - `api/main.py`：同步升級 `/mcp`、`/.well-known/mcp.json`、`/.webmcp/bridge.js`（僅限唯讀工具）、`/llms.txt`、`/llms-full.txt` 與根目錄 `llms.txt`。
+  - `skills/stock-quant/SKILL.md`：同步更新 30 項 MCP 工具與新 REST 端點說明。
+  - `scripts/README.md`：新增 `check_env.py` 工具說明。
+
+---
+
+## 2026-11-06 (v2.5.0-phase1)
+
+### Phase 1: DuckDB Cross-Process Locking, Upstream Circuit Breaker & Environment Doctor
+- **DuckDB 跨進程檔案鎖（`core/duckdb_lock.py`）與唯讀隔離治理**：
+  - 新增 `core/duckdb_lock.py`，基於共用卷 `<db_path>.write.lock` 之 `fcntl.flock` 排他寫鎖與逾時 `DuckDBBusyError`（`:memory:` 資料庫自動安全跳過檔案鎖）。
+  - 重構 `data/duckdb_manager.py`：所有 DDL 初始化與資料表寫入路徑一律納入跨執行緒與跨進程鎖保護；徹底移除 `read_only=True` 失敗時反向回退開 `read_only=False` 之危險邏輯，且 `read_only=True` 時絕不執行 DDL 寫入。
+  - 新增 `test/test_duckdb_crossprocess_locking.py`，以 `multiprocessing` 模擬多進程並發讀寫競爭，驗證零死鎖與優雅逾時保護。
+- **共用上游守護模組（`core/upstream_guard.py`）與安全網路閘門（`core/netlimiter.py`）**：
+  - 新增 `core/upstream_guard.py`：支援逗號分隔多把 API Key 輪詢分配（Key Pool Rotation）、單 Key 最大併發限制（`BoundedSemaphore`）與 60 秒失敗熔斷冷卻（`RecentFailureCooldownError`），日誌 100% 遮罩敏感金鑰。
+  - 將 `KeyPoolGuard` 深度接入 `data/investing_service.py` 與 `data/polymarket_service.py`，消除上游異常時的長逾時與日誌洗版問題。
+  - 新增 `core/netlimiter.py`：統一解析 `CF-Connecting-IP` ➔ `X-Real-IP` ➔ `client.host` 真實客戶端 IP；提供滑動視窗限流與 Fail-Closed 金鑰比對守衛；修復 `api/routes/decision.py` 之 `/health` 端點加上 60 秒快取、限流與輸出資訊脫敏。
+- **機密遮罩環境變數健檢工具（`scripts/check_env.py`）**：
+  - 新增 `scripts/check_env.py`，分類驗證必填設定、選填降級說明、`WATCHLIST_API_KEY` 生產模式提醒與已棄用變數（MONGODB/MYSQL/LSTM）。支援 `--json` 機器可讀輸出，敏感憑證 100% 遮罩僅顯示 `[SET]` / `[MISSING]`。
+  - 整合至 `scripts/install_new_machine.sh` 與 `.env.example`。
+- **測試回歸**：
+  - 新增並通過 `test/test_duckdb_crossprocess_locking.py`、`test/test_upstream_guard.py`、`test/test_decision_security.py`、`test/test_check_env.py`。
+
+---
+
 ## 2026-11-05 (v2.4.74)
 
 ### Quant Dashboard UI/UX Overhaul: Multi-Market Pills, Wrapping Tags & Overseas Institutional Data Guard

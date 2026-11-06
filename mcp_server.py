@@ -733,6 +733,66 @@ def get_model_performance_scorecard(
     }
 
 
+@mcp.tool(
+    name="get_watchlist",
+    description="查詢使用者本地 DuckDB 持久化之預設公開自選股清單（Watchlist），包含個股代號、市場別、備註、自訂排序及最新量化預測潛力摘要。僅限公開 profile_id='default'。為唯讀安全工具。"
+)
+def get_watchlist(profile_id: str = "default") -> Dict[str, Any]:
+    """
+    Query persisted default watchlist items enriched with latest prediction forecasts.
+    Only the public 'default' profile is accessible via MCP tool to prevent profile enumeration.
+    """
+    pid = str(profile_id or "default").strip()
+    if pid != "default":
+        return {
+            "success": False,
+            "error": "Only public 'default' profile is accessible via read-only MCP tool",
+            "profile_id": pid,
+            "count": 0,
+            "data": []
+        }
+    items = db.get_watchlist_items(profile_id="default")
+    return {
+        "success": True,
+        "profile_id": "default",
+        "count": len(items),
+        "data": items
+    }
+
+
+@mcp.tool(
+    name="get_market_live_sessions",
+    description="查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 即時交易時段五態狀態（pre_market, regular, lunch_break, after_hours, closed），包含東京 11:30–12:30 午休與美股夏冬令感知倒數。為唯讀安全工具。"
+)
+def get_market_live_sessions() -> Dict[str, Any]:
+    """
+    Query real-time cross-market trading session status (TW, US, JP).
+    """
+    from core.market_calendar import MarketCalendar
+    sessions = MarketCalendar.get_live_sessions_summary()
+    return {
+        "success": True,
+        "sessions": sessions
+    }
+
+
+@mcp.tool(
+    name="get_signal_alignment",
+    description="查詢指定個股代號之多源量化訊號一致度卡（Signal Alignment），聚合時序基礎模型、台股法人籌碼、近 30 日 Podcast 情報多空姿態與前沿雷達標選四維度，以確定性數值門檻合成多源共識（bullish_alignment, bearish_alignment, divergence_warning, mixed, insufficient_sources）。海外股自動將籌碼標記為不適用排除分母。為唯讀安全工具。"
+)
+def get_signal_alignment(ticker: str) -> Dict[str, Any]:
+    """
+    Query multi-source signal alignment and consensus for a given stock ticker.
+    """
+    from data.signal_alignment import compute_signal_alignment
+    res = compute_signal_alignment(ticker, db=db)
+    return {
+        "success": True,
+        "data": res
+    }
+
+
+
 if __name__ == "__main__":
     # Standard FastMCP entrypoint
     mcp.run()

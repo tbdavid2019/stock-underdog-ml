@@ -59,15 +59,17 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表 (21 大標準 FastMCP / WebMCP 工具)
+## 4. MCP Tools 快速對照表 (30 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
 | `get_market_macro_regime` | `market`, `index_name` | 台美股大盤情境、VIX 指數、季線狀態、建議曝險百分比 (0~100%) |
+| `screen_quant_stocks` | `direction`, `models`, `pe_range`, `min_potential`, `risk_reward`, `ma60`, `institutional`, `index_name`, `limit` | 多維度自訂量化篩選器（方向、時序模型多選、PE 估值、潛力門檻、盈虧比、均線支撐、法人合買） |
 | `get_triple_resonance_stocks` | `index_name`, `limit` | 👑 四重共振、🏆 三重共振與 🔮 雙模型共振多策略焦點交集股清單 |
 | `get_xuantie_pullback_stocks` | `index_name`, `pullback_type`, `limit` | 玄鐵重劍 MA60/MA120 回調買點清單 |
 | `get_timestral_top_predictions` | `index_name`, `direction`, `limit` | Mistral Timestral-209M 時序大模型預測漲跌幅排行、P10/P90 蒙地卡羅風控區間 |
 | `get_timesfm_top_predictions` | `index_name`, `direction`, `limit` | Google TimesFM 時序大模型漲跌幅排行與盈虧比 (Risk/Reward) |
+| `get_moirai_top_predictions` | `index_name`, `direction`, `limit` | Salesforce MOIRAI-2 時序大模型 5 日預測漲跌幅排行與分位數區間 |
 | `get_stock_history` | `ticker`, `limit` | 指定代號之歷史時序量化預測與指標軌跡 |
 | `get_latest_market_snapshot` | `index_name`, `limit` | 當日最新完整日報批次數據快照 |
 | `get_top_institutional_flows` | `order_by`, `sort_dir`, `market`, `limit` | 三大法人（外資、投信、自營商）買賣超排行榜 |
@@ -85,6 +87,12 @@ graph TD
 | `get_ticker_earnings_calls` | `ticker`, `limit` | 查詢指定個股歷史與即將召開之法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報下載 |
 | `open_company_network` | `company`, `direction` | 取得特定台股企業之視覺化股權拓撲關係圖譜連結 (web_url) 與官方靜態 SVG 向量拓撲圖 (image_url)，支援在瀏覽器中直接開啟圖譜 (Taiwan Company Network) |
 | `get_company_tenders` | `ticker` | 查詢台股企業之政府採購電子公報標案情資（累計得標總金額、投標勝率、獨家投標率、採購機關金主、競標對手與大案清單，串接 ToBid MCP） |
+| `get_industry_chain` | `theme` | 查詢跨市場 AI 產業價值鏈三欄拓撲關係圖譜（上游 ➔ 中游 ➔ 下游）與預測融合 |
+| `get_discovery_signals` | `limit` | 查詢 AI 產業前沿挖掘機（arXiv 論文與產業瓶頸映射）即時訊號流與候選標的 |
+| `get_model_performance_scorecard` | `market`, `horizon` | 查詢各 AI 時序基礎模型之歷史驗證回測績效計分卡（Hit Rate、MAE、勝率） |
+| `get_watchlist` | `profile_id` | 查詢使用者本地 DuckDB 持久化之自選股清單（Watchlist），包含個股代號、市場別、備註、自訂排序及最新量化預測潛力摘要 (唯讀安全) |
+| `get_market_live_sessions` | 無 | 查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 即時交易時段五態狀態（pre_market, regular, lunch_break, after_hours, closed），包含東京 11:30–12:30 午休與美股夏冬令感知倒數 (唯讀安全) |
+| `get_signal_alignment` | `ticker` | 查詢指定個股代號之多源量化訊號一致度卡（Signal Alignment），聚合時序基礎模型、台股法人籌碼、近 30 日 Podcast 情報多空姿態與前沿雷達四維度共識 (唯讀安全) |
 
 ---
 
@@ -92,8 +100,19 @@ graph TD
 
 - `GET /llms.txt` - LLM 系統摘要與標準端點導引 ([llmstxt.org](https://llmstxt.org/))
 - `GET /llms-full.txt` - 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義)
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (22 大原生量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (30 大原生量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
+- `GET /api/v1/watchlist` - 查詢使用者本地 DuckDB 持久化自選股清單與最新預測
+- `POST /api/v1/watchlist` - 新增自選股（需 WATCHLIST_API_KEY 金鑰驗證）
+- `DELETE /api/v1/watchlist/{ticker}` - 刪除自選股（需 WATCHLIST_API_KEY 金鑰驗證）
+- `GET /api/v1/market/calendar/sessions` - 跨市場即時交易時段五態狀態（含日股午休）
+- `GET /api/v1/predictions/alignment/{ticker}` - 多源量化訊號一致度卡與共識合成
+- `GET /api/v1/alerts` - 查詢量化價位與動態分位數告警清單
+- `POST /api/v1/alerts` - 新增量化告警規則（需 WATCHLIST_API_KEY 金鑰驗證）
+- `POST /api/v1/alerts/check` - 觸發量化到價告警批次巡檢與原子冷卻推播（需 WATCHLIST_API_KEY 金鑰驗證）
+- `GET /s/{ticker}` - 免登入公開個股量化檔案 (SSR & 結構化 JSON-LD，安全防禦 XSS)
+- `GET /sitemap.xml` - 全站動態 XML 網站地圖 (1 小時記憶體快取，lastmod 取實際交易日)
+- `GET /robots.txt` - 搜尋引擎爬蟲指引文件
 - `POST /api/v1/decision/evaluate` - Clef-Flash System One 決策模型評估端點
 - `GET /api/v1/decision/health` - Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev)
 - `GET /api/v1/market/company-profile?ticker=2330` - 個股繁中簡介、最新新聞與企業網絡

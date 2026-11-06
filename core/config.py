@@ -239,6 +239,15 @@ class SectorConfig:
 
 
 
+class SecurityConfig:
+    """Security, deployment mode and API keys"""
+    DEPLOYMENT_MODE: str = os.getenv("DEPLOYMENT_MODE", "production").lower()
+    WATCHLIST_API_KEY: Optional[str] = os.getenv("WATCHLIST_API_KEY")
+    ALLOW_ANONYMOUS_LOCAL_WRITES: bool = os.getenv("ALLOW_ANONYMOUS_LOCAL_WRITES", "false").lower() in ("true", "1", "yes")
+    DECISION_API_KEY: Optional[str] = os.getenv("DECISION_API_KEY")
+    CLEF_API_KEY: Optional[str] = os.getenv("CLEF_API_KEY")
+
+
 class Config:
     """Main configuration class providing structured access to all sections"""
     db = DatabaseConfig
@@ -250,6 +259,7 @@ class Config:
     llm = LLMConfig
     clef = ClefConfig
     sector = SectorConfig
+    security = SecurityConfig
 
     # Convenience properties for backward compatibility
     @property

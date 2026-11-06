@@ -29,14 +29,9 @@ class CovariateStore:
     @contextmanager
     def _write_lock(self):
         """Serialize DuckDB access across threads and processes for this database."""
-        lock_path = self.db_path + ".covariates.lock"
-        Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(lock_path, "a+b") as lock_file:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        from core.duckdb_lock import duckdb_write_lock
+        with duckdb_write_lock(self.db_path):
+            yield
 
     @staticmethod
     def _json(value):

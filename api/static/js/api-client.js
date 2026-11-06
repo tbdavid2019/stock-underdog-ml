@@ -1,7 +1,42 @@
 /**
  * api-client.js - REST API Client for 888 Stock Quant Engine
- * Encapsulates all backend FastAPI endpoint calls with consistent error handling.
+ * Encapsulates all backend FastAPI endpoint calls with consistent error handling and AbortController timeout protection.
  */
+
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: options.signal || controller.signal
+        });
+        clearTimeout(id);
+        if (!response.ok) {
+            let detail = `HTTP ${response.status}`;
+            try {
+                const errData = await response.json();
+                if (errData && errData.detail) {
+                    detail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+                } else if (errData && errData.message) {
+                    detail = errData.message;
+                }
+            } catch (_) {}
+            const error = new Error(detail);
+            error.status = response.status;
+            throw error;
+        }
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        if (err.name === 'AbortError') {
+            const timeoutError = new Error(`請求逾時 (${timeoutMs}ms)`);
+            timeoutError.status = 408;
+            throw timeoutError;
+        }
+        throw err;
+    }
+}
 
 export const ApiClient = {
     /**
@@ -466,6 +501,134 @@ export const ApiClient = {
         if (relationType) params.set('relation_type', relationType);
         const res = await fetch(`/api/v1/industry-chain/graph?${params.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get real-time cross-market trading sessions and freshness status
+     */
+    async getMarketLiveSessions() {
+        const res = await fetch('/api/v1/market/calendar/sessions');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
+     * Get user watchlist from cloud DuckDB
+     */
+    async getWatchlist(profileId = 'default', apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = {};
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout(`/api/v1/watchlist?profile_id=${encodeURIComponent(profileId)}`, { headers });
+        return await res.json();
+    },
+
+    /**
+     * Add ticker to cloud DuckDB watchlist
+     */
+    async addWatchlist(ticker, note = '', sortOrder = null, apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = { 'Content-Type': 'application/json' };
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout('/api/v1/watchlist', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ ticker, note, sort_order: sortOrder })
+        });
+        return await res.json();
+    },
+
+    /**
+     * Remove ticker from cloud DuckDB watchlist
+     */
+    async removeWatchlist(ticker, apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = {};
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout(`/api/v1/watchlist/${encodeURIComponent(ticker)}`, {
+            method: 'DELETE',
+            headers
+        });
+        return await res.json();
+    },
+
+    /**
+     * Batch import tickers to cloud DuckDB watchlist
+     */
+    async batchImportWatchlist(tickers, apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = { 'Content-Type': 'application/json' };
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout('/api/v1/watchlist/batch', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ tickers })
+        });
+        return await res.json();
+    },
+
+    /**
+     * Resolve ticker or query
+     */
+    async resolveTicker(query) {
+        const res = await fetchWithTimeout(`/api/v1/predictions/resolve/${encodeURIComponent(query)}`);
+        return await res.json();
+    },
+
+    /**
+     * Get Signal Alignment score & factor breakdown
+     */
+    async getSignalAlignment(ticker) {
+        const res = await fetchWithTimeout(`/api/v1/predictions/alignment/${encodeURIComponent(ticker)}`);
+        return await res.json();
+    },
+
+    /**
+     * Get user price alerts
+     */
+    async getAlerts(apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = {};
+        if (key) headers['X-API-Key'] = key;
+        try {
+            const res = await fetchWithTimeout('/api/v1/alerts', { headers });
+            return await res.json();
+        } catch (err) {
+            if (err.status === 401) {
+                // Anonymous visitors gracefully treat cloud alerts as empty list
+                return { success: true, alerts: [], count: 0 };
+            }
+            throw err;
+        }
+    },
+
+    /**
+     * Create user price alert
+     */
+    async createAlert(alertPayload, apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = { 'Content-Type': 'application/json' };
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout('/api/v1/alerts', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(alertPayload)
+        });
+        return await res.json();
+    },
+
+    /**
+     * Delete user price alert
+     */
+    async deleteAlert(alertId, apiKey = null) {
+        const key = apiKey || localStorage.getItem('sq_watchlist_api_key_v1');
+        const headers = {};
+        if (key) headers['X-API-Key'] = key;
+        const res = await fetchWithTimeout(`/api/v1/alerts/${encodeURIComponent(alertId)}`, {
+            method: 'DELETE',
+            headers
+        });
         return await res.json();
     }
 };

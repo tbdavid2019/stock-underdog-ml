@@ -4,13 +4,22 @@ api/main.py - FastAPI Application Entrypoint for Stock Prediction & Multi-Strate
 
 import os
 import datetime
-from fastapi import FastAPI
+import html
+import json
+import logging
+import re
+import threading
+import time
+from typing import Optional, Dict, Any, List
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
-from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance
+from api.routes import predictions, macro, stats, market, decision, earnings_call, podcast, discovery, industry_chain, performance, watchlist
 from api.schemas import HealthResponse
 from data.duckdb_manager import DuckDBManager
 from core.version import APP_VERSION
+
+logger = logging.getLogger("stock_app.api")
 
 app = FastAPI(
     title="888 StockQuant Platform API",
@@ -67,6 +76,8 @@ app.include_router(earnings_call.router, prefix="/api/v1")
 app.include_router(podcast.router, prefix="/api/v1")
 app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(industry_chain.router, prefix="/api/v1")
+app.include_router(watchlist.router, prefix="/api/v1")
+app.include_router(watchlist.alerts_router, prefix="/api/v1")
 
 STATIC_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -94,12 +105,49 @@ def _static_asset(filename: str) -> FileResponse:
     return FileResponse(os.path.join(STATIC_ASSET_DIR, filename))
 
 
+_ASSET_FINGERPRINT_CACHE: Dict[str, Any] = {"val": None, "expiry": 0.0}
+
+try:
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
+    _SSR_JINJA_ENV = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        autoescape=select_autoescape(["html", "xml"])
+    )
+    _SPA_JINJA_ENV = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        variable_start_string="[[",
+        variable_end_string="]]",
+        autoescape=False
+    )
+except Exception:
+    _SSR_JINJA_ENV = None
+    _SPA_JINJA_ENV = None
+
+
 def get_asset_fingerprint() -> str:
-    """產生包含靜態腳本修改時間之指紋版本號，確保代碼更新時全網瀏覽器與 CDN 零快取殘留"""
+    """產生包含靜態模組與樣板全目錄最新修改時間之指紋版本號，具備 60 秒記憶體快取以減少磁碟 I/O"""
+    now = time.time()
+    if _ASSET_FINGERPRINT_CACHE["val"] and now < _ASSET_FINGERPRINT_CACHE["expiry"]:
+        return _ASSET_FINGERPRINT_CACHE["val"]
     try:
-        app_js_path = os.path.join(STATIC_ASSET_DIR, "js", "app.js")
-        mtime = int(os.path.getmtime(app_js_path))
-        return f"{APP_VERSION}.{mtime}"
+        max_mtime = 0
+        for scan_dir in (STATIC_ASSET_DIR, TEMPLATES_DIR):
+            if not os.path.exists(scan_dir):
+                continue
+            for root, _, files in os.walk(scan_dir):
+                for f in files:
+                    if f.endswith((".js", ".css", ".html", ".svg", ".json")):
+                        full_path = os.path.join(root, f)
+                        try:
+                            mt = int(os.path.getmtime(full_path))
+                            if mt > max_mtime:
+                                max_mtime = mt
+                        except OSError:
+                            pass
+        fp = f"{APP_VERSION}.{max_mtime}" if max_mtime > 0 else APP_VERSION
+        _ASSET_FINGERPRINT_CACHE["val"] = fp
+        _ASSET_FINGERPRINT_CACHE["expiry"] = now + 60.0
+        return fp
     except Exception:
         return APP_VERSION
 
@@ -135,16 +183,18 @@ def _render_jinja_template(template_name: str = "index.html") -> str:
     Tries native Jinja2 with custom delimiters [[ ]], falling back to recursive include expansion.
     """
     fingerprint = get_asset_fingerprint()
+    global _SPA_JINJA_ENV
     # 1. 優先嘗試 Jinja2 Environment 並以 [[ ]] 作為變數定界符，完全保護 Vue 的 {{ }}
     try:
-        from jinja2 import Environment, FileSystemLoader
-        jinja_env = Environment(
-            loader=FileSystemLoader(TEMPLATES_DIR),
-            variable_start_string="[[",
-            variable_end_string="]]",
-            autoescape=False
-        )
-        template = jinja_env.get_template(template_name)
+        if _SPA_JINJA_ENV is None:
+            from jinja2 import Environment, FileSystemLoader
+            _SPA_JINJA_ENV = Environment(
+                loader=FileSystemLoader(TEMPLATES_DIR),
+                variable_start_string="[[",
+                variable_end_string="]]",
+                autoescape=False
+            )
+        template = _SPA_JINJA_ENV.get_template(template_name)
         return template.render(APP_VERSION=fingerprint).replace("__APP_VERSION__", fingerprint)
     except Exception:
         pass
@@ -170,6 +220,32 @@ def _render_jinja_template(template_name: str = "index.html") -> str:
 
     resolved = _replace_includes(content)
     return resolved.replace("__APP_VERSION__", fingerprint).replace("[[ APP_VERSION ]]", fingerprint)
+
+
+def _render_ssr_template(template_name: str, context: dict) -> str:
+    """
+    Render server-side rendered (SSR) template with strict autoescape=True using standard Jinja2 {{ }} syntax.
+    Isolated from the SPA dashboard renderer and reuses singleton _SSR_JINJA_ENV.
+    """
+    global _SSR_JINJA_ENV
+    if _SSR_JINJA_ENV is None:
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        _SSR_JINJA_ENV = Environment(
+            loader=FileSystemLoader(TEMPLATES_DIR),
+            autoescape=select_autoescape(["html", "xml"])
+        )
+    template = _SSR_JINJA_ENV.get_template(template_name)
+    return template.render(**context)
+
+
+_TICKER_REGEX = re.compile(r"^[A-Za-z0-9.\-]{1,12}$")
+
+
+def _escape_json_ld(data: dict) -> str:
+    """Safely serialize JSON-LD escaping <, >, & to prevent script block injection."""
+    raw = json.dumps(data, ensure_ascii=False)
+    return raw.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
 
 # 掛載原生 WebMCP (SSE 串流協議) 供遠端 Agent 即時連接
 try:
@@ -226,7 +302,10 @@ def mcp_root_endpoint():
             "get_company_tenders",
             "get_industry_chain",
             "get_discovery_signals",
-            "get_model_performance_scorecard"
+            "get_model_performance_scorecard",
+            "get_watchlist",
+            "get_market_live_sessions",
+            "get_signal_alignment"
         ]
     })
 
@@ -284,7 +363,10 @@ def get_webmcp_manifest():
             "get_company_tenders",
             "get_industry_chain",
             "get_discovery_signals",
-            "get_model_performance_scorecard"
+            "get_model_performance_scorecard",
+            "get_watchlist",
+            "get_market_live_sessions",
+            "get_signal_alignment"
         ]
     })
 
@@ -325,6 +407,12 @@ def get_llms_txt():
 - [Latest Batch Snapshot](/api/v1/predictions/latest): 取得全市場最新日報批次數據（含現價、目標價、均線、估值、標籤）
 - [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡、均線排列與法人籌碼歷程
 - [Resolve Stock Symbol](/api/v1/predictions/resolve/台積電): 將中英文股票名稱（台積電、聯發科、NVDA、Tesla）模糊解析為標準代號
+- [Watchlist Items](/api/v1/watchlist): 查詢使用者持久化自選股清單（支援公開訪客本地與管理員雲端雙軌）
+- [Live Market Sessions](/api/v1/market/calendar/sessions): 查詢台股、美股與日股即時五態交易時段與東京 11:30–12:30 午休倒數
+- [Signal Alignment](/api/v1/predictions/alignment/2330.TW): 多源量化訊號一致度與共識合成（模型、籌碼、情報、前沿雷達）
+- [Public Stock Dossier](/s/2330.TW): 免登入公開個股量化檔案 (SSR & 結構化 JSON-LD)
+- [XML Sitemap](/sitemap.xml): 全站動態網站地圖 (附帶實際交易日 lastmod)
+- [Robots.txt](/robots.txt): 搜尋引擎與爬蟲存取規範
 
 ## Macroeconomic Risk & Investing Catalysts (2MD)
 
@@ -363,7 +451,7 @@ def get_llms_txt():
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 26 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 30 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `screen_quant_stocks`: 多維量化自訂篩選器（方向、時序模型多選、PE估值、潛力門檻、核心量化因子）。
 - `get_triple_resonance_stocks`: 查詢多模型共識與多策略交集焦點股。
@@ -391,6 +479,9 @@ def get_llms_txt():
 - `get_industry_chain`: 查詢跨市場 AI 產業價值鏈與實體拓撲關係圖譜（上中下游結構）。
 - `get_discovery_signals`: 查詢 AI 產業前沿挖掘機即時訊號流與前沿候選標的。
 - `get_model_performance_scorecard`: 查詢各 AI 時序預測模型之歷史驗證回測績效計分卡。
+- `get_watchlist`: 查詢使用者本地 DuckDB 持久化之自選股清單（Watchlist）與預測潛力摘要。
+- `get_market_live_sessions`: 查詢台美日即時五態交易時段與東京 11:30–12:30 午休倒數。
+- `get_signal_alignment`: 查詢個股多源訊號一致度卡（聚合時序基礎模型、台股籌碼、近30日情報姿態與前沿雷達）。
 
 ## Agent & Developer Discovery Standards
 
@@ -402,6 +493,9 @@ def get_llms_txt():
 - [Interactive Swagger UI](/docs): Live API testing and interactive documentation
 - [Chrome WebMCP Dynamic Bridge](/.webmcp/bridge.js): Cloudflare & Chrome WebMCP registration script
 - [Alternative MCP Manifest](/mcp.json): WebMCP discovery alias
+- [Public Stock Dossier SSR](/s/2330.TW): Server-side rendered escape-safe public stock page
+- [Dynamic XML Sitemap](/sitemap.xml): Search engine discovery sitemap with real trade dates
+- [Robots Exclusion Protocol](/robots.txt): Crawler indexing and discovery rules
 
 ## Optional & Full Documentation
 
@@ -523,11 +617,26 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - `GET /api/v1/earnings-call/{ticker}?limit=20`: 個股歷史法說會歷程、官方財測指引 (營收/毛利率/資本支出) 與簡報 PDF 原始連結。
 - `POST /api/v1/earnings-call/sync`: 觸發背景非同步多視窗跨市場全量法說會同步。
 
+### 4.5 Watchlist, Live Sessions & Signal Alignment
+- `GET /api/v1/watchlist?profile_id=default`: 查詢使用者本地 DuckDB 持久化之自選股清單（附帶最新預測）。
+- `POST /api/v1/watchlist`: 新增自選股（生產環境需 WATCHLIST_API_KEY 金鑰驗證）。
+- `DELETE /api/v1/watchlist/{ticker}`: 刪除自選股（生產環境需 WATCHLIST_API_KEY 金鑰驗證）。
+- `GET /api/v1/market/calendar/sessions`: 查詢台股、美股與日股即時五態交易時段與東京午休倒數。
+- `GET /api/v1/predictions/alignment/{ticker}`: 查詢多源量化訊號一致度卡（模型、籌碼、情報、前沿雷達共識）。
+- `GET /api/v1/alerts`: 查詢使用者之量化價位與動態分位數告警清單。
+- `POST /api/v1/alerts`: 新增量化告警（生產環境需 WATCHLIST_API_KEY 金鑰驗證）。
+- `POST /api/v1/alerts/check`: 觸發量化到價告警批次巡檢與原子冷卻推播（生產環境需 WATCHLIST_API_KEY 金鑰驗證）。
+
+### 4.6 Public SEO, Dynamic Sitemap & Crawler Standards
+- `GET /s/{ticker}`: 免登入公開個股量化檔案 (SSR & 結構化 JSON-LD，強制正則檢驗與 XSS 跳脫)。
+- `GET /sitemap.xml`: 全站動態 XML 網站地圖 (1 小時記憶體快取，lastmod 取實際交易日)。
+- `GET /robots.txt`: 搜尋引擎爬蟲指引文件。
+
 ## 5. Model Context Protocol (MCP) Server
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (26 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`.
+- Tools (30 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`, `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -896,6 +1005,29 @@ def get_webmcp_bridge():
                 if (args?.model_name) url += '&model_name=' + encodeURIComponent(args.model_name);
                 return JSON.stringify(await (await fetch(url)).json());
             }
+        },
+        {
+            name: 'get_watchlist',
+            description: '查詢本地 DuckDB 持久化之自選股清單（Watchlist）',
+            inputSchema: { type: 'object', properties: { profile_id: { type: 'string' } } },
+            execute: async (args) => {
+                let url = '/api/v1/watchlist?profile_id=' + encodeURIComponent(args?.profile_id || 'default');
+                return JSON.stringify(await (await fetch(url)).json());
+            }
+        },
+        {
+            name: 'get_market_live_sessions',
+            description: '查詢台股、美股與日股即時五態交易時段與東京午休倒數',
+            inputSchema: { type: 'object', properties: {} },
+            execute: async () => JSON.stringify(await (await fetch('/api/v1/market/calendar/sessions')).json())
+        },
+        {
+            name: 'get_signal_alignment',
+            description: '查詢個股之多源量化訊號一致度卡（聚合時序大模型、台股法人籌碼、近30日情報姿態與前沿雷達）',
+            inputSchema: { type: 'object', properties: { ticker: { type: 'string' } }, required: ['ticker'] },
+            execute: async (args) => {
+                return JSON.stringify(await (await fetch('/api/v1/predictions/alignment/' + encodeURIComponent(args.ticker))).json());
+            }
         }
     ];
 
@@ -921,7 +1053,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 16 大原生 MCP 量化工具與 WebMCP 協議。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 30 大原生 MCP 量化工具與 WebMCP 協議。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"
@@ -946,6 +1078,313 @@ def get_agent_skill():
         with open(skill_path, "r", encoding="utf-8") as f:
             return PlainTextResponse(content=f.read(), media_type="text/markdown; charset=utf-8")
     return PlainTextResponse(content="# Stock Quant Skill not found", status_code=404)
+
+
+_SITEMAP_CACHE: Optional[str] = None
+_SITEMAP_CACHE_TS: float = 0.0
+_SITEMAP_LOCK = threading.Lock()
+
+
+@app.api_route("/s/{ticker:path}", methods=["GET", "HEAD"], response_class=HTMLResponse, include_in_schema=False)
+def public_stock_dossier(ticker: str):
+    """
+    公開免登入、伺服器端渲染 (SSR) 個股量化摘要頁面。
+    強制進行正則白名單檢驗與 HTML 自動跳脫，阻絕 XSS。
+    """
+    clean_ticker = ticker.strip()
+    if not clean_ticker or not _TICKER_REGEX.match(clean_ticker):
+        return HTMLResponse(
+            content="<!DOCTYPE html><html lang='zh-TW'><head><meta charset='UTF-8'><title>404 標的格式不合法 | 888 StockQuant</title><meta name='robots' content='noindex, nofollow'></head><body style='background:#0D0E11;color:#fff;font-family:sans-serif;padding:40px;text-align:center;'><h1>404 - 股票代號格式不合法</h1><p>代號僅允許英數字與點破折號 (1-12 字元)。</p><a href='/' style='color:#FFB010;'>返回首頁</a></body></html>",
+            status_code=404,
+            headers={"X-Robots-Tag": "noindex, nofollow"}
+        )
+
+    db = DuckDBManager()
+    resolved = db.resolve_ticker(clean_ticker)
+    canonical_ticker = resolved.get("ticker", clean_ticker) if resolved else clean_ticker
+    ticker_name = resolved.get("name") if resolved else None
+
+    # 查詢 predictions 與相關表
+    market = "TW" if any(canonical_ticker.endswith(sfx) for sfx in (".TW", ".TWO")) or canonical_ticker.isdigit() else ("JP" if canonical_ticker.endswith(".T") else "US")
+    industry = "綜合科技"
+    business_summary = None
+    as_of = None
+    current_price = None
+    predicted_price = None
+    potential = None
+    ma60 = None
+    ma120 = None
+    pe = None
+    pb = None
+    trust_net_5d = None
+    foreign_net_5d = None
+    p_row = None
+    mu_row = None
+    bar_row = None
+
+    try:
+        with db._get_connection(read_only=True) as con:
+            # 1. 查 predictions 表
+            p_row = con.execute("""
+                SELECT ticker, current_price, predicted_price, potential, ma60, ma120, pe, pb, trust_net_5d, foreign_net_5d, CAST(timestamp AS VARCHAR)
+                FROM predictions
+                WHERE ticker = ? OR ticker = ?
+                ORDER BY timestamp DESC, (predicted_price IS NOT NULL) DESC
+                LIMIT 1
+            """, [canonical_ticker, clean_ticker]).fetchone()
+            if p_row:
+                current_price = p_row[1]
+                predicted_price = p_row[2]
+                potential = round(p_row[3], 2) if p_row[3] is not None else None
+                ma60 = p_row[4]
+                ma120 = p_row[5]
+                pe = p_row[6]
+                pb = p_row[7]
+                trust_net_5d = p_row[8]
+                foreign_net_5d = p_row[9]
+                if p_row[10]:
+                    as_of = p_row[10][:10]
+
+            # 2. 若 current_price 仍為 None，查 tw_daily_bars
+            if current_price is None:
+                bar_row = con.execute("""
+                    SELECT name, close, CAST(date AS VARCHAR)
+                    FROM tw_daily_bars
+                    WHERE ticker = ? OR ticker = ?
+                    ORDER BY date DESC
+                    LIMIT 1
+                """, [canonical_ticker, clean_ticker]).fetchone()
+                if bar_row:
+                    if not ticker_name and bar_row[0]:
+                        ticker_name = bar_row[0]
+                    current_price = bar_row[1]
+                    if not as_of and bar_row[2]:
+                        as_of = bar_row[2][:10]
+
+            # 3. 查 market_universe 補充名稱、市場與類別
+            mu_row = con.execute("""
+                SELECT normalized_symbol, COALESCE(name_local, name_en), market, market_category
+                FROM market_universe
+                WHERE normalized_symbol = ? OR local_symbol = ?
+                LIMIT 1
+            """, [canonical_ticker, clean_ticker]).fetchone()
+            if mu_row:
+                if not ticker_name and mu_row[1]:
+                    ticker_name = mu_row[1]
+                if mu_row[2]:
+                    market = mu_row[2]
+                if mu_row[3]:
+                    industry = mu_row[3]
+
+            # 4. 查 company_profiles 補充業務簡述與產業
+            cp_row = con.execute("""
+                SELECT name, industry, business_summary
+                FROM company_profiles
+                WHERE ticker = ? OR ticker = ?
+                LIMIT 1
+            """, [canonical_ticker, clean_ticker]).fetchone()
+            if cp_row:
+                if not ticker_name and cp_row[0]:
+                    ticker_name = cp_row[0]
+                if cp_row[1]:
+                    industry = cp_row[1]
+                if cp_row[2]:
+                    business_summary = cp_row[2]
+
+            # 5. 查同產業/市場 4-6 檔 Peers (以 ROW_NUMBER 去重確保單一標的僅出現最新一筆)
+            peer_rows = con.execute("""
+                WITH latest_preds AS (
+                    SELECT ticker, current_price,
+                           ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+                    FROM predictions
+                )
+                SELECT m.normalized_symbol, COALESCE(m.name_local, m.name_en), m.market, p.current_price
+                FROM market_universe m
+                LEFT JOIN latest_preds p ON m.normalized_symbol = p.ticker AND p.rn = 1
+                WHERE (m.market_category = ? OR m.market = ?)
+                  AND m.normalized_symbol NOT IN (?, ?)
+                LIMIT 6
+            """, [industry, market, canonical_ticker, clean_ticker]).fetchall()
+            peers = [
+                {"ticker": r[0], "name": r[1] or r[0], "market": r[2] or market, "current_price": r[3]}
+                for r in peer_rows
+            ]
+    except Exception as e:
+        logger.warning(f"Error querying DuckDB for public stock dossier {clean_ticker}: {e}")
+        peers = []
+
+    # 若 predictions, tw_daily_bars, market_universe, company_profiles 全無此標的
+    if current_price is None and not mu_row and not p_row and not resolved and not bar_row:
+        return HTMLResponse(
+            content=f"<!DOCTYPE html><html lang='zh-TW'><head><meta charset='UTF-8'><title>404 查無此股票標的 | 888 StockQuant</title><meta name='robots' content='noindex, nofollow'></head><body style='background:#0D0E11;color:#fff;font-family:sans-serif;padding:40px;text-align:center;'><h1>404 - 查無標的「{html.escape(clean_ticker)}」</h1><p>資料庫與預測庫中未收錄此代號，請確認代號是否正確。</p><a href='/' style='color:#FFB010;'>返回首頁</a></body></html>",
+            status_code=404,
+            headers={"X-Robots-Tag": "noindex, nofollow"}
+        )
+
+    if not ticker_name:
+        ticker_name = canonical_ticker
+
+    # 構造 JSON-LD
+    json_ld_dict = {
+        "@context": "https://schema.org",
+        "@type": "FinancialProduct",
+        "name": f"{ticker_name} ({canonical_ticker})",
+        "tickerSymbol": canonical_ticker,
+        "description": business_summary or f"{ticker_name} ({canonical_ticker}) 量化預測與多維時序分析報告",
+        "url": f"https://stockdata.david888.com/s/{canonical_ticker}",
+        "provider": {
+            "@type": "Organization",
+            "name": "888 StockQuant Engine",
+            "url": "https://stockdata.david888.com"
+        }
+    }
+    if current_price is not None:
+        json_ld_dict["offers"] = {
+            "@type": "Offer",
+            "price": str(current_price),
+            "priceCurrency": "TWD" if market == "TW" else ("JPY" if market == "JP" else "USD")
+        }
+    safe_json_ld = _escape_json_ld(json_ld_dict)
+
+    context = {
+        "ticker": canonical_ticker,
+        "name": ticker_name,
+        "market": market,
+        "industry": industry,
+        "as_of": as_of or datetime.date.today().isoformat(),
+        "current_price": current_price,
+        "predicted_price": predicted_price,
+        "potential": potential,
+        "pe": pe,
+        "pb": pb,
+        "ma60": ma60,
+        "ma120": ma120,
+        "trust_net_5d": trust_net_5d,
+        "foreign_net_5d": foreign_net_5d,
+        "business_summary": business_summary,
+        "peers": peers,
+        "safe_json_ld": safe_json_ld
+    }
+
+    try:
+        content = _render_ssr_template("ticker_seo.html", context)
+        return HTMLResponse(content=content, status_code=200)
+    except Exception as e:
+        logger.error(f"Failed to render ticker_seo.html for {canonical_ticker}: {e}")
+        return HTMLResponse(content="<h1>500 Internal Server Error</h1>", status_code=500)
+
+
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+def sitemap_xml():
+    """
+    動態 Sitemap 生成器，具備 1 小時快取，<lastmod> 精確採用各標的最新實際交易日。
+    """
+    global _SITEMAP_CACHE, _SITEMAP_CACHE_TS
+    now = time.time()
+    with _SITEMAP_LOCK:
+        if _SITEMAP_CACHE is not None and (now - _SITEMAP_CACHE_TS < 3600):
+            return Response(content=_SITEMAP_CACHE, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
+
+    db = DuckDBManager()
+    ticker_lastmod = {}
+    default_date = datetime.date.today().isoformat()
+
+    try:
+        with db._get_connection(read_only=True) as con:
+            # 1. predictions 表活躍標的
+            try:
+                p_rows = con.execute("""
+                    SELECT ticker, CAST(MAX(timestamp) AS VARCHAR)
+                    FROM predictions
+                    WHERE ticker IS NOT NULL
+                    GROUP BY ticker
+                """).fetchall()
+                for t, ts in p_rows:
+                    if t:
+                        ticker_lastmod[t] = ts[:10] if ts else default_date
+            except Exception:
+                pass
+
+            # 2. tw_daily_bars 活躍標的
+            try:
+                b_rows = con.execute("""
+                    SELECT ticker, CAST(MAX(date) AS VARCHAR)
+                    FROM tw_daily_bars
+                    WHERE ticker IS NOT NULL
+                    GROUP BY ticker
+                """).fetchall()
+                for t, d in b_rows:
+                    if t and t not in ticker_lastmod:
+                        ticker_lastmod[t] = d[:10] if d else default_date
+            except Exception:
+                pass
+
+            # 3. market_universe 補充核心標的 (上限 1000 檔避免 sitemap 過巨)
+            if len(ticker_lastmod) < 500:
+                try:
+                    m_rows = con.execute("""
+                        SELECT normalized_symbol, CAST(snapshot_date AS VARCHAR)
+                        FROM market_universe
+                        WHERE normalized_symbol IS NOT NULL AND listing_status = 'ACTIVE'
+                        LIMIT 1000
+                    """).fetchall()
+                    for sym, d in m_rows:
+                        if sym and sym not in ticker_lastmod:
+                            ticker_lastmod[sym] = d[:10] if d else default_date
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"Error querying DuckDB for sitemap.xml: {e}")
+
+    # 構造合法 XML
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '  <url>',
+        '    <loc>https://stockdata.david888.com/</loc>',
+        f'    <lastmod>{default_date}</lastmod>',
+        '    <changefreq>hourly</changefreq>',
+        '    <priority>1.0</priority>',
+        '  </url>'
+    ]
+    for t, ldate in sorted(ticker_lastmod.items()):
+        clean_t = html.escape(t)
+        xml_lines.append('  <url>')
+        xml_lines.append(f'    <loc>https://stockdata.david888.com/s/{clean_t}</loc>')
+        xml_lines.append(f'    <lastmod>{ldate}</lastmod>')
+        xml_lines.append('    <changefreq>daily</changefreq>')
+        xml_lines.append('    <priority>0.8</priority>')
+        xml_lines.append('  </url>')
+    xml_lines.append('</urlset>')
+
+    xml_content = "\n".join(xml_lines)
+    with _SITEMAP_LOCK:
+        _SITEMAP_CACHE = xml_content
+        _SITEMAP_CACHE_TS = now
+
+    return Response(
+        content=xml_content,
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=3600"}
+    )
+
+
+@app.api_route("/robots.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
+def robots_txt():
+    """搜尋引擎爬蟲指引文件，允許公開頁面與 LLM 規格，遮蔽私有 API 與 MCP 端點。"""
+    content = """User-agent: *
+Allow: /
+Allow: /s/
+Allow: /skill
+Allow: /.well-known/
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /mcp/
+
+Sitemap: https://stockdata.david888.com/sitemap.xml
+"""
+    return PlainTextResponse(content=content, media_type="text/plain; charset=utf-8")
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health Check"])

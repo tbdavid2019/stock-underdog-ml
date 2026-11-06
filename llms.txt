@@ -29,6 +29,12 @@
 - [Latest Batch Snapshot](/api/v1/predictions/latest): 取得全市場最新日報批次數據（含現價、目標價、均線、估值、標籤）
 - [Stock History Trajectory](/api/v1/predictions/history/2330.TW): 查詢個股歷史時序預測軌跡、均線排列與法人籌碼歷程
 - [Resolve Stock Symbol](/api/v1/predictions/resolve/台積電): 將中英文股票名稱（台積電、聯發科、NVDA、Tesla）模糊解析為標準代號
+- [Watchlist Items](/api/v1/watchlist): 查詢使用者持久化自選股清單（支援公開訪客本地與管理員雲端雙軌）
+- [Live Market Sessions](/api/v1/market/calendar/sessions): 查詢台股、美股與日股即時五態交易時段與東京 11:30–12:30 午休倒數
+- [Signal Alignment](/api/v1/predictions/alignment/2330.TW): 多源量化訊號一致度與共識合成（模型、籌碼、情報、前沿雷達）
+- [Public Stock Dossier](/s/2330.TW): 免登入公開個股量化檔案 (SSR & 結構化 JSON-LD)
+- [XML Sitemap](/sitemap.xml): 全站動態網站地圖 (附帶實際交易日 lastmod)
+- [Robots.txt](/robots.txt): 搜尋引擎與爬蟲存取規範
 
 ## Macroeconomic Risk & Investing Catalysts (2MD)
 
@@ -67,7 +73,7 @@
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 26 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 30 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `screen_quant_stocks`: 多維量化自訂篩選器（方向、時序模型多選、PE估值、潛力門檻、核心量化因子）。
 - `get_triple_resonance_stocks`: 查詢多模型共識與多策略交集焦點股。
@@ -95,6 +101,9 @@
 - `get_industry_chain`: 查詢跨市場 AI 產業價值鏈與實體拓撲關係圖譜（上中下游結構）。
 - `get_discovery_signals`: 查詢 AI 產業前沿挖掘機即時訊號流與前沿候選標的。
 - `get_model_performance_scorecard`: 查詢各 AI 時序預測模型之歷史驗證回測績效計分卡。
+- `get_watchlist`: 查詢使用者本地 DuckDB 持久化之自選股清單（Watchlist）與預測潛力摘要。
+- `get_market_live_sessions`: 查詢台美日即時五態交易時段與東京 11:30–12:30 午休倒數。
+- `get_signal_alignment`: 查詢個股多源訊號一致度卡（聚合時序基礎模型、台股籌碼、近30日情報姿態與前沿雷達）。
 
 ## Agent & Developer Discovery Standards
 
@@ -106,6 +115,9 @@
 - [Interactive Swagger UI](/docs): Live API testing and interactive documentation
 - [Chrome WebMCP Dynamic Bridge](/.webmcp/bridge.js): Cloudflare & Chrome WebMCP registration script
 - [Alternative MCP Manifest](/mcp.json): WebMCP discovery alias
+- [Public Stock Dossier SSR](/s/2330.TW): Server-side rendered escape-safe public stock page
+- [Dynamic XML Sitemap](/sitemap.xml): Search engine discovery sitemap with real trade dates
+- [Robots Exclusion Protocol](/robots.txt): Crawler indexing and discovery rules
 
 ## Optional & Full Documentation
 

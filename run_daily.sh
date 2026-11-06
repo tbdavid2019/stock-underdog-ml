@@ -228,7 +228,14 @@ if [ $DISCOVERY_EXIT -ne 0 ]; then
     log "⚠️ [警告] Discovery Pipeline 執行非零退出碼 ($DISCOVERY_EXIT)，已記錄於日誌。"
 fi
 
-
+# Step 2.8: 巡檢量化價位與分位數條件告警 (Quant Price Alerts Evaluator)
+log ""
+log "[2.8/3] 巡檢量化價位與分位數條件告警..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
+else
+    $PYTHON_EXEC -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
+fi
 
 # Step 3: 清理舊日誌 (保留最近 30 天)
 log ""

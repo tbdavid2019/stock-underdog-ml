@@ -20,6 +20,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from core.upstream_guard import KeyPoolGuard
+
 logger = logging.getLogger("stock_app.polymarket")
 
 
@@ -49,6 +51,11 @@ class PolymarketService:
     _MEM_CACHE: Dict[str, Any] = {}
     _CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
     _CRAWLER_SEMAPHORE = threading.Semaphore(3)
+    _KEY_GUARD = KeyPoolGuard(
+        keys=os.getenv("POLYMARKET_KEYS") or os.getenv("CREATE360_API_KEY") or "",
+        cooldown_seconds=60.0,
+        name="polymarket_2md"
+    )
     _DNS_HOOK_LOCK = threading.Lock()
     _RESOLVED_IP: Optional[str] = None
     _IP_RESOLVED_AT: float = 0
@@ -239,20 +246,31 @@ class PolymarketService:
         with cls._CRAWLER_SEMAPHORE:
             # 軌道 1: 2MD 輪詢
             for host in cls.FALLBACK_2MD_HOSTS:
+                if cls._KEY_GUARD.is_in_cooldown(host):
+                    logger.debug(f"2md host {host} in cooldown, skipping...")
+                    continue
                 url = f"{host.rstrip('/')}/{cls.TARGET_API}"
+                headers = {}
+                key = cls._KEY_GUARD.get_next_key()
+                if key:
+                    headers["Authorization"] = f"Bearer {key}"
                 try:
-                    resp = requests.get(url, timeout=cls.TIMEOUT)
+                    resp = requests.get(url, headers=headers, timeout=cls.TIMEOUT)
                     if resp.status_code == 200:
                         text = resp.text
                         match = re.search(r"(\[|\{).*", text, re.DOTALL)
                         if match:
                             data = json.loads(match.group(0))
                             if isinstance(data, list) and len(data) > 0:
+                                cls._KEY_GUARD.record_success(host)
                                 cls._LAST_FETCH_SOURCE = "2md_reader"
                                 return data
+                    cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                 except requests.exceptions.Timeout:
+                    cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                     logger.debug(f"2MD timeout on {host} for Polymarket, trying next...")
                 except Exception as e:
+                    cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                     logger.debug(f"2MD fetch error on {host} for Polymarket: {e}")
 
             # 軌道 2: DoH (8.8.8.8 / 1.1.1.1) 繞過本機/ISP 污染直連

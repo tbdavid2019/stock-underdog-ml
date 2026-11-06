@@ -1,0 +1,105 @@
+<!-- ================= COMMAND PALETTE MODAL (⌘K / Ctrl+K) ================= -->
+<div v-if="showCommandPalette"
+     class="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 md:p-20 flex items-start justify-center backdrop-blur-md bg-black/60 transition-opacity duration-150"
+     @click.self="closeCommandPalette"
+     @keydown.window.esc="closeCommandPalette"
+     role="dialog"
+     aria-modal="true"
+     aria-label="全域指令與股票搜尋面板">
+
+    <div class="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200"
+         :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
+
+        <!-- Search Input Bar -->
+        <div class="flex items-center px-4 py-3.5 border-b"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#DDC58B] bg-[#FFF9E8]'">
+            <span class="material-symbols-outlined text-[22px] text-amber-500 mr-3 shrink-0">search</span>
+            <input ref="commandInput"
+                   type="text"
+                   v-model="commandQuery"
+                   @input="onCommandSearch"
+                   @keydown.down.prevent="selectNextCommand"
+                   @keydown.up.prevent="selectPrevCommand"
+                   @keydown.enter.prevent="executeActiveCommand"
+                   placeholder="搜尋股票代號、中文名稱 (如 2330, 台積電, NVDA, 7203)..."
+                   class="flex-1 bg-transparent border-0 outline-none text-base sm:text-lg font-medium placeholder-slate-400 focus:ring-0"
+                   :class="isDark ? 'text-white' : 'text-[#2B251A]'"
+                   autocomplete="off"
+                   spellcheck="false" />
+            <kbd class="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold rounded border ml-2 shrink-0 select-none"
+                 :class="isDark ? 'bg-[#262626] border-[#374151] text-amber-400' : 'bg-[#FFF0CC] border-[#DDC58B] text-[#2B251A]'">ESC 關閉</kbd>
+        </div>
+
+        <!-- Command Palette Results List -->
+        <div class="max-h-96 overflow-y-auto p-2 space-y-1">
+            <!-- Loading Indicator -->
+            <div v-if="isSearchingCommand" class="py-6 text-center text-sm text-slate-400 flex items-center justify-center space-x-2">
+                <span class="material-symbols-outlined animate-spin text-[20px] text-amber-500">sync</span>
+                <span>正在搜尋全市場清冊...</span>
+            </div>
+
+            <!-- Empty Results -->
+            <div v-else-if="commandQuery.trim().length >= 2 && commandResults.length === 0" class="py-8 text-center text-sm text-slate-400">
+                <span class="material-symbols-outlined text-[32px] text-slate-400 mb-1">sentiment_dissatisfied</span>
+                <p>查無匹配標的或代號「<span class="font-bold text-amber-500" v-text="commandQuery"></span>」</p>
+                <p class="text-xs text-slate-500 mt-1">請嘗試輸入完整代號 (如 2330.TW 或 NVDA)</p>
+            </div>
+
+            <!-- Results Items -->
+            <div v-else>
+                <!-- Section Header -->
+                <div class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span v-text="commandQuery.trim().length >= 2 ? '匹配標的' : (recentTickers.length > 0 ? '最近瀏覽與快捷標的' : '熱門標的推薦')"></span>
+                    <span class="text-xs lowercase text-slate-500">↑↓ 鍵導覽 · Enter 開啟</span>
+                </div>
+
+                <div v-for="(item, idx) in commandResults"
+                     :key="item.ticker || item.id || idx"
+                     @click="handleCommandClick(item)"
+                     @mouseenter="activeCommandIndex = idx"
+                     class="px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center justify-between transition-colors select-none group"
+                     :class="activeCommandIndex === idx
+                         ? (isDark ? 'bg-[#262626] text-white' : 'bg-[#FFF0CC] text-[#2B251A]')
+                         : (isDark ? 'hover:bg-[#1E2026] text-slate-300' : 'hover:bg-[#FFF9E8] text-[#2B251A]')">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                             :class="isDark ? 'bg-[#0D0E11] border-[#374151] text-amber-400' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#17324D]'">
+                            <span class="material-symbols-outlined text-[18px]">show_chart</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-mono font-black text-sm tracking-tight text-amber-500" v-text="item.ticker"></span>
+                                <span class="text-xs px-1.5 py-0.2 rounded font-mono font-bold border"
+                                      :class="isDark ? 'bg-[#17324D] text-white border-blue-600' : 'bg-[#17324D] text-white border-[#17324D]'"
+                                      v-text="item.market || 'TW'"></span>
+                            </div>
+                            <div class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md mt-0.5" v-text="item.name || item.title || ''"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-right shrink-0">
+                        <div v-if="item.potential !== undefined && item.potential !== null" class="text-xs font-mono font-bold"
+                             :class="item.potential >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                            {{ item.potential >= 0 ? '+' : '' }}{{ Number(item.potential).toFixed(1) }}%
+                        </div>
+                        <span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-amber-500 transition-colors">arrow_forward</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Shortcuts -->
+        <div class="px-4 py-2.5 border-t text-xs text-slate-400 flex items-center justify-between"
+             :class="isDark ? 'border-[#262626] bg-[#0D0E11]/80' : 'border-[#DDC58B] bg-[#FFF9E8]/80'">
+            <div class="flex items-center space-x-3">
+                <span><kbd class="font-mono font-bold">↑</kbd><kbd class="font-mono font-bold">↓</kbd> 移動</span>
+                <span><kbd class="font-mono font-bold">↵</kbd> 展開分析</span>
+                <span><kbd class="font-mono font-bold">ESC</kbd> 關閉</span>
+            </div>
+            <div class="text-xs font-mono text-slate-500">
+                888 StockQuant Engine
+            </div>
+        </div>
+
+    </div>
+</div>

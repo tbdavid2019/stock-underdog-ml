@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{ name }} ({{ ticker }}) 量化預測與多維時序分析報告 | 888 StockQuant</title>
+    <meta name="description" content="{{ name }} ({{ ticker }}) 最新收盤價 {{ current_price }}，時序神經網路模型預測目標價 {{ predicted_price or 'N/A' }} (潛力空間 {{ potential or '0' }}%)。三大法人籌碼、本益比與多源訊號共振量化摘要。">
+    <link rel="canonical" href="https://stockdata.david888.com/s/{{ ticker }}">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#FFB010">
+
+    <!-- OpenGraph & Twitter Cards -->
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="888 StockQuant">
+    <meta property="og:title" content="{{ name }} ({{ ticker }}) 量化預測與多維時序分析 | 888 StockQuant">
+    <meta property="og:description" content="{{ name }} 最新收盤價 {{ current_price }}，時序神經網路模型目標價 {{ predicted_price or 'N/A' }} ({{ potential or '0' }}%)。">
+    <meta property="og:url" content="https://stockdata.david888.com/s/{{ ticker }}">
+    <meta property="og:image" content="https://stockdata.david888.com/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ name }} ({{ ticker }}) 量化預測與多維時序分析">
+    <meta name="twitter:description" content="{{ name }} 最新收盤價 {{ current_price }}，時序模型預測目標價 {{ predicted_price or 'N/A' }}。">
+
+    <!-- JSON-LD Structured Data (Pre-escaped against XSS) -->
+    <script type="application/ld+json">
+    {{ safe_json_ld | safe }}
+    </script>
+
+    <!-- Typography: JetBrains Mono for financial figures & Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #0D0E11; color: #F3F4F6; }
+        .num-font { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum" 1; }
+        h1 { font-size: 2.25rem; line-height: 2.5rem; }
+        h2 { font-size: 1.5rem; line-height: 2rem; }
+        h3 { font-size: 1.25rem; line-height: 1.75rem; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-amber-500 selection:text-black">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-[#262626] bg-[#0D0E11]/90 backdrop-blur-md sticky top-0 z-20">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center space-x-3 group cursor-pointer" title="返回 888 StockQuant 操盤看板">
+                <div class="w-10 h-10 rounded-xl bg-[#FFB010] text-[#2B251A] border border-[#2B251A] flex flex-col items-center justify-center p-0.5 font-mono select-none group-hover:scale-105 transition-transform">
+                    <span class="font-black text-xs leading-none">888</span>
+                    <span class="font-black text-xs uppercase tracking-tighter mt-0.5">QUANT</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-black text-sm text-white tracking-tight">888 StockQuant</span>
+                    <span class="text-xs text-slate-400">公開個股量化檔案</span>
+                </div>
+            </a>
+
+            <div class="flex items-center space-x-2">
+                <a href="/?ticker={{ ticker }}"
+                   class="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-[#2B251A] font-black text-xs sm:text-sm transition-all shadow-sm flex items-center space-x-1.5">
+                    <span>進入互動操盤看板</span>
+                    <span class="material-symbols-outlined text-base">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8 flex-1">
+
+        <!-- Top Breadcrumbs -->
+        <nav aria-label="麵包屑導覽" class="text-xs text-slate-400 flex items-center space-x-2">
+            <a href="/" class="hover:text-amber-400 transition-colors">首頁</a>
+            <span>/</span>
+            <span class="text-slate-200">公開個股檔案</span>
+            <span>/</span>
+            <span class="text-amber-500 font-mono font-bold">{{ ticker }}</span>
+        </nav>
+
+        <!-- Company Header (Un-nested Flat Hierarchy) -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-[#262626]">
+            <div>
+                <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                    <h1 class="text-4xl font-black tracking-tight text-white">
+                        {{ name }}
+                    </h1>
+                    <span class="text-3xl font-black font-mono text-amber-500">{{ ticker }}</span>
+                    <span class="px-2.5 py-0.5 rounded-md text-xs font-bold font-mono bg-[#17324D] text-white border border-blue-500/30">
+                        {{ market }}
+                    </span>
+                </div>
+                <p class="text-sm text-slate-400 mt-2 flex items-center space-x-2">
+                    <span>產業類別: <strong class="text-slate-200">{{ industry or '綜合科技' }}</strong></span>
+                    <span>·</span>
+                    <span>資料基準日: <span class="font-mono text-amber-400">{{ as_of or '最新交易日' }}</span></span>
+                </p>
+            </div>
+
+            <div class="text-left sm:text-right">
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">最新收盤價</div>
+                <div class="text-4xl font-black font-mono text-white mt-0.5">
+                    {{ current_price or 'N/A' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Flat Bento Grid: Key Quantitative Metrics -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-5 rounded-2xl border border-[#262626] bg-[#16181D] space-y-2">
+                <div class="text-xs font-bold text-slate-400">時序基礎模型目標價</div>
+                <div class="text-2xl font-black font-mono text-amber-500">
+                    {{ predicted_price or 'N/A' }}
+                </div>
+                <div class="text-xs font-bold font-mono {{ 'text-emerald-400' if potential and potential > 0 else 'text-rose-400' }}">
+                    預期潛力: {{ '+' if potential and potential > 0 else '' }}{{ potential or '0' }}%
+                </div>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-[#262626] bg-[#16181D] space-y-2">
+                <div class="text-xs font-bold text-slate-400">本益比 / 股價淨值比 (PE / PB)</div>
+                <div class="text-2xl font-black font-mono text-white">
+                    {{ pe or 'N/A' }} <span class="text-xs text-slate-400">/</span> {{ pb or 'N/A' }}
+                </div>
+                <div class="text-xs text-slate-400">歷史估值分位水位</div>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-[#262626] bg-[#16181D] space-y-2">
+                <div class="text-xs font-bold text-slate-400">季線 MA60 / 半年線 MA120</div>
+                <div class="text-2xl font-black font-mono text-white">
+                    {{ ma60 or 'N/A' }} <span class="text-xs text-slate-400">/</span> {{ ma120 or 'N/A' }}
+                </div>
+                <div class="text-xs text-slate-400">關鍵中期支撐均線</div>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-[#262626] bg-[#16181D] space-y-2">
+                <div class="text-xs font-bold text-slate-400">近 5 日外資與投信籌碼</div>
+                <div class="text-2xl font-black font-mono text-white">
+                    {% if trust_net_5d is not none or foreign_net_5d is not none %}
+                        {{ (trust_net_5d or 0) + (foreign_net_5d or 0) }} 張
+                    {% else %}
+                        海外標的
+                    {% endif %}
+                </div>
+                <div class="text-xs text-slate-400">三大法人籌碼淨流向</div>
+            </div>
+        </div>
+
+        <!-- Business Description -->
+        <section class="space-y-3" aria-labelledby="desc-title">
+            <h2 id="desc-title" class="text-2xl font-black text-white flex items-center space-x-2">
+                <span class="material-symbols-outlined text-amber-500">info</span>
+                <span>公司基本業務與營運簡述</span>
+            </h2>
+            <div class="p-5 rounded-2xl border border-[#262626] bg-[#16181D]">
+                <p class="text-sm text-slate-300 leading-relaxed">
+                    {{ business_summary or '該公司為產業核心重要供應鏈成員，具備高度全球競爭力與技術護城河。可前往 888 StockQuant 互動操盤看板檢視歷史多模型預測軌跡、法說會簡報重點與關聯圖譜。' }}
+                </p>
+            </div>
+        </section>
+
+        <!-- Peer Companies Cross-Linking Section -->
+        {% if peers and peers | length > 0 %}
+        <section class="space-y-3" aria-labelledby="peers-title">
+            <h2 id="peers-title" class="text-2xl font-black text-white flex items-center space-x-2">
+                <span class="material-symbols-outlined text-amber-500">hub</span>
+                <span>相關同業與供應鏈推薦 (Peers)</span>
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {% for peer in peers %}
+                <a href="/s/{{ peer.ticker }}"
+                   class="p-4 rounded-xl border border-[#262626] bg-[#16181D] hover:border-amber-500/50 hover:bg-[#1E2026] transition-all flex flex-col justify-between space-y-1.5 group">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono font-black text-amber-500 text-sm group-hover:underline">{{ peer.ticker }}</span>
+                        <span class="text-xs font-mono text-slate-400">{{ peer.market or 'TW' }}</span>
+                    </div>
+                    <div class="text-xs text-slate-200 truncate font-bold">{{ peer.name or peer.ticker }}</div>
+                    <div class="text-xs font-mono font-bold pt-1.5 border-t border-[#262626] text-slate-400">
+                        現價: {{ peer.current_price or 'N/A' }}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Interactive Board CTA Banner -->
+        <section class="p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-[#16181D] to-[#16181D] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <h3 class="text-xl font-black text-white">想檢視 {{ name }} 的完整時序大模型預測與法說會情報？</h3>
+                <p class="text-sm text-slate-400">888 StockQuant 提供 TimesFM、Timestral 與 MOIRAI 三大時序模型共振分析、法人分點買賣超與即時推播告警。</p>
+            </div>
+            <a href="/?ticker={{ ticker }}"
+               class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#2B251A] font-black text-sm whitespace-nowrap shadow-lg shadow-amber-500/10 transition-transform active:scale-95 flex items-center justify-center space-x-1 shrink-0">
+                <span>立即開啟完整操盤面板</span>
+                <span class="material-symbols-outlined text-base">arrow_forward</span>
+            </a>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[#262626] bg-[#0D0E11] py-8 text-xs text-slate-400">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                © 2026 888 StockQuant Engine. All rights reserved.
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="hover:text-amber-400 transition-colors">操盤看板</a>
+                <a href="/sitemap.xml" class="hover:text-amber-400 transition-colors">網站地圖 (Sitemap)</a>
+                <a href="/robots.txt" class="hover:text-amber-400 transition-colors">Robots.txt</a>
+                <a href="/llms.txt" class="hover:text-amber-400 transition-colors">LLMs.txt</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -4,6 +4,7 @@ test/test_market_calendar.py - 跨市場交易行事曆與休市守衛單元測�
 
 import unittest
 import datetime
+from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from core.market_calendar import MarketCalendar
 from api.main import app
@@ -220,6 +221,20 @@ class TestMarketCalendar(unittest.TestCase):
         h_list = resp_h.json()
         self.assertEqual(len(h_list), 10)
         self.assertEqual(h_list[0]["name"], "New Year's Day")
+
+    def test_check_market_freshness_weekend_and_holidays(self):
+        """測試假日與週末不會誤判為資料過期 (stale=False)"""
+        cal = MarketCalendar()
+        # 2026-11-06 (週五) 收盤資料，在 2026-11-08 (週日) 評估不應過期
+        friday_data = "2026-11-06"
+        sunday_now = datetime.datetime(2026, 11, 8, 14, 0, 0, tzinfo=ZoneInfo("Asia/Taipei"))
+        res_sunday = cal.check_market_freshness("TW", friday_data, sunday_now)
+        self.assertFalse(res_sunday["stale"])
+
+        # 2026-11-10 (週二) 晚上評估上週五資料，已逾 1 交易日，應標記過期
+        tuesday_now = datetime.datetime(2026, 11, 10, 20, 0, 0, tzinfo=ZoneInfo("Asia/Taipei"))
+        res_tue = cal.check_market_freshness("TW", friday_data, tuesday_now)
+        self.assertTrue(res_tue["stale"])
 
 
 if __name__ == "__main__":

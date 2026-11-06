@@ -4,6 +4,8 @@ from mcp_server import (
     get_industry_chain,
     get_discovery_signals,
     get_model_performance_scorecard,
+    get_watchlist,
+    get_market_live_sessions,
 )
 
 
@@ -51,6 +53,42 @@ class TestMCPTools(unittest.TestCase):
         self.assertTrue(res.get("success"))
         self.assertIn("window_days", res)
         self.assertIn("data", res)
+
+
+    def test_get_watchlist_tool(self):
+        """驗證 get_watchlist FastMCP 唯讀工具執行正常，且拒絕非 default profile 存取"""
+        res = get_watchlist(profile_id="default")
+        self.assertIsInstance(res, dict)
+        self.assertTrue(res.get("success"))
+        self.assertIn("data", res)
+        self.assertIsInstance(res["data"], list)
+
+        # 拒絕存取非 default 的私有 profile
+        res_denied = get_watchlist(profile_id="private_vault")
+        self.assertFalse(res_denied.get("success"))
+        self.assertIn("default", res_denied.get("error", ""))
+
+
+    def test_get_market_live_sessions_tool(self):
+        """驗證 get_market_live_sessions FastMCP 工具執行正常"""
+        res = get_market_live_sessions()
+        self.assertIsInstance(res, dict)
+        self.assertTrue(res.get("success"))
+        self.assertIn("sessions", res)
+        self.assertIn("TW", res["sessions"])
+        self.assertIn("US", res["sessions"])
+        self.assertIn("JP", res["sessions"])
+
+    def test_get_signal_alignment_tool(self):
+        """驗證 get_signal_alignment FastMCP 工具執行正常"""
+        from mcp_server import get_signal_alignment
+        res = get_signal_alignment("2330.TW")
+        self.assertIsInstance(res, dict)
+        self.assertTrue(res.get("success"))
+        self.assertIn("data", res)
+        self.assertEqual(res["data"]["ticker"], "2330.TW")
+        self.assertIn("alignment_status", res["data"])
+        self.assertIn("dimensions", res["data"])
 
 
 if __name__ == "__main__":

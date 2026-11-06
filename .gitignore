@@ -83,6 +83,7 @@ nohup.out
 *.sqlite3
 *.db
 *.duckdb
+*.write.lock
 data/storage/
 data/cache/
 
@@ -119,6 +120,7 @@ catboost_info/
 # ==========================================
 # Temporary and Backup Files
 # ==========================================
+test/scratch/
 tmp/
 temp/
 *.tmp

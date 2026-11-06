@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M**、**Google TimesFM 3.0**、**Salesforce MOIRAI-2**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**自選 6 維度量化篩選器 (方向、時序模型多選、估值、潛力門檻、均線與法人合買)**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **27 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M**、**Google TimesFM 3.0**、**Salesforce MOIRAI-2**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**自選 6 維度量化篩選器 (方向、時序模型多選、估值、潛力門檻、均線與法人合買)**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **30 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -185,7 +185,14 @@ graph TD
 * **表格模式 RWD 混合轉譯 (Hybrid Table-to-Card)**：當使用者在手機上選擇表格模式時，自動轉譯為**「高密度行動量化卡片」**，保留 # 排名、代號、現價、目標價、PE/PB、法人籌碼與抽屜展開，文字絕不垂直擠壓折行。
 * **桌面彭博寬表格**：平板與桌面端（`>= 768px`）提供專業級寬表格，賦予 `min-w-[980px]` 與所有欄位 `whitespace-nowrap`，保障橫向滑動體驗流暢穩固。
 
-### 14. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
+### 15. ⚡ 操盤手套件與全域指令面板 (Operator Suite & Command Palette)
+* **⌘K 全域指令面板 (Command Palette)**：免編譯原生 ES Module 實現 `⌘K / Ctrl+K / Esc` 快捷開啟、鍵盤上下箭頭導航、即時搜尋與代號解析。
+* **自選股 (Watchlist) 與量化告警 (Quant Alerts)**：訪客本地 `localStorage` 與管理員 DuckDB 跨設備同步雙軌架構；支援動態 P10/P50 與靜態價格告警及原子防洗版推播。
+* **跨市場即時交易時段五態狀態 (Live Market Sessions)**：台/美/日（東京 11:30–12:30 午間休市）即時開休市與夏冬令感知。
+* **多源訊號一致度卡 (Multi-Source Signal Alignment)**：聚合時序模型、籌碼、30日情報姿態與前沿雷達。
+* **公開個股 SEO 檔案與動態 Sitemap**：`/s/{ticker}` 免登入 SSR 頁面、安全防禦 XSS 之結構化 JSON-LD、`/sitemap.xml` 與 `/robots.txt`。
+
+### 16. ⏰ 盤前買進決策排程與純股市數據庫 (Pre-Market Schedule & Raw Data Warehouse)
 本系統核心定位為**「開盤前的進場買進指南（Pre-Market Buy Guide）」**，所有計算與數據抓取均嚴格在市場開盤前完成，並透過 `--market auto` 實施智慧時段防護（白天專注台股、夜間專注美股，非手動指定全市場時杜絕資源浪費）：
 
 * **🇹🇼 台股開盤前指南 (每日 08:00 執行 / UTC 00:00，時段 05:00~13:30 派發)**：
@@ -435,13 +442,24 @@ python scripts/export_supabase_to_duckdb.py
 > 本專案整合 PyTorch、TensorFlow、DuckDB 等大型科學計算與深度學習依賴庫，若在本地自行從原始碼構建 (`docker build`) 通常需耗時 10~20 分鐘以上，且極易因本機記憶體不足或編譯工具差異中斷。
 > 官方 GitHub Actions CI/CD 會在每次更新時自動完成雙架構優化編譯與全量單元測試，發布至 Docker Hub，**直接 `docker pull` 數十秒內即可完成部署！**
 
-#### 🌟 0. 新機器全自動一鍵安裝 (One-Click Setup on New Machine)
+#### 🌟 0. 新機器全自動一鍵安裝與環境健檢 (One-Click Setup & Pre-flight Doctor)
 ```bash
 # Clone 專案後執行一鍵安裝腳本，自動完成依賴檢測、目錄初始化、.env 配置、API 服務與定時排程啟動與健康驗證：
 git clone https://github.com/tbdavid2019/stock-underdog-ml.git
 cd stock-underdog-ml
 bash scripts/install_new_machine.sh
+
+# 亦可隨時手動執行環境變數安全健檢（100% 遮罩敏感值，絕不外洩金鑰明文）：
+python scripts/check_env.py
+
+# CI/CD 或自動化腳本支援結構化 JSON 輸出：
+python scripts/check_env.py --json
 ```
+
+#### 🛡️ 系統韌性與並發安全底座 (Resilience & Concurrency Architecture)
+- **DuckDB 跨進程檔案鎖（`core/duckdb_lock.py`）**：生產環境常駐之 `stock-ml-api` 與排程 `stock-ml-cron` 共享相同 DuckDB 儲存卷，透過同目錄 `<db_path>.write.lock` 之 `fcntl.flock` 實現跨進程寫入排他序列化，徹底防範寫入衝突死鎖；唯讀連線強制維持 `read_only=True` 隔離，遇鎖忙碌指數退避重試並可回傳 HTTP 503。
+- **共用上游守護模組（`core/upstream_guard.py`）**：支援逗號分隔多金鑰輪詢池（Key Pool Rotation）、單 Key 併發限制（`BoundedSemaphore`）與 60 秒失敗熔斷冷卻（`RecentFailureCooldownError`），杜絕外部 API 限流掛起或重複錯誤洗版。
+- **Fail-Closed 寫入防護**：生產環境（`DEPLOYMENT_MODE="production"`）強制要求有效 `WATCHLIST_API_KEY`，未設定或未授權時全面鎖定寫入端點，公開訪客自動以 `localStorage` 雙軌運作。
 
 #### 🐳 A. 直接拉取 Docker Hub 官方映像檔
 ```bash

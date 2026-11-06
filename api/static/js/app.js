@@ -57,6 +57,34 @@ export const app = createApp({
             expandedDrawerData: null,
             expandedDrawerLoading: false,
 
+            // Command Palette (⌘K / Ctrl+K)
+            showCommandPalette: false,
+            commandQuery: '',
+            commandResults: [],
+            activeCommandIndex: 0,
+            isSearchingCommand: false,
+            commandSearchTimer: null,
+
+            // Workspace Bar & Recent Tickers (sq_recent_tickers_v1)
+            recentTickers: [],
+
+            // Watchlist Dual-Track Reactive State (sq_local_watchlist_v1 + Cloud)
+            watchlistTickers: [],
+            filterWatchlistOnly: false,
+            sharedWatchlistTickers: [],
+
+            // Live Cross-Market Trading Sessions Clock
+            marketSessions: null,
+            marketSessionsTimer: null,
+
+            // Quant Price Alerts & Alignment Drawer State (Phase 3)
+            drawerSignalAlignment: null,
+            drawerSignalLoading: false,
+            drawerAlerts: [],
+            newAlertTargetPrice: null,
+            newAlertConditionType: 'above_price',
+            newAlertDirection: 'bullish',
+
             strategyOptions: [
                 // 多方看漲策略
                 {
@@ -397,6 +425,9 @@ export const app = createApp({
         currentStrategyOptions() {
             return this.strategyOptions.filter(s => s.direction === this.strategyDirection);
         },
+        watchlistCount() {
+            return (this.watchlistTickers || []).length;
+        },
         displayRecords() {
             let list = this.records || [];
             const isBearish = this.selectedDirection === 'bearish';
@@ -489,6 +520,11 @@ export const app = createApp({
                 // 8. 多選市場篩選 (Markets Multi-Select)
                 if (this.selectedMarkets && this.selectedMarkets.length > 0 && !this.selectedMarkets.includes('ALL')) {
                     if (!this.selectedMarkets.includes(r.index_name)) return false;
+                }
+
+                // 9. 我的自選標的篩選 (Watchlist Only Filter)
+                if (this.filterWatchlistOnly) {
+                    if (!this.isWatchlisted(tk)) return false;
                 }
 
                 seenTickers.add(tk);
@@ -2287,6 +2323,18 @@ export const app = createApp({
                     const indTicker = params.get('ticker') || params.get('focus') || params.get('node');
                     this.selectedNodeTicker = indTicker ? indTicker.trim().toUpperCase() : null;
                 }
+
+                const wlShare = params.get('watchlist_share');
+                if (wlShare) {
+                    const tickerRegex = /^[A-Za-z0-9.\-^]{1,12}$/;
+                    const rawList = wlShare.split(',')
+                        .map(s => s.trim().toUpperCase())
+                        .filter(s => tickerRegex.test(s));
+                    const deduped = Array.from(new Set(rawList)).slice(0, 100);
+                    if (deduped.length > 0) {
+                        this.sharedWatchlistTickers = deduped;
+                    }
+                }
             } catch (e) {
                 console.debug("Parse URL params error:", e);
             }
@@ -3247,6 +3295,433 @@ export const app = createApp({
             }
 
             this.bezierPaths = paths;
+        },
+
+        // ==================== WORKSPACE & WATCHLIST METHODS ====================
+        initWorkspaceAndWatchlist() {
+            try {
+                const savedRecent = localStorage.getItem('sq_recent_tickers_v1');
+                if (savedRecent) {
+                    this.recentTickers = JSON.parse(savedRecent);
+                }
+            } catch (e) {
+                console.warn('Failed to parse recent tickers:', e);
+                this.recentTickers = [];
+            }
+
+            try {
+                const savedWatchlist = localStorage.getItem('sq_local_watchlist_v1');
+                if (savedWatchlist) {
+                    this.watchlistTickers = JSON.parse(savedWatchlist);
+                }
+            } catch (e) {
+                console.warn('Failed to parse local watchlist:', e);
+                this.watchlistTickers = [];
+            }
+
+            this.syncCloudWatchlist();
+        },
+
+        async syncCloudWatchlist() {
+            try {
+                const res = await ApiClient.getWatchlist();
+                if (res && res.items && Array.isArray(res.items)) {
+                    let deleted = [];
+                    try {
+                        deleted = JSON.parse(localStorage.getItem('sq_local_deleted_watchlist_v1') || '[]');
+                    } catch (_) {}
+                    const cloudTickers = res.items
+                        .map(item => this.normalizeTicker(item.ticker))
+                        .filter(t => !deleted.includes(t));
+                    const merged = Array.from(new Set([...this.watchlistTickers, ...cloudTickers]));
+                    this.watchlistTickers = merged;
+                    localStorage.setItem('sq_local_watchlist_v1', JSON.stringify(this.watchlistTickers));
+                }
+            } catch (e) {
+                console.debug('Cloud watchlist sync skipped or unauthorized:', e.message);
+            }
+        },
+
+        normalizeTicker(t) {
+            if (!t) return '';
+            let s = String(t).trim().toUpperCase();
+            if (/^\d{4,6}$/.test(s)) {
+                s = `${s}.TW`;
+            }
+            return s;
+        },
+
+        isWatchlisted(ticker) {
+            if (!ticker) return false;
+            const norm = this.normalizeTicker(ticker);
+            return (this.watchlistTickers || []).some(t => this.normalizeTicker(t) === norm);
+        },
+
+        async toggleWatchlist(ticker) {
+            if (!ticker) return;
+            const norm = this.normalizeTicker(ticker);
+            const exists = this.isWatchlisted(norm);
+            if (exists) {
+                this.watchlistTickers = this.watchlistTickers.filter(t => this.normalizeTicker(t) !== norm);
+                let deleted = [];
+                try {
+                    deleted = JSON.parse(localStorage.getItem('sq_local_deleted_watchlist_v1') || '[]');
+                } catch (_) {}
+                if (!deleted.includes(norm)) deleted.push(norm);
+                localStorage.setItem('sq_local_deleted_watchlist_v1', JSON.stringify(deleted));
+
+                this.showToast(`已從自選清單移除 ${formatTicker(ticker)}`);
+                try {
+                    await ApiClient.removeWatchlist(norm);
+                } catch (e) {
+                    console.debug('Cloud remove failed, preserved in local tombstones:', e.message);
+                }
+            } else {
+                let deleted = [];
+                try {
+                    deleted = JSON.parse(localStorage.getItem('sq_local_deleted_watchlist_v1') || '[]');
+                } catch (_) {}
+                deleted = deleted.filter(t => t !== norm);
+                localStorage.setItem('sq_local_deleted_watchlist_v1', JSON.stringify(deleted));
+
+                if (this.watchlistTickers.length >= 100) {
+                    this.showToast('自選清單已達上限（100 檔）');
+                    return;
+                }
+                this.watchlistTickers.unshift(norm);
+                this.showToast(`已加入自選清單 ${formatTicker(ticker)}`);
+                try {
+                    await ApiClient.addWatchlist(norm);
+                } catch (e) {
+                    console.debug('Cloud add failed, preserved in local:', e.message);
+                }
+            }
+            localStorage.setItem('sq_local_watchlist_v1', JSON.stringify(this.watchlistTickers));
+        },
+
+        toggleWatchlistFilter() {
+            this.filterWatchlistOnly = !this.filterWatchlistOnly;
+        },
+
+        async importSharedWatchlist() {
+            if (!this.sharedWatchlistTickers || this.sharedWatchlistTickers.length === 0) return;
+            const incoming = this.sharedWatchlistTickers.map(t => this.normalizeTicker(t));
+            const merged = Array.from(new Set([...this.watchlistTickers, ...incoming])).slice(0, 100);
+            const addedCount = merged.length - this.watchlistTickers.length;
+            this.watchlistTickers = merged;
+            localStorage.setItem('sq_local_watchlist_v1', JSON.stringify(this.watchlistTickers));
+
+            try {
+                await ApiClient.batchImportWatchlist(incoming);
+            } catch (e) {
+                console.debug('Cloud batch import failed, saved locally:', e.message);
+            }
+
+            this.showToast(`已成功匯入 ${addedCount} 檔自選標的！`);
+            this.dismissSharedWatchlist();
+        },
+
+        dismissSharedWatchlist() {
+            this.sharedWatchlistTickers = [];
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('watchlist_share');
+                window.history.replaceState({}, '', url.toString());
+            } catch (e) {
+                console.debug("Failed to clean URL search param:", e);
+            }
+        },
+
+        copyWatchlistShareLink() {
+            if (!this.watchlistTickers || this.watchlistTickers.length === 0) {
+                this.showToast('目前自選清單為空，無法產生分享連結');
+                return;
+            }
+            try {
+                const url = new URL(window.location.origin + window.location.pathname);
+                url.searchParams.set('watchlist_share', this.watchlistTickers.join(','));
+                navigator.clipboard.writeText(url.toString()).then(() => {
+                    this.showToast('自選清單分享連結已複製至剪貼簿！');
+                }).catch(() => {
+                    prompt('請複製以下自選分享連結：', url.toString());
+                });
+            } catch (e) {
+                console.error('Failed to copy share link:', e);
+            }
+        },
+
+        // ==================== RECENT & PINNED TICKERS ====================
+        addRecentTicker(ticker, name = '', market = '') {
+            if (!ticker) return;
+            const norm = this.normalizeTicker(ticker);
+            const m = market || (norm.endsWith('.TW') || norm.endsWith('.TWO') ? 'TW' : (norm.endsWith('.T') ? 'JP' : 'US'));
+            const existingIdx = this.recentTickers.findIndex(item => this.normalizeTicker(item.ticker) === norm);
+            let isPinned = false;
+            if (existingIdx !== -1) {
+                isPinned = !!this.recentTickers[existingIdx].pinned;
+                this.recentTickers.splice(existingIdx, 1);
+            }
+            this.recentTickers.unshift({
+                ticker: norm,
+                name: name || '',
+                market: m,
+                pinned: isPinned,
+                visited_at: new Date().toISOString()
+            });
+            this.recentTickers.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+            if (this.recentTickers.length > 10) {
+                this.recentTickers = this.recentTickers.slice(0, 10);
+            }
+            localStorage.setItem('sq_recent_tickers_v1', JSON.stringify(this.recentTickers));
+        },
+
+        togglePinRecentTicker(ticker) {
+            const norm = this.normalizeTicker(ticker);
+            const item = this.recentTickers.find(i => this.normalizeTicker(i.ticker) === norm);
+            if (item) {
+                item.pinned = !item.pinned;
+                this.recentTickers.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+                localStorage.setItem('sq_recent_tickers_v1', JSON.stringify(this.recentTickers));
+            }
+        },
+
+        removeRecentTicker(ticker) {
+            const norm = this.normalizeTicker(ticker);
+            this.recentTickers = this.recentTickers.filter(i => this.normalizeTicker(i.ticker) !== norm);
+            localStorage.setItem('sq_recent_tickers_v1', JSON.stringify(this.recentTickers));
+        },
+
+        openStockDrawer(ticker) {
+            if (!ticker) return;
+            this.addRecentTicker(ticker);
+            if (this.activeTab !== 'dashboard') {
+                this.activeTab = 'dashboard';
+                this.updateUrl();
+            }
+            this.$nextTick(() => {
+                this.toggleRowDrawer(ticker);
+            });
+        },
+
+        // ==================== MARKET LIVE SESSIONS CLOCK ====================
+        async loadMarketSessions() {
+            try {
+                const res = await ApiClient.getMarketLiveSessions();
+                if (res && res.success && res.data) {
+                    this.marketSessions = res.data;
+                }
+            } catch (e) {
+                console.debug('Failed to load market live sessions:', e.message);
+            }
+        },
+
+        // ==================== COMMAND PALETTE (⌘K) ====================
+        openCommandPalette() {
+            this.showCommandPalette = true;
+            this.commandQuery = '';
+            this.activeCommandIndex = 0;
+            this.populateDefaultCommandResults();
+            this.$nextTick(() => {
+                this.$refs.commandInput?.focus();
+            });
+        },
+
+        closeCommandPalette() {
+            this.showCommandPalette = false;
+            this.commandQuery = '';
+            this.commandResults = [];
+        },
+
+        toggleCommandPalette() {
+            if (this.showCommandPalette) {
+                this.closeCommandPalette();
+            } else {
+                this.openCommandPalette();
+            }
+        },
+
+        populateDefaultCommandResults() {
+            if (this.recentTickers && this.recentTickers.length > 0) {
+                this.commandResults = this.recentTickers.map(r => ({
+                    ticker: r.ticker,
+                    name: r.name,
+                    market: r.market,
+                    potential: null
+                }));
+            } else if (this.displayRecords && this.displayRecords.length > 0) {
+                this.commandResults = this.displayRecords.slice(0, 8).map(r => ({
+                    ticker: r.ticker,
+                    name: r.name,
+                    market: r.index_name || 'TW',
+                    potential: r.potential
+                }));
+            } else {
+                this.commandResults = [
+                    { ticker: '2330.TW', name: '台積電', market: 'TW', potential: 12.5 },
+                    { ticker: 'NVDA', name: 'NVIDIA Corp', market: 'US', potential: 15.2 },
+                    { ticker: '2454.TW', name: '聯發科', market: 'TW', potential: 8.4 },
+                    { ticker: '7203.T', name: 'Toyota Motor', market: 'JP', potential: 6.1 }
+                ];
+            }
+        },
+
+        onCommandSearch() {
+            if (this.commandSearchTimer) {
+                clearTimeout(this.commandSearchTimer);
+            }
+            const q = this.commandQuery.trim();
+            if (!q) {
+                this.isSearchingCommand = false;
+                this.populateDefaultCommandResults();
+                return;
+            }
+
+            this.commandSearchTimer = setTimeout(async () => {
+                this.isSearchingCommand = true;
+                try {
+                    const matched = [];
+                    const qUpper = q.toUpperCase();
+                    if (this.records && this.records.length > 0) {
+                        for (const r of this.records) {
+                            if (!r.ticker) continue;
+                            const tUpper = r.ticker.toUpperCase();
+                            const nUpper = String(r.name || '').toUpperCase();
+                            if (tUpper.includes(qUpper) || nUpper.includes(qUpper)) {
+                                matched.push({
+                                    ticker: r.ticker,
+                                    name: r.name || '',
+                                    market: r.index_name || 'TW',
+                                    potential: r.potential
+                                });
+                            }
+                            if (matched.length >= 10) break;
+                        }
+                    }
+
+                    if (q.length >= 2 && matched.length < 5) {
+                        try {
+                            const res = await ApiClient.resolveTicker(q);
+                            if (res && res.success && res.data && res.data.ticker) {
+                                const found = res.data;
+                                if (!matched.some(m => m.ticker === found.ticker)) {
+                                    matched.unshift({
+                                        ticker: found.ticker,
+                                        name: found.name || found.company_name || '',
+                                        market: found.market || 'TW',
+                                        potential: null
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.debug('Resolve API fallback error:', e);
+                        }
+                    }
+
+                    this.commandResults = matched;
+                    this.activeCommandIndex = 0;
+                } finally {
+                    this.isSearchingCommand = false;
+                }
+            }, 180);
+        },
+
+        selectNextCommand() {
+            if (this.commandResults.length === 0) return;
+            if (this.activeCommandIndex < this.commandResults.length - 1) {
+                this.activeCommandIndex++;
+            } else {
+                this.activeCommandIndex = 0;
+            }
+        },
+
+        selectPrevCommand() {
+            if (this.commandResults.length === 0) return;
+            if (this.activeCommandIndex > 0) {
+                this.activeCommandIndex--;
+            } else {
+                this.activeCommandIndex = this.commandResults.length - 1;
+            }
+        },
+
+        executeActiveCommand() {
+            if (this.commandResults.length === 0) return;
+            const item = this.commandResults[this.activeCommandIndex];
+            if (item) {
+                this.handleCommandClick(item);
+            }
+        },
+
+        handleCommandClick(item) {
+            if (!item || !item.ticker) return;
+            this.closeCommandPalette();
+            this.openStockDrawer(item.ticker);
+        },
+
+        // ==================== DRAWER QUANT ALERTS & SIGNAL ALIGNMENT ====================
+        async loadDrawerSignalAlignment(ticker) {
+            if (!ticker) return;
+            this.drawerSignalLoading = true;
+            this.drawerSignalAlignment = null;
+            try {
+                const res = await ApiClient.getSignalAlignment(ticker);
+                if (res && res.ticker) {
+                    this.drawerSignalAlignment = res;
+                }
+            } catch (e) {
+                console.debug('Failed to load signal alignment:', e.message);
+            } finally {
+                this.drawerSignalLoading = false;
+            }
+        },
+
+        async loadDrawerAlerts(ticker) {
+            if (!ticker) return;
+            try {
+                const res = await ApiClient.getAlerts();
+                if (res && res.alerts && Array.isArray(res.alerts)) {
+                    const norm = this.normalizeTicker(ticker);
+                    this.drawerAlerts = res.alerts.filter(a => this.normalizeTicker(a.ticker) === norm);
+                }
+            } catch (e) {
+                console.debug('Failed to load price alerts:', e.message);
+                this.drawerAlerts = [];
+            }
+        },
+
+        async createDrawerAlert(ticker) {
+            if (!ticker) return;
+            const cond = this.newAlertConditionType || 'above_price';
+            const isStatic = (cond === 'above_price' || cond === 'below_price');
+            if (isStatic && (!this.newAlertTargetPrice || isNaN(this.newAlertTargetPrice))) {
+                this.showToast('靜態價位告警請輸入目標價格');
+                return;
+            }
+            try {
+                const payload = {
+                    ticker: this.normalizeTicker(ticker),
+                    rule_type: cond,
+                    threshold_value: this.newAlertTargetPrice ? Number(this.newAlertTargetPrice) : null,
+                    reference_model: 'auto',
+                    cooldown_minutes: 720
+                };
+                await ApiClient.createAlert(payload);
+                this.showToast(`已建立 ${formatTicker(ticker)} 價位告警！`);
+                this.newAlertTargetPrice = null;
+                await this.loadDrawerAlerts(ticker);
+            } catch (e) {
+                this.showToast(`建立告警失敗：${e.message}`);
+            }
+        },
+
+        async deleteDrawerAlert(alertId, ticker) {
+            if (!alertId) return;
+            try {
+                await ApiClient.deleteAlert(alertId);
+                this.showToast('已取消該筆價位告警');
+                await this.loadDrawerAlerts(ticker);
+            } catch (e) {
+                this.showToast(`刪除告警失敗：${e.message}`);
+            }
         }
     },
     mounted() {
@@ -3302,8 +3777,34 @@ export const app = createApp({
         }, { passive: true });
 
         this.registerChromeWebMCP();
+
+        // 1. Initialize recent tickers & watchlist
+        this.initWorkspaceAndWatchlist();
+
+        // 2. Load market live sessions & set up periodic poll (30s)
+        this.loadMarketSessions();
+        this.marketSessionsTimer = setInterval(() => {
+            this.loadMarketSessions();
+        }, 30000);
+
+        // 3. Register global keyboard shortcuts (⌘K / Ctrl+K and Esc)
+        this._handleGlobalKeydown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                this.toggleCommandPalette();
+            } else if (e.key === 'Escape' && this.showCommandPalette) {
+                this.closeCommandPalette();
+            }
+        };
+        window.addEventListener('keydown', this._handleGlobalKeydown);
     },
     beforeUnmount() {
+        if (this.marketSessionsTimer) {
+            clearInterval(this.marketSessionsTimer);
+        }
+        if (this._handleGlobalKeydown) {
+            window.removeEventListener('keydown', this._handleGlobalKeydown);
+        }
         if (this._clickOutsideDropdown) {
             document.removeEventListener('click', this._clickOutsideDropdown);
         }

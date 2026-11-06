@@ -21,6 +21,8 @@ import concurrent.futures
 from typing import Dict, List, Optional, Any
 import requests
 
+from core.upstream_guard import KeyPoolGuard
+
 logger = logging.getLogger("stock_app.investing")
 
 
@@ -56,6 +58,11 @@ class InvestingService:
 
     # 全域節流信號量 (擴展至 4 並發)
     _CRAWLER_SEMAPHORE = threading.Semaphore(4)
+    _KEY_GUARD = KeyPoolGuard(
+        keys=os.getenv("INVESTING_2MD_KEYS") or os.getenv("CREATE360_API_KEY") or "",
+        cooldown_seconds=60.0,
+        name="investing_2md"
+    )
     TIMEOUT = 7.0
 
     # 磁碟快取目錄
@@ -153,28 +160,42 @@ class InvestingService:
 
     @classmethod
     def _fetch_url_markdown(cls, target_url: str) -> str:
-        """透過 2MD 輪詢擷取目標網址之 Markdown 內容"""
+        """透過 2MD 輪詢擷取目標網址之 Markdown 內容，整合 KeyPoolGuard 熔斷防護"""
         with cls._CRAWLER_SEMAPHORE:
             for host in cls.FALLBACK_2MD_HOSTS:
+                if cls._KEY_GUARD.is_in_cooldown(host):
+                    logger.debug(f"2md host {host} is in cooldown, skipping...")
+                    continue
+
                 reader_url = f"{host.rstrip('/')}/{target_url}"
+                headers = {}
+                key = cls._KEY_GUARD.get_next_key()
+                if key:
+                    headers["Authorization"] = f"Bearer {key}"
+
                 try:
-                    resp = requests.get(reader_url, timeout=cls.TIMEOUT)
+                    resp = requests.get(reader_url, headers=headers, timeout=cls.TIMEOUT)
                     if resp.status_code == 200:
                         resp.encoding = "utf-8"
                         text = resp.text
                         is_blocked_or_error = any(m in text for m in cls.BLOCKED_OR_ERROR_MARKERS)
                         if len(text) > 100 and not is_blocked_or_error:
+                            cls._KEY_GUARD.record_success(host)
                             return text
                         else:
+                            cls._KEY_GUARD.record_failure(host, cooldown_seconds=30.0)
                             logger.debug(f"2md host {host} response for {target_url} was blocked or returned error marker, falling back...")
                             continue
                     elif resp.status_code in (429, 502, 503, 504):
+                        cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                         logger.warning(f"2md host {host} returned {resp.status_code}, falling back...")
                         continue
                 except requests.exceptions.Timeout:
+                    cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                     logger.warning(f"2md timeout on {host} for {target_url}, falling back to next host...")
                     continue
                 except Exception as e:
+                    cls._KEY_GUARD.record_failure(host, cooldown_seconds=60.0)
                     logger.debug(f"2md fetch error on {host} for {target_url}: {e}")
                     continue
 

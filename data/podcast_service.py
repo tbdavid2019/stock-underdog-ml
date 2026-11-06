@@ -185,7 +185,7 @@ class PodcastService:
             "42zhangjing": "42"
         }
         try:
-            with self.db._get_connection() as con:
+            with self.db._write_lock(), self.db._get_connection(read_only=False) as con:
                 for old_id, new_id in legacy_remap.items():
                     con.execute("UPDATE podcast_episodes SET channel_id = ? WHERE channel_id = ?", [new_id, old_id])
                 

@@ -11,12 +11,15 @@ import math
 import logging
 import datetime
 import json
+import random
 import threading
+from contextlib import contextmanager
 from typing import Dict, List, Optional, Any, Tuple, Union
 import pandas as pd
 import duckdb
 
 from core.config import config
+from core.duckdb_lock import duckdb_write_lock, DuckDBBusyError, get_lock_path
 from data.macro import MacroState
 from data.ticker_resolver import clean_query, normalize_ticker, resolve_alias
 
@@ -37,6 +40,13 @@ class DuckDBManager:
     _SCHEMA_INITIALIZED_PATHS = set()
     _INIT_LOCK = threading.RLock()
 
+    @contextmanager
+    def _write_lock(self, timeout: float = 15.0):
+        """跨執行緒與跨進程安全排他寫入鎖"""
+        with self._WRITE_LOCK:
+            with duckdb_write_lock(self.db_path, timeout=timeout):
+                yield
+
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or config.db.DUCKDB_PATH
         self.enabled = config.db.ENABLE_DUCKDB
@@ -46,8 +56,13 @@ class DuckDBManager:
             if needs_init:
                 with self._INIT_LOCK:
                     if (self.db_path not in self._SCHEMA_INITIALIZED_PATHS) or not os.path.exists(self.db_path):
-                        self._init_schema()
-                        self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+                        try:
+                            if self._init_schema():
+                                self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+                        except DuckDBBusyError:
+                            logger.warning("DuckDB busy during __init__ schema initialization; will retry upon connection")
+                        except Exception as e:
+                            logger.warning("DuckDB schema init deferred due to exception: %s", e)
 
     def _ensure_storage_dir(self):
         storage_dir = os.path.dirname(self.db_path)
@@ -62,11 +77,11 @@ class DuckDBManager:
         allow_downgrade: bool = False
     ) -> duckdb.DuckDBPyConnection:
         """建立或取得 DuckDB 連線，支援唯讀模式與並發鎖衝突/配置衝突指數退避重試"""
-        if self.db_path != ":memory:" and not os.path.exists(self.db_path):
+        if not read_only and self.db_path != ":memory:" and not os.path.exists(self.db_path):
             with self._INIT_LOCK:
-                if self.db_path != ":memory:" and not os.path.exists(self.db_path):
-                    self._init_schema()
-                    self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
+                if not os.path.exists(self.db_path):
+                    if self._init_schema():
+                        self._SCHEMA_INITIALIZED_PATHS.add(self.db_path)
         for attempt in range(max_retries + 1):
             try:
                 return duckdb.connect(self.db_path, read_only=read_only)
@@ -75,13 +90,10 @@ class DuckDBManager:
                 is_diff_config = ("different configuration" in err_msg) or ("different config" in err_msg)
                 if is_diff_config:
                     if read_only:
+                        # 徹底移除「read_only=True 失敗時反向回退開 read_only=False」之危險邏輯
                         logger.warning(
-                            "⚠️ DuckDB 唯讀連線配置衝突 (已有寫入連線開啟)，透明回退為 read_only=False 以匹配既有連線: %s", exc
+                            "⚠️ DuckDB 唯讀連線配置衝突: %s", exc
                         )
-                        try:
-                            return duckdb.connect(self.db_path, read_only=False)
-                        except Exception as fb_exc:
-                            logger.warning("⚠️ DuckDB read_only=False 回退亦失敗: %s", fb_exc)
                     else:
                         if allow_downgrade:
                             logger.warning(
@@ -102,8 +114,10 @@ class DuckDBManager:
                             return duckdb.connect(self.db_path, read_only=True)
                         except Exception as downgrade_exc:
                             logger.error("❌ DuckDB 降級唯讀連線亦失敗: %s", downgrade_exc)
+                    if is_lock_conflict or is_diff_config:
+                        raise DuckDBBusyError(f"DuckDB connection busy (attempt {attempt + 1}/{max_retries + 1}): {exc}") from exc
                     raise
-                sleep_sec = retry_delay * (2 ** attempt)
+                sleep_sec = retry_delay * (2 ** attempt) + random.uniform(0.01, 0.05)
                 logger.warning(
                     "⚠️ DuckDB 連線異常 (attempt %d/%d, read_only=%s)，將於 %.2fs 後重試: %s",
                     attempt + 1, max_retries, read_only, sleep_sec, exc
@@ -113,7 +127,7 @@ class DuckDBManager:
     def _init_schema(self):
         """初始化表格結構 (若不存在則建立)"""
         try:
-            with duckdb.connect(self.db_path, read_only=False) as con:
+            with self._write_lock(), duckdb.connect(self.db_path, read_only=False) as con:
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS predictions (
                     index_name VARCHAR,
@@ -549,6 +563,33 @@ class DuckDBManager:
                     created_at VARCHAR
                 );
                 CREATE INDEX IF NOT EXISTS idx_disc_hist_asof ON discovery_history (as_of);
+
+                CREATE TABLE IF NOT EXISTS watchlist_items (
+                    profile_id VARCHAR DEFAULT 'default',
+                    ticker VARCHAR NOT NULL,
+                    canonical_ticker VARCHAR NOT NULL,
+                    market VARCHAR,
+                    note VARCHAR,
+                    sort_order INTEGER,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY (profile_id, canonical_ticker)
+                );
+                CREATE INDEX IF NOT EXISTS idx_watchlist_profile ON watchlist_items (profile_id);
+
+                CREATE TABLE IF NOT EXISTS quant_price_alerts (
+                    alert_id VARCHAR PRIMARY KEY,
+                    profile_id VARCHAR DEFAULT 'default',
+                    canonical_ticker VARCHAR NOT NULL,
+                    rule_type VARCHAR NOT NULL,
+                    threshold_value DOUBLE,
+                    reference_model VARCHAR DEFAULT 'auto',
+                    enabled BOOLEAN DEFAULT true,
+                    cooldown_minutes INTEGER DEFAULT 720,
+                    last_triggered_at TIMESTAMP,
+                    last_triggered_price DOUBLE,
+                    created_at TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_alerts_profile_ticker ON quant_price_alerts (profile_id, canonical_ticker);
                 """);
 
                 # Schema migration for existing installations
@@ -561,8 +602,13 @@ class DuckDBManager:
                     logger.debug(f"DuckDB schema migration note: {alter_e}")
             logger.info(f"✅ DuckDB 資料庫初始化成功: {self.db_path}")
             self.init_industry_chain_tables()
+            return True
+        except DuckDBBusyError:
+            logger.warning(f"⚠️ DuckDB 初始化遇鎖衝突 busy: {self.db_path}")
+            raise
         except Exception as e:
             logger.error(f"❌ DuckDB 初始化失敗: {e}")
+            raise
 
     def save_predictions_batch(self, records: List[Dict[str, Any]]) -> int:
         """批次寫入預測與策略記錄"""
@@ -594,7 +640,7 @@ class DuckDBManager:
             df["tags"] = df["tags"].apply(lambda x: " | ".join(x) if isinstance(x, list) else str(x) if x is not None else None)
 
         col_names = ", ".join(expected_cols)
-        with self._WRITE_LOCK:
+        with self._write_lock():
             for attempt in range(3):
                 try:
                     with self._get_connection(read_only=False) as con:
@@ -888,17 +934,17 @@ class DuckDBManager:
     def clean_test_data(self) -> int:
         """清理歷史混入的測試與除錯假數據 (TEST, DEBUG, SERVICE_KEY 等)"""
         try:
-            with self._get_connection(read_only=False) as con:
-                res = con.execute("""
-                    DELETE FROM predictions 
-                    WHERE index_name LIKE '%TEST%' 
-                       OR index_name LIKE '%DEBUG%' 
-                       OR index_name LIKE '%SERVICE_KEY%'
-                       OR model_name LIKE '%DEBUG%'
-                       OR ticker LIKE 'TEST%';
-                """).fetchone()
-                logger.info("🧹 已成功清理非生產測試資料")
-                return res[0] if res else 0
+            with self._write_lock(), self._get_connection(read_only=False) as con:
+                    res = con.execute("""
+                        DELETE FROM predictions 
+                        WHERE index_name LIKE '%TEST%' 
+                           OR index_name LIKE '%DEBUG%' 
+                           OR index_name LIKE '%SERVICE_KEY%'
+                           OR model_name LIKE '%DEBUG%'
+                           OR ticker LIKE 'TEST%';
+                    """).fetchone()
+                    logger.info("🧹 已成功清理非生產測試資料")
+                    return res[0] if res else 0
         except Exception as e:
             logger.error(f"❌ 清理測試資料失敗: {e}")
             return 0
@@ -1049,8 +1095,10 @@ class DuckDBManager:
             else:
                 batch_dt = batch_dt.astimezone(TZ_TAIPEI)
             age_hours = max(0.0, round((now - batch_dt).total_seconds() / 3600.0, 1))
-            is_stale = age_hours > 48.0
             batch_date = batch_dt.strftime("%Y-%m-%d")
+            from core.market_calendar import MarketCalendar
+            freshness = MarketCalendar.check_market_freshness(market="TW", last_data_date=batch_date, now_dt=now)
+            is_stale = freshness.get("stale", False)
         except Exception:
             age_hours = 0.0
             is_stale = False
@@ -2159,7 +2207,7 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        with self._WRITE_LOCK:
+        with self._write_lock():
             for attempt in range(3):
                 try:
                     with self._get_connection(read_only=False) as con:
@@ -2204,7 +2252,7 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        with self._WRITE_LOCK:
+        with self._write_lock():
             for attempt in range(3):
                 try:
                     with self._get_connection(read_only=False) as con:
@@ -2420,7 +2468,7 @@ class DuckDBManager:
         if not self.enabled:
             return
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 con.execute(
                     "INSERT INTO universe_sync_runs VALUES (?, ?, ?, ?, ?, ?)",
                     [
@@ -2561,7 +2609,7 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        with self._WRITE_LOCK:
+        with self._write_lock():
             for attempt in range(3):
                 try:
                     with self._get_connection(read_only=False) as con:
@@ -2655,7 +2703,7 @@ class DuckDBManager:
             if col not in df.columns:
                 df[col] = None
 
-        with self._WRITE_LOCK:
+        with self._write_lock():
             for attempt in range(3):
                 try:
                     with self._get_connection(read_only=False) as con:
@@ -2820,7 +2868,7 @@ class DuckDBManager:
             df["updated_at"] = now_str
             df = df[expected_cols]
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.register("df_earnings_batch", df)
                     con.execute("""
@@ -3078,7 +3126,7 @@ class DuckDBManager:
         try:
             now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
             data_json = json.dumps(data, ensure_ascii=False)
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO macro_snapshots (category, data_json, source, updated_at)
@@ -3139,7 +3187,7 @@ class DuckDBManager:
 
             is_tw = t_upper.endswith(".TW") or t_upper.endswith(".TWO")
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     # 寫入主代碼
                     con.execute("""
@@ -3223,7 +3271,7 @@ class DuckDBManager:
             clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_networks 
@@ -3294,7 +3342,7 @@ class DuckDBManager:
             clean_code = re.sub(r"\.(TW|TWO)$", "", str(ticker).strip().upper())
             canonical_ticker = str(data.get("ticker") or ticker).strip().upper()
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_tenders 
@@ -3354,7 +3402,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         saved = 0
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 for ch in channels:
                     con.execute("""
                         INSERT INTO podcast_channels (
@@ -3452,7 +3500,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         saved = 0
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 for r in records:
                     tt = r.get("topic_tags")
                     if isinstance(tt, list):
@@ -3553,7 +3601,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         ts_str = json.dumps(ticker_sentiments, ensure_ascii=False) if isinstance(ticker_sentiments, dict) else str(ticker_sentiments or "{}")
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 con.execute("""
                     UPDATE podcast_episodes
                     SET importance_score = ?,
@@ -3575,7 +3623,7 @@ class DuckDBManager:
         now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
         updated_count = 0
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 for r in updates:
                     ep_id = r.get("id") or r.get("episode_id")
                     if not ep_id:
@@ -3787,7 +3835,7 @@ class DuckDBManager:
             source_slot = str(verdict.get("source_slot") or "clef")
             raw_verdict_str = json.dumps(verdict, ensure_ascii=False)
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO decision_verdicts
@@ -3884,7 +3932,7 @@ class DuckDBManager:
             ev_ebitda = _s_float(data.get("ev_ebitda"))
             data_json = json.dumps(data, ensure_ascii=False)
 
-            with self._WRITE_LOCK:
+            with self._write_lock():
                 with self._get_connection(read_only=False) as con:
                     con.execute("""
                     INSERT OR REPLACE INTO company_fundamentals
@@ -3956,8 +4004,7 @@ class DuckDBManager:
                 return None
 
         try:
-            with self._WRITE_LOCK:
-                with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                     for t, data in records.items():
                         if not t or not data:
                             continue
@@ -4001,7 +4048,7 @@ class DuckDBManager:
 
         for attempt in range(max_retries):
             try:
-                with self._WRITE_LOCK:
+                with self._write_lock():
                     with self._get_connection(read_only=False) as con:
                         con.begin()
                         try:
@@ -4151,8 +4198,7 @@ class DuckDBManager:
         pruned_signals = 0
 
         try:
-            with self._WRITE_LOCK:
-                with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                     # 清理論文
                     del_papers = con.execute("DELETE FROM discovery_papers WHERE as_of < ? OR published_date < ?", [paper_cutoff, paper_cutoff])
                     pruned_papers = del_papers.fetchall()[0][0] if del_papers else 0
@@ -4417,7 +4463,7 @@ class DuckDBManager:
         if not self.enabled:
             return
         try:
-            with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                 con.execute("""
                 CREATE TABLE IF NOT EXISTS tw_industry_chains (
                     chain_id VARCHAR PRIMARY KEY,
@@ -4473,8 +4519,7 @@ class DuckDBManager:
                 df[col] = None
 
         try:
-            with self._WRITE_LOCK:
-                with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                     con.register("temp_industry_chains_df", df[expected_cols])
                     con.execute("""
                     DELETE FROM tw_industry_chains
@@ -4512,8 +4557,7 @@ class DuckDBManager:
         df = df.drop_duplicates(subset=["ticker", "chain_id", "layer"], keep="last")
 
         try:
-            with self._WRITE_LOCK:
-                with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                     con.register("temp_industry_nodes_df", df[expected_cols])
                     con.execute("BEGIN TRANSACTION;")
                     try:
@@ -4556,8 +4600,7 @@ class DuckDBManager:
         df = df.drop_duplicates(subset=["source_ticker", "target_ticker", "relation_type"], keep="last")
 
         try:
-            with self._WRITE_LOCK:
-                with self._get_connection(read_only=False) as con:
+            with self._write_lock(), self._get_connection(read_only=False) as con:
                     con.register("temp_industry_rels_df", df[expected_cols])
                     con.execute("BEGIN TRANSACTION;")
                     try:
@@ -4800,5 +4843,422 @@ class DuckDBManager:
             logger.warning(f"DuckDB 批量補強行情失敗: {e}")
 
         return enrichment
+
+    # ==================== Watchlist Methods ====================
+
+    def normalize_watchlist_ticker(self, ticker: str) -> Tuple[str, str, str]:
+        """
+        Normalize input ticker and deduce market.
+        Returns (ticker, canonical_ticker, market).
+        """
+        raw_ticker = str(ticker).strip()
+        if not raw_ticker:
+            raise ValueError("Ticker cannot be empty")
+
+        canonical = normalize_ticker(raw_ticker)
+        canonical_upper = canonical.upper()
+
+        if canonical_upper.endswith(".TW") or canonical_upper.endswith(".TWO"):
+            market = "TW"
+        elif canonical_upper.endswith(".T") or canonical_upper.endswith(".JP"):
+            market = "JP"
+        else:
+            market = "US"
+
+        return raw_ticker, canonical, market
+
+    def add_watchlist_item(
+        self,
+        profile_id: str = "default",
+        ticker: str = "",
+        note: str = "",
+        sort_order: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """新增或更新自選股，限制 note <= 500 字元且單一 profile 上限 100 檔"""
+        profile_id = str(profile_id or "default").strip()
+        raw_ticker, canonical, market = self.normalize_watchlist_ticker(ticker)
+        note = str(note or "").strip()
+        if len(note) > 500:
+            raise ValueError("Note exceeds 500 characters maximum")
+
+        now_dt = datetime.datetime.now(datetime.timezone.utc)
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            existing = con.execute(
+                "SELECT COUNT(*) FROM watchlist_items WHERE profile_id = ? AND canonical_ticker = ?",
+                [profile_id, canonical]
+            ).fetchone()[0]
+
+            if existing == 0:
+                total_cnt = con.execute(
+                    "SELECT COUNT(*) FROM watchlist_items WHERE profile_id = ?",
+                    [profile_id]
+                ).fetchone()[0]
+                if total_cnt >= 100:
+                    raise ValueError(f"Watchlist limit of 100 items reached for profile '{profile_id}'")
+
+            con.execute("""
+                INSERT INTO watchlist_items (profile_id, ticker, canonical_ticker, market, note, sort_order, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (profile_id, canonical_ticker) DO UPDATE SET
+                    note = EXCLUDED.note,
+                    sort_order = COALESCE(EXCLUDED.sort_order, watchlist_items.sort_order)
+            """, [profile_id, raw_ticker, canonical, market, note, sort_order, now_dt])
+
+        return {
+            "profile_id": profile_id,
+            "ticker": raw_ticker,
+            "canonical_ticker": canonical,
+            "market": market,
+            "note": note,
+            "sort_order": sort_order,
+            "created_at": now_dt.isoformat()
+        }
+
+    def remove_watchlist_item(self, profile_id: str = "default", ticker: str = "") -> bool:
+        """自選股移除"""
+        profile_id = str(profile_id or "default").strip()
+        raw_ticker, canonical, _ = self.normalize_watchlist_ticker(ticker)
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            con.execute(
+                "DELETE FROM watchlist_items WHERE profile_id = ? AND canonical_ticker = ?",
+                [profile_id, canonical]
+            )
+            return True
+
+    def get_watchlist_items(self, profile_id: str = "default") -> List[Dict[str, Any]]:
+        """唯讀連線查詢自選股清單並附帶最新預測摘要"""
+        profile_id = str(profile_id or "default").strip()
+        items = []
+
+        try:
+            with self._get_connection(read_only=True) as con:
+                rows = con.execute("""
+                    SELECT profile_id, ticker, canonical_ticker, market, note, sort_order, created_at
+                    FROM watchlist_items
+                    WHERE profile_id = ?
+                    ORDER BY sort_order ASC NULLS LAST, created_at DESC
+                """, [profile_id]).fetchall()
+
+                if not rows:
+                    return []
+
+                canonical_tickers = [r[2] for r in rows]
+                pred_map = {}
+                try:
+                    pred_query = f"""
+                        WITH ranked_preds AS (
+                            SELECT ticker, current_price, predicted_price, potential,
+                                   model_name, strategy_type, macro_regime, timestamp, tags,
+                                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC, (predicted_price IS NOT NULL) DESC) as rn
+                            FROM predictions
+                            WHERE ticker IN ({','.join(['?'] * len(canonical_tickers))})
+                        )
+                        SELECT ticker, current_price, predicted_price, potential,
+                               model_name, strategy_type, macro_regime, timestamp, tags
+                        FROM ranked_preds WHERE rn = 1;
+                    """
+                    pred_rows = con.execute(pred_query, canonical_tickers).fetchall()
+                    for pr in pred_rows:
+                        pred_map[pr[0]] = {
+                            "current_price": pr[1],
+                            "predicted_price": pr[2],
+                            "potential": pr[3],
+                            "model_name": pr[4],
+                            "strategy_type": pr[5],
+                            "macro_regime": pr[6],
+                            "timestamp": pr[7],
+                            "tags": pr[8]
+                        }
+                except Exception as pred_e:
+                    logger.debug("自選股預測摘要補強略過: %s", pred_e)
+
+                for r in rows:
+                    item_dict = {
+                        "profile_id": r[0],
+                        "ticker": r[1],
+                        "canonical_ticker": r[2],
+                        "market": r[3],
+                        "note": r[4],
+                        "sort_order": r[5],
+                        "created_at": r[6].isoformat() if r[6] else None
+                    }
+                    if r[2] in pred_map:
+                        item_dict.update(pred_map[r[2]])
+                    items.append(item_dict)
+        except DuckDBBusyError:
+            raise
+        except Exception as e:
+            logger.error("查詢自選股清單失敗: %s", e)
+
+        return items
+
+    def batch_import_watchlist(
+        self,
+        profile_id: str = "default",
+        tickers: List[str] = []
+    ) -> Dict[str, Any]:
+        """批次匯入自選股，白名單格式驗證、去重並強制 <= 100 檔上限"""
+        profile_id = str(profile_id or "default").strip()
+        added_count = 0
+        valid_items = []
+
+        import re
+        TICKER_REGEX = re.compile(r"^[A-Za-z0-9.\-^]{1,12}$")
+
+        seen = set()
+        clean_tickers = []
+        for t in tickers:
+            cand = str(t).strip().upper()
+            if cand and TICKER_REGEX.match(cand) and cand not in seen:
+                seen.add(cand)
+                clean_tickers.append(cand)
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            existing_count = con.execute(
+                "SELECT COUNT(*) FROM watchlist_items WHERE profile_id = ?",
+                [profile_id]
+            ).fetchone()[0]
+
+            for idx, raw_t in enumerate(clean_tickers):
+                try:
+                    _, canonical, market = self.normalize_watchlist_ticker(raw_t)
+                except Exception:
+                    continue
+
+                already_in = con.execute(
+                    "SELECT COUNT(*) FROM watchlist_items WHERE profile_id = ? AND canonical_ticker = ?",
+                    [profile_id, canonical]
+                ).fetchone()[0]
+
+                if not already_in and existing_count >= 100:
+                    break
+
+                now_dt = datetime.datetime.now(datetime.timezone.utc)
+                con.execute("""
+                    INSERT INTO watchlist_items (profile_id, ticker, canonical_ticker, market, note, sort_order, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (profile_id, canonical_ticker) DO UPDATE SET
+                        sort_order = COALESCE(EXCLUDED.sort_order, watchlist_items.sort_order)
+                """, [profile_id, raw_t, canonical, market, "", existing_count + 1, now_dt])
+
+                if not already_in:
+                    existing_count += 1
+                    added_count += 1
+
+                valid_items.append(canonical)
+
+        return {
+            "profile_id": profile_id,
+            "added": added_count,
+            "total": existing_count,
+            "canonical_tickers": valid_items
+        }
+
+    # ==================== QUANT PRICE ALERTS ====================
+
+    def add_quant_alert(
+        self,
+        canonical_ticker: str,
+        rule_type: str,
+        threshold_value: Optional[float] = None,
+        reference_model: str = "auto",
+        cooldown_minutes: int = 720,
+        profile_id: str = "default"
+    ) -> Dict[str, Any]:
+        """
+        新增量化價位或分位數動態告警規則。
+        驗證門檻值與分位數可用性：
+        - 靜態門檻 (above_price, below_price) 必須帶有正數 threshold_value。
+        - 動態門檻 (below_p10) 必須驗證該標的是否存在有效 P10 分位數預測。
+        - 動態均線 (pullback_ma60, pullback_ma120) 驗證是否有最新均線數據。
+        """
+        import uuid
+        profile_id = str(profile_id or "default").strip()
+        rule_type = str(rule_type or "").strip().lower()
+        reference_model = str(reference_model or "auto").strip().lower()
+
+        valid_rules = {
+            "above_price", "below_price",
+            "below_p10", "above_p50",
+            "pullback_ma60", "pullback_ma120"
+        }
+        if rule_type not in valid_rules:
+            raise ValueError(f"不支援的告警規則類型: {rule_type}，合法範圍: {sorted(list(valid_rules))}")
+
+        _, canonical, _ = self.normalize_watchlist_ticker(canonical_ticker)
+
+        # 靜態規則驗證
+        if rule_type in ("above_price", "below_price"):
+            if threshold_value is None or float(threshold_value) <= 0:
+                raise ValueError("靜態價位告警必須提供大於 0 之 threshold_value 門檻價格")
+            threshold_val = float(threshold_value)
+        else:
+            threshold_val = float(threshold_value) if threshold_value is not None else None
+
+        # 動態分位數規則驗證
+        with self._get_connection(read_only=True) as con:
+            max_ts_row = con.execute("""
+                SELECT MAX(timestamp) FROM predictions WHERE ticker = ? OR ticker = ?
+            """, [canonical, canonical.split(".")[0]]).fetchone()
+            latest_ts = max_ts_row[0] if max_ts_row else None
+
+            pred_rows = []
+            if latest_ts:
+                pred_rows = con.execute("""
+                    SELECT timestral_p10, moirai_p10, predicted_price, ma60, ma120, current_price,
+                           model_name, timestral_predicted_price, timesfm_predicted_price, moirai_predicted_price
+                    FROM predictions
+                    WHERE (ticker = ? OR ticker = ?) AND timestamp = ?
+                """, [canonical, canonical.split(".")[0], latest_ts]).fetchall()
+
+            has_p10 = False
+            has_p50 = False
+            for pr in pred_rows:
+                if pr[0] is not None or pr[1] is not None:
+                    has_p10 = True
+                if reference_model == "timestral":
+                    if pr[7] is not None or (pr[6] and "timestral" in pr[6].lower() and pr[2] is not None):
+                        has_p50 = True
+                elif reference_model == "timesfm":
+                    if pr[8] is not None or (pr[6] and "timesfm" in pr[6].lower() and pr[2] is not None):
+                        has_p50 = True
+                elif reference_model == "moirai":
+                    if pr[9] is not None or (pr[6] and "moirai" in pr[6].lower() and pr[2] is not None):
+                        has_p50 = True
+                else:  # auto
+                    if pr[2] is not None or pr[7] is not None or pr[8] is not None or pr[9] is not None:
+                        has_p50 = True
+
+            if rule_type == "below_p10":
+                if not pred_rows or not has_p10:
+                    raise ValueError(f"標的 {canonical} 最新預測資料庫無有效 P10 分位數（timestral_p10 / moirai_p10），無法建立 P10 動態告警")
+            elif rule_type == "above_p50":
+                if not pred_rows or not has_p50:
+                    raise ValueError(f"標的 {canonical} 最新預測資料庫無有效目標價（predicted_price / P50），無法建立 P50 動態告警")
+
+        alert_id = str(uuid.uuid4())
+        now_dt = datetime.datetime.now(datetime.timezone.utc)
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            count = con.execute(
+                "SELECT COUNT(*) FROM quant_price_alerts WHERE profile_id = ?",
+                [profile_id]
+            ).fetchone()[0]
+            if count >= 50:
+                raise ValueError(f"該設定檔 {profile_id} 告警規則已達上限（50 筆）")
+
+            con.execute("""
+                INSERT INTO quant_price_alerts (
+                    alert_id, profile_id, canonical_ticker, rule_type, threshold_value,
+                    reference_model, enabled, cooldown_minutes, last_triggered_at,
+                    last_triggered_price, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)
+            """, [
+                alert_id, profile_id, canonical, rule_type, threshold_val,
+                reference_model, True, int(cooldown_minutes or 720), now_dt
+            ])
+
+        return {
+            "alert_id": alert_id,
+            "profile_id": profile_id,
+            "canonical_ticker": canonical,
+            "rule_type": rule_type,
+            "threshold_value": threshold_val,
+            "reference_model": reference_model,
+            "cooldown_minutes": cooldown_minutes,
+            "enabled": True,
+            "created_at": now_dt.isoformat()
+        }
+
+    def get_quant_alerts(
+        self,
+        profile_id: str = "default",
+        enabled_only: bool = False
+    ) -> List[Dict[str, Any]]:
+        """查詢量化價位告警清單"""
+        profile_id = str(profile_id or "default").strip()
+        query = "SELECT alert_id, profile_id, canonical_ticker, rule_type, threshold_value, reference_model, enabled, cooldown_minutes, last_triggered_at, last_triggered_price, created_at FROM quant_price_alerts WHERE profile_id = ?"
+        params = [profile_id]
+        if enabled_only:
+            query += " AND enabled = true"
+        query += " ORDER BY created_at DESC"
+
+        alerts = []
+        with self._get_connection(read_only=True) as con:
+            rows = con.execute(query, params).fetchall()
+            for r in rows:
+                alerts.append({
+                    "alert_id": r[0],
+                    "profile_id": r[1],
+                    "canonical_ticker": r[2],
+                    "rule_type": r[3],
+                    "threshold_value": r[4],
+                    "reference_model": r[5],
+                    "enabled": bool(r[6]),
+                    "cooldown_minutes": r[7],
+                    "last_triggered_at": r[8].isoformat() if r[8] else None,
+                    "last_triggered_price": r[9],
+                    "created_at": r[10].isoformat() if r[10] else None
+                })
+        return alerts
+
+    def delete_quant_alert(
+        self,
+        alert_id: str,
+        profile_id: str = "default"
+    ) -> bool:
+        """刪除指定量化價位告警"""
+        profile_id = str(profile_id or "default").strip()
+        alert_id = str(alert_id or "").strip()
+        if not alert_id:
+            return False
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            count = con.execute(
+                "SELECT COUNT(*) FROM quant_price_alerts WHERE alert_id = ? AND profile_id = ?",
+                [alert_id, profile_id]
+            ).fetchone()[0]
+            if count == 0:
+                return False
+            con.execute(
+                "DELETE FROM quant_price_alerts WHERE alert_id = ? AND profile_id = ?",
+                [alert_id, profile_id]
+            )
+            return True
+
+    def record_alert_trigger(
+        self,
+        alert_id: str,
+        triggered_price: float,
+        profile_id: str = "default",
+        cooldown_minutes: Optional[int] = None
+    ) -> bool:
+        """原子 CAS 更新告警觸發時間與觸發價格（防洗版與並發重複推播）"""
+        profile_id = str(profile_id or "default").strip()
+        alert_id = str(alert_id or "").strip()
+        now_dt = datetime.datetime.now(datetime.timezone.utc)
+
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            if cooldown_minutes is not None and cooldown_minutes > 0:
+                cutoff_dt = now_dt - datetime.timedelta(minutes=cooldown_minutes)
+                row = con.execute("""
+                    UPDATE quant_price_alerts
+                    SET last_triggered_at = ?, last_triggered_price = ?
+                    WHERE alert_id = ? AND profile_id = ?
+                      AND (last_triggered_at IS NULL OR last_triggered_at <= ?)
+                    RETURNING alert_id
+                """, [now_dt, float(triggered_price), alert_id, profile_id, cutoff_dt]).fetchone()
+            else:
+                row = con.execute("""
+                    UPDATE quant_price_alerts
+                    SET last_triggered_at = ?, last_triggered_price = ?
+                    WHERE alert_id = ? AND profile_id = ?
+                    RETURNING alert_id
+                """, [now_dt, float(triggered_price), alert_id, profile_id]).fetchone()
+
+            return row is not None
+
 
 

@@ -84,6 +84,16 @@
                 <span class="tracking-tight">{{ currentLocale === 'zh' ? '繁中' : 'EN' }}</span>
             </button>
 
+            <!-- Command Palette Trigger Button (⌘K / Search) -->
+            <button @click="openCommandPalette()"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
+                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
+                    title="搜尋股票代號或名稱 (⌘K / Ctrl+K)"
+                    aria-label="開啟搜尋面板">
+                <span class="material-symbols-outlined text-[18px]">search</span>
+                <span class="hidden sm:inline font-mono text-xs opacity-75 font-bold">⌘K</span>
+            </button>
+
             <!-- Share URL Icon Button -->
             <button @click="copyShareLink()"
                     class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm hover:scale-105 active:scale-95"
@@ -102,6 +112,100 @@
             </button>
         </div>
 
+    </div>
+
+    <!-- ================= WORKSPACE SUB-BAR: MARKET CLOCK & RECENT TICKERS ================= -->
+    <div class="border-t px-3 sm:px-6 lg:px-8 py-1.5 transition-colors text-xs flex flex-wrap items-center justify-between gap-2"
+         :class="isDark ? 'bg-[#0B0C0E] border-[#262626]' : 'bg-[#FFF0CC]/60 border-[#DDC58B]'">
+
+        <!-- 1. Market Live Sessions (TW, US, JP) -->
+        <div class="flex items-center space-x-2 sm:space-x-3 overflow-x-auto no-scrollbar py-0.5">
+            <div v-if="marketSessions && marketSessions.sessions" class="flex items-center space-x-2">
+                <div v-for="s in [marketSessions.sessions.TW, marketSessions.sessions.US, marketSessions.sessions.JP].filter(Boolean)"
+                     :key="s.market"
+                     class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border font-mono text-xs shrink-0"
+                     :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38]'">
+                    <!-- Status indicator dot -->
+                    <span class="w-2 h-2 rounded-full shrink-0"
+                          :class="s.is_open ? 'bg-emerald-500 animate-pulse' : (s.lunch_break ? 'bg-amber-500' : 'bg-slate-400')"></span>
+                    <span class="font-bold font-sans" :class="isDark ? 'text-slate-200' : 'text-[#2B251A]'">{{ s.market_name }}</span>
+                    <span class="font-bold"
+                          :class="s.is_open ? 'text-emerald-500' : (s.lunch_break ? 'text-amber-500' : 'text-slate-400')">
+                        {{ s.status_label }}
+                    </span>
+                    <span v-if="s.countdown_formatted" class="opacity-70 tabular-nums">
+                        {{ s.countdown_formatted }}
+                    </span>
+                </div>
+
+                <!-- Freshness Warning Pill -->
+                <div v-if="marketSessions.freshness && marketSessions.freshness.is_stale"
+                     class="flex items-center space-x-1 px-2 py-0.5 rounded-lg border bg-amber-500/10 border-amber-500/40 text-amber-500 font-bold text-xs shrink-0"
+                     title="市場交易日數據延遲警示">
+                    <span class="material-symbols-outlined text-[14px]">warning</span>
+                    <span>資料待同步</span>
+                </div>
+            </div>
+
+            <div v-else class="text-slate-400 text-xs flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
+                <span>市場狀態載入中...</span>
+            </div>
+        </div>
+
+        <!-- 2. Recent & Pinned Tickers Workspace Bar -->
+        <div v-if="recentTickers && recentTickers.length > 0" class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <span class="text-xs font-bold shrink-0 opacity-60 flex items-center space-x-1">
+                <span class="material-symbols-outlined text-[14px]">bookmark</span>
+                <span>工作區:</span>
+            </span>
+
+            <div v-for="t in recentTickers" :key="t.ticker"
+                 class="group flex items-center space-x-1 px-2 py-0.5 rounded-md border text-xs font-mono shrink-0 transition-all select-none"
+                 :class="t.pinned
+                     ? (isDark ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold' : 'bg-amber-100 border-amber-500 text-amber-950 font-bold')
+                     : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]')">
+                <button @click="openStockDrawer(t.ticker)" class="font-bold hover:underline cursor-pointer">
+                    {{ t.ticker }}
+                </button>
+                <button @click.stop="togglePinRecentTicker(t.ticker)"
+                        :title="t.pinned ? '取消固定' : '釘選此標的'"
+                        class="opacity-60 hover:opacity-100 cursor-pointer text-xs leading-none"
+                        :class="t.pinned ? 'text-amber-500' : 'text-slate-400'">
+                    {{ t.pinned ? '★' : '☆' }}
+                </button>
+                <button @click.stop="removeRecentTicker(t.ticker)"
+                        title="從工作區移除"
+                        class="opacity-40 hover:opacity-100 hover:text-rose-500 cursor-pointer text-xs leading-none ml-0.5">
+                    ✕
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= WATCHLIST SHARE IMPORT BANNER ================= -->
+    <div v-if="sharedWatchlistTickers && sharedWatchlistTickers.length > 0"
+         class="border-t px-3 sm:px-6 lg:px-8 py-2 text-xs flex flex-wrap items-center justify-between gap-3 bg-amber-500/15 border-amber-500/30 transition-colors">
+        <div class="flex items-center space-x-2">
+            <span class="material-symbols-outlined text-[18px] text-amber-500 shrink-0">share</span>
+            <span class="font-bold" :class="isDark ? 'text-amber-300' : 'text-amber-950'">
+                偵測到分享的自選清單（共 {{ sharedWatchlistTickers.length }} 檔）:
+            </span>
+            <span class="font-mono text-xs opacity-90 truncate max-w-xs sm:max-w-md">
+                {{ sharedWatchlistTickers.slice(0, 6).join(', ') }}{{ sharedWatchlistTickers.length > 6 ? ' 等...' : '' }}
+            </span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button @click="importSharedWatchlist()"
+                    class="px-3 py-1 rounded-lg bg-amber-500 text-[#2B251A] font-black text-xs shadow-sm hover:bg-amber-400 cursor-pointer transition-colors">
+                匯入我的自選
+            </button>
+            <button @click="dismissSharedWatchlist()"
+                    class="px-2.5 py-1 rounded-lg border text-xs font-bold hover:bg-black/10 cursor-pointer transition-colors"
+                    :class="isDark ? 'border-slate-600 text-slate-300' : 'border-[#6B5B38] text-[#2B251A]'">
+                略過
+            </button>
+        </div>
     </div>
 </header>
 

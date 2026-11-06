@@ -57,6 +57,19 @@
                     {{ getMarketLabel(resolvedTicker) }}
                 </span>
 
+                <!-- Watchlist Star Toggle -->
+                <button type="button"
+                        @click.stop="toggleWatchlist(resolvedTicker)"
+                        class="min-h-[44px] min-w-[44px] px-2.5 py-1 rounded-xl border text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer select-none"
+                        :class="isWatchlisted(resolvedTicker)
+                            ? (isDark ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-amber-100 border-amber-500 text-amber-950')
+                            : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#6B5B38] text-slate-600 hover:text-slate-900')"
+                        :title="isWatchlisted(resolvedTicker) ? '從自選清單移除' : '加入自選清單'"
+                        :aria-label="isWatchlisted(resolvedTicker) ? '從自選清單移除' : '加入自選清單'">
+                    <span>{{ isWatchlisted(resolvedTicker) ? '★' : '☆' }}</span>
+                    <span>{{ isWatchlisted(resolvedTicker) ? '已在自選' : '加自選' }}</span>
+                </button>
+
                 <!-- Industry Badge -->
                 <span v-if="historyCompanyData?.industry" class="px-3 py-1 text-xs sm:text-sm font-bold rounded-lg border"
                       :class="isDark ? 'bg-amber-500/10 text-amber-300 border-amber-500/40' : 'bg-amber-100 text-amber-900 border-amber-300'">

@@ -6,12 +6,14 @@ and checking health of Clef primary and fallback endpoints.
 """
 
 import os
+import secrets
 import time
 from collections import defaultdict
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from pydantic import BaseModel, Field
 
+from core.netlimiter import resolve_client_ip, sanitize_health_data, SlidingWindowRateLimiter
 from data.clef_client import ClefDecisionClient
 from data.decision_service import DecisionService
 from data.duckdb_manager import DuckDBManager
@@ -21,28 +23,28 @@ db = DuckDBManager()
 clef_client = ClefDecisionClient(db=db)
 decision_service = DecisionService(clef_client=clef_client, db=db)
 
-# In-memory sliding window rate limiter per client IP
-_RATE_LIMIT_STORE: Dict[str, list] = defaultdict(list)
+# Thread-safe sliding window rate limiter per client IP
 RATE_LIMIT_WINDOW_SECONDS = 60
-DEFAULT_RATE_LIMIT_PER_MIN = int(os.getenv("DECISION_RATE_LIMIT_PER_MIN", "60"))
 MAX_RATE_LIMIT_STORE_ENTRIES = 2000
+_RATE_LIMIT_STORE: Dict[str, list] = defaultdict(list)
+DEFAULT_RATE_LIMIT_PER_MIN = int(os.getenv("DECISION_RATE_LIMIT_PER_MIN", "60"))
+
+decision_limiter = SlidingWindowRateLimiter(
+    default_limit=DEFAULT_RATE_LIMIT_PER_MIN,
+    window_seconds=RATE_LIMIT_WINDOW_SECONDS,
+    max_entries=MAX_RATE_LIMIT_STORE_ENTRIES
+)
 
 
 def _prune_rate_limit_store(now: float):
-    """Periodically remove expired client IP entries to prevent unbounded memory growth"""
-    if len(_RATE_LIMIT_STORE) > MAX_RATE_LIMIT_STORE_ENTRIES:
-        for ip in list(_RATE_LIMIT_STORE.keys()):
-            timestamps = _RATE_LIMIT_STORE[ip]
-            if not timestamps or now - timestamps[-1] >= RATE_LIMIT_WINDOW_SECONDS:
-                _RATE_LIMIT_STORE.pop(ip, None)
+    expired = [ip for ip, timestamps in _RATE_LIMIT_STORE.items() if not timestamps or now - timestamps[-1] >= RATE_LIMIT_WINDOW_SECONDS]
+    for ip in expired:
+        _RATE_LIMIT_STORE.pop(ip, None)
 
 
 def _resolve_client_ip(request: Request) -> str:
     """Resolve real client IP prioritizing Cloudflare / Nginx edge headers."""
-    cf_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP")
-    if cf_ip and cf_ip.strip():
-        return cf_ip.strip().split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    return resolve_client_ip(request)
 
 
 def verify_public_decision_rate_limit(request: Request):
@@ -50,21 +52,7 @@ def verify_public_decision_rate_limit(request: Request):
     Sliding window rate limit for public web UI decision queries (per client IP).
     Does NOT require DECISION_API_KEY.
     """
-    client_ip = _resolve_client_ip(request)
-    now = time.time()
-    _prune_rate_limit_store(now)
-
-    history = _RATE_LIMIT_STORE[client_ip]
-    valid_history = [t for t in history if now - t < RATE_LIMIT_WINDOW_SECONDS]
-    _RATE_LIMIT_STORE[client_ip] = valid_history
-
-    if len(valid_history) >= DEFAULT_RATE_LIMIT_PER_MIN:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded: maximum {DEFAULT_RATE_LIMIT_PER_MIN} requests per minute."
-        )
-
-    _RATE_LIMIT_STORE[client_ip].append(now)
+    decision_limiter.check(request, limit=DEFAULT_RATE_LIMIT_PER_MIN)
 
 
 def verify_decision_access(
@@ -86,14 +74,14 @@ def verify_decision_access(
         elif authorization and authorization.startswith("Bearer "):
             token = authorization[7:].strip()
 
-        if token != required_key:
+        if not token or not secrets.compare_digest(token, required_key.strip()):
             raise HTTPException(
                 status_code=401,
                 detail="Unauthorized: Missing or invalid API key for decision inference"
             )
 
     # 2. Sliding Window Rate Limiting (Bounded store)
-    client_ip = request.client.host if request.client else "127.0.0.1"
+    client_ip = _resolve_client_ip(request)
     now = time.time()
     _prune_rate_limit_store(now)
 
@@ -118,13 +106,27 @@ class EvaluateDecisionRequest(BaseModel):
     force_refresh: bool = Field(False, description="Whether to bypass DuckDB & memory cache and force remote LLM inference")
 
 
-@router.get("/health", summary="Check 5-Tier Decision Model endpoints health")
+_HEALTH_CACHE: Dict[str, Any] = {}
+_HEALTH_CACHE_TIME: float = 0.0
+HEALTH_CACHE_TTL = 60.0
+
+
+@router.get("/health", summary="Check 5-Tier Decision Model endpoints health", dependencies=[Depends(verify_public_decision_rate_limit)])
 def get_decision_health() -> Dict[str, Any]:
     """
-    Check availability across all 5 tiers:
-    Clef Primary, Clef Aiurl, JEV, OpenAI, and Local-Rules.
+    Check availability across all 5 tiers with 60-second in-memory cache,
+    per-IP rate limiting, and sanitized error and URL outputs.
     """
-    return decision_service.check_health()
+    global _HEALTH_CACHE, _HEALTH_CACHE_TIME
+    now = time.time()
+    if _HEALTH_CACHE and (now - _HEALTH_CACHE_TIME < HEALTH_CACHE_TTL):
+        return _HEALTH_CACHE
+
+    raw_results = decision_service.check_health()
+    sanitized = sanitize_health_data(raw_results)
+    _HEALTH_CACHE = sanitized
+    _HEALTH_CACHE_TIME = now
+    return sanitized
 
 
 @router.post("/evaluate", summary="Evaluate stock or custom state using Clef System One", dependencies=[Depends(verify_decision_access)])

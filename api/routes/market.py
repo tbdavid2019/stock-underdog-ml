@@ -3,8 +3,9 @@ import datetime
 import time
 import logging
 from typing import Optional, List, Dict, Any, Tuple
-from fastapi import APIRouter, Query, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, Query, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel
+from core.netlimiter import default_limiter
 from data.duckdb_manager import DuckDBManager
 from core.market_calendar import MarketCalendar
 from api.schemas import TradingDayStatusResponse, MarketHolidayItem
@@ -732,5 +733,25 @@ def get_market_calendar_holidays(
     except Exception as e:
         logger.error(f"❌ 查詢全年度休市清冊失敗: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"查詢全年度休市清冊失敗: {str(e)}")
+
+
+@router.get("/calendar/sessions", summary="查詢台美日跨市場即時交易時段摘要與倒數")
+def get_market_calendar_sessions(request: Request) -> Dict[str, Any]:
+    """
+    查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 之即時交易階段狀態：
+    支援 pre_market | regular | lunch_break | after_hours | closed 五態，
+    包含東京 11:30–12:30 午間休市、美股夏冬令與提前收盤日、下次狀態轉換時間戳與倒數秒數。
+    """
+    default_limiter.check(request)
+    try:
+        sessions = MarketCalendar.get_live_sessions_summary()
+        return {
+            "success": True,
+            "sessions": sessions
+        }
+    except Exception as e:
+        logger.error(f"❌ 查詢跨市場即時時段失敗: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"查詢跨市場即時時段失敗: {str(e)}")
+
 
 

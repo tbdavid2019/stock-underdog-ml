@@ -411,27 +411,24 @@ class TestTypographyAndRWD(unittest.TestCase):
 
     def test_duckdb_connection_different_configuration_fallback(self):
         """
-        Verify DuckDBManager handles 'different configuration' exception gracefully,
-        falling back between read_only=True and read_only=False seamlessly.
+        Verify DuckDBManager does NOT silently upgrade read_only=True to read_only=False,
+        enforcing strict read-only isolation without write fallback.
         """
         import os
         import tempfile
         import duckdb
         from data.duckdb_manager import DuckDBManager
+        from core.duckdb_lock import DuckDBBusyError
 
         db_file = tempfile.mktemp(suffix=".duckdb")
         try:
             mgr = DuckDBManager(db_path=db_file)
-            # 模擬背景排程開啟了 read_write 連線
+            # 模擬已有 read_write 連線開啟
             rw_conn = duckdb.connect(db_file, read_only=False)
             try:
-                # 測試 _get_connection(read_only=True) 在遇到配置衝突時透明回退
-                ro_conn = mgr._get_connection(read_only=True)
-                self.assertIsNotNone(ro_conn)
-                # 驗證連線可安全執行 SELECT 查詢
-                res = ro_conn.execute("SELECT 1").fetchall()
-                self.assertEqual(res, [(1,)])
-                ro_conn.close()
+                # 驗證 _get_connection(read_only=True) 絕不反向升級為 read_only=False
+                with self.assertRaises((DuckDBBusyError, duckdb.ConnectionException, duckdb.IOException)):
+                    mgr._get_connection(read_only=True, max_retries=1, retry_delay=0.01)
             finally:
                 rw_conn.close()
         finally:

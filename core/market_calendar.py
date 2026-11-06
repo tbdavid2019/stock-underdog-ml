@@ -21,6 +21,17 @@ from typing import Optional, List, Dict, Any, Union
 
 logger = logging.getLogger("stock_app.market_calendar")
 
+try:
+    import zoneinfo
+    TZ_TAIPEI = zoneinfo.ZoneInfo("Asia/Taipei")
+    TZ_TOKYO = zoneinfo.ZoneInfo("Asia/Tokyo")
+    TZ_NY = zoneinfo.ZoneInfo("America/New_York")
+except Exception as ze:
+    logger.warning("ZoneInfo import or loading failed; falling back to fixed UTC offsets: %s", ze)
+    TZ_TAIPEI = datetime.timezone(datetime.timedelta(hours=8))
+    TZ_TOKYO = datetime.timezone(datetime.timedelta(hours=9))
+    TZ_NY = datetime.timezone(datetime.timedelta(hours=-5))
+
 
 class MarketCalendar:
     """跨市場 (台股 TWSE / 美股 NYSE) 交易行事曆與休市守衛"""
@@ -760,3 +771,232 @@ class MarketCalendar:
         items = list(holidays.values())
         items.sort(key=lambda x: x["date"])
         return items
+
+    @classmethod
+    def _is_us_early_close(cls, d: datetime.date) -> bool:
+        """Check if date is a US half-day trading session (closes at 13:00 ET)."""
+        # 1. Day after Thanksgiving (Black Friday) - 4th Thursday in Nov + 1 day
+        if d.month == 11 and d.weekday() == 4:
+            thursdays = [day for day in range(1, 31) if datetime.date(d.year, 11, day).weekday() == 3]
+            if len(thursdays) >= 4 and d.day == thursdays[3] + 1:
+                return True
+        # 2. Christmas Eve (Dec 24) if it falls on a weekday
+        if d.month == 12 and d.day == 24 and d.weekday() < 5:
+            return True
+        # 3. July 3 if it falls on a weekday before July 4
+        if d.month == 7 and d.day == 3 and d.weekday() < 5:
+            return True
+        return False
+
+    @classmethod
+    def get_live_sessions_summary(
+        cls,
+        now_utc: Optional[datetime.datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        跨市場即時交易時段摘要（支援 TW, US, JP 五態枚舉：
+        pre_market | regular | lunch_break | after_hours | closed）
+        精確支援：
+        - 東京證交所 (TSE) 11:30–12:30 JST 午休 (lunch_break)
+        - 美股夏冬令 (America/New_York) 與提前收盤日 (13:00 ET)
+        - 台股 08:30 盤前、09:00–13:30 盤中、13:30–14:30 盤後
+        - 提供 next_transition_epoch、seconds_to_transition、休市原因
+        """
+        if now_utc is None:
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+        elif now_utc.tzinfo is None:
+            now_utc = now_utc.replace(tzinfo=datetime.timezone.utc)
+        else:
+            now_utc = now_utc.astimezone(datetime.timezone.utc)
+
+        summary = {}
+
+        # Markets: TW, US, JP
+        for market, tz, conf in [
+            ("TW", TZ_TAIPEI, {"name": "台股 (TWSE)", "close_hour": 13, "close_min": 30}),
+            ("JP", TZ_TOKYO, {"name": "日股 (TSE)", "close_hour": 15, "close_min": 30}),
+            ("US", TZ_NY, {"name": "美股 (NYSE/NASDAQ)", "close_hour": 16, "close_min": 0}),
+        ]:
+            local_dt = now_utc.astimezone(tz)
+            local_date = local_dt.date()
+            is_trade = cls.is_trading_day(local_date, market)
+            t = local_dt.time()
+
+            if not is_trade:
+                next_day = cls.get_next_trading_day(local_date, market)
+                if market == "TW":
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(8, 30), tzinfo=tz)
+                elif market == "JP":
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(8, 0), tzinfo=tz)
+                else:
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(4, 0), tzinfo=tz)
+
+                next_epoch = int(next_dt.timestamp())
+                secs = max(0, int((next_dt - local_dt).total_seconds()))
+                status_info = cls.get_trading_day_status(local_date, market)
+
+                summary[market] = {
+                    "market": market,
+                    "market_name": conf["name"],
+                    "session": "closed",
+                    "session_name": "休市",
+                    "reason": status_info["reason"],
+                    "local_time": local_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "next_transition_epoch": next_epoch,
+                    "next_transition_iso": next_dt.isoformat(),
+                    "seconds_to_transition": secs
+                }
+                continue
+
+            # It is a trading day
+            if market == "TW":
+                if t < datetime.time(8, 30):
+                    session = "closed"
+                    session_name = "尚未開盤"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(8, 30), tzinfo=tz)
+                elif datetime.time(8, 30) <= t < datetime.time(9, 0):
+                    session = "pre_market"
+                    session_name = "盤前試撮"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(9, 0), tzinfo=tz)
+                elif datetime.time(9, 0) <= t < datetime.time(13, 30):
+                    session = "regular"
+                    session_name = "盤中連續交易"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(13, 30), tzinfo=tz)
+                elif datetime.time(13, 30) <= t < datetime.time(14, 30):
+                    session = "after_hours"
+                    session_name = "盤後定價交易"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(14, 30), tzinfo=tz)
+                else:
+                    session = "closed"
+                    session_name = "今日收盤"
+                    next_day = cls.get_next_trading_day(local_date, market)
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(8, 30), tzinfo=tz)
+
+            elif market == "JP":
+                if t < datetime.time(8, 0):
+                    session = "closed"
+                    session_name = "尚未開盤"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(8, 0), tzinfo=tz)
+                elif datetime.time(8, 0) <= t < datetime.time(9, 0):
+                    session = "pre_market"
+                    session_name = "東證盤前"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(9, 0), tzinfo=tz)
+                elif datetime.time(9, 0) <= t < datetime.time(11, 30):
+                    session = "regular"
+                    session_name = "東證前場連續交易"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(11, 30), tzinfo=tz)
+                elif datetime.time(11, 30) <= t < datetime.time(12, 30):
+                    session = "lunch_break"
+                    session_name = "東證午休 (Lunch Break)"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(12, 30), tzinfo=tz)
+                elif datetime.time(12, 30) <= t < datetime.time(15, 30):
+                    session = "regular"
+                    session_name = "東證後場連續交易"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(15, 30), tzinfo=tz)
+                elif datetime.time(15, 30) <= t < datetime.time(16, 0):
+                    session = "after_hours"
+                    session_name = "東證盤後 (ToSTNeT)"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(16, 0), tzinfo=tz)
+                else:
+                    session = "closed"
+                    session_name = "今日收盤"
+                    next_day = cls.get_next_trading_day(local_date, market)
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(8, 0), tzinfo=tz)
+
+            else:  # US
+                is_early = cls._is_us_early_close(local_date)
+                close_h = 13 if is_early else 16
+                post_h = 17 if is_early else 20
+
+                if t < datetime.time(4, 0):
+                    session = "closed"
+                    session_name = "尚未開盤"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(4, 0), tzinfo=tz)
+                elif datetime.time(4, 0) <= t < datetime.time(9, 30):
+                    session = "pre_market"
+                    session_name = "美股盤前 (Pre-Market)"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(9, 30), tzinfo=tz)
+                elif datetime.time(9, 30) <= t < datetime.time(close_h, 0):
+                    session = "regular"
+                    session_name = "美股常規盤 (Regular)" + (" (提前半日收盤)" if is_early else "")
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(close_h, 0), tzinfo=tz)
+                elif datetime.time(close_h, 0) <= t < datetime.time(post_h, 0):
+                    session = "after_hours"
+                    session_name = "美股盤後 (After-Hours)"
+                    next_dt = datetime.datetime.combine(local_date, datetime.time(post_h, 0), tzinfo=tz)
+                else:
+                    session = "closed"
+                    session_name = "今日收盤"
+                    next_day = cls.get_next_trading_day(local_date, market)
+                    next_dt = datetime.datetime.combine(next_day, datetime.time(4, 0), tzinfo=tz)
+
+            next_epoch = int(next_dt.timestamp())
+            secs = max(0, int((next_dt - local_dt).total_seconds()))
+
+            summary[market] = {
+                "market": market,
+                "market_name": conf["name"],
+                "session": session,
+                "session_name": session_name,
+                "reason": "正常交易日",
+                "local_time": local_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                "next_transition_epoch": next_epoch,
+                "next_transition_iso": next_dt.isoformat(),
+                "seconds_to_transition": secs
+            }
+
+        return summary
+
+    @classmethod
+    def check_market_freshness(
+        cls,
+        market: str = "TW",
+        last_data_date: str = "",
+        now_dt: Optional[datetime.datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        交易日感知新鮮度判定 (Trading-Day-Aware Freshness Guard)：
+        對照指定市場最近一個已收盤結算之交易日，避免農曆年或長週末誤報過期。
+        """
+        market = cls.resolve_market(market)
+        tz = TZ_TAIPEI if market == "TW" else (TZ_TOKYO if market == "JP" else TZ_NY)
+        if now_dt is None:
+            now_dt = datetime.datetime.now(tz)
+        elif now_dt.tzinfo is None:
+            now_dt = now_dt.replace(tzinfo=tz)
+        else:
+            now_dt = now_dt.astimezone(tz)
+
+        cur_date = now_dt.date()
+        cur_time = now_dt.time()
+
+        settle_times = {
+            "TW": datetime.time(15, 30),
+            "JP": datetime.time(16, 0),
+            "US": datetime.time(17, 0)
+        }
+        settle_t = settle_times.get(market, datetime.time(16, 0))
+
+        if cls.is_trading_day(cur_date, market) and cur_time >= settle_t:
+            expected_date = cur_date
+        else:
+            expected_date = cls.get_previous_trading_day(cur_date, market)
+
+        exp_iso = expected_date.strftime("%Y-%m-%d")
+        clean_last = str(last_data_date or "").strip()
+        if len(clean_last) == 8 and clean_last.isdigit():
+            clean_last = f"{clean_last[:4]}-{clean_last[4:6]}-{clean_last[6:]}"
+
+        is_stale = False
+        if not clean_last:
+            is_stale = True
+        else:
+            is_stale = clean_last < exp_iso
+
+        return {
+            "market": market,
+            "last_data_date": clean_last,
+            "expected_date": exp_iso,
+            "stale": is_stale,
+            "as_of": clean_last
+        }

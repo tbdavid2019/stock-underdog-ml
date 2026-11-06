@@ -5,6 +5,7 @@ import datetime as dt
 import hashlib
 import json
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -58,15 +59,16 @@ class ForecastStore:
     def _connect(self):
         return duckdb.connect(self.db_path, read_only=self.read_only)
 
+    @contextmanager
     def _lock(self):
         if self.read_only:
-            return _WRITE_LOCK
-        # Reuse the repository-wide writer lock when the manager is available.
-        try:
-            from data.duckdb_manager import DuckDBManager
-            return DuckDBManager._WRITE_LOCK
-        except Exception:
-            return _WRITE_LOCK
+            with _WRITE_LOCK:
+                yield
+            return
+        from core.duckdb_lock import duckdb_write_lock
+        with _WRITE_LOCK:
+            with duckdb_write_lock(self.db_path):
+                yield
 
     @staticmethod
     def _identity(prefix: str, value: Mapping[str, Any]) -> str:
