@@ -235,6 +235,34 @@ class TestFastAPIService(unittest.TestCase):
         resp = self.client.get("/skill")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("name: stock-quant", resp.text)
+        self.assertIn("888-stock-quant", resp.text)
+        self.assertIn("check-update", resp.text)
+
+    def test_npx_skill_distribution_and_update_reminders(self):
+        """驗證 /llms.txt、/llms-full.txt、/skill、Agent Hub 前台與 README.md 皆同步宣導 npx 888-stock-quant 與使用前檢查更新提示"""
+        from pathlib import Path
+
+        for route in ("/llms.txt", "/llms-full.txt", "/skill"):
+            resp = self.client.get(route)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("npx -y 888-stock-quant@latest", resp.text, f"{route} missing npx command")
+            self.assertIn("check-update", resp.text, f"{route} missing pre-use update check reminder")
+
+        index_resp = self.client.get("/")
+        self.assertEqual(index_resp.status_code, 200)
+        html = index_resp.text
+        self.assertIn("npx -y 888-stock-quant@latest install", html)
+        self.assertIn("npx -y 888-stock-quant@latest check-update", html)
+        self.assertIn("32 大原生量化 MCP 函數", html)
+        self.assertNotIn("17 大原生量化 MCP 函數", html)
+
+        readme = Path("README.md").read_text(encoding="utf-8")
+        self.assertIn("npx -y 888-stock-quant@latest install", readme)
+        self.assertIn("check-update", readme)
+
+        root_skill = Path("skills/stock-quant/SKILL.md").read_text(encoding="utf-8")
+        pkg_skill = Path("packages/888-stock-quant/skills/stock-quant/SKILL.md").read_text(encoding="utf-8")
+        self.assertEqual(root_skill, pkg_skill, "NPM bundled SKILL.md must stay synced with skills/stock-quant/SKILL.md")
 
     def test_webmcp_manifest(self):
         resp = self.client.get("/.well-known/mcp.json")

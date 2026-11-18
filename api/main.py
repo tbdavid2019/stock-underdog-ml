@@ -414,7 +414,14 @@ def get_llms_txt():
 
 > 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、Mistral Timestral-209M 時序大模型、Google Research TimesFM 時序大模型、雙時序模型波形共振、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
 
-> ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents and automated systems should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` at the start of each session/task to leverage newly released AI models, FastMCP tools, and multi-market data endpoints.
+> ⚠️ **Mandatory Pre-Use Update Check & Continuous Feature Evolution**:
+> Caller LLM Agents that have installed the `stock-quant` Skill MUST check whether `npx` or the live specification has updates BEFORE running analysis:
+> 1. Run `npx -y 888-stock-quant@latest check-update` (and `npx -y 888-stock-quant@latest update` if an update is reported)
+> 2. Or dynamically fetch `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` at the start of each session/task.
+>
+> **One-Command Multi-Agent Install (`AGY`, `Codex`, `OpenCode`, `Hermes`, `OpenClaw`, `Claude Code`, `OMP`) & Zero-Python CLI**:
+> - Install / Refresh Skill: `npx -y 888-stock-quant@latest install` (supports `--agent <name|all>`, `--project`, `--dir <path>`)
+> - Query Quant API directly: `npx -y 888-stock-quant@latest macro --json`, `resonance`, `screen`, `query 2330.TW`, `align 2330.TW`, `xray 2330.TW NVDA`
 
 888 Stock Quant 遵循 [llmstxt.org](https://llmstxt.org/) 規範，為大語言模型 (LLM)、AI Agents、Claude Desktop、Cursor、Antigravity 與自動化投資決策系統提供標準化、結構化之量化訊號與資料字典。本平台核心定位為「盤前買進決策指南 (Pre-Market Buy Guide)」，每日於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動完成運算並推播。
 
@@ -556,7 +563,9 @@ def get_llms_full_txt():
 
 > 專業級台美股深度學習與多維量化決策平台全量架構規格、數學模型定義與資料庫字典。
 
-> ⚠️ **Continuous Feature Evolution Active**: Caller LLM Agents should dynamically fetch the latest live specifications from `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` before execution to leverage newly released models, tools, and endpoints.
+> ⚠️ **Mandatory Pre-Use Update Check & Continuous Feature Evolution**:
+> Caller LLM Agents with the installed `stock-quant` Skill MUST run `npx -y 888-stock-quant@latest check-update` (and `npx -y 888-stock-quant@latest update` if newer) OR dynamically fetch `https://stockdata.david888.com/llms.txt` and `https://stockdata.david888.com/skill` before execution.
+> Install across AGY, Codex, OpenCode, Hermes, OpenClaw, Claude Code, and OMP via `npx -y 888-stock-quant@latest install`.
 
 ## 1. System Architecture & Core Philosophy
 888 Stock Quant 定位為「**盤前買進決策指南 (Pre-Market Buy Guide)**」與「**純股市時序資料庫**」，每天於台股開盤前 (08:00 TWN / 00:00 UTC) 與美股開盤前 (20:30 TWN / 12:30 UTC) 自動運算完成並推播決策。系統透過 `--market auto` 實施時段防護，白天專注台股、夜間專注美股，非指定全市場時杜絕算力浪費。

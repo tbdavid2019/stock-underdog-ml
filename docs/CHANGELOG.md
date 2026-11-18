@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-11-18 (v2.6.1 — `888-stock-quant` npx Skill 套件與使用前更新檢查)
+
+### 新增與異動
+- **零依賴 Multi-Agent npm 套件 (`packages/888-stock-quant/`)**：
+  - 建立獨立可發佈套件 `888-stock-quant`（AGPL-3.0-only，`bin/cli.js`、`lib/agents.js`、`lib/client.js`、`lib/commands.js`、`scripts/sync-skill.js`、`README.md`）。
+  - 支援 `npx -y 888-stock-quant@latest install` 自動偵測與指定代理安裝，涵蓋 **Antigravity (`~/.gemini/skills`)、Codex (`~/.codex/skills`)、OpenCode (`~/.config/opencode/skills`)、Claude Code (`~/.claude/skills`)、Hermes (`${HERMES_HOME:-~/.hermes}/skills`)、OpenClaw (`~/.openclaw/workspace/skills`)、OMP／跨代理 (`~/.agents/skills`)**，支援 `--agent`、`--project`、`--dir`、`--offline`、`--dry-run`、`--json`。
+  - 內建 `check-update`（同時檢查 npm `@latest` 版本與線上 `/skill` SHA-256 指紋）與 `update`（自動更新已安裝 `SKILL.md`），以及零 Python REST 查詢命令（`macro`、`resonance`、`screen`、`xuantie`、`query`、`align`、`resolve`、`xray`、`sessions`、`canary`），並強制 `http:`/`https:` URL 與 `/skill` Markdown 前置標頭防禦 HTML 攔截驗證。
+  - 新增 GitHub Actions 手動/Tag 發佈流程 [`.github/workflows/npm-publish.yml`](.github/workflows/npm-publish.yml) 與 Node.js 單元測試 [`packages/888-stock-quant/test/cli.test.mjs`](packages/888-stock-quant/test/cli.test.mjs)。
+- **全前台與規範文件同步 (`skills/stock-quant/SKILL.md`, `api/main.py`, `api/templates/partials/tab_agent_hub.html`, `README.md`, `api/static/css/app.css`)**：
+  - 於 `/llms.txt`、`/llms-full.txt`、`/skill`（與套件內同步副本）、首頁 **Agent 整合中心** (`tab_agent_hub.html`) 與 `README.md` 同步加入 `npx -y 888-stock-quant@latest install` 指引及「**LLM Agent 使用前先執行 `check-update` / `update` 檢查更新**」強制提醒。
+  - 修正 Agent 整合中心與 `README.md` 工具數量標示（`32 大原生量化 MCP 函數` / `32 大量化工具宣告`），並移除 `tab_agent_hub.html` 殘餘 `transition-all`。
+- **自動化測試 (`test/test_api.py`, `packages/888-stock-quant/test/cli.test.mjs`)**：
+  - 新增 `test_npx_skill_distribution_and_update_reminders` 與 Node CLI 5 項單元測試，驗證跨路由提示與 `SKILL.md` 與 npm 套件副本位元組級同步。
+
 ## 2026-11-18 (v2.6.1 — `web-ui-hardening-and-modernization`)
 
 ### 切片四：圖示／Token 收斂與公開個股頁一致性

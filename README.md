@@ -307,9 +307,25 @@ graph TD
 21. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
 22. `get_company_tenders`: 查詢台灣上市櫃公司之政府電子採購網得標情報（累計得標總金額、勝率、獨標率、核心採購機關金主、競標對手與大案清單，串接 ToBid MCP）。
 
-### 3. 📖 Agent Skill 規範檔 (`SKILL.md`)
-本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](file:///Users/david/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)，亦可直接透過 API 獲取：`http://localhost:8088/skill`。
-> 💡 **動態最新拉取提示**：平台機能快速演進，建議外部 AI Agent（Claude, Cursor, Antigravity）在執行任務前隨時重新發送 HTTP GET 請求至 `/skill`、`/llms.txt` 或 `/.well-known/mcp.json`，取得即時更新之 MCP 函數契約與資料字典。
+### 3. 📖 Agent Skill 規範檔 (`SKILL.md`) 與 `npx` 一鍵安裝
+本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](skills/stock-quant/SKILL.md)（同時提供線上下載 [`/skill`](https://stockdata.david888.com/skill)），並封裝為零依賴 npm 套件 **`888-stock-quant`**：
+
+```bash
+# 一鍵自動偵測並安裝至 AGY / Codex / OpenCode / Hermes / OpenClaw / Claude Code / OMP
+npx -y 888-stock-quant@latest install
+
+# 零 Python 直查量化端點（支援 --json）
+npx -y 888-stock-quant@latest macro --json
+npx -y 888-stock-quant@latest resonance --index TW_TOP50 --limit 10
+```
+
+> 🔄 **已安裝 LLM Agent 使用前必查更新**：本平台模型與端點持續演進，任何已安裝此 Skill 的 LLM Agent 在每次會話或任務執行前，**請先檢查 `npx` 與線上 `/skill` 是否有更新**：
+> ```bash
+> npx -y 888-stock-quant@latest check-update
+> # 若偵測到新版 CLI 或新版 /skill，執行 update 同步最新規範：
+> npx -y 888-stock-quant@latest update
+> ```
+> 亦可隨時發送 HTTP GET 請求至 `/skill`、`/llms.txt` 或 `/.well-known/mcp.json` 取得即時契約。
 
 ### 4. 核心 REST API 端點清單
 
@@ -318,7 +334,7 @@ graph TD
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (23 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (32 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -551,6 +567,8 @@ stock-underdog-ml/
 │   └── formatter.py            # 美化終端機與推播日報排版工具
 ├── pipeline/                   # 分層管線排程器
 │   └── orchestrator.py         # 4-Stage 量化管線執行調度器
+├── packages/                   # 獨立發佈套件
+│   └── 888-stock-quant/        # npx 多 Agent Skill 安裝器與零依賴量化 CLI
 ├── docker/                     # 容器化腳本與排程
 │   ├── entrypoint.sh           # 多模式啟動入口 (預設安全導向 api)
 │   └── crontab                 # 台北時區定時排程定義

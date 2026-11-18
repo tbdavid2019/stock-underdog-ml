@@ -1,0 +1,39 @@
+name: Publish 888-stock-quant to npm
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "npm-v*"
+
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/888-stock-quant
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Sync SKILL.md and LICENSE
+        run: node ./scripts/sync-skill.js
+
+      - name: Run CLI unit tests
+        run: npm test
+
+      - name: Dry-run package tarball
+        run: npm pack --dry-run
+
+      - name: Publish to npm registry
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

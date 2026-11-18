@@ -1,0 +1,53 @@
+{
+  "name": "888-stock-quant",
+  "version": "2.6.1",
+  "description": "Multi-agent AI Skill installer & zero-dependency quant brain CLI for 888 Stock Quant (AGY, Codex, OpenCode, Hermes, OpenClaw, Claude Code, OMP).",
+  "type": "module",
+  "bin": {
+    "888-stock-quant": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "sync:skill": "node ./scripts/sync-skill.js",
+    "prepack": "node ./scripts/sync-skill.js",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "888-stock-quant",
+    "stock-quant",
+    "agent-skill",
+    "ai-agent",
+    "quant",
+    "taiwan-stock",
+    "us-stock",
+    "timesfm",
+    "timemachine",
+    "codex",
+    "opencode",
+    "openclaw",
+    "hermes",
+    "antigravity",
+    "claude-code",
+    "omp"
+  ],
+  "author": "David (888 Stock Quant)",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://stockdata.david888.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tbdavid2019/stock-underdog-ml.git",
+    "directory": "packages/888-stock-quant"
+  },
+  "bugs": {
+    "url": "https://github.com/tbdavid2019/stock-underdog-ml/issues"
+  }
+}

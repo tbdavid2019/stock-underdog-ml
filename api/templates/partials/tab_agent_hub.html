@@ -48,7 +48,7 @@
             </div>
 
             <button @click="copyText(claudeMcpConfig, 'Claude Desktop 配置已複製！')"
-                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1.5"
+                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1.5"
                     :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
                 <span class="material-symbols-outlined text-[15px] leading-none">content_copy</span>
                 <span>一鍵複製 Claude MCP 設定</span>
@@ -75,22 +75,33 @@
                 <div class="mt-3 p-3 rounded-xl text-xs num-font space-y-1.5 border"
                      :class="isDark ? 'bg-[#030302] border-[#262626] text-slate-300' : 'bg-[#1E1E1C] border-[#2D2A26] text-stone-200'">
                     <div class="flex items-center space-x-1">
-                        <span class="material-symbols-outlined text-[13px] leading-none">folder</span>
-                        <span>本地路徑: <code>skills/stock-quant/SKILL.md</code></span>
+                        <span class="material-symbols-outlined text-[13px] leading-none">terminal</span>
+                        <span>一鍵安裝: <code class="text-amber-400">npx -y 888-stock-quant@latest install</code></span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[13px] leading-none">update</span>
+                        <span>使用前檢查更新: <code class="text-emerald-400">npx -y 888-stock-quant@latest check-update</code></span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[13px] leading-none">devices</span>
+                        <span>支援代理: <code>AGY / Codex / OpenCode / Hermes / OpenClaw / Claude / OMP</code></span>
                     </div>
                     <div class="flex items-center space-x-1">
                         <span class="material-symbols-outlined text-[13px] leading-none">handyman</span>
-                        <span>工具數量: <code>17 大原生量化 MCP 函數</code></span>
+                        <span>工具數量: <code>32 大原生量化 MCP 函數</code></span>
                     </div>
                     <div class="flex items-center space-x-1">
                         <span class="material-symbols-outlined text-[13px] leading-none">military_tech</span>
                         <span>因子支援: <code>四重共振 / 三重共振 / 雙ML共振 / TimesFM / 玄鐵均線 / 法人連買</code></span>
                     </div>
                 </div>
+                <p class="text-[11px] mt-2 leading-relaxed" :class="isDark ? 'text-amber-300/90' : 'text-amber-700'">
+                    提示未來調用的 LLM Agent：執行分析前務必先執行 <code class="num-font font-semibold">npx -y 888-stock-quant@latest check-update</code>（或 <code class="num-font font-semibold">update</code>）確認 CLI 與線上 <code class="num-font font-semibold">/skill</code> 皆為最新版。
+                </p>
             </div>
 
             <a href="/skill" target="_blank"
-               class="w-full py-2.5 text-black bg-amber-500 hover:bg-amber-400 rounded-xl text-xs font-bold text-center transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1">
+               class="w-full py-2.5 text-black bg-amber-500 hover:bg-amber-400 rounded-xl text-xs font-bold text-center transition-colors shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1">
                 <span>線上檢視 SKILL.md 完整規格</span>
                 <span class="material-symbols-outlined text-[13px] leading-none">open_in_new</span>
             </a>
@@ -136,13 +147,13 @@
 
             <div class="grid grid-cols-2 gap-2">
                 <button @click="copyText(window.location.origin + '/mcp/sse', 'WebMCP SSE URL 已複製！')"
-                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1"
                          :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-emerald-400 border-[#262626]' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
                     <span class="material-symbols-outlined text-[14px] leading-none">content_copy</span>
                     <span>複製 WebMCP SSE</span>
                 </button>
                 <button @click="copyText(window.location.origin + '/openapi.json', 'OpenAPI URL 已複製！')"
-                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1"
                          :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
                     <span class="material-symbols-outlined text-[14px] leading-none">content_copy</span>
                     <span>複製 OpenAPI</span>
@@ -169,7 +180,7 @@
             </div>
 
             <button @click="copyText(pythonSnippet, 'Python 代碼範例已複製！')"
-                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1.5"
+                    class="w-full py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1.5"
                     :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
                 <span class="material-symbols-outlined text-[15px] leading-none">content_copy</span>
                 <span>複製 Python 腳本</span>
@@ -208,13 +219,13 @@
 
             <div class="grid grid-cols-2 gap-2">
                 <button @click="copyText(window.location.origin + '/llms.txt', 'llms.txt URL 已複製！')"
-                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1"
                          :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-emerald-400 border-[#262626]' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'">
                     <span class="material-symbols-outlined text-[14px] leading-none">content_copy</span>
                     <span>複製 llms.txt</span>
                 </button>
                 <button @click="copyText(window.location.origin + '/llms-full.txt', 'llms-full.txt URL 已複製！')"
-                         class="py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1"
+                         class="py-2.5 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center space-x-1"
                          :class="isDark ? 'bg-[#16181D] hover:bg-[#262626] text-white border-[#262626]' : 'bg-[#F4F4F6] hover:bg-white text-slate-800 border-[#E5E7EB]'">
                     <span class="material-symbols-outlined text-[14px] leading-none">content_copy</span>
                     <span>複製 full.txt</span>
