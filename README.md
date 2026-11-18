@@ -48,17 +48,17 @@ graph TD
 
     subgraph S2 [Stage 2: 模組化多策略矩陣]
         Pool --> ST1[🗡️ 玄鐵重劍: MA60/120 趨勢回調買點]
-        Pool --> ST2[🔮 Timestral: Mistral 時序大模型 209M]
-        Pool --> ST3[🔮 TimesFM 3.0: Google 時序大模型 Zero-Shot]
-        Pool --> ST4[🔮 MOIRAI-2: Salesforce 研究 Shadow]
+        Pool --> ST2[Timestral: Mistral 時序大模型 209M]
+        Pool --> ST3[TimesFM 3.0: Google 時序大模型 Zero-Shot]
+        Pool --> ST4[MOIRAI-2: Salesforce 時序大模型池]
         Pool --> ST5[🌊 板塊輪動: 7 大產業 10D/15D/20D 動量]
         Pool --> ST6[📈 法人籌碼: TWSE 投信連買 / 土洋合買]
     end
 
     subgraph S3 [Stage 3: 綜合評估與 AI 研報]
-        ST1 & ST2 & ST3 & ST4 & ST5 & ST6 --> Composite[⭐ 雙 Foundation Model 綜合評估引擎]
+        ST1 & ST2 & ST3 & ST4 & ST5 & ST6 --> Composite[⭐ 可擴充多模型動態評估引擎]
         Exposure -.->|宏觀折減| Composite
-        Composite --> Overlap[👑 四重共振 / 🏆 雙模型共振 / 焦點標的]
+        Composite --> Overlap[多策略綜合優選 / 模型共識交集]
         Composite --> LLM[🧠 3-Tier Fallback LLM 操盤解讀<br>Primary ➔ Fallback 1 ➔ Fallback 2 ➔ 規則模板]
     end
 
@@ -87,17 +87,17 @@ graph TD
 * 核心思維：「**順大勢（MA60/120 多頭排列）、逆小勢（回踩均線支撐）**」。
 * 精確捕捉股價回測 MA60 季線 (`MA60 Pullback`) 或 MA120 半年線之波段技術買點。
 
-### 3. 🔮 Mistral Timestral-209M 時序大模型 (Time Series Foundation Model)
-* 整合現代化三大時序基礎大模型（Google TimesFM、Mistral Timestral、Salesforce MOIRAI-2），徹底連根移除早期廢棄之單層 LSTM/Chronos/Prophet 舊模型與端點。
+### 3. Mistral Timestral-209M 時序大模型 (Time Series Foundation Model)
+* 整合現代化可擴充時序基礎模型動態池（Google TimesFM、Mistral Timestral、Salesforce MOIRAI-2 等持續新增），徹底連根移除早期廢棄之單層 LSTM/Chronos/Prophet 舊模型與端點。
 * 採用純推論 Zero-Shot 模式，輸入 128 根歷史 K 線，預測隔日 (T+1) 與未來 5 日目標價位。
 * **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
 * 輸出嚴格單調的分位數區間 **P10 (下行防守位)**、**P50 (中位目標價)** 與 **P90 (上行獲利位)**，並以 T+1 分位數計算有界非對稱盈虧比（Risk-Reward Ratio）。
 
-### 4. 🔮 Google Research TimesFM 3.0 時序大模型 (Time Series Foundation Model)
+### 4. Google Research TimesFM 3.0 時序大模型 (Time Series Foundation Model)
 * 採用 Google 預訓練之 **TimesFM 3.0** 時序基礎模型，以 **Zero-Shot 純推論模式** 進行研究環境評估；TimesFM 2.5 僅保留歷史紀錄。
 * **嚴格統一對齊隔日 (T+1) 預測合約**：預測目標價 (`predicted_price`) 與潛力報酬百分比 (`potential`) 100% 嚴格對應隔日 T+1 目標價與當日收盤價之漲跌幅。
 * 同步計算隔日 **P10 (下行防守位)**、**P50 (中位預期)** 與 **P90 (上行獲利位)**，以 T+1 之 **P50 中位預期 / P10 下行防守位**計算真實盈虧比 (Risk/Reward Ratio)；P90 僅作上行參考，輸出 `TimesFM強`、`TimesFM看漲`、`高盈虧比` 標籤。
-* 與 Mistral Timestral 形成 **「雙 Foundation Model 交叉驗證」**（Google TimesFM 3.0 × Mistral Timestral 雙時序大模型波形共識）；MOIRAI-2 初期僅保存研究成績，不直接參與選股。
+* 與 Mistral Timestral、Salesforce MOIRAI-2 及後續納入之模型共同構成 **可擴充 Foundation Model 模型動態池**，支援獨立檢視與多模型交叉篩選。
 
 ### 5. 🌊 7 大產業板塊資金輪動 (Sector Rotation Strategy)
 * 即時追蹤台股與美股 7 大核心板塊：`半導體與IC設計`、`AI伺服器與電子科技`、`金融保險`、`重電與綠能基建`、`航運與原物料`、`傳統產業與化學`、`生技醫療與太空概念`。
@@ -107,10 +107,10 @@ graph TD
 * 直連 **臺灣證券交易所 (TWSE T86 / MI_QFIIS)** 與 **櫃買中心 (TPEX)** 官方開放數據。
 * 自動統計 5日/20日 外資與投信累計買賣超（張數），識別 **「投信連買 >= 3 天」** 與 **「土洋合買」** 主力鎖碼個股。
 
-### 7. ⭐ 綜合優選 / 雙模型看漲評估 (Dual Foundation Model Consensus)
-* 跨維度篩選同時符合 **「季線支撐買點 ∩ TimesFM 看漲 ∩ Timestral 看漲 ∩ 投信/外資主力大買」** 之最高信心標的。
-* 自動貼上 `綜合優選`、`雙模型看漲`、`土洋合買`、`投信連買`、`高盈虧比`、`主流板塊`、`低PE` 等量化標籤。
-* 目標價以 TimesFM 與 Timestral P50 進行等權防禦性合成（$0.5 \times P_{TimesFM} + 0.5 \times P_{Timestral}$），單一模型缺漏時自動優雅退化降級。
+### 7. ⭐ 多策略綜合優選與動態模型評估 (Multi-Model Composite Evaluation)
+* 跨維度篩選同時符合 **「季線支撐買點 ∩ 已啟用時序大模型看漲共識 ∩ 投信/外資主力大買」** 之高信心標的，隨模型動態擴充不鎖死模型數量。
+* 自動貼上 `綜合優選`、`土洋合買`、`投信連買`、`主流板塊`、`低PE` 等乾淨純文字量化標籤。
+* 目標價依當前啟用模型動態加權防禦性合成，單一模型缺漏時自動優雅降級。
 * **個股歷史查詢 (Ticker Explorer)**：
   - **T+1 目標兌現日平移折線圖**：第 $i$ 天之隔日預測平移至 $i+1$ 與次日真實收盤對照，杜絕「影子線」錯覺，右側設有 `'隔日預估 (T+1)'` 錨點。
   - **K 線級高互動縮放平移與時間區間快選 (v2.4.46)**：支援滑鼠滾輪縮放、按住拖曳平移、手機雙指縮放與雙擊重置；內建 `近1月 (22D)`、`近2月 (45D)`、`近1季 (66D)`、`半年 (130D)`、`全部 (ALL)` 區間快選，搭配視窗動態 Y 軸自動貼合（Auto-fit）與開獎標點尺度自適應。
@@ -202,7 +202,7 @@ graph TD
   - 自動同步前一交易日台股全市場收盤行情、三大法人盤後結算籌碼以及昨夜美股收盤連動。
   - 夜間時段嚴格停止台股運算，避免重複消耗 CPU 與記憶體資源。
 * **🇯🇵 日股開盤前指南 (每日 07:15 執行 / 台北時間，東京 08:15 盤前)**：
-  - 於東證 TSE 09:00 (東京時間 / 台北 08:00) 開盤前 45 分鐘產出日經 225 (Nikkei 225) 雙時序大模型預測與日股宏觀曝險。
+  - 於東證 TSE 09:00 (東京時間 / 台北 08:00) 開盤前 45 分鐘產出日經 225 (Nikkei 225) 多時序大模型預測與日股宏觀曝險。
 * **🇺🇸 美股開盤前指南 (每日 20:30 執行 / UTC 12:30，時段 13:30~05:00 派發)**：
   - 於美股 21:30 (夏令) / 22:30 (冬令) 開盤前 1 小時產出 S&P 500 多維量化決策與 Google TimesFM 預測。
   - SP500 分析集合保留太空主題擴充標的：`SPCX`、`DXYZ`、`ASTS`、`RKLB`；這些標的屬於策略擴充，不代表目前正式 S&P 500 成分資格。
@@ -285,7 +285,7 @@ graph TD
 **支援之 20 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
 
 1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
-2. `get_triple_resonance_stocks`: 查詢 👑四重共振、🏆雙模型共振焦點多策略交集個股。
+2. `get_triple_resonance_stocks`: 查詢多策略綜合優選與動態時序模型交集個股（相容工具名稱）。
 3. `get_xuantie_pullback_stocks`: 玄鐵重劍 MA60/120 波段回踩買點標的。
 4. `get_timestral_top_predictions`: Mistral Timestral 209M 5 日預測漲跌榜、分位數區間 (P10/P90) 與盈虧比。
 5. `get_timesfm_top_predictions`: Google Research TimesFM 200M 5 日預測漲跌榜與真實盈虧比 (Risk/Reward)。
@@ -342,7 +342,7 @@ npx -y 888-stock-quant@latest resonance --index TW_TOP50 --limit 10
 | `/api/v1/decision/evaluate` | `POST` | Clef-Flash System One 決策模型評估端點 |
 | `/api/v1/decision/health` | `GET` | Clef 3 級決策端點健康度檢查 (create360 / aiurl.tw / jev) |
 | `/api/v1/predictions/latest` | `GET` | 查詢多指數最新各標的現價、預測價、均線數據、PE/PB 估值與籌碼 |
-| `/api/v1/predictions/resonance` | `GET` | 篩選 **👑四重共振 / 🏆雙模型共振** 重點焦點股 |
+| `/api/v1/predictions/resonance` | `GET` | 篩選多策略綜合優選與動態時序模型交集股（相容端點） |
 | `/api/v1/predictions/xuantie` | `GET` | 篩選 **玄鐵重劍技術買點**（回測 MA60 季線 / MA120 半年線） |
 | `/api/v1/predictions/timestral/top-bullish` | `GET` | 查詢 **Mistral Timestral 預測漲幅 TOP N** 看漲榜與盈虧比 |
 | `/api/v1/predictions/timestral/top-bearish` | `GET` | 查詢 **Mistral Timestral 預測跌幅 TOP N** 避險/破底防禦榜 |
@@ -562,7 +562,7 @@ stock-underdog-ml/
 │   ├── sector_rotation.py      # 7 大板塊資金輪動策略
 │   └── institutional.py        # 三大法人連買與土洋合買策略
 ├── evaluators/                 # 綜合評價與研報引擎
-│   ├── composite_evaluator.py  # 多策略動態評分與四重/三重共振標籤
+│   ├── composite_evaluator.py  # 多策略動態評分與綜合優選合成引擎
 │   ├── ai_narrative.py         # 3 級 Fallback LLM 操盤解讀引擎
 │   └── formatter.py            # 美化終端機與推播日報排版工具
 ├── pipeline/                   # 分層管線排程器

@@ -264,6 +264,23 @@ class TestFastAPIService(unittest.TestCase):
         pkg_skill = Path("packages/888-stock-quant/skills/stock-quant/SKILL.md").read_text(encoding="utf-8")
         self.assertEqual(root_skill, pkg_skill, "NPM bundled SKILL.md must stay synced with skills/stock-quant/SKILL.md")
 
+        # Verify legacy fixed-count resonance wording/emojis are completely eradicated from public/LLM surfaces
+        legacy_terms = ("四重共振", "三重共振", "雙模型共振", "雙ML共振", "👑", "🏆", "🔮")
+        pkg_readme = Path("packages/888-stock-quant/README.md").read_text(encoding="utf-8")
+        ai_plugin = self.client.get("/.well-known/ai-plugin.json").text
+        surfaces = {
+            "/llms.txt": self.client.get("/llms.txt").text,
+            "/llms-full.txt": self.client.get("/llms-full.txt").text,
+            "/skill": self.client.get("/skill").text,
+            "/.well-known/ai-plugin.json": ai_plugin,
+            "/?tab=agent_hub": html,
+            "README.md": readme,
+            "packages/888-stock-quant/README.md": pkg_readme,
+        }
+        for name, body in surfaces.items():
+            for term in legacy_terms:
+                self.assertNotIn(term, body, f"Legacy wording {term!r} must not appear in {name}")
+
     def test_webmcp_manifest(self):
         resp = self.client.get("/.well-known/mcp.json")
         self.assertEqual(resp.status_code, 200)

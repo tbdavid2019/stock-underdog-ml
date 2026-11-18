@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-11-18 (v2.6.3 — 清除過時固定模型數共振遺毒文字與 Agent Hub／npm 同步更新)
+
+### 修正與清理
+- **全公開面清除過時共振用語與花俏圖示**：徹底從 [`skills/stock-quant/SKILL.md`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/skills/stock-quant/SKILL.md)、[`api/main.py`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/api/main.py)（`/llms.txt`、`/llms-full.txt`、`/.well-known/ai-plugin.json`、`/.webmcp/bridge.js`）、[`api/templates/partials/tab_agent_hub.html`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/api/templates/partials/tab_agent_hub.html)、[`api/static/js/app.js`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/api/static/js/app.js)（`pythonSnippet` 與 WebMCP 工具說明）、[`api/routes/predictions.py`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/api/routes/predictions.py)、[`mcp_server.py`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/mcp_server.py)、[`README.md`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/README.md) 與 [`packages/888-stock-quant/README.md`](file:///Users/david/Documents/git/tbdavid2019/stock-underdog-ml/packages/888-stock-quant/README.md) 移除所有已淘汰之 `四重共振`、`三重共振`、`雙模型共振`、`雙ML共振` 及 `👑/🏆/🔮` 字樣，統一對齊「**可擴充時序基礎模型動態池（`/api/v1/models`）與多策略綜合優選**」。
+- **防回歸測試 (`test/test_api.py`)**：於 `test_npx_skill_distribution_and_update_reminders` 新增反向斷言，確保所有公開端點、Agent Hub 與 README 不再出現過時固定模型數共振詞彙。
+- **`888-stock-quant@2.6.3`**：同步更新套件內建 `SKILL.md` 與 `README.md` 並準備發佈至 npm。
+
 ## 2026-11-18 (v2.6.1 — `888-stock-quant` npx Skill 套件與使用前更新檢查)
 
 ### 新增與異動

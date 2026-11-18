@@ -59,7 +59,7 @@ def get_market_macro_regime(
 
 @mcp.tool(
     name="get_triple_resonance_stocks",
-    description="查詢多策略交集與雙時序大模型共振 (Google TimesFM × Mistral Timestral ∩ 技術面玄鐵回調 ∩ 投信/外資主力連續買超鎖碼) 之標的。目標價由雙大模型加權合成。"
+    description="查詢多策略綜合優選與動態時序大模型交集（已啟用之時序基礎模型共識 ∩ 技術面玄鐵回調 ∩ 投信/外資主力連續買超鎖碼）之標的。目標價由啟用模型池動態加權合成。"
 )
 def get_triple_resonance_stocks(
     index_name: Optional[str] = None,

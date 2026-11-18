@@ -412,7 +412,7 @@ def get_llms_txt():
     """
     content = r"""# 888 Stock Quant Platform
 
-> 專業級台美股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、Mistral Timestral-209M 時序大模型、Google Research TimesFM 時序大模型、雙時序模型波形共振、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
+> 專業級台美日股深度學習與多維量化決策平台，整合總體經濟宏觀風控、玄鐵均線波段回調、可擴充時序基礎模型動態池（Google TimesFM、Mistral Timestral-209M、Salesforce MOIRAI-2 等持續新增）、三大法人籌碼鎖碼、7 大板塊資金輪動與 2MD 即時財經資訊。
 
 > ⚠️ **Mandatory Pre-Use Update Check & Continuous Feature Evolution**:
 > Caller LLM Agents that have installed the `stock-quant` Skill MUST check whether `npx` or the live specification has updates BEFORE running analysis:
@@ -634,7 +634,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 ## 4. REST API Endpoints Specification
 
 ### 4.1 Quantitative Strategies
-- `GET /api/v1/predictions/resonance?index_name=台灣50&limit=30`: 查詢雙時序大模型共振與多策略焦點推薦清單。
+- `GET /api/v1/predictions/resonance?index_name=台灣50&limit=30`: 查詢多策略綜合優選與多時序基礎模型共識交集清單。
 - `GET /api/v1/predictions/timestral/top-bullish?index_name=...&limit=20`: Mistral Timestral 5日看漲榜與蒙地卡羅區間。
 - `GET /api/v1/predictions/timestral/top-bearish?index_name=...&limit=20`: Mistral Timestral 5日看跌避險榜。
 - `GET /api/v1/predictions/timesfm/top-bullish?index_name=...&limit=20`: Google TimesFM 5日看漲榜與盈虧比。
@@ -717,7 +717,7 @@ def get_webmcp_bridge():
         },
         {
             name: 'get_triple_resonance_stocks',
-            description: '篩選三重共振強勢股（技術面 ∩ 雙大模型 ∩ 籌碼 ∩ 估值）',
+            description: '篩選多策略綜合優選股（技術均線 ∩ 已啟用時序大模型池 ∩ 籌碼 ∩ 估值）',
             inputSchema: { type: 'object', properties: { index_name: { type: 'string' }, limit: { type: 'integer' } } },
             execute: async (args) => {
                 let url = '/api/v1/predictions/resonance?limit=' + (args?.limit || 20);
@@ -1122,7 +1122,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、👑四重共振、🏆三重共振、🔮雙模型共振、Polymarket 真金白銀預測市場)。提供每日台美股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 32 大原生 MCP 量化工具與 WebMCP 協議。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統（宏觀風控、玄鐵均線、可擴充時序基礎模型動態池 TimesFM / Timestral / MOIRAI-2、三大法人籌碼、多維量化綜合優選、Polymarket 預測市場）。提供每日台美日股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 32 大原生 MCP 量化工具、WebMCP 協議與 npx -y 888-stock-quant@latest。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"

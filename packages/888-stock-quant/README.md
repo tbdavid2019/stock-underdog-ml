@@ -2,7 +2,7 @@
 
 Zero-dependency multi-agent AI Skill installer, updater, and quantitative market intelligence CLI for **888 Stock Quant** (`https://stockdata.david888.com`).
 
-Integrates **Macro Risk Regime**, **Xuantie MA60/MA120 Pullbacks**, **Mistral Timestral-209M**, **Google TimesFM**, **Salesforce MOIRAI-2**, **Multi-Model Resonance (`👑 四重共振 / 🏆 三重共振`)**, **TWSE/TPEx Institutional Flows**, and **Portfolio Risk X-Ray** directly into your AI coding agent or terminal — with **zero Python dependencies**.
+Integrates **Macro Risk Regime**, **Xuantie MA60/MA120 Pullbacks**, **Extensible Time-Series Foundation Model Pool** (**Mistral Timestral-209M**, **Google TimesFM**, **Salesforce MOIRAI-2**, plus future registered models), **Multi-Factor Screening**, **TWSE/TPEx Institutional Flows**, and **Portfolio Risk X-Ray** directly into your AI coding agent or terminal — with **zero Python dependencies**.
 
 ## Supported AI Agents
 

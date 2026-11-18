@@ -153,15 +153,15 @@ def get_latest_predictions(
     return response_obj
 
 
-@router.get("/resonance", response_model=PredictionResponse, summary="查詢雙時序大模型共振 (TimesFM × Timestral ∩ 玄鐵 ∩ 法人鎖碼)")
+@router.get("/resonance", response_model=PredictionResponse, summary="查詢多策略綜合優選與動態時序模型交集")
 def get_resonance_candidates(
     index_name: Optional[str] = Query(None, description="指數篩選"),
     limit: int = Query(50, ge=1, le=200, description="回傳數量上限"),
     db: DuckDBManager = Depends(get_duckdb)
 ):
     """
-    篩選同時符合「技術面均線買點 ∩ Google TimesFM 看漲 ∩ Mistral Timestral 看漲 ∩ 投信/法人鎖碼」的雙時序大模型共振股票。
-    目標價由 TimesFM 與 Timestral P50 中位數加權合成，提供極致穩健的預測視野。
+    篩選同時符合「技術面均線買點 ∩ 已啟用時序基礎模型看漲共識 ∩ 投信/法人鎖碼 ∩ 估值篩選」的多策略綜合優選股票。
+    目標價由當前啟用之時序大模型動態加權合成，隨模型池擴充自動納入最新模型。
     """
     cache_key = f"resonance_{_normalize_index_name(index_name)}_{limit}"
     cached = _get_from_cache(cache_key)

@@ -591,7 +591,7 @@ export const app = createApp({
             discoverySelectedTheme: 'ALL',
             discoveryExpandedDossiers: {},
 
-            pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get("${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
+            pythonSnippet: `import requests\n\n# 取得多策略綜合優選推薦標的\nres = requests.get("${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
         };
     },
     computed: {
@@ -3107,7 +3107,7 @@ export const app = createApp({
 
                 await modelCtx.registerTool({
                     name: 'get_triple_resonance_stocks',
-                    description: '篩選雙時序共振強勢股（技術面均線 ∩ 雙大模型看漲 ∩ 法人籌碼鎖碼 ∩ 估值合理）。',
+                    description: '篩選多策略綜合優選股（技術均線 ∩ 已啟用時序大模型池 ∩ 法人籌碼 ∩ 估值合理）。',
                     inputSchema: {
                         type: 'object',
                         properties: {

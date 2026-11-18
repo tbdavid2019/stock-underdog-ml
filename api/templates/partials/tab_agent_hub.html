@@ -9,8 +9,8 @@
             <span>Agent & MCP 協議對接中心</span>
         </h1>
         <p class="text-xs sm:text-sm leading-relaxed" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
-            本量化引擎原生支援 <strong>Anthropic Model Context Protocol (MCP)</strong>、<strong>WebMCP</strong> 以及標準 <strong>OpenAPI 3.1 規範</strong>。<br>
-            Claude Desktop、Cursor、Antigravity、Open-WebUI、LangChain 等任何代理系統皆可直接將本平台掛載為量化決策工具。
+            本量化引擎原生支援 <strong>npx Multi-Agent Skill</strong>、<strong>Anthropic MCP</strong>、<strong>WebMCP</strong> 與 <strong>OpenAPI 3.1 規範</strong>。<br>
+            AGY (Antigravity)、Codex、OpenCode、Hermes、OpenClaw、Claude Code 與 OMP 皆可透過 <code class="num-font font-bold text-amber-500">npx -y 888-stock-quant@latest install</code> 一鍵掛載，或直連 MCP / REST 取得動態模型池最新訊號。
         </p>
     </div>
 
@@ -92,10 +92,10 @@
                     </div>
                     <div class="flex items-center space-x-1">
                         <span class="material-symbols-outlined text-[13px] leading-none">military_tech</span>
-                        <span>因子支援: <code>四重共振 / 三重共振 / 雙ML共振 / TimesFM / 玄鐵均線 / 法人連買</code></span>
+                        <span>模型架構: <code>可擴充時序大模型動態池 (/api/v1/models) / 玄鐵均線 / 法人籌碼 / 風控X光</code></span>
                     </div>
                 </div>
-                <p class="text-[11px] mt-2 leading-relaxed" :class="isDark ? 'text-amber-300/90' : 'text-amber-700'">
+                <p class="text-xs mt-2 leading-relaxed" :class="isDark ? 'text-amber-300/90' : 'text-amber-700'">
                     提示未來調用的 LLM Agent：執行分析前務必先執行 <code class="num-font font-semibold">npx -y 888-stock-quant@latest check-update</code>（或 <code class="num-font font-semibold">update</code>）確認 CLI 與線上 <code class="num-font font-semibold">/skill</code> 皆為最新版。
                 </p>
             </div>
