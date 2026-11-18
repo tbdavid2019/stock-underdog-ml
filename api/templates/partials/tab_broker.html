@@ -6,10 +6,10 @@
          class="p-5 rounded-2xl border space-y-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h3 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+                <h1 class="text-base font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
                     <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">domain</span>
                     <span>券商分點主力進出雷達</span>
-                </h3>
+                </h1>
                 <p class="text-xs mt-0.5" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">
                     穿透個別券商分點（外資高盛、摩根士丹利、瑞銀，本土元大台北、凱基台北）之多空建倉時間序列
                 </p>
@@ -21,11 +21,11 @@
                     <span class="text-xs font-bold" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">股票代號:</span>
                     <input type="text" v-model="brokerSearchTicker" @keyup.enter="loadBrokerTrend()"
                            placeholder="例如 2330"
-                           class="w-24 sm:w-28 px-3 py-1.5 text-xs font-bold num-font rounded-xl border focus:outline-none transition-all uppercase"
+                           class="w-24 sm:w-28 px-3 py-1.5 text-xs font-bold num-font rounded-xl border focus:outline-none transition-colors uppercase"
                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-white focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 focus:ring-2 focus:ring-amber-500 shadow-sm'">
                 </div>
                 <select v-model="brokerDays" @change="loadBrokerTrend()"
-                        class="border rounded-xl px-3 py-1.5 text-xs font-bold num-font focus:outline-none transition-all cursor-pointer"
+                        class="border rounded-xl px-3 py-1.5 text-xs font-bold num-font focus:outline-none transition-colors cursor-pointer"
                         :class="isDark ? 'bg-[#16181D] border-[#262626] text-white' : 'bg-white border-[#E5E7EB] text-slate-800 shadow-sm'">
                     <option :value="10">10 個交易日</option>
                     <option :value="20">20 個交易日</option>
@@ -33,7 +33,7 @@
                     <option :value="60">60 個交易日</option>
                 </select>
                 <button @click="loadBrokerTrend()"
-                        class="px-4 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20">
+                        class="px-4 py-1.5 rounded-xl text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 transition-colors shadow-md shadow-amber-500/20">
                     分析分點
                 </button>
             </div>

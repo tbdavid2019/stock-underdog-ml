@@ -96,3 +96,46 @@ The system SHALL provide `/api/v1/discovery/status` returning pipeline execution
 #### Scenario: Pending actuals in historical chart
 - **WHEN** 目標日尚未正式開獎
 - **THEN** API 標記 pending，圖表與 PK 不使用後續預測紀錄冒充實際行情
+
+### Requirement: Watchlist and Quant Alert REST and MCP Endpoints
+系統 SHALL 提供自選股與量化告警之 REST 端點（`/api/v1/watchlist`、`/api/v1/alerts`、`/api/v1/alerts/check`）與唯讀公開 MCP 查詢工具；生產環境下所有寫入與巡檢操作 MUST 驗證授權金鑰（無論透過 REST 或業務層呼叫），遇跨進程資料庫寫鎖忙碌則明確回傳 HTTP 503。
+
+#### Scenario: Querying enriched watchlist via read-only connection
+- **WHEN** 客戶端發送 `GET /api/v1/watchlist` 或呼叫公開唯讀 MCP 自選查詢工具
+- **THEN** 系統以唯讀連線回傳持久化自選股清單及最新預測摘要，絕不升級搶佔寫入鎖
+
+#### Scenario: Rejecting unauthorized mutation or alert check across REST and MCP
+- **WHEN** 生產環境下未帶有效金鑰呼叫 `POST /api/v1/watchlist`、`POST /api/v1/alerts/check` 或嘗試執行寫入操作
+- **THEN** 系統拒絕執行並回傳 HTTP 401（或授權失敗錯誤），不修改資料庫亦不觸發外部推播
+
+### Requirement: Cross-Market Live Session Summary Including Lunch Break
+系統 SHALL 提供 `GET /api/v1/market/calendar/sessions` 端點，回傳台股（TW）、美股（US，含夏冬令與提前收盤日）與日股（JP，含東京證交所 11:30–12:30 午間休市）之當前交易階段（`pre_market`、`regular`、`lunch_break`、`after_hours`、`closed`）、下次轉換時間戳與休市原因。
+
+#### Scenario: Fetching Tokyo midday break and US DST-aware session status
+- **WHEN** 於東京時間交易日 12:00 呼叫 `GET /api/v1/market/calendar/sessions`
+- **THEN** 系統將 `JP` 狀態標示為 `lunch_break` 並提供 12:30 後場開盤倒數，不誤標為盤中連續交易
+
+### Requirement: Ticker Signal Alignment and Sanitized Health Endpoints
+系統 SHALL 提供 `GET /api/v1/predictions/alignment/{ticker}` REST 端點與對應唯讀 MCP 工具回傳多源訊號共識，並對健康度檢查端點（含 `/api/v1/decision/health`）套用滑動視窗限流、回應快取與上游 URL/憑證遮罩。
+
+#### Scenario: Querying signal alignment and rate-limited sanitized health
+- **WHEN** 客戶端查詢 `/api/v1/predictions/alignment/2330.TW` 或 `/api/v1/decision/health`
+- **THEN** 訊號端點回傳結構化共識明細；健康端點回傳遮罩敏感路徑與參數後之狀態且受速率限制保護
+
+### Requirement: Bounded Read-Only Risk X-Ray and Protected Paper Account Endpoints
+系統必須（SHALL）提供受每 IP 滑動視窗限流與進程級併發 Semaphore 保護之唯讀端點：`POST /api/v1/risk/xray`（上限 `<= 100` 檔、`window` `30..504`）、`GET /api/v1/watchlist/risk-xray`（當自選股表未就緒時優雅回傳 `status: "watchlist_unavailable"`）與 `POST /api/v1/risk/optimize-weights`（上限 `<= 50` 檔，零 DB 寫入）；私有模擬帳戶診斷端點 `GET /api/v1/paper/accounts/{account_id}/risk-xray` 必須（MUST）強制驗證 `account_id` 格式並在生產模式要求 API Key 認證以防枚舉洩漏。
+
+#### Scenario: Oversized basket rejected with HTTP 422 before matrix computation
+- **WHEN** 客戶端向 `POST /api/v1/risk/xray` 傳入超過 100 檔代號或含負數/非有限權重之 payload
+- **THEN** API 在讀取日 K 與建構共變異矩陣前直接回傳 HTTP 422，且不完整回顯超長輸入以防日誌污染
+
+#### Scenario: Unauthenticated request to private paper account Risk X-Ray blocked
+- **WHEN** 客戶端在 `production` 模式未帶合法 API Key 呼叫 `GET /api/v1/paper/accounts/main/risk-xray`
+- **THEN** 伺服器回傳 HTTP 401/403 拒絕存取，不洩漏該 `account_id` 是否存在及其持倉明細
+
+### Requirement: Cached Canary Health Snapshot Endpoint
+系統必須（SHALL）提供 `GET /api/v1/stats/canary-health` 唯讀端點與對應唯讀 MCP 工具，僅讀取最近一次由背景排程或 CLI 產出之 `data/cache/canary_health_latest.json` 快照（若檔案尚未建立則回傳 `status: "not_initialized"`），嚴禁由公開匿名 GET 請求直接觸發對外部上游網站之即時無快取探測風暴。
+
+#### Scenario: Public GET reads cached snapshot without live upstream requests
+- **WHEN** 匿名客戶端連續呼叫 `GET /api/v1/stats/canary-health`
+- **THEN** 伺服器僅讀取本地白名單已遮罩快照檔並回傳各資料源健康分類，不向 TWSE、Investing 或其他外部來源發起任何即時網路連線

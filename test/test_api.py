@@ -512,6 +512,101 @@ class TestFastAPIService(unittest.TestCase):
         self.assertIn("max-width: 1.5em;", html)
         self.assertIn("overflow: hidden;", html)
 
+    def test_cdn_scripts_sri_importmap_and_precompiled_css(self):
+        """驗證外部 CDN 腳本具備固定版本與 SRI、Import Map 傳遞版本、停用 Tailwind Play CDN，以及 color-scheme / reduced-motion 規範"""
+        from pathlib import Path
+        import re
+
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.text
+
+        # 1. No Tailwind Play CDN
+        self.assertNotIn("cdn.tailwindcss.com", html)
+        self.assertIn('/static/css/app.css?v=', html)
+        self.assertTrue(Path("api/static/css/app.css").is_file(), "Compiled api/static/css/app.css must exist")
+        self.assertTrue(Path("tailwind.config.js").is_file(), "tailwind.config.js must exist")
+        self.assertTrue(Path("scripts/build_css.sh").is_file(), "scripts/build_css.sh must exist")
+
+        # 2. Pinned external CDN scripts with SRI + crossorigin + referrerpolicy
+        cdn_patterns = [
+            r"vue@3\.\d+\.\d+/dist/vue\.global\.prod\.js",
+            r"chart\.js@4\.\d+\.\d+/dist/chart\.umd\.min\.js",
+            r"hammerjs@2\.0\.8/hammer\.min\.js",
+            r"chartjs-plugin-zoom@2\.0\.1/dist/chartjs-plugin-zoom\.min\.js",
+        ]
+        for pat in cdn_patterns:
+            match = re.search(rf'<script[^>]*src="https://cdn\.jsdelivr\.net/npm/{pat}"[^>]*>', html)
+            self.assertIsNotNone(match, f"Missing pinned script matching {pat}")
+            tag = match.group(0)
+            self.assertIn('integrity="sha384-', tag)
+            self.assertIn('crossorigin="anonymous"', tag)
+            self.assertIn('referrerpolicy="no-referrer"', tag)
+
+        # 3. Import map propagates APP_VERSION fingerprint & app.js drops hardcoded ?v=2.6.0
+        self.assertIn('<script type="importmap">', html)
+        self.assertIn('"/static/js/api-client.js": "/static/js/api-client.js?v=', html)
+        self.assertIn('"/static/js/chart-manager.js": "/static/js/chart-manager.js?v=', html)
+        self.assertIn('"/static/js/risk-xray.js": "/static/js/risk-xray.js?v=', html)
+
+        app_js = Path("api/static/js/app.js").read_text(encoding="utf-8")
+        self.assertNotIn("?v=2.6.0", app_js)
+
+        # 4. color-scheme synchronization & precision reduced-motion & content-visibility
+        self.assertIn('<meta name="color-scheme"', html)
+        self.assertIn("colorScheme", html)
+        self.assertIn("colorScheme", app_js)
+        self.assertNotIn("0.01ms !important", html)
+        self.assertIn("content-visibility: auto", html)
+        self.assertIn("contain-intrinsic-size", html)
+
+    def test_static_cache_headers_and_manifest_theme_color(self):
+        """驗證 /static/ 帶版本指紋可長效 immutable 快取，未帶版本維持 no-cache，且 site.webmanifest theme_color 對齊 #FFB010"""
+        versioned = self.client.get("/static/js/app.js?v=test123")
+        self.assertEqual(versioned.status_code, 200)
+        vc = versioned.headers.get("cache-control", "")
+        self.assertIn("immutable", vc)
+        self.assertIn("max-age=31536000", vc)
+
+        unversioned = self.client.get("/static/js/app.js")
+        self.assertEqual(unversioned.status_code, 200)
+        uc = unversioned.headers.get("cache-control", "")
+        self.assertIn("no-cache", uc)
+        self.assertIn("must-revalidate", uc)
+
+        manifest = self.client.get("/site.webmanifest")
+        self.assertEqual(manifest.status_code, 200)
+        self.assertEqual(manifest.json()["theme_color"], "#FFB010")
+
+    def test_asset_fingerprint_changes_on_content_change_even_same_mtime(self):
+        """驗證 get_asset_fingerprint() 採用內容雜湊，即使 mtime 相同仍能即時反映內容變更，並驗證 SRI sha384 格式有效"""
+        import base64
+        import re
+        import tempfile
+        from api.main import get_asset_fingerprint
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            js_file = os.path.join(tmpdir, "sample.js")
+            with open(js_file, "wb") as f:
+                f.write(b"console.log('v1');")
+            fixed_time = (1700000000, 1700000000)
+            os.utime(js_file, fixed_time)
+            fp1 = get_asset_fingerprint(scan_dirs=(tmpdir,))
+
+            with open(js_file, "wb") as f:
+                f.write(b"console.log('v2');")
+            os.utime(js_file, fixed_time)
+            fp2 = get_asset_fingerprint(scan_dirs=(tmpdir,))
+
+            self.assertNotEqual(fp1, fp2)
+
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        digests = re.findall(r'integrity="sha384-([A-Za-z0-9+/=]+)"', resp.text)
+        self.assertEqual(len(digests), 4)
+        for d in digests:
+            self.assertEqual(len(base64.b64decode(d, validate=True)), 48)
+
 
 if __name__ == "__main__":
     unittest.main()

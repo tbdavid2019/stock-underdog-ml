@@ -4,6 +4,13 @@
  * Features an internal instances map to avoid canvas memory leaks and ensure proper teardown.
  */
 
+const safeToSorted = (arr, compareFn) => (
+    typeof arr?.toSorted === 'function' ? arr.toSorted(compareFn) : [...(arr || [])].sort(compareFn)
+);
+const safeToReversed = (arr) => (
+    typeof arr?.toReversed === 'function' ? arr.toReversed() : [...(arr || [])].reverse()
+);
+
 /** Build chart points from recorded forecast and target sessions, without inferred dates. */
 export function buildVerifiedPriceChartData(historyRecords) {
     const points = new Map();
@@ -17,7 +24,7 @@ export function buildVerifiedPriceChartData(historyRecords) {
     const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').slice(0, 10));
     const positive = value => value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) > 0
         ? Number(value) : null;
-    const sorted = [...(historyRecords || [])].sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+    const sorted = safeToSorted(historyRecords, (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
     for (const row of sorted) {
         const source = String(row.forecast_session || row.timestamp || '').slice(0, 10);
         if (!validDate(source)) continue;
@@ -51,7 +58,7 @@ export function buildVerifiedPriceChartData(historyRecords) {
             point.timestralP90 = positive(row.p90 ?? row.timestral_p90);
         }
     }
-    const dates = [...points.keys()].sort();
+    const dates = safeToSorted([...points.keys()]);
     const values = key => dates.map(date => points.get(date)[key]);
     const meta = key => dates.map(date => points.get(date).meta[key] || null);
     return { dates, price: values('price'), ma60: values('ma60'), timesfm: values('timesfm'), moirai: values('moirai'),
@@ -120,7 +127,7 @@ export class ChartManager {
         this.destroy(chartKey);
 
         // Chronological order (earliest to latest)
-        const sorted = [...rawHistory].reverse();
+        const sorted = safeToReversed(rawHistory);
         const labels = sorted.map(d => d.date);
 
         let cumForeign = 0, cumTrust = 0, cumDealer = 0, cumTotal = 0;
@@ -1077,6 +1084,16 @@ export class ChartManager {
                 chart.update();
             } catch (err) {
                 console.debug('Chart theme update deferred:', err);
+            }
+        }
+    }
+
+    resizeAll() {
+        for (const chart of Object.values(this.instances || {})) {
+            if (chart && typeof chart.resize === 'function') {
+                try {
+                    chart.resize();
+                } catch (_) {}
             }
         }
     }

@@ -1,13 +1,16 @@
 <!-- ================= COMMAND PALETTE MODAL (⌘K / Ctrl+K) ================= -->
-<div v-if="showCommandPalette"
-     class="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 md:p-20 flex items-start justify-center backdrop-blur-md bg-black/60 transition-opacity duration-150"
-     @click.self="closeCommandPalette"
-     @keydown.window.esc="closeCommandPalette"
-     role="dialog"
-     aria-modal="true"
-     aria-label="全域指令與股票搜尋面板">
+<dialog ref="commandPaletteDialog"
+        class="quant-dialog"
+        style="--dialog-max-w: 42rem;"
+        aria-label="全域指令與股票搜尋面板"
+        @cancel.prevent="closeCommandPalette()"
+        @close="syncDialogClosed('commandPalette')"
+        @pointerdown="handleDialogPointerDown('commandPalette', $event, 'commandPaletteDialog')"
+        @pointercancel="handleDialogPointerCancel('commandPalette', $event)"
+        @pointerup="handleDialogPointerUp('commandPalette', $event, 'commandPaletteDialog', 'closeCommandPalette')">
 
-    <div class="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200"
+    <div v-if="showCommandPalette"
+         class="relative w-full max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-colors duration-200 overscroll-contain"
          :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
 
         <!-- Search Input Bar -->
@@ -31,7 +34,7 @@
         </div>
 
         <!-- Command Palette Results List -->
-        <div class="max-h-96 overflow-y-auto p-2 space-y-1">
+        <div class="flex-1 min-h-0 max-h-96 overflow-y-auto p-2 space-y-1">
             <!-- Loading Indicator -->
             <div v-if="isSearchingCommand" class="py-6 text-center text-sm text-slate-400 flex items-center justify-center space-x-2">
                 <span class="material-symbols-outlined animate-spin text-[20px] text-amber-500">sync</span>
@@ -102,4 +105,4 @@
         </div>
 
     </div>
-</div>
+</dialog>

@@ -1,0 +1,229 @@
+<!-- Shared Stock Drawer Subtabs: Signal Alignment & Quant Price Alerts -->
+<!-- Subtab: Signal Alignment Synthesis -->
+<div v-if="drawerActiveSubTab === 'alignment'" class="space-y-4">
+    <div v-if="drawerSignalLoading" class="py-8 text-center text-amber-500 animate-pulse text-sm flex items-center justify-center space-x-2">
+        <span class="material-symbols-outlined text-[20px] animate-spin">sync</span>
+        <span>計算時序模型、籌碼、情報與前沿雷達共振中...</span>
+    </div>
+    <div v-else-if="drawerSignalAlignment" class="space-y-4">
+        <!-- Consensus Verdict Hero Card -->
+        <div class="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] shadow-sm'">
+            <div>
+                <div class="text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-600'">多源量化訊號共振評估</div>
+                <div class="text-lg font-black mt-0.5 flex items-center space-x-2">
+                    <span v-if="drawerSignalAlignment.alignment_status === 'bullish_alignment'"
+                          class="px-2.5 py-0.5 rounded-md text-xs font-black bg-emerald-800 text-white flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[14px]">trending_up</span>
+                        <span>全訊號一致看多 (Bullish Alignment)</span>
+                    </span>
+                    <span v-else-if="drawerSignalAlignment.alignment_status === 'bearish_alignment'"
+                          class="px-2.5 py-0.5 rounded-md text-xs font-black bg-rose-700 text-white flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[14px]">trending_down</span>
+                        <span>全訊號一致看空 (Bearish Alignment)</span>
+                    </span>
+                    <span v-else-if="drawerSignalAlignment.alignment_status === 'divergence_warning'"
+                          class="px-2.5 py-0.5 rounded-md text-xs font-black bg-[#FFB010] text-[#2B251A] flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[14px]">warning</span>
+                        <span>多空訊號背離警示 (Divergence Warning)</span>
+                    </span>
+                    <span v-else-if="drawerSignalAlignment.alignment_status === 'mixed'"
+                          class="px-2.5 py-0.5 rounded-md text-xs font-black bg-[#17324D] text-white flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[14px]">balance</span>
+                        <span>多空分歧 (Mixed Signals)</span>
+                    </span>
+                    <span v-else
+                          class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-600 text-slate-100 flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-[14px]">help</span>
+                        <span>訊號來源不足 (Insufficient Sources)</span>
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 text-right">
+                <div>
+                    <div class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">有效訊號來源</div>
+                    <div class="text-base font-black font-mono text-amber-500">
+                        {{ drawerSignalAlignment.active_sources_count }} / {{ drawerSignalAlignment.total_applicable_sources }}
+                    </div>
+                </div>
+                <div v-if="drawerSignalAlignment.score !== null">
+                    <div class="text-xs" :class="isDark ? 'text-slate-400' : 'text-slate-500'">合成共振得分</div>
+                    <div class="text-base font-black font-mono"
+                         :class="drawerSignalAlignment.score > 0 ? 'text-emerald-500' : (drawerSignalAlignment.score < 0 ? 'text-rose-500' : 'text-slate-400')">
+                        {{ drawerSignalAlignment.score > 0 ? '+' : '' }}{{ drawerSignalAlignment.score }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4-Dimension Breakdown Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- 1. Model Dimension -->
+            <div class="p-3.5 rounded-xl border space-y-1.5"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                    <span>1. AI 時序模型預測</span>
+                    <span class="font-mono font-black"
+                          :class="drawerSignalAlignment.dimensions.model.score === 1 ? 'text-emerald-500' : (drawerSignalAlignment.dimensions.model.score === -1 ? 'text-rose-500' : 'text-slate-400')">
+                        {{ drawerSignalAlignment.dimensions.model.score === 1 ? '+1 看多' : (drawerSignalAlignment.dimensions.model.score === -1 ? '-1 看空' : '0 中立') }}
+                    </span>
+                </div>
+                <div class="text-xs text-slate-400">
+                    <span v-if="drawerSignalAlignment.dimensions.model.details.avg_potential_pct !== undefined">
+                        平均潛力: <strong class="font-mono text-amber-500">{{ drawerSignalAlignment.dimensions.model.details.avg_potential_pct }}%</strong>
+                    </span>
+                    <span v-else>{{ drawerSignalAlignment.dimensions.model.details.reason || '尚無模型快照' }}</span>
+                </div>
+            </div>
+
+            <!-- 2. Institutional Dimension -->
+            <div class="p-3.5 rounded-xl border space-y-1.5"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                    <span>2. 台股法人籌碼流向</span>
+                    <span v-if="!drawerSignalAlignment.dimensions.institutional.applicable" class="text-xs text-slate-500">
+                        海外股排除
+                    </span>
+                    <span v-else class="font-mono font-black"
+                          :class="drawerSignalAlignment.dimensions.institutional.score === 1 ? 'text-emerald-500' : (drawerSignalAlignment.dimensions.institutional.score === -1 ? 'text-rose-500' : 'text-slate-400')">
+                        {{ drawerSignalAlignment.dimensions.institutional.score === 1 ? '+1 買超' : (drawerSignalAlignment.dimensions.institutional.score === -1 ? '-1 賣超' : '0 平衡') }}
+                    </span>
+                </div>
+                <div class="text-xs text-slate-400">
+                    <span v-if="drawerSignalAlignment.dimensions.institutional.details.total_net_5d !== undefined">
+                        近5日外資+投信: <strong class="font-mono text-amber-500">{{ Number(drawerSignalAlignment.dimensions.institutional.details.total_net_5d).toLocaleString() }} 張</strong>
+                    </span>
+                    <span v-else>{{ drawerSignalAlignment.dimensions.institutional.details.reason || '海外標的不扣分' }}</span>
+                </div>
+            </div>
+
+            <!-- 3. Podcast Dimension -->
+            <div class="p-3.5 rounded-xl border space-y-1.5"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                    <span>3. Podcast 智慧情報</span>
+                    <span v-if="drawerSignalAlignment.dimensions.podcast.stale" class="text-xs text-amber-500">
+                        逾30日排除
+                    </span>
+                    <span v-else-if="drawerSignalAlignment.dimensions.podcast.score !== null" class="font-mono font-black"
+                          :class="drawerSignalAlignment.dimensions.podcast.score === 1 ? 'text-emerald-500' : (drawerSignalAlignment.dimensions.podcast.score === -1 ? 'text-rose-500' : 'text-slate-400')">
+                        {{ drawerSignalAlignment.dimensions.podcast.score === 1 ? '+1 偏多' : (drawerSignalAlignment.dimensions.podcast.score === -1 ? '-1 偏空' : '0 中性') }}
+                    </span>
+                    <span v-else class="text-xs text-slate-500">無提及</span>
+                </div>
+                <div class="text-xs text-slate-400">
+                    <span v-if="drawerSignalAlignment.dimensions.podcast.details.recent_mentions_count">
+                        近30日共提及 <strong class="font-mono text-amber-500">{{ drawerSignalAlignment.dimensions.podcast.details.recent_mentions_count }}</strong> 次
+                    </span>
+                    <span v-else>{{ drawerSignalAlignment.dimensions.podcast.details.reason || '無近期情報' }}</span>
+                </div>
+            </div>
+
+            <!-- 4. Discovery Dimension -->
+            <div class="p-3.5 rounded-xl border space-y-1.5"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB]'">
+                <div class="flex items-center justify-between text-xs font-bold" :class="isDark ? 'text-slate-400' : 'text-slate-600'">
+                    <span>4. 前沿 AI 學術雷達</span>
+                    <span v-if="drawerSignalAlignment.dimensions.discovery.score !== null" class="font-mono font-black"
+                          :class="drawerSignalAlignment.dimensions.discovery.score === 1 ? 'text-emerald-500' : (drawerSignalAlignment.dimensions.discovery.score === -1 ? 'text-rose-500' : 'text-slate-400')">
+                        {{ drawerSignalAlignment.dimensions.discovery.score === 1 ? '+1 入選' : (drawerSignalAlignment.dimensions.discovery.score === -1 ? '-1 剔除' : '0 觀察') }}
+                    </span>
+                    <span v-else class="text-xs text-slate-500">未入選</span>
+                </div>
+                <div class="text-xs text-slate-400">
+                    <span v-if="drawerSignalAlignment.dimensions.discovery.details.recommendation">
+                        評等: <strong class="font-mono text-amber-500">{{ drawerSignalAlignment.dimensions.discovery.details.recommendation }}</strong> ({{ drawerSignalAlignment.dimensions.discovery.details.total_score }}分)
+                    </span>
+                    <span v-else>{{ drawerSignalAlignment.dimensions.discovery.details.reason || '尚未列入雷達' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subtab: Quant Price Alerts Controls -->
+<div v-if="drawerActiveSubTab === 'alerts'" class="space-y-4">
+    <div class="p-4 rounded-xl border space-y-3"
+         :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] shadow-sm'">
+        <div class="text-sm font-bold flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+                <span class="material-symbols-outlined text-[18px] text-amber-500">add_alert</span>
+                <span>設定量化價位與分位數條件告警</span>
+            </div>
+            <span class="text-xs text-slate-400">觸發後冷卻防洗版 (預設 12 小時)</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+                <label :for="'[[ drawer_prefix ]]-alert-type-' + normalizeTicker(item.ticker) + '-' + idx"
+                       class="block text-xs font-bold text-slate-400 mb-1">觸發條件類型</label>
+                <select :id="'[[ drawer_prefix ]]-alert-type-' + normalizeTicker(item.ticker) + '-' + idx"
+                        v-model="newAlertConditionType"
+                        class="w-full text-xs font-bold rounded-lg border px-2.5 py-2 focus:ring-1 focus:ring-amber-500"
+                        :class="isDark ? 'bg-[#0D0E11] border-[#374151] text-white' : 'bg-white border-[#DDC58B] text-[#2B251A]'">
+                    <option value="above_price">向上突破目標價 (above_price)</option>
+                    <option value="below_price">跌破警戒防守價 (below_price)</option>
+                    <option value="below_p10">跌破時序 P10 分位數支撐 (below_p10)</option>
+                    <option value="above_p50">達成模型 P50 目標價 (above_p50)</option>
+                    <option value="pullback_ma60">回測季線 MA60 支撐 (pullback_ma60)</option>
+                    <option value="pullback_ma120">回測半年線 MA120 支撐 (pullback_ma120)</option>
+                </select>
+            </div>
+
+            <div>
+                <label :for="'[[ drawer_prefix ]]-alert-price-' + normalizeTicker(item.ticker) + '-' + idx"
+                       class="block text-xs font-bold text-slate-400 mb-1">目標價格 (靜態規則必填)</label>
+                <input :id="'[[ drawer_prefix ]]-alert-price-' + normalizeTicker(item.ticker) + '-' + idx"
+                       type="number" step="any" v-model="newAlertTargetPrice"
+                       placeholder="輸入自訂價位 (如 1050)..."
+                       class="w-full text-xs font-mono font-bold rounded-lg border px-2.5 py-2 focus:ring-1 focus:ring-amber-500"
+                       :class="isDark ? 'bg-[#0D0E11] border-[#374151] text-white' : 'bg-white border-[#DDC58B] text-[#2B251A]'">
+            </div>
+
+            <div class="flex items-end">
+                <button type="button" @click="createDrawerAlert(item.ticker)"
+                        class="w-full min-h-[38px] px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-[#2B251A] font-black text-xs shadow-sm transition-colors flex items-center justify-center space-x-1 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">notifications_active</span>
+                    <span>建立告警規則</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Alerts List -->
+    <div class="space-y-2">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+            <span>已建立之價位告警規則 ({{ drawerAlerts.length }})</span>
+            <span class="text-xs font-mono text-slate-500">命中時自動經 Telegram / Discord / Email 推播</span>
+        </div>
+
+        <div v-if="drawerAlerts.length === 0" class="py-6 text-center text-xs text-slate-400 border rounded-xl"
+             :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+            目前尚未為此標的設定價位告警
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div v-for="a in drawerAlerts" :key="a.alert_id"
+                 class="p-3 rounded-xl border flex items-center justify-between text-xs transition-colors"
+                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+                <div class="min-w-0 space-y-0.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-mono font-black text-amber-500">{{ a.rule_type }}</span>
+                        <span v-if="a.threshold_value" class="font-mono font-bold" :class="isDark ? 'text-white' : 'text-slate-900'">
+                            門檻: {{ a.threshold_value }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-400 truncate">
+                        上次觸發: {{ a.last_triggered_at ? a.last_triggered_at.slice(0, 16).replace('T', ' ') : '尚未觸發' }}
+                    </div>
+                </div>
+                <button type="button" @click="deleteDrawerAlert(a.alert_id, item.ticker)"
+                        class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                        title="刪除此筆告警"
+                        aria-label="刪除此筆告警">
+                    <span class="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

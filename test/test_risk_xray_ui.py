@@ -21,7 +21,10 @@ class TestRiskXrayUI(unittest.TestCase):
         with open(panel_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Check key components
+        # Check key components inside native <dialog>
+        self.assertIn("<dialog", content)
+        self.assertIn('ref="riskXrayDialog"', content)
+        self.assertIn('@cancel.prevent="closeRiskXrayModal()"', content)
         self.assertIn("showRiskXrayModal", content)
         self.assertIn("annualized_volatility_total", content)
         self.assertIn("annualized_volatility_risk_sleeve", content)

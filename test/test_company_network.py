@@ -153,30 +153,30 @@ class TestCompanyNetworkService(unittest.TestCase):
     def test_duckdb_company_network_persistence(self):
         db = DuckDBManager()
         test_data = {
-            "ticker": "2330.TW",
-            "raw_code": "2330",
-            "name": "台灣積體電路製造股份有限公司",
+            "ticker": "TEST9999.TW",
+            "raw_code": "TEST9999",
+            "name": "測試積體電路製造股份有限公司",
             "unified_id": "22099131",
             "capital": 280500000000,
             "capital_formatted": "2805.00 億元",
-            "representative": "魏_家",
+            "representative": "測試代表",
             "address": "新竹科學園區新竹市力行六路8號",
             "relationships": {
                 "upstream": [],
                 "downstream": [{"name": "創意電子股份有限公司", "code": "3443", "is_listed": True}]
             },
-            "web_url": "https://taiwan-company-network.david888.com/graph?company=test",
+            "web_url": "https://taiwan-company-network.david888.com/graph?company=%E6%B8%AC%E8%A9%A6%E7%A9%8D%E9%AB%94%E9%9B%BB%E8%B7%AF%E8%A3%BD%E9%80%A0%E8%82%A1%E4%BB%BD%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8",
             "source": "taiwan-company-network"
         }
-        # 1. 寫入 DuckDB
-        ok = db.save_company_network("2330", test_data)
+        # 1. 寫入 DuckDB (使用專用測試代號，避免污染正式股票記錄)
+        ok = db.save_company_network("TEST9999", test_data)
         self.assertTrue(ok)
 
         # 2. 從 DuckDB 讀回
-        loaded = db.get_company_network("2330")
+        loaded = db.get_company_network("TEST9999")
         self.assertIsNotNone(loaded)
         self.assertEqual(loaded["unified_id"], "22099131")
-        self.assertEqual(loaded["name"], "台灣積體電路製造股份有限公司")
+        self.assertEqual(loaded["name"], "測試積體電路製造股份有限公司")
         self.assertEqual(loaded["capital"], 280500000000)
         self.assertEqual(len(loaded["relationships"]["downstream"]), 1)
 

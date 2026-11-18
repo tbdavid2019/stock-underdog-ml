@@ -66,6 +66,35 @@ class TestDrawerAlignmentAlertsUI(unittest.TestCase):
         self.assertIn("drawerAlerts", html)
         self.assertIn("deleteDrawerAlert", html)
 
+    def test_calendar_modal_does_not_leak_drawer_subtabs(self):
+        """Regression test: Full Earnings Call Calendar Modal must not contain stock drawer alignment/alerts subtabs."""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.text
+
+        cal_marker = "6. FULL EARNINGS CALL CALENDAR MODAL"
+        self.assertIn(cal_marker, html)
+        calendar_section = html.split(cal_marker, 1)[1]
+        self.assertNotIn("drawerActiveSubTab", calendar_section)
+        self.assertNotIn("createDrawerAlert", calendar_section)
+
+    def test_all_three_drawer_layouts_render_alignment_and_alerts_as_top_level_subtabs(self):
+        """Verify Mobile Card, Desktop Table, and Desktop Card drawers all expose alignment & alerts outside tender."""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.text
+
+        mobile_block = html.split("<!-- Mobile Drawer Expansion -->", 1)[1].split("<!-- 4B. Desktop", 1)[0]
+        table_block = html.split("<!-- Expandable Company Details Drawer Row -->", 1)[1].split("<!-- 5. VIEW MODE", 1)[0]
+        card_block = html.split("<!-- Card View Expandable Drawer -->", 1)[1].split("6. FULL EARNINGS CALL CALENDAR MODAL", 1)[0]
+
+        for name, block in [("mobile", mobile_block), ("table", table_block), ("card", card_block)]:
+            self.assertIn("v-if=\"drawerActiveSubTab === 'alignment'\"", block, f"{name} drawer missing alignment panel")
+            self.assertIn("v-if=\"drawerActiveSubTab === 'alerts'\"", block, f"{name} drawer missing alerts panel")
+            # Ensure alignment/alerts are NOT nested inside tender's top_clients/top_rivals
+            tender_tail = block.split("v-if=\"drawerActiveSubTab === 'tender'\"", 1)[1].split("v-if=\"drawerActiveSubTab === 'alignment'\"", 1)[0]
+            self.assertNotIn("drawerSignalAlignment", tender_tail, f"{name} drawer has alignment leaked inside tender")
+
 
 if __name__ == "__main__":
     unittest.main()

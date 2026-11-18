@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>888 StockQuant | 專業級多維量化決策平台</title>
     <meta name="description" content="888 StockQuant 提供台美股技術面、TimesFM 與 Timestral 雙時序大模型、三大法人與券商分點籌碼多維量化決策分析。">
+    <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#FFB010">
     <meta name="application-name" content="888 StockQuant">
     <link rel="canonical" href="https://stockdata.david888.com/">
@@ -54,66 +55,44 @@
     <!-- Fonts & Icons: JetBrains Mono for Numbers, Noto Sans TC for Chinese & Google Material Symbols -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" referrerpolicy="no-referrer" />
 
-    <!-- Tailwind CSS CDN -->
-    <script>
-        (function() {
-            const _origWarn = console.warn;
-            console.warn = function(...args) {
-                if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-                _origWarn.apply(console, args);
-            };
-        })();
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontSize: {
-                        'xs': ['13px', { lineHeight: '18px' }],
-                        'sm': ['14px', { lineHeight: '20px' }],
-                    },
-                    fontFamily: {
-                        sans: ['"Noto Sans TC"', '-apple-system', 'BlinkMacSystemFont', '"PingFang TC"', '"Microsoft JhengHei"', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-                    },
-                    colors: {
-                        terminal: {
-                            'dark-bg': '#030302',
-                            'dark-card': '#0D0E11',
-                            'dark-card-inner': '#16181D',
-                            'dark-border': '#262626',
-                            'amber': '#FFB010',
-                            'amber-hover': '#F2A600',
-                            'profit': '#24D97A',
-                            'loss': '#EF4444',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Precompiled Production Tailwind CSS -->
+    <link rel="stylesheet" href="/static/css/app.css?v=[[ APP_VERSION ]]">
     <script>
         // Immediate Theme Pre-load (Anti-flash) - Default to Light Mode
         (function() {
             const savedTheme = localStorage.getItem('theme_v20261013') || localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
+            const isDark = savedTheme === 'dark';
+            if (isDark) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
+            const scheme = isDark ? 'dark' : 'light';
+            document.documentElement.style.colorScheme = scheme;
+            const metaScheme = document.querySelector('meta[name="color-scheme"]');
+            if (metaScheme) metaScheme.setAttribute('content', scheme);
         })();
     </script>
 
-    <!-- Vue 3 & Chart.js CDN -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <!-- Versioned Import Map for Transitive ES Modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "/static/js/api-client.js": "/static/js/api-client.js?v=[[ APP_VERSION ]]",
+        "/static/js/chart-manager.js": "/static/js/chart-manager.js?v=[[ APP_VERSION ]]",
+        "/static/js/risk-xray.js": "/static/js/risk-xray.js?v=[[ APP_VERSION ]]"
+      }
+    }
+    </script>
+
+    <!-- Vue 3 & Chart.js CDN (Pinned versions with SRI + crossorigin + referrerpolicy) -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.5.45/dist/vue.global.prod.js" integrity="sha384-K2FjvpG1y48yCE+7CBPhnKc16ShPmT3dlNwvoA3dhjV18+L5ugI0P8PWPvdjm/Fa" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js" integrity="sha384-Emf5ZVIUiarAdhkgtqK+5/Z5qIvM6QoVrS+qAVtfyZVuD5lIHrac0me485+Antp0" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" integrity="sha384-Cs3dgUx6+jDxxuqHvVH8Onpyj2LF1gKZurLDlhqzuJmUqVYMJ0THTWpxK5Z086Zm" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js" integrity="sha384-zPzbVRXfR492Sd5D+HydTYCxxgHAfgVO8KERbLlpeH5unsmbAEXrscGUUqLZG9BM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <style>
         [v-cloak], [v-cloak] * {
@@ -121,25 +100,32 @@
         }
         
         :root {
-            /* 2md.aiurl.tw Five Base Colors & Tonal Tints */
+            /* 2md.aiurl.tw Five Base Colors & Semantic Tokens */
             --saffron: #FFB010;
             --saffron-hover: #F2A600;
             --deep-blue: #17324D;
             --clay: #9A3412;        /* WCAG AA 6.4:1 on #FFF9E8 */
             --warm-cream: #FFF9E8;
+            --warm-cream-glass: rgba(255, 249, 232, 0.96);
             --ink: #2B251A;         /* WCAG AAA 14.2:1 on #FFF9E8 */
+            --ink-soft: #3D3424;
             --canvas: #FFF0CC;
+            --surface-tint: #F5E6C4;
             --card-border: #DDC58B;
+            --border-divide: #E6D2A3;
             --text-muted: #5C5038;  /* WCAG AA 6.8:1 on #FFF9E8 */
             --input-bg: #FFFEFA;
             --input-border: #6B5B38;
+            --bullish-ink: #065F46; /* WCAG AAA 7.6:1 on #FFF9E8 */
+            --bearish-ink: #991B1B; /* WCAG AAA 7.2:1 on #FFF9E8 */
+            --violet-ink: #5B21B6;  /* WCAG AAA 7.9:1 on #FFF9E8 */
 
-            --bg-primary: #FFF0CC;
-            --card-bg: #FFF9E8;
+            --bg-primary: var(--canvas);
+            --card-bg: var(--warm-cream);
             --card-inner-bg: #FFFDF7;
-            --border-color: #DDC58B;
-            --text-primary: #2B251A;
-            --accent-amber: #FFB010;
+            --border-color: var(--card-border);
+            --text-primary: var(--ink);
+            --accent-amber: var(--saffron);
         }
 
         html.dark {
@@ -150,8 +136,8 @@
             --text-primary: #F9FAFB;
             --text-muted: #9CA3AF;
             --accent-amber: #FFB010;
-            background-color: #030302;
-            color: #F9FAFB;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
         }
 
         html {
@@ -159,64 +145,64 @@
         }
 
         html:not(.dark), html:not(.dark) body {
-            background-color: #FFF0CC;
-            color: #2B251A;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
         }
 
         /* ================= 2MD.AIURL.TW LIGHT MODE SURFACES & WCAG AA/AAA CONTRAST ================= */
-        html:not(.dark) .bg-white { background-color: #FFF9E8 !important; }
-        html:not(.dark) .bg-white\/95, html:not(.dark) .bg-white\/90 { background-color: rgba(255, 249, 232, 0.96) !important; }
-        html:not(.dark) .bg-\[\#F4F4F6\], html:not(.dark) .bg-\[\#F9FAFB\], html:not(.dark) .bg-slate-50 { background-color: #FFFDF7 !important; }
-        html:not(.dark) .bg-slate-100, html:not(.dark) .bg-slate-200 { background-color: #F5E6C4 !important; }
-        html:not(.dark) .border-\[\#E5E7EB\], html:not(.dark) .border-slate-200, html:not(.dark) .border-slate-300 { border-color: #DDC58B !important; }
-        html:not(.dark) .divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) { border-color: #E6D2A3 !important; }
-        html:not(.dark) .hover\:bg-\[\#F4F4F6\]:hover, html:not(.dark) .hover\:bg-white:hover { background-color: #FFF0CC !important; }
+        html:not(.dark) .bg-white { background-color: var(--card-bg) !important; }
+        html:not(.dark) .bg-white\/95, html:not(.dark) .bg-white\/90 { background-color: var(--warm-cream-glass) !important; }
+        html:not(.dark) .bg-\[\#F4F4F6\], html:not(.dark) .bg-\[\#F9FAFB\], html:not(.dark) .bg-slate-50 { background-color: var(--card-inner-bg) !important; }
+        html:not(.dark) .bg-slate-100, html:not(.dark) .bg-slate-200 { background-color: var(--surface-tint) !important; }
+        html:not(.dark) .border-\[\#E5E7EB\], html:not(.dark) .border-slate-200, html:not(.dark) .border-slate-300 { border-color: var(--border-color) !important; }
+        html:not(.dark) .divide-\[\#E5E7EB\] > :not([hidden]) ~ :not([hidden]) { border-color: var(--border-divide) !important; }
+        html:not(.dark) .hover\:bg-\[\#F4F4F6\]:hover, html:not(.dark) .hover\:bg-white:hover { background-color: var(--canvas) !important; }
 
         /* WCAG AAA Contrast on Saffron / Amber Buttons (10.2:1 dark ink on saffron) */
         html:not(.dark) .bg-amber-500, html:not(.dark) .bg-\[\#FFB010\] {
-            background-color: #FFB010 !important;
-            color: #2B251A !important;
+            background-color: var(--saffron) !important;
+            color: var(--ink) !important;
         }
         html:not(.dark) .bg-amber-500.text-white, html:not(.dark) .bg-amber-500 .text-white,
         html:not(.dark) .hover\:bg-amber-500:hover, html:not(.dark) .hover\:bg-amber-400:hover, html:not(.dark) .hover\:bg-amber-600:hover {
-            background-color: #F2A600 !important;
-            color: #2B251A !important;
+            background-color: var(--saffron-hover) !important;
+            color: var(--ink) !important;
         }
 
         /* Primary & Muted Text in Light Mode (WCAG AAA 14.2:1 / AA 6.8:1) */
-        html:not(.dark) .text-slate-900, html:not(.dark) .text-slate-800, html:not(.dark) .text-gray-900 { color: #2B251A !important; }
-        html:not(.dark) .text-slate-700, html:not(.dark) .text-slate-600, html:not(.dark) .text-slate-300 { color: #3D3424 !important; }
-        html:not(.dark) .text-slate-500, html:not(.dark) .text-slate-400, html:not(.dark) .text-\[\#9CA3AF\] { color: #5C5038 !important; }
+        html:not(.dark) .text-slate-900, html:not(.dark) .text-slate-800, html:not(.dark) .text-gray-900 { color: var(--ink) !important; }
+        html:not(.dark) .text-slate-700, html:not(.dark) .text-slate-600, html:not(.dark) .text-slate-300 { color: var(--ink-soft) !important; }
+        html:not(.dark) .text-slate-500, html:not(.dark) .text-slate-400, html:not(.dark) .text-\[\#9CA3AF\] { color: var(--text-muted) !important; }
 
-        /* Amber / Clay Accent Text in Light Mode -> 2md Clay #9A3412 (6.4:1 WCAG AA) */
+        /* Amber / Clay Accent Text in Light Mode -> 2md Clay */
         html:not(.dark) .text-amber-300, html:not(.dark) .text-amber-400, html:not(.dark) .text-amber-500, html:not(.dark) .text-amber-600, html:not(.dark) .text-amber-700, html:not(.dark) .text-orange-400, html:not(.dark) .text-orange-500 {
-            color: #9A3412 !important;
+            color: var(--clay) !important;
         }
 
-        /* Emerald / Bullish Text in Light Mode -> Deep Forest #065F46 (7.6:1 WCAG AAA) */
+        /* Emerald / Bullish Text in Light Mode -> Deep Forest */
         html:not(.dark) .text-emerald-300, html:not(.dark) .text-emerald-400, html:not(.dark) .text-emerald-500, html:not(.dark) .text-emerald-600 {
-            color: #065F46 !important;
+            color: var(--bullish-ink) !important;
         }
 
-        /* Rose / Bearish Text in Light Mode -> Deep Crimson #991B1B (7.2:1 WCAG AAA) */
+        /* Rose / Bearish Text in Light Mode -> Deep Crimson */
         html:not(.dark) .text-rose-300, html:not(.dark) .text-rose-400, html:not(.dark) .text-rose-500, html:not(.dark) .text-red-400, html:not(.dark) .text-red-500 {
-            color: #991B1B !important;
+            color: var(--bearish-ink) !important;
         }
 
-        /* Sky / Cyan / Blue / Timestral Text in Light Mode -> 2md Deep Blue #17324D (12.1:1 WCAG AAA) */
+        /* Sky / Cyan / Blue / Timestral Text in Light Mode -> 2md Deep Blue */
         html:not(.dark) .text-sky-300, html:not(.dark) .text-sky-400, html:not(.dark) .text-sky-500,
         html:not(.dark) .text-cyan-300, html:not(.dark) .text-cyan-400, html:not(.dark) .text-cyan-500,
         html:not(.dark) .text-blue-400, html:not(.dark) .text-blue-500 {
-            color: #17324D !important;
+            color: var(--deep-blue) !important;
         }
 
-        /* Purple / Indigo / TimesFM Text in Light Mode -> Deep Royal Violet #5B21B6 (7.9:1 WCAG AAA) */
+        /* Purple / Indigo / TimesFM Text in Light Mode -> Deep Royal Violet */
         html:not(.dark) .text-purple-300, html:not(.dark) .text-purple-400, html:not(.dark) .text-purple-500,
         html:not(.dark) .text-indigo-300, html:not(.dark) .text-indigo-400 {
-            color: #5B21B6 !important;
+            color: var(--violet-ink) !important;
         }
 
-        /* Preserve High-Contrast Light Text Inside Intentional Dark Surfaces (e.g. Video Player Header, Dark Badges) */
+        /* Preserve High-Contrast Light Text Inside Intentional Dark Surfaces (e.g. Video Player Header, Dark Code Panels) */
         html:not(.dark) .bg-slate-800.text-slate-300, html:not(.dark) .bg-slate-800 .text-slate-300,
         html:not(.dark) .bg-slate-800.text-slate-400, html:not(.dark) .bg-slate-800 .text-slate-400,
         html:not(.dark) [class*="bg-zinc-900"] .text-slate-400, html:not(.dark) [class*="bg-zinc-900"].text-slate-400 {
@@ -225,12 +211,18 @@
         html:not(.dark) [class*="bg-zinc-900"] .text-rose-400, html:not(.dark) [class*="bg-zinc-900"].text-rose-400 {
             color: #FDA4AF !important;
         }
+        html:not(.dark) [class*="bg-[#1E1E1C]"].text-amber-300, html:not(.dark) [class*="bg-[#1E1E1C]"] .text-amber-300 {
+            color: #FCD34D !important;
+        }
+        html:not(.dark) [class*="bg-[#1E1E1C]"] .text-emerald-400 {
+            color: #6EE7B7 !important;
+        }
 
         /* Inputs, Selects, Textareas in Light Mode */
         html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea {
-            background-color: #FFFEFA;
-            border-color: #6B5B38;
-            color: #2B251A;
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--ink);
         }
 
         body {
@@ -360,19 +352,67 @@
             }
         }
 
+        /* Below-the-fold static rendering optimization (never apply on sticky table sections) */
+        .cv-auto-section {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 420px;
+        }
+
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
+            html, *, *::before, *::after {
                 scroll-behavior: auto !important;
             }
+            .animate-pulse,
+            .animate-spin,
+            .animate-bounce,
+            .animate-ping,
+            .skeleton,
+            .toast-enter {
+                animation: none !important;
+            }
+            [class*="transition-"] {
+                transition-property: color, background-color, border-color, opacity !important;
+            }
+            [class*="hover:scale-"]:hover,
+            [class*="active:scale-"]:active,
+            .group:hover [class*="group-hover:-translate-y-"] {
+                transform: none !important;
+            }
+        }
+
+        dialog.quant-dialog {
+            margin: auto;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            width: min(var(--dialog-max-w, 42rem), calc(100vw - 1.5rem));
+            max-width: calc(100vw - 1.5rem);
+            max-height: calc(100dvh - 1.5rem);
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        dialog.quant-dialog[open] {
+            display: flex;
+            flex-direction: column;
+        }
+        dialog.quant-dialog:not([open]) {
+            display: none;
+        }
+        dialog.quant-dialog:modal {
+            overscroll-behavior: contain;
+        }
+        dialog.quant-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        html:has(dialog[open]) {
+            overflow: hidden;
         }
     </style>
 </head>
 <body class="min-h-screen antialiased flex flex-col font-sans transition-colors duration-200 overflow-x-hidden [overflow-x:clip]">
-    <h1 class="sr-only">888 StockQuant 專業量化決策平台</h1>
-    <h2 class="sr-only">今日量化訊號與跨市場情報</h2>
 
     <div id="app" v-cloak class="flex-1 flex flex-col">
 

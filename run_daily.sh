@@ -121,6 +121,15 @@ else
     log "🐍 使用本機 Python 環境執行 ($PYTHON_EXEC)..."
 fi
 
+# Step 0-Canary: 執行上游金絲雀健康探測 (非阻塞容錯)
+log ""
+log "[0-Canary] 執行上游金絲雀健康探測 (TWSE, TPEx, yfinance, Investing, Polymarket, BigGo, arXiv)..."
+if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python scripts/check_loader_health.py 2>&1 | tee -a "$LOG_FILE" || log "⚠️ [WARN] 上游金絲雀健康巡檢略過或回報異常 (不影響主流程)"
+else
+    $PYTHON_EXEC scripts/check_loader_health.py 2>&1 | tee -a "$LOG_FILE" || log "⚠️ [WARN] 上游金絲雀健康巡檢略過或回報異常 (不影響主流程)"
+fi
+
 # Step 0: 執行官方全球證券清冊與台股全市場日 K 棒同步至 DuckDB
 log ""
 if [ "$TARGET_MARKET" = "us" ] || [ "$TARGET_MARKET" = "jp" ]; then

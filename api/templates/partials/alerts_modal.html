@@ -1,55 +1,59 @@
 <!-- ================= QUANT PRICE ALERTS CENTER MODAL ================= -->
-<div v-if="showAlertsModal"
-     class="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 md:p-12 flex items-start justify-center backdrop-blur-md bg-black/60 transition-opacity duration-150"
-     @click.self="closeAlertsCenterModal"
-     @keydown.window.esc="closeAlertsCenterModal"
-     role="dialog"
-     aria-modal="true"
-     aria-label="量化到價告警管理中心">
+<dialog ref="alertsModalDialog"
+        class="quant-dialog"
+        style="--dialog-max-w: 42rem;"
+        aria-label="量化到價告警管理中心"
+        @cancel.prevent="closeAlertsCenterModal()"
+        @close="syncDialogClosed('alertsModal')"
+        @pointerdown="handleDialogPointerDown('alertsModal', $event, 'alertsModalDialog')"
+        @pointercancel="handleDialogPointerCancel('alertsModal', $event)"
+        @pointerup="handleDialogPointerUp('alertsModal', $event, 'alertsModalDialog', 'closeAlertsCenterModal')">
 
-    <div class="relative w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200"
+    <div v-if="showAlertsModal"
+         class="relative w-full max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-colors duration-200 overscroll-contain"
          :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
 
         <!-- Modal Header -->
-        <div class="flex items-center justify-between px-5 py-4 border-b"
+        <div class="flex items-center justify-between px-5 py-4 border-b shrink-0"
              :class="isDark ? 'border-[#262626] bg-[#0D0E11]' : 'border-[#DDC58B] bg-[#FFF9E8]'">
             <div class="flex items-center space-x-2.5">
                 <span class="material-symbols-outlined text-amber-500 text-[24px]">notifications_active</span>
                 <div>
                     <h3 class="text-base sm:text-lg font-black tracking-tight flex items-center space-x-2">
-                        <span>量化到價告警中心</span>
+                        <span>{{ t('modal.alerts_title') }}</span>
                         <span v-if="alertsModalList && alertsModalList.length > 0"
                               class="text-xs px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500 text-black">
                             {{ alertsModalList.length }}
                         </span>
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">監控突破目標價、跌破 P10 支撐、季線均線回測等量化規則</p>
+                    <p class="text-xs text-slate-400 mt-0.5">{{ t('modal.alerts_subtitle') }}</p>
                 </div>
             </div>
             <button @click="closeAlertsCenterModal"
                     class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors cursor-pointer"
                     :class="isDark ? 'border-[#374151] text-slate-400 hover:text-white hover:bg-[#262626]' : 'border-[#DDC58B] text-[#2B251A] hover:bg-[#FFF0CC]'"
-                    aria-label="關閉告警中心">
+                    :aria-label="t('common.close')">
                 <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
         </div>
 
         <!-- Modal Body -->
-        <div class="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-6">
 
             <!-- 1. Quick Create Form -->
             <div class="p-4 rounded-xl border space-y-3"
                  :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-[#FFF9E8] border-[#DDC58B]'">
                 <div class="text-xs font-bold uppercase tracking-wider text-amber-500 flex items-center justify-between">
-                    <span>新增價位告警規則</span>
-                    <span class="text-xs text-slate-400">觸發後發送即時推播</span>
+                    <span>{{ t('modal.alerts_create_header') }}</span>
+                    <span class="text-xs text-slate-400">{{ t('modal.alerts_trigger_push') }}</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <!-- Ticker Input -->
                     <div>
-                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">股票代號</label>
-                        <input type="text"
+                        <label for="alert-ticker-input" class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">{{ t('modal.alerts_ticker') }}</label>
+                        <input id="alert-ticker-input"
+                               type="text"
                                v-model="alertsModalNewTicker"
                                @input="alertsModalNewTicker = alertsModalNewTicker.toUpperCase()"
                                placeholder="如 2330.TW, NVDA"
@@ -59,8 +63,9 @@
 
                     <!-- Condition Select -->
                     <div>
-                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">觸發條件</label>
-                        <select v-model="alertsModalNewRule"
+                        <label for="alert-rule-select" class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">{{ t('modal.alerts_rule') }}</label>
+                        <select id="alert-rule-select"
+                                v-model="alertsModalNewRule"
                                 class="w-full px-3 py-2 text-sm rounded-lg border outline-none font-medium cursor-pointer"
                                 :class="isDark ? 'bg-[#16181D] border-[#374151] text-white' : 'bg-[#FFFDF7] border-[#DDC58B] text-[#2B251A]'">
                             <option value="above_price">突破目標價 (above_price)</option>
@@ -74,10 +79,11 @@
 
                     <!-- Threshold Price Input -->
                     <div>
-                        <label class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">
-                            門檻價格 {{ (alertsModalNewRule === 'above_price' || alertsModalNewRule === 'below_price') ? '(必填)' : '(選填)' }}
+                        <label for="alert-threshold-input" class="block text-xs font-semibold mb-1" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">
+                            {{ t('modal.alerts_threshold') }} {{ (alertsModalNewRule === 'above_price' || alertsModalNewRule === 'below_price') ? '(必填)' : '(選填)' }}
                         </label>
-                        <input type="number"
+                        <input id="alert-threshold-input"
+                               type="number"
                                step="0.01"
                                v-model="alertsModalNewThreshold"
                                :placeholder="(alertsModalNewRule === 'above_price' || alertsModalNewRule === 'below_price') ? '輸入價格' : '自動計算'"
@@ -89,10 +95,11 @@
                 <!-- API Key (Stored in LocalStorage) -->
                 <div class="pt-1">
                     <div class="flex items-center justify-between text-xs mb-1">
-                        <label class="font-semibold" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">管理金鑰 (WATCHLIST_API_KEY)</label>
+                        <label for="alert-api-key-input" class="font-semibold" :class="isDark ? 'text-slate-300' : 'text-[#2B251A]'">{{ t('modal.alerts_api_key') }}</label>
                         <span class="text-slate-400 text-xs">雲端推播需填寫管理金鑰</span>
                     </div>
-                    <input type="password"
+                    <input id="alert-api-key-input"
+                           type="password"
                            v-model="alertsModalApiKey"
                            @change="onAlertsApiKeyChange"
                            placeholder="若伺服器設定了 WATCHLIST_API_KEY 請在此輸入..."
@@ -103,10 +110,10 @@
                 <div class="flex justify-end pt-1">
                     <button @click="createAlertFromModal"
                             :disabled="alertsModalCreating || !alertsModalNewTicker"
-                            class="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg border transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg border transition-colors flex items-center space-x-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                             :class="isDark ? 'bg-amber-500 text-black border-amber-500 hover:bg-amber-400' : 'bg-[#17324D] text-white border-[#17324D] hover:bg-[#1E4268]'">
                         <span class="material-symbols-outlined text-[16px]">add_alert</span>
-                        <span>{{ alertsModalCreating ? '建立中...' : '建立告警' }}</span>
+                        <span>{{ alertsModalCreating ? t('modal.alerts_creating') : t('modal.alerts_create_btn') }}</span>
                     </button>
                 </div>
             </div>
@@ -196,13 +203,13 @@
             <div class="flex items-center space-x-2">
                 <button @click="triggerAlertsCheckNow"
                         :disabled="alertsModalChecking"
-                        class="px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center space-x-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors flex items-center space-x-1 cursor-pointer active:scale-95 disabled:opacity-50"
                         :class="isDark ? 'bg-[#262626] border-[#374151] text-amber-400 hover:text-amber-300' : 'bg-[#FFF0CC] border-[#DDC58B] text-[#2B251A] hover:bg-[#FFE6A3]'">
                     <span class="material-symbols-outlined text-[16px]" :class="alertsModalChecking ? 'animate-spin' : ''">play_circle</span>
-                    <span>{{ alertsModalChecking ? '巡檢中...' : '立即巡檢測試' }}</span>
+                    <span>{{ alertsModalChecking ? t('modal.alerts_checking') : t('modal.alerts_check_now') }}</span>
                 </button>
             </div>
         </div>
 
     </div>
-</div>
+</dialog>

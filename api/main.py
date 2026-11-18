@@ -4,13 +4,14 @@ api/main.py - FastAPI Application Entrypoint for Stock Prediction & Multi-Strate
 
 import os
 import datetime
+import hashlib
 import html
 import json
 import logging
 import re
 import threading
 import time
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
@@ -69,7 +70,14 @@ async def add_static_cache_control(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if path.startswith("/static/") and (path.endswith(".js") or path.endswith(".css")):
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        if request.query_params.get("v"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            if "pragma" in response.headers:
+                del response.headers["pragma"]
+            if "expires" in response.headers:
+                del response.headers["expires"]
+        else:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
 # 掛載業務路由
@@ -98,9 +106,14 @@ try:
     class NoCacheStaticFiles(StaticFiles):
         def file_response(self, *args, **kwargs):
             resp = super().file_response(*args, **kwargs)
-            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            resp.headers["Pragma"] = "no-cache"
-            resp.headers["Expires"] = "0"
+            scope = kwargs.get("scope") or (args[2] if len(args) > 2 else None)
+            qs = scope.get("query_string", b"").decode("latin1") if isinstance(scope, dict) else ""
+            if "v=" in qs:
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            else:
+                resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                resp.headers["Pragma"] = "no-cache"
+                resp.headers["Expires"] = "0"
             return resp
 
     app.mount("/static", NoCacheStaticFiles(directory=STATIC_ASSET_DIR), name="static")
@@ -133,30 +146,35 @@ except Exception:
     _SPA_JINJA_ENV = None
 
 
-def get_asset_fingerprint() -> str:
-    """產生包含靜態模組與樣板全目錄最新修改時間之指紋版本號，具備 60 秒記憶體快取以減少磁碟 I/O"""
-    now = time.time()
-    if _ASSET_FINGERPRINT_CACHE["val"] and now < _ASSET_FINGERPRINT_CACHE["expiry"]:
-        return _ASSET_FINGERPRINT_CACHE["val"]
+def get_asset_fingerprint(scan_dirs: Optional[Tuple[str, ...]] = None) -> str:
+    """依據靜態資源與樣板內容計算確定性 SHA-256 指紋版本號，內容一有異動即刻變更 URL，防止 immutable 長效快取吃到舊檔案。"""
+    dirs = scan_dirs if scan_dirs is not None else (STATIC_ASSET_DIR, TEMPLATES_DIR)
     try:
-        max_mtime = 0
-        for scan_dir in (STATIC_ASSET_DIR, TEMPLATES_DIR):
-            if not os.path.exists(scan_dir):
+        hasher = hashlib.sha256()
+        hasher.update(APP_VERSION.encode("utf-8"))
+        file_entries: List[Tuple[str, str]] = []
+        for scan_dir in dirs:
+            if not scan_dir or not os.path.exists(scan_dir):
                 continue
             for root, _, files in os.walk(scan_dir):
                 for f in files:
                     if f.endswith((".js", ".css", ".html", ".svg", ".json")):
                         full_path = os.path.join(root, f)
-                        try:
-                            mt = int(os.path.getmtime(full_path))
-                            if mt > max_mtime:
-                                max_mtime = mt
-                        except OSError:
-                            pass
-        fp = f"{APP_VERSION}.{max_mtime}" if max_mtime > 0 else APP_VERSION
-        _ASSET_FINGERPRINT_CACHE["val"] = fp
-        _ASSET_FINGERPRINT_CACHE["expiry"] = now + 60.0
-        return fp
+                        rel_path = os.path.relpath(full_path, scan_dir).replace("\\", "/")
+                        file_entries.append((f"{os.path.basename(scan_dir)}/{rel_path}", full_path))
+        file_entries.sort(key=lambda item: item[0])
+        if not file_entries:
+            return APP_VERSION
+        for rel_key, full_path in file_entries:
+            hasher.update(rel_key.encode("utf-8"))
+            hasher.update(b"\x00")
+            try:
+                with open(full_path, "rb") as fp:
+                    while chunk := fp.read(65536):
+                        hasher.update(chunk)
+            except OSError:
+                pass
+        return f"{APP_VERSION}.{hasher.hexdigest()[:12]}"
     except Exception:
         return APP_VERSION
 
@@ -1305,7 +1323,8 @@ def public_stock_dossier(ticker: str):
         "foreign_net_5d": foreign_net_5d,
         "business_summary": business_summary,
         "peers": peers,
-        "safe_json_ld": safe_json_ld
+        "safe_json_ld": safe_json_ld,
+        "asset_version": get_asset_fingerprint()
     }
 
     try:

@@ -150,6 +150,20 @@ class TestPublicTickerSEO(unittest.TestCase):
         peer_link_matches = re.findall(r'href="/s/1101\.TW"', resp.text)
         self.assertEqual(len(peer_link_matches), 1, "Expected peer 1101.TW to be deduplicated to exactly 1 link")
 
+    def test_public_ticker_seo_modern_css_baseline(self):
+        """驗證公開個股頁具備預編譯樣式、焦點外框、overflow-x: clip、降動態與 text-wrap: balance，維持固定深色無 JS SSR 契約"""
+        response = self.client.get("/s/2330.TW")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertNotIn("cdn.tailwindcss.com", html)
+        self.assertIn('/static/css/app.css?v=', html)
+        self.assertIn(":focus-visible", html)
+        self.assertIn("overflow-x: clip", html)
+        self.assertIn("prefers-reduced-motion: reduce", html)
+        self.assertIn("text-wrap: balance", html)
+        self.assertNotIn("transition-all", html)
+        self.assertIn('<html lang="zh-TW" class="dark">', html)
+
 
 if __name__ == "__main__":
     unittest.main()

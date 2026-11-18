@@ -6,6 +6,60 @@
 
 ---
 
+## 2026-11-18 (v2.6.1 — `web-ui-hardening-and-modernization`)
+
+### 切片四：圖示／Token 收斂與公開個股頁一致性
+- **圖示家族統一與精準屬性轉場 (`api/templates/partials/header.html`, `tab_dashboard.html`, `tab_history.html`, `tab_broker.html`)**：
+  - 將 `tab_dashboard.html` 內所有非旋轉載入用之手寫 inline Lucide `<svg>`（共 45 處），以及 `header.html`、`tab_dashboard.html`、`tab_history.html` 中的互動式 `★`/`☆`/`✕` 符號控制項統一收斂為 Google Material Symbols（保留向量 `animate-spin` SVG 載入圈，避免 FOUT 字型連字旋轉）。
+  - 全面移除上述樣板中的 `transition-all`，改為精準的 `transition-colors`、`transition-[width]` 或 `transition-[background-color,border-color,color,transform]`。
+- **語意化 CSS Token 收斂 (`api/templates/index.html`)**：
+  - 將 `html:not(.dark)` 淺色模式覆寫規則中的硬編碼色值收斂至 `:root` 語意 Token（`--card-bg`、`--card-inner-bg`、`--border-color`、`--border-divide`、`--surface-tint`、`--ink-soft`、`--bullish-ink`、`--bearish-ink`、`--violet-ink` 等），保持 WCAG AA/AAA 對比度。
+- **公開個股頁一致性升級 (`api/templates/ticker_seo.html`)**：
+  - 移除 `cdn.tailwindcss.com` 改載入預編譯 `/static/css/app.css?v={{ asset_version }}`，補齊 `:focus-visible`、根節點與 `body` `overflow-x: clip`、`h1/h2/h3` `text-wrap: balance` 與精準 `prefers-reduced-motion: reduce`，替換 `transition-all`，維持固定深色無 JS SSR 契約。
+- **整合驗證 (`test/test_command_palette_and_tabs_ui.py`, `test/test_public_ticker_seo.py`)**：
+  - 新增 `test_iconography_and_precision_transitions` 與 `test_public_ticker_seo_modern_css_baseline`。
+- **Code Review (Codex + OMP) 雙審補強修正 (`api/main.py`, `api/static/js/app.js`, `api/templates/index.html`, `_stock_drawer_tabs.html`, `header.html`, `command_palette.html`, `alerts_modal.html`, `risk_xray_panel.html`, `tab_dashboard.html`)**：
+  - `get_asset_fingerprint()` 由整秒 `max(mtime)` 改為 SHA-256 內容雜湊指紋，確保同秒更新或保留 mtime 時亦能即時失效 `immutable` 長效快取。
+  - 強化原生 `<dialog>`：`min(--dialog-max-w, calc(100vw - 1.5rem))` 與 `max-h-[calc(100dvh-1.5rem)] flex-1 min-h-0` 防短視窗裁切；`getBoundingClientRect()` 矩形外協調判定 + `pointercancel` 清理；`_dialogRequestSeq` 防 `$nextTick` 開關競態；不支援 `showModal` 時以 `inert` 補齊模態退回。
+  - `_stock_drawer_tabs.html` 改用 `bg-emerald-800` / `bg-rose-700` / `bg-[#17324D]` 達標 WCAG AA/AAA，且卡片清單補齊 `idx` 與 `'-' + idx` ID 唯一化；`index.html` 為 `tab_agent_hub.html` 深色程式碼面板保留淺色模式對比度與完整降動態停用；補齊市場時鐘狀態字典與 JS `scrollIntoView` 降動態判斷，並清除 `pythonSnippet` 多餘 `f"` 前綴。
+
+### 切片三：CDN SRI、ES 模組快取鏈、深淺色同步與預編譯 CSS
+- **第三方 CDN 版本鎖定與 SRI (`api/templates/index.html`)**：
+  - 將 Vue (`3.5.45`)、Chart.js (`4.6.1`)、Hammer.js (`2.0.8`) 與 chartjs-plugin-zoom (`2.0.1`) 鎖定確切版本並加入 `integrity="sha384-..."`、`crossorigin="anonymous"` 與 `referrerpolicy="no-referrer"`，Google Fonts 同步設定 `referrerpolicy="no-referrer"`。
+- **ES 模組 Import Map 傳遞版本與靜態快取策略統一 (`api/templates/index.html`, `api/static/js/app.js`, `api/static/js/chart-manager.js`, `api/main.py`)**：
+  - 於 `index.html` 導入 `<script type="importmap">`，將 `/static/js/api-client.js`、`chart-manager.js`、`risk-xray.js` 動態映射至 `?v=[[ APP_VERSION ]]`，並移除 `app.js` 內硬編碼之 `?v=2.6.0`。
+  - 統一 `api/main.py` 中 `add_static_cache_control` 與 `NoCacheStaticFiles` 策略：含 `?v=` 指紋之 `/static/*.js` / `/static/*.css` 回傳 `Cache-Control: public, max-age=31536000, immutable`；未帶版本參數者維持 `no-cache, no-store, must-revalidate`。
+  - `chart-manager.js` 引入 `safeToSorted` / `safeToReversed` 非破壞性陣列排序／反轉保護。
+- **預編譯生產級 Tailwind CSS (`tailwind.config.js`, `api/static/css/input.css`, `api/static/css/app.css`, `scripts/build_css.sh`, `README.md`)**：
+  - 完整保留既有 `darkMode`、字級（`xs: 13px` / `sm: 14px`）、字型、`terminal.*` 色票與動態類別 `safelist`，產出壓縮預編譯靜態 CSS（約 79 KB）並自 `index.html` 與 `ticker_seo.html` 移除 `cdn.tailwindcss.com`；同步於 `README.md` 補充本機建置說明，維持 Docker 無 Node.js 相依。
+- **深淺色同步、精準降動態與 Render 優化 (`api/templates/index.html`, `api/static/js/app.js`, `api/static/site.webmanifest`, `api/templates/partials/footer.html`)**：
+  - `index.html` 防閃爍腳本與 `app.js` `applyTheme()` 同步更新 `<meta name="color-scheme">` 與 `document.documentElement.style.colorScheme`；`site.webmanifest` `theme_color` 對齊品牌色 `#FFB010`。
+  - 移除過度破壞性之 `@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important } }`，改為精準停用 `.animate-pulse`/`.animate-spin`/`.skeleton`/`.toast-enter` 循環與位移/縮放動畫；於 `<footer>` 套用 `.cv-auto-section` (`content-visibility: auto; contain-intrinsic-size: auto 420px`)。
+- **安全與標準掃描**：`npx -y modern-web-guidance@latest legacy-scan api/templates api/static/js --json` 檢查 `totalFindings` 降為 `0`；`test/test_api.py`（29/29）全數通過。
+
+### 切片二：原生 `<dialog>` 遷移與鍵盤／表格無障礙
+- **原生 Top-Layer `<dialog>` 與雙指標 Light-Dismiss (`api/templates/partials/command_palette.html`, `alerts_modal.html`, `risk_xray_panel.html`, `tab_dashboard.html`, `api/templates/index.html`, `api/static/js/app.js`, `api/static/js/chart-manager.js`)**：
+  - 將全站 4 座阻斷式彈窗（全域搜尋指令面板、到價告警中心、投資組合風險 X 光健檢、法說會與財報行事曆）重構為常駐掛載之原生 `<dialog>` + `showModal()`，透過 `dialog.quant-dialog:modal { overscroll-behavior: contain }` 與 `html:has(dialog[open])` 鎖定背景捲動（移除 `document.body.classList.add('overflow-hidden')` 副作用）。
+  - 於 `app.js` 新增 `openNativeDialog`、`closeNativeDialog`、`syncDialogClosed`、`handleDialogPointerDown`/`handleDialogPointerUp`，實現原生 `Esc` (`@cancel.prevent`)、同 `pointerId` 背景點放防誤關（從內容拖曳至 backdrop 不誤關）、關閉後焦點歸還原觸發元件（若原元件已卸載則安全退回 `<main>`）與 `chartManager.resizeAll()`。
+- **鍵盤可及性、表格語意與分頁 `<h1>` 層級 (`api/templates/partials/tab_dashboard.html`, `header.html`, `alerts_modal.html`, `tab_*.html`, `index.html`)**：
+  - 表格排序表頭全面改為 `<th :aria-sort="..."><button type="button">`；`.quant-table-wrap` 新增 `role="region" tabindex="0" aria-label="..."` 支援鍵盤水平捲動；頂部品牌標誌改為原生 `<button type="button">`；告警表單 4 組 `<label for>` 完整對應唯一 `id`。
+  - 移除 `index.html` 全域競爭之 `<h1 class="sr-only">`，並將 `tab_agent_hub.html`、`tab_history.html`、`tab_industry_chain.html`、`tab_institutional.html` 與 `tab_broker.html` 視圖主標題統一升級為單一可視 `<h1>`。
+- **測試覆蓋 (`test/test_command_palette_and_tabs_ui.py`, `test/test_risk_xray_ui.py`)**：
+  - 補齊 `<dialog>` / `showModal` / light-dismiss、`:aria-sort` 排序鈕、`label[for]` 與各分頁單一 `<h1>` 驗證（33 項相關測試全數通過）。
+
+### 切片一：抽屜結構去重、Agent Hub 範例統一與核心雙語字典
+- **共用股票展開抽屜元件 (`api/templates/partials/_stock_drawer_tabs.html`, `api/templates/partials/tab_dashboard.html`)**：
+  - 抽取共用 `alignment`（模型方向對齊分析）與 `alerts`（到價追蹤告警）子頁籤樣板，透過 `[[ drawer_prefix ]]` 為行動版（`mob`）、桌面表格（`table`）、桌面卡片（`card`）三個檢視產生唯一 `for`/`id`。
+  - 清理 `tab_dashboard.html` 中錯貼進標案子頁籤與法說會行事曆彈窗的 3 份重複面板，補齊行動版與桌面卡片檢視原本缺失的頂層抽屜頁籤（`tab_dashboard.html` 由 4,106 行精簡至約 3,200 行）。
+- **Agent Hub Python 範例單一來源 (`api/templates/partials/tab_agent_hub.html`)**：
+  - 移除硬編碼字面 `f"{window.location.origin}/api/v1/predictions/resonance"`，統一綁定 `{{ pythonSnippet }}`，以實際當前站台來源呈現。
+- **核心中英雙語字典與 `<html lang>` 同步 (`api/static/js/app.js`, `api/templates/partials/header.html`, `api/templates/partials/tab_dashboard.html`, `api/templates/partials/alerts_modal.html`, `api/templates/partials/risk_xray_panel.html`)**：
+  - 於 `app.js` 補齊 `I18N_MESSAGES`（`zh`/`en`）、`t(key, fallback)` 與 `applyLocale()`，切換語系時同步更新 `document.documentElement.lang`（`zh-TW` / `en`）與頂部導覽、大盤風控、總經卡片、6 維篩選器、表格表頭及彈窗標題。
+- **驗證回歸測試 (`test/test_drawer_alignment_alerts_ui.py`, `test/test_command_palette_and_tabs_ui.py`)**：
+  - 新增行事曆隔離斷言、三版型抽屜對齊/告警頂層頁籤斷言、Agent Hub 單一來源斷言與雙語字典/`<html lang>` 同步斷言。
+
+---
+
 ## 2026-11-06 (v2.6.0)
 
 ### Part A: 主表欄位動態排序直覺切換與快取防呆

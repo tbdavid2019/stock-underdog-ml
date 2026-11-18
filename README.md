@@ -432,7 +432,12 @@ python -m unittest discover -s test -p 'test_*.py'
 
 # 4. 從 Supabase 全量導出歷史資料至 DuckDB
 python scripts/export_supabase_to_duckdb.py
+
+# 5. 前端樣式開發後重建預編譯 Tailwind CSS（需本機 Node.js；Docker 生產映像直接使用已提交之 app.css）
+./scripts/build_css.sh
 ```
+
+> **前端靜態資源說明**：首頁與公開個股頁皆採用預編譯靜態樣式 [`api/static/css/app.css`](api/static/css/app.css)（設定檔 [`tailwind.config.js`](tailwind.config.js)、輸入檔 [`api/static/css/input.css`](api/static/css/input.css)），已移除執行期 Tailwind Play CDN。Docker 生產容器維持純 `python:3.12-slim` 無 Node.js 相依；修改 `api/templates/` 或 `api/static/js/` 中的 Tailwind 類別後請在本機執行 `./scripts/build_css.sh` 並一併提交 `api/static/css/app.css`。
 
 ---
 

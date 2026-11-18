@@ -3,13 +3,181 @@
  * Powered by Vue 3, Tailwind CSS, Chart.js & FastAPI
  */
 
-import { ApiClient } from '/static/js/api-client.js?v=2.6.0';
-import { ChartManager } from '/static/js/chart-manager.js?v=2.6.0';
-import { fetchPortfolioRiskXray, fetchOptimizedWeights, formatRiskPercent } from '/static/js/risk-xray.js?v=2.6.0';
+import { ApiClient } from '/static/js/api-client.js';
+import { ChartManager } from '/static/js/chart-manager.js';
+import { fetchPortfolioRiskXray, fetchOptimizedWeights, formatRiskPercent } from '/static/js/risk-xray.js';
 
 const { createApp } = Vue;
 
 const chartManager = new ChartManager();
+
+const I18N_MESSAGES = {
+    zh: {
+        'nav.dashboard': '操盤看板',
+        'nav.institutional': '法人籌碼',
+        'nav.history': '個股歷史',
+        'nav.industry_chain': '產業圖譜',
+        'nav.discovery': '前沿發現',
+        'nav.podcast': 'Podcast 雷達',
+        'nav.alerts': '告警',
+        'nav.workspace': '工作區:',
+        'macro.risk_control': '大盤風控:',
+        'macro.suggested_exposure': '建議曝險:',
+        'macro.regime': '美股宏觀環境',
+        'macro.vix': 'VIX 恐慌指數',
+        'macro.benchmarks': '標普 / 費半均線狀態',
+        'macro.tech_cap': '科技股上限:',
+        'macro.history_db': '歷史報告資料',
+        'macro.tickers': '標的檔數:',
+        'macro.records_unit': '筆',
+        'macro.tickers_unit': '檔',
+        'dashboard.title': '今日量化訊號',
+        'dashboard.subtitle': '先看總體大盤風險門檻，再依多維量化策略檢視每日計算出的候選標的與時序預測軌跡。',
+        'screener.title': '多維量化自訂篩選器',
+        'screener.subtitle': '自主多選模型與因子',
+        'screener.view_table': '表格',
+        'screener.view_card': '卡片',
+        'screener.market': '1. 標的市場:',
+        'screener.all_markets': '全部市場',
+        'screener.watchlist': '我的自選',
+        'screener.risk_xray': '組合風險 X 光',
+        'screener.select_all': '全選',
+        'screener.clear': '清空',
+        'screener.direction': '2. 交易方向:',
+        'screener.bullish': '多方看漲',
+        'screener.bearish': '空方避險',
+        'screener.models': '3. AI 預測模型:',
+        'screener.pe': '4. 本益比估值:',
+        'screener.potential': '5. 預期潛力空間:',
+        'screener.factors': '6. 核心量化因子:',
+        'screener.applied': '已套用條件:',
+        'screener.reset': '重設條件',
+        'table.ticker': '標的 / 名稱',
+        'table.market': '市場',
+        'table.strategy': '策略模型',
+        'table.price': '現價',
+        'table.target': '目標價 / 均線',
+        'table.potential': '潛力',
+        'table.valuation': 'PE / PB',
+        'table.tags': '策略標籤',
+        'table.actions': '操作',
+        'table.detail': '詳情',
+        'table.collapse': '收合',
+        'modal.search_title': '全域指令與股票搜尋面板',
+        'modal.search_placeholder': '搜尋股票代號、中文名稱 (如 2330, 台積電, NVDA, 7203)...',
+        'modal.alerts_title': '量化到價告警中心',
+        'modal.alerts_subtitle': '監控突破目標價、跌破 P10 支撐、季線均線回測等量化規則',
+        'modal.alerts_create_header': '新增價位告警規則',
+        'modal.alerts_trigger_push': '觸發後發送即時推播',
+        'modal.alerts_ticker': '股票代號',
+        'modal.alerts_rule': '觸發條件',
+        'modal.alerts_threshold': '門檻價格',
+        'modal.alerts_api_key': '管理金鑰 (WATCHLIST_API_KEY)',
+        'modal.alerts_create_btn': '建立告警',
+        'modal.alerts_creating': '建立中...',
+        'modal.alerts_check_now': '立即巡檢測試',
+        'modal.alerts_checking': '巡檢中...',
+        'modal.risk_xray_title': '投資組合量化風險 X 光健檢',
+        'modal.risk_xray_recompute': '重新診斷',
+        'modal.risk_xray_computing': '運算中...',
+        'modal.calendar_title': '全球跨市場法人說明會暨財報行事曆',
+        'sessions.stale': '資料待同步',
+        'sessions.offline': '跨市場即時狀態離線',
+        'sessions.loading': '市場狀態載入中...',
+        'common.close': '關閉',
+        'common.refresh': '重新整理'
+    },
+    en: {
+        'nav.dashboard': 'Dashboard',
+        'nav.institutional': 'Flows',
+        'nav.history': 'History',
+        'nav.industry_chain': 'Supply Chain',
+        'nav.discovery': 'Discovery',
+        'nav.podcast': 'Podcasts',
+        'nav.alerts': 'Alerts',
+        'nav.workspace': 'Workspace:',
+        'macro.risk_control': 'Macro Regime:',
+        'macro.suggested_exposure': 'Exposure:',
+        'macro.regime': 'US Macro Regime',
+        'macro.vix': 'VIX Volatility Index',
+        'macro.benchmarks': 'SPY / SOX MA60 Regime',
+        'macro.tech_cap': 'Tech Cap:',
+        'macro.history_db': 'Quant Signal Archive',
+        'macro.tickers': 'Tracked Tickers:',
+        'macro.records_unit': 'rows',
+        'macro.tickers_unit': 'tickers',
+        'dashboard.title': 'Daily Quant Signals',
+        'dashboard.subtitle': 'Review macro exposure guardrails first, then screen daily multi-model candidates and time-series forecast trajectories.',
+        'screener.title': 'Multi-Factor Quant Screener',
+        'screener.subtitle': 'Filter across models & quant factors',
+        'screener.view_table': 'Table',
+        'screener.view_card': 'Cards',
+        'screener.market': '1. Markets:',
+        'screener.all_markets': 'All Markets',
+        'screener.watchlist': 'Watchlist',
+        'screener.risk_xray': 'Risk X-Ray',
+        'screener.select_all': 'All',
+        'screener.clear': 'Clear',
+        'screener.direction': '2. Direction:',
+        'screener.bullish': 'Bullish',
+        'screener.bearish': 'Bearish',
+        'screener.models': '3. AI Models:',
+        'screener.pe': '4. P/E Valuation:',
+        'screener.potential': '5. Min Potential:',
+        'screener.factors': '6. Quant Factors:',
+        'screener.applied': 'Active Filters:',
+        'screener.reset': 'Reset',
+        'table.ticker': 'Ticker / Name',
+        'table.market': 'Market',
+        'table.strategy': 'Model / Strategy',
+        'table.price': 'Price',
+        'table.target': 'Target / MA',
+        'table.potential': 'Potential',
+        'table.valuation': 'PE / PB',
+        'table.tags': 'Signal Tags',
+        'table.actions': 'Actions',
+        'table.detail': 'Detail',
+        'table.collapse': 'Hide',
+        'modal.search_title': 'Global Command & Ticker Search',
+        'modal.search_placeholder': 'Search ticker or name (e.g. 2330, TSMC, NVDA, 7203)...',
+        'modal.alerts_title': 'Quant Price Alerts Center',
+        'modal.alerts_subtitle': 'Monitor target breakouts, P10 floor breaches, and MA pullback rules',
+        'modal.alerts_create_header': 'Create Price Alert Rule',
+        'modal.alerts_trigger_push': 'Real-time push notification',
+        'modal.alerts_ticker': 'Ticker',
+        'modal.alerts_rule': 'Rule',
+        'modal.alerts_threshold': 'Threshold',
+        'modal.alerts_api_key': 'Admin Key (WATCHLIST_API_KEY)',
+        'modal.alerts_create_btn': 'Create Alert',
+        'modal.alerts_creating': 'Creating...',
+        'modal.alerts_check_now': 'Check Now',
+        'modal.alerts_checking': 'Checking...',
+        'modal.risk_xray_title': 'Portfolio Quant Risk X-Ray',
+        'modal.risk_xray_recompute': 'Recompute',
+        'modal.risk_xray_computing': 'Computing...',
+        'modal.calendar_title': 'Global Earnings Call & IR Calendar',
+        'sessions.stale': 'Sync Pending',
+        'sessions.offline': 'Market status offline',
+        'sessions.loading': 'Loading market sessions...',
+        'common.close': 'Close',
+        'common.refresh': 'Refresh'
+    }
+};
+
+const SESSION_STATUS_EN = {
+    '開盤交易中': 'Open',
+    '盤中交易': 'Open',
+    '開盤中': 'Open',
+    '午間休市': 'Lunch Break',
+    '午休時間': 'Lunch Break',
+    '盤前交易': 'Pre-Market',
+    '盤後交易': 'After-Hours',
+    '已收盤': 'Closed',
+    '已休市': 'Closed',
+    '休市': 'Closed',
+    '休市 (週末)': 'Closed (Weekend)',
+    '例假日休市': 'Holiday Closed'
+};
 
 export const app = createApp({
     data() {
@@ -423,7 +591,7 @@ export const app = createApp({
             discoverySelectedTheme: 'ALL',
             discoveryExpandedDossiers: {},
 
-            pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get(f"${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
+            pythonSnippet: `import requests\n\n# 取得三重共振焦點推薦標的\nres = requests.get("${window.location.origin}/api/v1/predictions/resonance")\npicks = res.json().get("data", [])\nfor p in picks:\n    print(f"{p['ticker']} | 潛力:{p['potential']}% | 標籤:{p['tags']}")`
         };
     },
     computed: {
@@ -1130,16 +1298,33 @@ export const app = createApp({
             chartManager.updateTheme(this.isDark);
         },
         applyTheme() {
+            const scheme = this.isDark ? 'dark' : 'light';
             if (this.isDark) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
+            document.documentElement.style.colorScheme = scheme;
+            document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
         },
         toggleLocale() {
             this.currentLocale = this.currentLocale === 'zh' ? 'en' : 'zh';
             localStorage.setItem('stock_quant_locale', this.currentLocale);
+            this.applyLocale();
             this.showToast(this.currentLocale === 'zh' ? '已切換為繁體中文' : 'Language switched to English');
+        },
+        applyLocale() {
+            if (typeof document !== 'undefined' && document.documentElement) {
+                document.documentElement.lang = this.currentLocale === 'en' ? 'en' : 'zh-TW';
+            }
+        },
+        t(key, fallback = '') {
+            const loc = this.currentLocale === 'en' ? 'en' : 'zh';
+            return I18N_MESSAGES[loc]?.[key] ?? I18N_MESSAGES.zh?.[key] ?? fallback ?? key;
+        },
+        translateSessionStatus(statusLabel) {
+            if (!statusLabel || this.currentLocale !== 'en') return statusLabel || '';
+            return SESSION_STATUS_EN[statusLabel] || statusLabel;
         },
         async loadMacro() {
             try {
@@ -1730,12 +1915,11 @@ export const app = createApp({
             const d = new Date();
             this.calendarTodayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             this.showEarningsModal = true;
-            document.body.classList.add('overflow-hidden');
+            this.openNativeDialog('earningsCalendar', 'earningsCalendarDialog');
             await this.loadCalendarData();
         },
         closeEarningsCalendar() {
-            this.showEarningsModal = false;
-            document.body.classList.remove('overflow-hidden');
+            this.closeNativeDialog('earningsCalendar', 'earningsCalendarDialog');
         },
         toggleCalendarTimezone() {
             this.calendarTimezone = this.calendarTimezone === 'CST' ? 'EST' : 'CST';
@@ -3659,7 +3843,9 @@ export const app = createApp({
                     this.toggleRowDrawer(ticker);
                     const rowEl = document.getElementById(`row-${norm}`);
                     if (rowEl) {
-                        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const reducedMotion = typeof window !== 'undefined' &&
+                            window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                        rowEl.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
                     }
                 });
             } else {
@@ -3684,21 +3870,190 @@ export const app = createApp({
             }
         },
 
+        // ==================== NATIVE <dialog> MODAL COORDINATOR ====================
+        _ensureDialogMaps() {
+            if (!this._dialogReturnFocus) this._dialogReturnFocus = {};
+            if (!this._dialogPointerBackdrop) this._dialogPointerBackdrop = {};
+            if (!this._dialogRequestSeq) this._dialogRequestSeq = {};
+            if (!this._dialogInertEls) this._dialogInertEls = {};
+        },
+
+        _isPointOutsideRect(event, rect) {
+            if (!rect || (rect.width === 0 && rect.height === 0)) return false;
+            return (
+                event.clientX < rect.left ||
+                event.clientX > rect.right ||
+                event.clientY < rect.top ||
+                event.clientY > rect.bottom
+            );
+        },
+
+        _setFallbackModalInert(dialogKey, dlg, enable) {
+            this._ensureDialogMaps();
+            if (enable) {
+                const siblings = [];
+                for (const tag of ['header', 'main', 'footer', 'nav']) {
+                    const el = document.querySelector(tag);
+                    if (el && !el.contains(dlg) && !el.hasAttribute('inert')) {
+                        el.setAttribute('inert', '');
+                        siblings.push(el);
+                    }
+                }
+                this._dialogInertEls[dialogKey] = siblings;
+            } else {
+                const siblings = this._dialogInertEls[dialogKey] || [];
+                for (const el of siblings) {
+                    el.removeAttribute('inert');
+                }
+                delete this._dialogInertEls[dialogKey];
+            }
+        },
+
+        openNativeDialog(dialogKey, refName, onOpened) {
+            this._ensureDialogMaps();
+            const seq = (this._dialogRequestSeq[dialogKey] || 0) + 1;
+            this._dialogRequestSeq[dialogKey] = seq;
+            const dlg = this.$refs?.[refName];
+            const activeEl = document.activeElement;
+            if (activeEl instanceof HTMLElement && (!dlg || !dlg.contains(activeEl))) {
+                this._dialogReturnFocus[dialogKey] = activeEl;
+            }
+            this._dialogPointerBackdrop[dialogKey] = null;
+            this.$nextTick(() => {
+                if (this._dialogRequestSeq[dialogKey] !== seq) return;
+                const targetDlg = this.$refs?.[refName];
+                if (!targetDlg) return;
+                if (!targetDlg.open) {
+                    if (typeof targetDlg.showModal === 'function') {
+                        targetDlg.showModal();
+                    } else {
+                        targetDlg.setAttribute('role', 'dialog');
+                        targetDlg.setAttribute('aria-modal', 'true');
+                        targetDlg.setAttribute('open', '');
+                        targetDlg.dataset.fallbackModal = '1';
+                        targetDlg.style.position = 'fixed';
+                        targetDlg.style.inset = '0';
+                        targetDlg.style.margin = 'auto';
+                        targetDlg.style.zIndex = '60';
+                        this._setFallbackModalInert(dialogKey, targetDlg, true);
+                    }
+                }
+                if (typeof onOpened === 'function') {
+                    onOpened(targetDlg);
+                }
+                requestAnimationFrame(() => chartManager.resizeAll?.());
+            });
+        },
+
+        handleDialogPointerDown(dialogKey, event, refName) {
+            this._ensureDialogMaps();
+            const dlg = this.$refs?.[refName];
+            const isOutside = Boolean(dlg && event.target === dlg && this._isPointOutsideRect(event, dlg.getBoundingClientRect()));
+            this._dialogPointerBackdrop[dialogKey] = {
+                isBackdrop: isOutside,
+                pointerId: event.pointerId
+            };
+        },
+
+        handleDialogPointerCancel(dialogKey, event) {
+            this._ensureDialogMaps();
+            const start = this._dialogPointerBackdrop[dialogKey];
+            if (start && (!event || start.pointerId === event.pointerId)) {
+                this._dialogPointerBackdrop[dialogKey] = null;
+            }
+        },
+
+        handleDialogPointerUp(dialogKey, event, refName, closeMethodName) {
+            this._ensureDialogMaps();
+            const dlg = this.$refs?.[refName];
+            const start = this._dialogPointerBackdrop[dialogKey];
+            this._dialogPointerBackdrop[dialogKey] = null;
+            const isOutside = Boolean(dlg && event.target === dlg && this._isPointOutsideRect(event, dlg.getBoundingClientRect()));
+            if (
+                isOutside &&
+                start &&
+                start.isBackdrop &&
+                start.pointerId === event.pointerId
+            ) {
+                if (typeof this[closeMethodName] === 'function') {
+                    this[closeMethodName]();
+                }
+            }
+        },
+
+        closeNativeDialog(dialogKey, refName) {
+            this._ensureDialogMaps();
+            this._dialogRequestSeq[dialogKey] = (this._dialogRequestSeq[dialogKey] || 0) + 1;
+            const dlg = this.$refs?.[refName];
+            if (dlg && dlg.open && typeof dlg.close === 'function' && !dlg.dataset.fallbackModal) {
+                dlg.close();
+            } else {
+                if (dlg) {
+                    dlg.removeAttribute('open');
+                    if (dlg.dataset.fallbackModal) {
+                        delete dlg.dataset.fallbackModal;
+                        dlg.style.position = '';
+                        dlg.style.inset = '';
+                        dlg.style.margin = '';
+                        dlg.style.zIndex = '';
+                        this._setFallbackModalInert(dialogKey, dlg, false);
+                    }
+                }
+                this.syncDialogClosed(dialogKey);
+            }
+        },
+
+        syncDialogClosed(dialogKey) {
+            this._ensureDialogMaps();
+            this._dialogRequestSeq[dialogKey] = (this._dialogRequestSeq[dialogKey] || 0) + 1;
+            this._dialogPointerBackdrop[dialogKey] = null;
+            this._setFallbackModalInert(dialogKey, null, false);
+            if (dialogKey === 'commandPalette') {
+                this.showCommandPalette = false;
+                this.commandQuery = '';
+                this.commandResults = [];
+            } else if (dialogKey === 'alertsModal') {
+                this.showAlertsModal = false;
+            } else if (dialogKey === 'riskXray') {
+                this.showRiskXrayModal = false;
+            } else if (dialogKey === 'earningsCalendar') {
+                this.showEarningsModal = false;
+            }
+
+            const returnEl = this._dialogReturnFocus[dialogKey];
+            this._dialogReturnFocus[dialogKey] = null;
+            this.$nextTick(() => {
+                if (returnEl && returnEl.isConnected && typeof returnEl.focus === 'function') {
+                    try {
+                        returnEl.focus({ preventScroll: true });
+                        return;
+                    } catch (_) {}
+                }
+                const mainEl = document.querySelector('main');
+                if (mainEl) {
+                    if (!mainEl.hasAttribute('tabindex')) {
+                        mainEl.setAttribute('tabindex', '-1');
+                    }
+                    try {
+                        mainEl.focus({ preventScroll: true });
+                    } catch (_) {}
+                }
+            });
+        },
+
         // ==================== COMMAND PALETTE (⌘K) ====================
         openCommandPalette() {
             this.showCommandPalette = true;
             this.commandQuery = '';
             this.activeCommandIndex = 0;
             this.populateDefaultCommandResults();
-            this.$nextTick(() => {
+            this.openNativeDialog('commandPalette', 'commandPaletteDialog', () => {
                 this.$refs.commandInput?.focus();
             });
         },
 
         closeCommandPalette() {
-            this.showCommandPalette = false;
-            this.commandQuery = '';
-            this.commandResults = [];
+            this.closeNativeDialog('commandPalette', 'commandPaletteDialog');
         },
 
         toggleCommandPalette() {
@@ -3991,11 +4346,12 @@ export const app = createApp({
         openAlertsCenterModal() {
             this.showAlertsModal = true;
             this.alertsModalApiKey = localStorage.getItem('sq_watchlist_api_key_v1') || '';
+            this.openNativeDialog('alertsModal', 'alertsModalDialog');
             this.loadAlertsModalList();
         },
 
         closeAlertsCenterModal() {
-            this.showAlertsModal = false;
+            this.closeNativeDialog('alertsModal', 'alertsModalDialog');
         },
 
         onAlertsApiKeyChange() {
@@ -4131,11 +4487,12 @@ export const app = createApp({
                 this.riskXrayTickers = ['2330.TW', '2317.TW', '2454.TW', '2308.TW', '2382.TW'];
             }
 
+            this.openNativeDialog('riskXray', 'riskXrayDialog');
             this.loadRiskXrayData();
         },
 
         closeRiskXrayModal() {
-            this.showRiskXrayModal = false;
+            this.closeNativeDialog('riskXray', 'riskXrayDialog');
         },
 
         changeRiskXrayWindow(w) {
@@ -4241,6 +4598,7 @@ export const app = createApp({
         this.loadAlertsModalList(true);
 
         this.applyTheme();
+        this.applyLocale();
         this.parseUrlParams();
         this.fetchAvailableModels();
         this.loadPerformance();
@@ -4303,13 +4661,11 @@ export const app = createApp({
             this.loadMarketSessions();
         }, 30000);
 
-        // 3. Register global keyboard shortcuts (⌘K / Ctrl+K and Esc)
+        // 3. Register global keyboard shortcuts (⌘K / Ctrl+K)
         this._handleGlobalKeydown = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 this.toggleCommandPalette();
-            } else if (e.key === 'Escape' && this.showCommandPalette) {
-                this.closeCommandPalette();
             }
         };
         window.addEventListener('keydown', this._handleGlobalKeydown);

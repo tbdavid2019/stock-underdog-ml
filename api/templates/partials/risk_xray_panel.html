@@ -1,13 +1,16 @@
 <!-- ================= QUANT PORTFOLIO RISK X-RAY MODAL ================= -->
-<div v-if="showRiskXrayModal"
-     class="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 md:p-10 flex items-start justify-center backdrop-blur-md bg-black/70 transition-opacity duration-150"
-     @click.self="closeRiskXrayModal"
-     @keydown.window.esc="closeRiskXrayModal"
-     role="dialog"
-     aria-modal="true"
-     aria-label="投資組合量化風險 X 光健檢中心">
+<dialog ref="riskXrayDialog"
+        class="quant-dialog"
+        style="--dialog-max-w: 64rem;"
+        aria-label="投資組合量化風險 X 光健檢中心"
+        @cancel.prevent="closeRiskXrayModal()"
+        @close="syncDialogClosed('riskXray')"
+        @pointerdown="handleDialogPointerDown('riskXray', $event, 'riskXrayDialog')"
+        @pointercancel="handleDialogPointerCancel('riskXray', $event)"
+        @pointerup="handleDialogPointerUp('riskXray', $event, 'riskXrayDialog', 'closeRiskXrayModal')">
 
-    <div class="relative w-full max-w-5xl rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200 my-4"
+    <div v-if="showRiskXrayModal"
+         class="relative w-full max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-colors duration-200 overscroll-contain"
          :class="isDark ? 'bg-[#16181D] border-[#374151] text-slate-100' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
 
         <!-- Modal Header -->
@@ -20,7 +23,7 @@
                 </div>
                 <div>
                     <h3 class="text-base sm:text-lg font-black tracking-tight flex items-center space-x-2">
-                        <span>投資組合量化風險 X 光健檢</span>
+                        <span>{{ t('modal.risk_xray_title') }}</span>
                         <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
                               :class="isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] text-[#2B251A]'">
                             Wave 2 Quant
@@ -65,15 +68,15 @@
             <!-- Recalculate Button -->
             <button @click="loadRiskXrayData()"
                     :disabled="riskXrayLoading || riskXrayTickers.length === 0"
-                    class="px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                    class="px-3.5 py-1.5 rounded-xl font-bold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-sm disabled:opacity-50"
                     :class="isDark ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40' : 'bg-[#FFB010] hover:bg-[#e09b0b] text-[#2B251A]'">
                 <span class="material-symbols-outlined text-[16px]" :class="riskXrayLoading ? 'animate-spin' : ''">refresh</span>
-                <span>{{ riskXrayLoading ? '運算中...' : '重新診斷' }}</span>
+                <span>{{ riskXrayLoading ? t('modal.risk_xray_computing') : t('modal.risk_xray_recompute') }}</span>
             </button>
         </div>
 
         <!-- Modal Body -->
-        <div class="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-6">
 
             <!-- 1. Loading State -->
             <div v-if="riskXrayLoading" class="py-16 text-center space-y-3">
@@ -450,9 +453,9 @@
             <button @click="closeRiskXrayModal"
                     class="px-4 py-1.5 rounded-xl font-black transition-colors cursor-pointer"
                     :class="isDark ? 'bg-[#262626] hover:bg-[#333333] text-white' : 'bg-[#EAE0C8] hover:bg-[#DDC58B] text-[#2B251A]'">
-                關閉
+                {{ t('common.close') }}
             </button>
         </div>
 
     </div>
-</div>
+</dialog>

@@ -4,17 +4,17 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
 
         <!-- 1. LEFT COLUMN: 888 STOCK QUANT Badge Logo (2md.aiurl.tw Style) -->
-        <div class="flex items-center cursor-pointer select-none shrink-0 group"
-             @click="setTab('dashboard')"
-             title="返回操盤看板首頁"
-             role="button"
-             aria-label="888 StockQuant 首頁">
-            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#FFB010] text-[#2B251A] border-2 border-[#2B251A] shadow-sm flex flex-col items-center justify-center p-1 transition-all duration-200 group-hover:bg-[#F2A600] group-hover:-translate-y-0.5 group-active:scale-95 select-none">
+        <button type="button"
+                class="flex items-center cursor-pointer select-none shrink-0 group bg-transparent border-0 p-0 text-left"
+                @click="setTab('dashboard')"
+                title="返回操盤看板首頁"
+                aria-label="888 StockQuant 首頁">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#FFB010] text-[#2B251A] border-2 border-[#2B251A] shadow-sm flex flex-col items-center justify-center p-1 transition-[background-color,transform] duration-200 group-hover:bg-[#F2A600] group-hover:-translate-y-0.5 group-active:scale-95 select-none">
                 <span class="font-black text-[13px] sm:text-[14px] tracking-tight leading-none text-[#2B251A] font-mono">888</span>
                 <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-[#2B251A]">STOCK</span>
                 <span class="font-black text-[8px] sm:text-[9px] tracking-tighter uppercase leading-none mt-0.5 text-[#2B251A]">QUANT</span>
             </div>
-        </div>
+        </button>
 
         <!-- 2. CENTER COLUMN: Core Navigation Tabs (Centered Balance with Material Icons) -->
         <div class="flex-1 hidden md:flex justify-center px-1">
@@ -22,39 +22,39 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#17324D] border-[#17324D] shadow-md'">
                 <button @click="setTab('dashboard')" :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
                         :class="activeTab === 'dashboard' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">monitoring</span>
-                    <span>操盤看板</span>
+                    <span>{{ t('nav.dashboard', '操盤看板') }}</span>
                 </button>
                 <button @click="setTab('institutional')" :aria-current="activeTab === 'institutional' ? 'page' : undefined"
                         :class="activeTab === 'institutional' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">account_balance</span>
-                    <span>法人籌碼</span>
+                    <span>{{ t('nav.institutional', '法人籌碼') }}</span>
                 </button>
                 <button @click="setTab('history')" :aria-current="activeTab === 'history' ? 'page' : undefined"
                         :class="activeTab === 'history' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">history</span>
-                    <span>個股歷史</span>
+                    <span>{{ t('nav.history', '個股歷史') }}</span>
                 </button>
                 <button @click="setTab('industry_chain')" :aria-current="activeTab === 'industry_chain' ? 'page' : undefined"
                         :class="activeTab === 'industry_chain' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">hub</span>
-                    <span>產業圖譜</span>
+                    <span>{{ t('nav.industry_chain', '產業圖譜') }}</span>
                 </button>
                 <button @click="setTab('discovery')" :aria-current="activeTab === 'discovery' ? 'page' : undefined"
                         :class="activeTab === 'discovery' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">radar</span>
-                    <span>前沿發現</span>
+                    <span>{{ t('nav.discovery', '前沿發現') }}</span>
                 </button>
                 <button @click="setTab('podcast')" :aria-current="activeTab === 'podcast' ? 'page' : undefined"
                         :class="activeTab === 'podcast' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8] hover:bg-white/10 hover:text-white')"
-                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center space-x-1.5">
+                        class="px-3.5 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5">
                     <span class="material-symbols-outlined text-[18px]">podcasts</span>
-                    <span>Podcast 雷達</span>
+                    <span>{{ t('nav.podcast', 'Podcast 雷達') }}</span>
                 </button>
             </nav>
         </div>
@@ -66,10 +66,10 @@
                  :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A]'">
                 <span class="w-2 h-2 rounded-full animate-pulse"
                       :class="macro.exposure === null || macro.exposure === undefined ? 'bg-slate-400' : (macro.exposure >= 0.8 ? 'bg-emerald-500' : 'bg-amber-500')"></span>
-                <span :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">大盤風控:</span>
+                <span :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">{{ t('macro.risk_control', '大盤風控:') }}</span>
                 <span class="font-bold">{{ cleanRegimeName(macro.regime_name) }}</span>
                 <span class="opacity-30">|</span>
-                <span :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">建議曝險:</span>
+                <span :class="isDark ? 'text-[#9CA3AF]' : 'text-[#5C5038]'">{{ t('macro.suggested_exposure', '建議曝險:') }}</span>
                 <span class="font-black num-font text-amber-500">
                     {{ macro.exposure !== null && macro.exposure !== undefined ? (macro.exposure * 100).toFixed(0) + '%' : '—' }}
                 </span>
@@ -77,7 +77,7 @@
 
             <!-- Language Switcher Button (繁中 / EN) -->
             <button @click="toggleLocale()"
-                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-[background-color,border-color,color,transform] flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:text-white hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     :title="currentLocale === 'zh' ? '切換為 English' : '切換為繁體中文'" aria-label="切換語言">
                 <span class="material-symbols-outlined text-[18px]">language</span>
@@ -86,7 +86,7 @@
 
             <!-- Command Palette Trigger Button (⌘K / Search) -->
             <button @click="openCommandPalette()"
-                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-[background-color,border-color,color,transform] flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     title="搜尋股票代號或名稱 (⌘K / Ctrl+K)"
                     aria-label="開啟搜尋面板">
@@ -96,12 +96,12 @@
 
             <!-- Alerts Center Trigger Button (🔔 告警) -->
             <button @click="openAlertsCenterModal()"
-                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-all flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer relative"
+                    class="h-10 px-3 sm:px-3.5 rounded-full border transition-[background-color,border-color,color,transform] flex items-center space-x-1.5 shadow-sm hover:scale-105 active:scale-95 text-sm font-bold select-none cursor-pointer relative"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:text-amber-300 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     title="量化到價告警管理中心"
                     aria-label="開啟量化告警管理中心">
                 <span class="material-symbols-outlined text-[18px]">notifications</span>
-                <span class="hidden sm:inline font-sans text-xs font-bold">告警</span>
+                <span class="hidden sm:inline font-sans text-xs font-bold">{{ t('nav.alerts', '告警') }}</span>
                 <span v-if="alertsModalList && alertsModalList.filter(a => a.enabled !== false).length > 0"
                       class="absolute -top-1 -right-1 px-1.5 py-0.2 text-[10px] font-mono font-black rounded-full bg-amber-500 text-black leading-tight border"
                       :class="isDark ? 'border-black' : 'border-white'">
@@ -111,7 +111,7 @@
 
             <!-- Share URL Icon Button -->
             <button @click="copyShareLink()"
-                    class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm hover:scale-105 active:scale-95"
+                    class="w-10 h-10 rounded-full border transition-[background-color,border-color,color,transform] flex items-center justify-center shadow-sm hover:scale-105 active:scale-95"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626] hover:text-amber-300' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     title="複製目前頁面完整分享連結" aria-label="分享連結">
                 <span class="material-symbols-outlined text-[20px]">share</span>
@@ -119,7 +119,7 @@
 
             <!-- Dark / Light Mode Switcher (Pure Icon Button, No Verbose Text) -->
             <button @click="toggleTheme()"
-                    class="w-10 h-10 rounded-full border transition-all flex items-center justify-center shadow-sm select-none hover:scale-105 active:scale-95"
+                    class="w-10 h-10 rounded-full border transition-[background-color,border-color,color,transform] flex items-center justify-center shadow-sm select-none hover:scale-105 active:scale-95"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]'"
                     :title="isDark ? '切換為淺色模式' : '切換為曜石黑深色模式'"
                     :aria-label="isDark ? '切換為淺色模式' : '切換為深色模式'">
@@ -146,7 +146,7 @@
                     <span class="font-bold font-sans" :class="isDark ? 'text-slate-200' : 'text-[#2B251A]'">{{ s.market_name }}</span>
                     <span class="font-bold"
                           :class="s.is_open ? 'text-emerald-500' : (s.lunch_break ? 'text-amber-500' : 'text-slate-400')">
-                        {{ s.status_label }}
+                        {{ translateSessionStatus(s.status_label) }}
                     </span>
                     <span v-if="s.countdown_formatted" class="opacity-70 tabular-nums">
                         {{ s.countdown_formatted }}
@@ -158,17 +158,17 @@
                      class="flex items-center space-x-1 px-2 py-0.5 rounded-lg border bg-amber-500/10 border-amber-500/40 text-amber-500 font-bold text-xs shrink-0"
                      title="市場交易日數據延遲警示">
                     <span class="material-symbols-outlined text-[14px]">warning</span>
-                    <span>資料待同步</span>
+                    <span>{{ t('sessions.stale') }}</span>
                 </div>
             </div>
 
             <div v-else-if="marketSessionsError" class="text-slate-400 text-xs flex items-center space-x-1.5 font-mono">
                 <span class="w-2 h-2 rounded-full bg-slate-500"></span>
-                <span>跨市場即時狀態離線</span>
+                <span>{{ t('sessions.offline') }}</span>
             </div>
             <div v-else class="text-slate-400 text-xs flex items-center space-x-1">
                 <span class="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                <span>市場狀態載入中...</span>
+                <span>{{ t('sessions.loading') }}</span>
             </div>
         </div>
 
@@ -176,11 +176,11 @@
         <div v-if="recentTickers && recentTickers.length > 0" class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
             <span class="text-xs font-bold shrink-0 opacity-60 flex items-center space-x-1">
                 <span class="material-symbols-outlined text-[14px]">bookmark</span>
-                <span>工作區:</span>
+                <span>{{ t('nav.workspace', '工作區:') }}</span>
             </span>
 
             <div v-for="t in recentTickers" :key="t.ticker"
-                 class="group flex items-center space-x-1 px-2 py-0.5 rounded-md border text-xs font-mono shrink-0 transition-all select-none"
+                 class="group flex items-center space-x-1 px-2 py-0.5 rounded-md border text-xs font-mono shrink-0 transition-colors select-none"
                  :class="t.pinned
                      ? (isDark ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold' : 'bg-amber-100 border-amber-500 text-amber-950 font-bold')
                      : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-300 hover:border-slate-500' : 'bg-[#FFFDF7] border-[#6B5B38] text-[#2B251A] hover:bg-[#FFF0CC]')">
@@ -189,14 +189,16 @@
                 </button>
                 <button @click.stop="togglePinRecentTicker(t.ticker)"
                         :title="t.pinned ? '取消固定' : '釘選此標的'"
-                        class="opacity-60 hover:opacity-100 cursor-pointer text-xs leading-none"
+                        :aria-label="t.pinned ? '取消固定' : '釘選此標的'"
+                        class="opacity-70 hover:opacity-100 cursor-pointer flex items-center justify-center leading-none"
                         :class="t.pinned ? 'text-amber-500' : 'text-slate-400'">
-                    {{ t.pinned ? '★' : '☆' }}
+                    <span class="material-symbols-outlined text-[14px] leading-none" :class="t.pinned ? 'fill' : ''" aria-hidden="true">star</span>
                 </button>
                 <button @click.stop="removeRecentTicker(t.ticker)"
                         title="從工作區移除"
-                        class="opacity-40 hover:opacity-100 hover:text-rose-500 cursor-pointer text-xs leading-none ml-0.5">
-                    ✕
+                        aria-label="從工作區移除"
+                        class="opacity-50 hover:opacity-100 hover:text-rose-500 cursor-pointer flex items-center justify-center leading-none ml-0.5">
+                    <span class="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">close</span>
                 </button>
             </div>
         </div>
@@ -237,42 +239,42 @@
         <button @click="setTab('dashboard')"
                 :aria-current="activeTab === 'dashboard' ? 'page' : undefined"
                 :class="activeTab === 'dashboard' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">monitoring</span>
-            <span class="truncate">操盤看板</span>
+            <span class="truncate">{{ t('nav.dashboard', '操盤看板') }}</span>
         </button>
         <button @click="setTab('institutional')"
                 :aria-current="activeTab === 'institutional' ? 'page' : undefined"
                 :class="activeTab === 'institutional' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">account_balance</span>
-            <span class="truncate">法人籌碼</span>
+            <span class="truncate">{{ t('nav.institutional', '法人籌碼') }}</span>
         </button>
         <button @click="setTab('history')"
                 :aria-current="activeTab === 'history' ? 'page' : undefined"
                 :class="activeTab === 'history' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">history</span>
-            <span class="truncate">個股歷史</span>
+            <span class="truncate">{{ t('nav.history', '個股歷史') }}</span>
         </button>
         <button @click="setTab('industry_chain')"
                 :aria-current="activeTab === 'industry_chain' ? 'page' : undefined"
                 :class="activeTab === 'industry_chain' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">hub</span>
-            <span class="truncate">產業圖譜</span>
+            <span class="truncate">{{ t('nav.industry_chain', '產業圖譜') }}</span>
         </button>
         <button @click="setTab('discovery')"
                 :aria-current="activeTab === 'discovery' ? 'page' : undefined"
                 :class="activeTab === 'discovery' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">radar</span>
-            <span class="truncate">前沿發現</span>
+            <span class="truncate">{{ t('nav.discovery', '前沿發現') }}</span>
         </button>
         <button @click="setTab('podcast')"
                 :aria-current="activeTab === 'podcast' ? 'page' : undefined"
                 :class="activeTab === 'podcast' ? 'bg-[#FFB010] text-[#2B251A] font-black shadow-sm' : (isDark ? 'text-[#9CA3AF] hover:text-white' : 'text-[#FFF9E8]/90 hover:text-white')"
-                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
+                class="min-h-[48px] py-1.5 px-2 rounded-xl text-xs font-bold transition-colors flex flex-col items-center justify-center gap-0.5 text-center select-none flex-1 min-w-[64px] shrink-0">
             <span class="material-symbols-outlined text-[20px] leading-none">podcasts</span>
             <span class="truncate">Podcast</span>
         </button>

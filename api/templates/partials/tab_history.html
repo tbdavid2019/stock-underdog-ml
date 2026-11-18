@@ -4,10 +4,10 @@
     <!-- 1. Search Box Card (Top Priority) -->
     <div :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
          class="p-6 rounded-2xl border space-y-4">
-        <h2 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
+        <h1 class="text-xl font-black flex items-center space-x-2" :class="isDark ? 'text-white' : 'text-slate-900'">
             <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">search</span>
             <span>個股時間序列量化預測查詢</span>
-        </h2>
+        </h1>
         <p class="text-xs sm:text-sm" :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-600'">
             輸入股票代號或公司名稱（例如 <code class="num-font font-bold text-amber-500">2330</code>、<code class="font-bold text-amber-500">台積電</code>、<code class="font-bold text-amber-500">特斯拉</code>、<code class="font-bold text-amber-500">聯電</code>、<code class="font-bold text-amber-500">漢翔</code>）檢索個股情報、集團網絡、法說會、政府標案、歷史預測與法人動向。
         </p>
@@ -16,10 +16,10 @@
             <input v-model="searchTicker" @keyup.enter="loadHistory()"
                    type="text" placeholder="輸入股票代號或中文名稱 (如 2330、漢翔)..."
                    aria-label="股票代號"
-                   class="flex-1 border rounded-xl px-4 py-2.5 text-sm num-font font-bold uppercase focus:outline-none transition-all"
+                   class="flex-1 border rounded-xl px-4 py-2.5 text-sm num-font font-bold uppercase focus:outline-none transition-colors"
                    :class="isDark ? 'bg-[#16181D] border-[#262626] text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 shadow-sm'">
             <button @click="loadHistory()"
-                    class="px-6 py-2.5 text-black bg-amber-500 hover:bg-amber-400 rounded-xl text-sm font-bold shadow-md shadow-amber-500/20 transition-all flex items-center justify-center">
+                    class="px-6 py-2.5 text-black bg-amber-500 hover:bg-amber-400 rounded-xl text-sm font-bold shadow-md shadow-amber-500/20 transition-colors flex items-center justify-center">
                 查詢歷史
             </button>
         </div>
@@ -29,7 +29,7 @@
             <span :class="isDark ? 'text-[#9CA3AF]' : 'text-slate-500'">熱門速查:</span>
             <button v-for="t in ['2330', '2634', '2454', '2059', '2301', 'DXYZ', 'RKLB', 'NVDA']" :key="t"
                     @click="searchTicker = t; loadHistory()"
-                    class="px-2.5 py-0.5 rounded-lg border num-font font-bold transition-all text-xs"
+                    class="px-2.5 py-0.5 rounded-lg border num-font font-bold transition-colors text-xs"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-400 hover:bg-[#262626]' : 'bg-[#F4F4F6] border-[#E5E7EB] text-slate-700 hover:bg-white'">
                 {{ t }}
             </button>
@@ -39,7 +39,7 @@
     <!-- ================= 2. COMPANY DETAILS & INTELLIGENCE DOSSIER (4-IN-1 HUB) ================= -->
     <div v-if="resolvedTicker"
          :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
-         class="p-5 sm:p-6 rounded-2xl border space-y-4 transition-all">
+         class="p-5 sm:p-6 rounded-2xl border space-y-4 transition-colors">
 
         <!-- Header: Company Identity & Fold Toggle -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b"
@@ -60,13 +60,13 @@
                 <!-- Watchlist Star Toggle -->
                 <button type="button"
                         @click.stop="toggleWatchlist(resolvedTicker)"
-                        class="min-h-[44px] min-w-[44px] px-2.5 py-1 rounded-xl border text-sm font-bold transition-all flex items-center space-x-1 cursor-pointer select-none"
+                        class="min-h-[44px] min-w-[44px] px-2.5 py-1 rounded-xl border text-sm font-bold transition-colors flex items-center space-x-1 cursor-pointer select-none"
                         :class="isWatchlisted(resolvedTicker)
                             ? (isDark ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-amber-100 border-amber-500 text-amber-950')
                             : (isDark ? 'bg-[#16181D] border-[#262626] text-slate-400 hover:text-white' : 'bg-[#FFFDF7] border-[#6B5B38] text-slate-600 hover:text-slate-900')"
                         :title="isWatchlisted(resolvedTicker) ? '從自選清單移除' : '加入自選清單'"
                         :aria-label="isWatchlisted(resolvedTicker) ? '從自選清單移除' : '加入自選清單'">
-                    <span>{{ isWatchlisted(resolvedTicker) ? '★' : '☆' }}</span>
+                    <span class="material-symbols-outlined text-[18px] leading-none" :class="isWatchlisted(resolvedTicker) ? 'fill text-amber-500' : ''" aria-hidden="true">star</span>
                     <span>{{ isWatchlisted(resolvedTicker) ? '已在自選' : '加自選' }}</span>
                 </button>
 
@@ -100,7 +100,7 @@
 
             <!-- Right: Expand/Collapse Details Toggle -->
             <button @click="toggleHistoryDetails()"
-                    class="px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center space-x-1.5 self-start sm:self-auto shadow-sm"
+                    class="px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-bold transition-colors flex items-center space-x-1.5 self-start sm:self-auto shadow-sm"
                     :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                 <span class="material-symbols-outlined text-[17px] leading-none">{{ historyDetailsCollapsed ? 'unfold_more' : 'unfold_less' }}</span>
                 <span>{{ historyDetailsCollapsed ? '展開個股詳情' : '收合個股詳情' }}</span>
@@ -209,7 +209,7 @@
                         <button v-for="(down, didx) in (historyCompanyData.company_network.relationships?.downstream || []).slice(0, 8)" :key="'h-down-'+didx"
                                 @click="down.code ? searchTickerHistory(down.ticker || down.code) : null"
                                 :disabled="!down.is_listed"
-                                class="px-3 py-1 rounded-lg text-xs sm:text-sm border font-bold inline-flex items-center space-x-1.5 transition-all"
+                                class="px-3 py-1 rounded-lg text-xs sm:text-sm border font-bold inline-flex items-center space-x-1.5 transition-colors"
                                 :class="down.is_listed ? (isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400 cursor-pointer' : 'bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100 cursor-pointer') : (isDark ? 'bg-[#1e2025] border-[#2a2c33] text-slate-400 cursor-default' : 'bg-slate-100 border-slate-200 text-slate-700 cursor-default')">
                             <span>{{ down.name }}</span>
                             <span v-if="down.code" class="text-xs font-mono font-bold px-1.5 py-0.2 rounded" :class="isDark ? 'bg-emerald-500/20 text-emerald-200' : 'bg-emerald-200 text-emerald-900'">{{ down.code }}</span>
@@ -232,7 +232,7 @@
                     <div class="space-y-2">
                         <a v-for="(news, nidx) in historyCompanyData.recent_news.slice(0, 3)" :key="nidx"
                            :href="news.url" target="_blank" rel="noopener"
-                           class="block p-3 rounded-xl border text-xs sm:text-sm font-bold leading-normal transition-all truncate hover:underline"
+                           class="block p-3 rounded-xl border text-xs sm:text-sm font-bold leading-normal transition-colors truncate hover:underline"
                            :class="isDark ? 'bg-[#16181D] border-[#262626] text-amber-300 hover:border-amber-500' : 'bg-[#F4F4F6] border-[#E5E7EB] text-amber-900 hover:bg-white'">
                             • {{ news.title }}
                         </a>
@@ -243,26 +243,26 @@
                 <div class="pt-3 border-t flex flex-wrap items-center gap-2.5 text-xs sm:text-sm font-bold" :class="isDark ? 'border-[#262626]' : 'border-[#E5E7EB]'">
                     <button v-if="historyCompanyData?.company_network"
                             @click.stop="setHistoryDetailSubTab('network')"
-                            class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                            class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
                             :class="isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100'">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_tree</span>
                         <span>股權拓撲圖</span>
                     </button>
                     <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.company_tender"
                             @click.stop="setHistoryDetailSubTab('tender')"
-                            class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                            class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
                             :class="isDark ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
                         <span>政府標案情報</span>
                     </button>
                     <a v-if="historyCompanyData?.links?.yahoo" :href="historyCompanyData.links.yahoo" target="_blank" rel="noopener"
-                       class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                       class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                         <span>Yahoo 奇摩</span>
                         <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
                     </a>
                     <a v-if="historyCompanyData?.links?.goodinfo" :href="historyCompanyData.links.goodinfo" target="_blank" rel="noopener"
-                       class="px-3 py-1.5 rounded-lg border transition-all flex items-center space-x-1 shadow-sm"
+                       class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
                        :class="isDark ? 'bg-[#16181D] border-[#262626] text-slate-200 hover:text-white hover:border-amber-500' : 'bg-white border-[#E5E7EB] text-slate-800 hover:bg-[#F4F4F6]'">
                         <span>Goodinfo! 股市資訊網</span>
                         <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
@@ -303,7 +303,7 @@
                                 </span>
                             </div>
                             <a :href="historyCompanyData.company_network.web_url" target="_blank" rel="noopener"
-                               class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all shadow-sm flex items-center justify-center space-x-1 shrink-0">
+                               class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-black bg-amber-500 hover:bg-amber-400 transition-colors shadow-sm flex items-center justify-center space-x-1 shrink-0">
                                 <span class="material-symbols-outlined text-[17px] leading-none">account_tree</span>
                                 <span>開啟互動圖譜</span>
                                 <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
@@ -355,13 +355,13 @@
                             </div>
                             <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                                 <div v-for="(down, didx) in historyCompanyData.company_network.relationships.downstream" :key="'net-down-'+didx"
-                                     class="p-2.5 rounded-lg border flex items-center justify-between text-xs sm:text-sm transition-all"
+                                     class="p-2.5 rounded-lg border flex items-center justify-between text-xs sm:text-sm transition-colors"
                                      :class="down.is_listed ? (isDark ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40' : 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300') : (isDark ? 'bg-[#181A22] border-[#262833]' : 'bg-white border-slate-200')">
                                     <span class="font-bold truncate mr-2 text-xs sm:text-sm" :class="isDark ? 'text-slate-200' : 'text-slate-800'" :title="down.name">
                                         {{ down.name }}
                                     </span>
                                     <button v-if="down.code" @click="searchTickerHistory(down.ticker || down.code)"
-                                            class="px-2 py-0.5 rounded text-xs font-mono font-black shrink-0 transition-all"
+                                            class="px-2 py-0.5 rounded text-xs font-mono font-black shrink-0 transition-colors"
                                             :class="isDark ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40' : 'bg-emerald-200 text-emerald-900 hover:bg-emerald-300'"
                                             title="點擊載入此標的歷史走勢">
                                         {{ down.code }} ↗
@@ -374,7 +374,7 @@
 
                     <!-- SVG 拓撲圖譜 (官方 SVG 向量架構) -->
                     <div v-if="historyCompanyData.company_network.image_url"
-                         class="p-4 sm:p-5 rounded-xl border space-y-3 transition-all mt-3"
+                         class="p-4 sm:p-5 rounded-xl border space-y-3 transition-colors mt-3"
                          :class="isDark ? 'bg-[#14161C] border-[#22242B]' : 'bg-slate-50 border-slate-200'">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2 text-sm sm:text-base font-black text-amber-500">
@@ -382,7 +382,7 @@
                                 <span>集團股權拓撲圖譜 (官方 SVG 即時向量架構)</span>
                             </div>
                             <a :href="historyCompanyData.company_network.image_url" target="_blank" rel="noopener"
-                               class="px-3 py-1 rounded-lg text-xs sm:text-sm font-bold transition-all border inline-flex items-center space-x-1"
+                               class="px-3 py-1 rounded-lg text-xs sm:text-sm font-bold transition-colors border inline-flex items-center space-x-1"
                                :class="isDark ? 'bg-[#181A22] border-[#262833] text-amber-300 hover:border-amber-500' : 'bg-white border-slate-200 text-amber-900 hover:border-amber-400'">
                                 <span>檢視原圖</span>
                                 <span class="material-symbols-outlined text-[14px] leading-none">open_in_new</span>
@@ -714,7 +714,7 @@
                 <!-- 真實股價 (海軍藍/天藍) -->
                 <button type="button" @click="togglePriceChartSeries('price')"
                         title="點擊切換顯示真實股價"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.price ? (isDark ? 'bg-blue-500/20 border-blue-500/60 text-blue-300' : 'bg-blue-50 border-blue-400 text-blue-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 rounded-full bg-[#1D4ED8] dark:bg-[#60A5FA] inline-block shadow-sm"></span>
                     <span>真實股價</span>
@@ -723,7 +723,7 @@
                 <!-- Timestral 目標價 (濃郁琥珀橙) -->
                 <button type="button" @click="togglePriceChartSeries('timestral')"
                         title="點擊切換顯示 Timestral 預測目標價 (P50)"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.timestral ? (isDark ? 'bg-amber-500/20 border-amber-500/60 text-amber-300' : 'bg-amber-50 border-amber-400 text-amber-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 rounded-sm bg-[#D97706] dark:bg-[#F59E0B] inline-block shadow-sm"></span>
                     <span>Timestral 目標價</span>
@@ -732,7 +732,7 @@
                 <!-- Timestral P10~P90 蒙地卡羅區間 -->
                 <button type="button" @click="togglePriceChartSeries('timestralBands')"
                         title="點擊切換顯示 Timestral P10~P90 蒙地卡羅風控分位數區間"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.timestralBands ? (isDark ? 'bg-amber-500/20 border-amber-400/60 text-amber-200' : 'bg-amber-100 border-amber-400 text-amber-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 rounded-sm bg-[#D97706]/30 dark:bg-[#F59E0B]/30 border border-[#D97706] dark:border-[#F59E0B] inline-block"></span>
                     <span>P10~P90 區間</span>
@@ -741,7 +741,7 @@
                 <!-- TimesFM 目標價 (皇家深紫) -->
                 <button type="button" @click="togglePriceChartSeries('timesfm')"
                         title="點擊切換顯示 TimesFM 預測目標價"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.timesfm ? (isDark ? 'bg-purple-500/20 border-purple-500/60 text-purple-300' : 'bg-purple-50 border-purple-400 text-purple-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 rounded-sm bg-[#7C3AED] dark:bg-[#C084FC] inline-block shadow-sm transform rotate-45"></span>
                     <span>TimesFM 目標價</span>
@@ -749,7 +749,7 @@
 
                 <button type="button" @click="togglePriceChartSeries('moirai')" :aria-pressed="priceChartVisibility.moirai"
                         title="點擊切換顯示 MOIRAI-2 預測目標價"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.moirai ? (isDark ? 'bg-teal-500/20 border-teal-500/60 text-teal-300' : 'bg-teal-50 border-teal-400 text-teal-900') : (isDark ? 'border-slate-700 text-slate-400' : 'border-slate-300 text-slate-600')">
                     <span class="w-2.5 h-2.5 rounded-full bg-teal-600 dark:bg-teal-400 inline-block"></span>
                     <span>MOIRAI-2 目標價</span>
@@ -758,7 +758,7 @@
                 <!-- 雙模型平均目標價 (深松石綠) -->
                 <button type="button" @click="togglePriceChartSeries('resonance')"
                         title="點擊切換顯示雙模型平均目標價 (TimesFM & Timestral 均值)"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.resonance ? (isDark ? 'bg-teal-500/20 border-teal-500/60 text-teal-300' : 'bg-teal-50 border-teal-400 text-teal-900') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-2.5 bg-[#0F766E] dark:bg-[#2DD4BF] inline-block shadow-sm transform rotate-45"></span>
                     <span>雙模型平均</span>
@@ -767,7 +767,7 @@
                 <!-- MA60 季線 (深石板灰) -->
                 <button type="button" @click="togglePriceChartSeries('ma60')"
                         title="點擊切換顯示 MA60 季線"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-sm"
                         :class="priceChartVisibility.ma60 ? (isDark ? 'bg-slate-700/40 border-slate-500 text-slate-200' : 'bg-slate-100 border-slate-400 text-slate-800') : (isDark ? 'opacity-40 border-transparent bg-transparent text-slate-500 line-through' : 'opacity-40 border-transparent bg-transparent text-slate-400 line-through')">
                     <span class="w-2.5 h-0.5 bg-[#475569] dark:bg-[#94A3B8] inline-block"></span>
                     <span>MA60 季線</span>
@@ -809,7 +809,7 @@
                 <button type="button" @click="setPriceChartRange('22')"
                         :aria-pressed="priceChartRange === '22'"
                         title="近 1 個月交易日 (約 22 根 K 棒)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-colors shadow-sm"
                         :class="priceChartRange === '22'
                             ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
                             : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
@@ -818,7 +818,7 @@
                 <button type="button" @click="setPriceChartRange('45')"
                         :aria-pressed="priceChartRange === '45'"
                         title="近 2 個月交易日 (約 45 根 K 棒，聚焦近期 AI 密集預測)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-colors shadow-sm"
                         :class="priceChartRange === '45'
                             ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
                             : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
@@ -827,7 +827,7 @@
                 <button type="button" @click="setPriceChartRange('66')"
                         :aria-pressed="priceChartRange === '66'"
                         title="近 1 季交易日 (約 66 根 K 棒)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-colors shadow-sm"
                         :class="priceChartRange === '66'
                             ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
                             : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
@@ -836,7 +836,7 @@
                 <button type="button" @click="setPriceChartRange('130')"
                         :aria-pressed="priceChartRange === '130'"
                         title="半年交易日 (約 130 根 K 棒)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-colors shadow-sm"
                         :class="priceChartRange === '130'
                             ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
                             : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
@@ -845,7 +845,7 @@
                 <button type="button" @click="setPriceChartRange('ALL')"
                         :aria-pressed="priceChartRange === 'ALL'"
                         title="全部歷史交易日"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-all shadow-sm"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-bold transition-colors shadow-sm"
                         :class="priceChartRange === 'ALL'
                             ? (isDark ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-amber-100 border-amber-500 text-amber-900')
                             : (isDark ? 'bg-[#14151B] border-[#262626] text-slate-400 hover:text-slate-200 hover:border-slate-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900')">
@@ -857,35 +857,35 @@
             <div class="flex items-center space-x-1 sm:space-x-1.5 text-xs">
                 <button type="button" @click="zoomPriceChartIn()"
                         title="放大檢視 (或於圖表滾動滑鼠滾輪)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-colors shadow-sm flex items-center space-x-0.5"
                         :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
                     <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">zoom_in</span>
                     <span>放大</span>
                 </button>
                 <button type="button" @click="zoomPriceChartOut()"
                         title="縮小檢視"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-colors shadow-sm flex items-center space-x-0.5"
                         :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
                     <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">zoom_out</span>
                     <span>縮小</span>
                 </button>
                 <button type="button" @click="panPriceChartLeft()"
                         title="向過去歷史平移 (或按住圖表向右拖曳)"
-                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-colors shadow-sm flex items-center space-x-0.5"
                         :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
                     <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">chevron_left</span>
                     <span>左移</span>
                 </button>
                 <button type="button" @click="panPriceChartRight()"
                         title="向最新日期平移 (或按住圖表向左拖曳)"
-                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        class="px-2 py-0.5 sm:px-2 sm:py-1 rounded-md border text-xs font-medium transition-colors shadow-sm flex items-center space-x-0.5"
                         :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-white hover:bg-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
                     <span>右移</span>
                     <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">chevron_right</span>
                 </button>
                 <button type="button" @click="resetPriceChartZoom()"
                         title="重置為全部交易日區間 (或雙擊圖表)"
-                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-all shadow-sm flex items-center space-x-0.5"
+                        class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border text-xs font-medium transition-colors shadow-sm flex items-center space-x-0.5"
                         :class="isDark ? 'bg-[#14151B] border-[#262626] text-slate-300 hover:text-amber-400 hover:border-amber-500/50' : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-amber-700 hover:border-amber-300'">
                     <span class="material-symbols-outlined text-[15px] leading-none" aria-hidden="true">restart_alt</span>
                     <span>重置</span>
@@ -934,7 +934,7 @@
                         @click="loadHistoryDecision(resolvedTicker || searchTicker, historyRequestId, true)"
                         :disabled="historyDecisionLoading"
                         title="強制重新評估"
-                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center space-x-1 shadow-sm disabled:opacity-50"
+                        class="px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors flex items-center space-x-1 shadow-sm disabled:opacity-50"
                         :class="isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'">
                     <span class="material-symbols-outlined text-[15px] leading-none" :class="{ 'animate-spin': historyDecisionLoading }">refresh</span>
                     <span>{{ historyDecisionLoading ? '評估中...' : '重新評估' }}</span>
@@ -1017,7 +1017,7 @@
                             <span class="num-font font-bold">{{ Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.strong_buy) || 0) * 100) }}%</span>
                         </div>
                         <div class="w-full rounded-full h-1.5 overflow-hidden" :class="isDark ? 'bg-slate-700' : 'bg-slate-200'">
-                            <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                            <div class="bg-emerald-500 h-1.5 rounded-full transition-[width] duration-300"
                                  :style="{ width: Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.strong_buy) || 0) * 100) + '%' }"></div>
                         </div>
                     </div>
@@ -1030,7 +1030,7 @@
                             <span class="num-font font-bold">{{ Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.buy) || 0) * 100) }}%</span>
                         </div>
                         <div class="w-full rounded-full h-1.5 overflow-hidden" :class="isDark ? 'bg-slate-700' : 'bg-slate-200'">
-                            <div class="bg-teal-500 h-1.5 rounded-full transition-all duration-300"
+                            <div class="bg-teal-500 h-1.5 rounded-full transition-[width] duration-300"
                                  :style="{ width: Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.buy) || 0) * 100) + '%' }"></div>
                         </div>
                     </div>
@@ -1043,7 +1043,7 @@
                             <span class="num-font font-bold">{{ Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.hold_watch) || 0) * 100) }}%</span>
                         </div>
                         <div class="w-full rounded-full h-1.5 overflow-hidden" :class="isDark ? 'bg-slate-700' : 'bg-slate-200'">
-                            <div class="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                            <div class="bg-amber-500 h-1.5 rounded-full transition-[width] duration-300"
                                  :style="{ width: Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.hold_watch) || 0) * 100) + '%' }"></div>
                         </div>
                     </div>
@@ -1056,7 +1056,7 @@
                             <span class="num-font font-bold">{{ Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.avoid) || 0) * 100) }}%</span>
                         </div>
                         <div class="w-full rounded-full h-1.5 overflow-hidden" :class="isDark ? 'bg-slate-700' : 'bg-slate-200'">
-                            <div class="bg-rose-500 h-1.5 rounded-full transition-all duration-300"
+                            <div class="bg-rose-500 h-1.5 rounded-full transition-[width] duration-300"
                                  :style="{ width: Math.round(((historyDecisionVerdict.action_probabilities && historyDecisionVerdict.action_probabilities.avoid) || 0) * 100) + '%' }"></div>
                         </div>
                     </div>
@@ -1111,7 +1111,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Card 1: TimesFM -->
-            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-colors"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
                      modelScorecard.timesfm.isLeader ? (isDark ? 'ring-1 ring-purple-500/50' : 'ring-2 ring-purple-500') : ''
@@ -1177,7 +1177,7 @@
             </div>
 
             <!-- Card 2: Timestral -->
-            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-colors"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
                      modelScorecard.timestral.isLeader ? (isDark ? 'ring-1 ring-amber-500/50' : 'ring-2 ring-amber-500') : ''
@@ -1243,7 +1243,7 @@
             </div>
 
             <!-- Card 3: MOIRAI-2 -->
-            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-all"
+            <div class="p-4 rounded-xl border space-y-3 relative overflow-hidden transition-colors"
                  :class="[
                      isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-slate-50 border-slate-200',
                      modelScorecard.moirai.isLeader ? (isDark ? 'ring-1 ring-sky-500/50' : 'ring-2 ring-sky-500') : ''
@@ -1341,7 +1341,7 @@
             </thead>
             <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                 <tr v-for="row in dailyHistoryRows" :key="row.date"
-                    :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'" class="transition-all">
+                    :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'" class="transition-colors">
                     <!-- 預測日期 -->
                     <td class="p-3 num-font font-bold text-xs sm:text-sm whitespace-nowrap" :class="isDark ? 'text-slate-300' : 'text-slate-700'">
                         {{ row.date }}
@@ -1719,7 +1719,7 @@
                 </thead>
                 <tbody class="divide-y" :class="isDark ? 'divide-[#262626] text-slate-200' : 'divide-[#E5E7EB] text-slate-800'">
                     <tr v-for="row in tickerInstHistory" :key="row.date"
-                        :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'" class="transition-all">
+                        :class="isDark ? 'hover:bg-[#16181D]' : 'hover:bg-[#F4F4F6]'" class="transition-colors">
                         <td class="p-3 num-font font-bold sticky left-0 z-10 whitespace-nowrap shadow-sm" :class="isDark ? 'bg-[#0D0E11] text-slate-300' : 'bg-white text-slate-700'">{{ row.date }}</td>
                         <td class="p-3 text-right num-font font-bold"
                             :class="row.foreign_net > 0 ? 'text-emerald-400' : (row.foreign_net < 0 ? 'text-rose-500' : 'opacity-40')">
@@ -1751,7 +1751,7 @@
 
     <!-- Foreign Stock Friendly Note for Institutional Flows -->
     <div v-else-if="!historyLoading && !isTwStock(resolvedTicker || searchTicker) && (historyRecords.length > 0 || hasSearched)"
-         class="p-4 rounded-2xl border flex items-center space-x-3 transition-all"
+         class="p-4 rounded-2xl border flex items-center space-x-3 transition-colors"
          :class="isDark ? 'bg-[#16181D] border-blue-900/40 text-blue-300' : 'bg-blue-50/80 border-blue-200 text-blue-950'">
         <span class="material-symbols-outlined text-[24px] text-blue-500 shrink-0">info</span>
         <div class="text-xs sm:text-sm leading-relaxed font-medium">
@@ -1799,7 +1799,7 @@
     </div>
 
     <!-- ================= 6. ALL-MARKET FORECAST ACCURACY LEADERBOARD (COLLAPSIBLE) ================= -->
-    <section class="rounded-2xl border transition-all overflow-hidden"
+    <section class="rounded-2xl border transition-colors overflow-hidden"
              :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'"
              aria-labelledby="performance-heading">
         <!-- Collapsible Toggle Header -->
@@ -1832,12 +1832,12 @@
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div class="flex items-center gap-1.5 border-b pb-2 sm:border-b-0 sm:pb-0" role="group" aria-label="選擇排行榜">
                     <button @click="performanceView = 'stocks'" :aria-pressed="performanceView === 'stocks'"
-                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all"
+                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-colors"
                             :class="performanceView === 'stocks' ? 'bg-amber-500 text-slate-950 shadow-sm' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100')">
                         股票可信榜
                     </button>
                     <button @click="performanceView = 'models'" :aria-pressed="performanceView === 'models'"
-                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all"
+                            class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-colors"
                             :class="performanceView === 'models' ? 'bg-amber-500 text-slate-950 shadow-sm' : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100')">
                         模型戰績榜
                     </button>
