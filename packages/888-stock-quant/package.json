@@ -4,7 +4,7 @@
   "description": "Multi-agent AI Skill installer & zero-dependency quant brain CLI for 888 Stock Quant (AGY, Codex, OpenCode, Hermes, OpenClaw, Claude Code, OMP).",
   "type": "module",
   "bin": {
-    "888-stock-quant": "./bin/cli.js"
+    "888-stock-quant": "bin/cli.js"
   },
   "files": [
     "bin/",
