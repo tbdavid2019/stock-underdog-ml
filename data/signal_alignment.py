@@ -429,6 +429,23 @@ def compute_signal_alignment(ticker: str, db: Optional[DuckDBManager] = None) ->
                 alignment_status = "mixed"
             final_score = round(sum(active_scores) / len(active_scores), 3)
 
+    # Optional MOPS context for Taiwan equities (informational & catalyst enrichment)
+    mops_context: Optional[Dict[str, Any]] = None
+    if market == "TW":
+        try:
+            rev_list = db.get_monthly_revenue(canonical, limit=1) if hasattr(db, "get_monthly_revenue") else []
+            ev_list = db.get_mops_events(canonical, limit=5) if hasattr(db, "get_mops_events") else []
+            if rev_list or ev_list:
+                from data.mops_fetcher import MOPSFetcher
+                rev_latest = rev_list[0] if rev_list else None
+                mops_context = {
+                    "latest_revenue": rev_latest,
+                    "recent_events": ev_list,
+                    "factor_summary": MOPSFetcher.build_factor_summary(rev_latest, ev_list),
+                }
+        except Exception as e:
+            logger.debug(f"Signal alignment MOPS context skipped for {canonical}: {e}")
+
     return {
         "ticker": canonical,
         "market": market,
@@ -437,5 +454,6 @@ def compute_signal_alignment(ticker: str, db: Optional[DuckDBManager] = None) ->
         "active_sources_count": len(active_scores),
         "total_applicable_sources": len(applicable_sources),
         "dimensions": dimensions,
+        "mops_context": mops_context,
         "computed_at": now_utc.isoformat()
     }

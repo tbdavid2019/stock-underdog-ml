@@ -6,6 +6,7 @@ Provides native AI Agent Tools for Claude Desktop, Cursor, Antigravity, Open-Web
 Connects directly to the embedded DuckDB high-speed quantitative time-series database.
 """
 
+import json
 import os
 import sys
 import time
@@ -820,7 +821,7 @@ def get_portfolio_risk_xray(tickers: List[str], window: int = 252, as_of_date: O
 
 @mcp.tool(
     name="get_canary_loader_health",
-    description="取得上游 8 大資料源 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv) 隔離金絲雀健康巡檢快照。僅讀取本地已遮罩快照 (data/cache/canary_health_latest.json)，零生產 DuckDB 連線、零即時外部連線風暴。為唯讀安全工具。"
+    description="取得上游 9 大資料源 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv, MOPS) 隔離金絲雀健康巡檢快照。僅讀取本地已遮罩快照 (data/cache/canary_health_latest.json)，零生產 DuckDB 連線、零即時外部連線風暴。為唯讀安全工具。"
 )
 def get_canary_loader_health() -> Dict[str, Any]:
     """
@@ -843,6 +844,52 @@ def get_canary_loader_health() -> Dict[str, Any]:
         "success": True,
         "data": data
     }
+
+
+@mcp.tool(
+    name="get_tw_mops_intel",
+    description="查詢台股公開資訊觀測站 (MOPS) 重大訊息催化（庫藏股、資本支出擴產、現增/私募稀釋警示）與最新月營收動能（MoM / YoY / 累計年增）。傳入 ticker 查個股；未傳入則回傳全市場重點催化與營收高成長排行。"
+)
+def get_tw_mops_intel(ticker: Optional[str] = None, limit: int = 20) -> Dict[str, Any]:
+    """Query Taiwan MOPS material announcements and monthly revenue momentum from DuckDB."""
+    from data.mops_fetcher import MOPSFetcher
+    clamped_limit = min(50, max(1, int(limit or 20)))
+    if ticker:
+        raw_t = str(ticker).strip()
+        clean_t = raw_t.upper()
+        if hasattr(db, "resolve_ticker"):
+            try:
+                resolved = db.resolve_ticker(raw_t)
+                if isinstance(resolved, dict) and resolved.get("ticker"):
+                    clean_t = str(resolved["ticker"]).strip().upper()
+            except Exception:
+                pass
+        if clean_t.isdigit() and len(clean_t) in (4, 5, 6):
+            clean_t = f"{clean_t}.TW"
+        if not clean_t.endswith((".TW", ".TWO")):
+            return {
+                "success": True,
+                "ticker": clean_t,
+                "applicable": False,
+                "latest_revenue": None,
+                "revenue_history": [],
+                "events": [],
+                "factor_summary": None,
+            }
+        revs = db.get_monthly_revenue(clean_t, limit=12)
+        events = db.get_mops_events(clean_t, limit=clamped_limit)
+        latest_rev = revs[0] if revs else None
+        return {
+            "success": True,
+            "ticker": clean_t,
+            "applicable": True,
+            "latest_revenue": latest_rev,
+            "revenue_history": revs,
+            "events": events,
+            "factor_summary": MOPSFetcher.build_factor_summary(latest_rev, events),
+        }
+    highlights = db.get_mops_highlights(limit=clamped_limit)
+    return {"success": True, **highlights}
 
 
 if __name__ == "__main__":

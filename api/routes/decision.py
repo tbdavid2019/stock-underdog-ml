@@ -8,8 +8,7 @@ and checking health of Clef primary and fallback endpoints.
 import os
 import secrets
 import time
-from collections import defaultdict
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Literal
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from pydantic import BaseModel, Field
 
@@ -26,7 +25,6 @@ decision_service = DecisionService(clef_client=clef_client, db=db)
 # Thread-safe sliding window rate limiter per client IP
 RATE_LIMIT_WINDOW_SECONDS = 60
 MAX_RATE_LIMIT_STORE_ENTRIES = 2000
-_RATE_LIMIT_STORE: Dict[str, list] = defaultdict(list)
 DEFAULT_RATE_LIMIT_PER_MIN = int(os.getenv("DECISION_RATE_LIMIT_PER_MIN", "60"))
 
 decision_limiter = SlidingWindowRateLimiter(
@@ -34,12 +32,11 @@ decision_limiter = SlidingWindowRateLimiter(
     window_seconds=RATE_LIMIT_WINDOW_SECONDS,
     max_entries=MAX_RATE_LIMIT_STORE_ENTRIES
 )
+_RATE_LIMIT_STORE = decision_limiter._store
 
 
 def _prune_rate_limit_store(now: float):
-    expired = [ip for ip, timestamps in _RATE_LIMIT_STORE.items() if not timestamps or now - timestamps[-1] >= RATE_LIMIT_WINDOW_SECONDS]
-    for ip in expired:
-        _RATE_LIMIT_STORE.pop(ip, None)
+    decision_limiter.prune(now)
 
 
 def _resolve_client_ip(request: Request) -> str:
@@ -63,7 +60,7 @@ def verify_decision_access(
     """
     Access control & Rate Limiting for remote decision inference.
     1. If DECISION_API_KEY or CLEF_API_KEY is configured, enforces valid bearer/header token.
-    2. Enforces sliding window rate limit per client IP to protect upstream inference capacity.
+    2. Enforces thread-safe sliding window rate limit per client IP via SlidingWindowRateLimiter.
     """
     # 1. API Key Access Control
     required_key = os.getenv("DECISION_API_KEY") or os.getenv("CLEF_API_KEY")
@@ -80,29 +77,18 @@ def verify_decision_access(
                 detail="Unauthorized: Missing or invalid API key for decision inference"
             )
 
-    # 2. Sliding Window Rate Limiting (Bounded store)
-    client_ip = _resolve_client_ip(request)
-    now = time.time()
-    _prune_rate_limit_store(now)
+    # 2. Thread-safe Sliding Window Rate Limiting
+    decision_limiter.check(request, limit=DEFAULT_RATE_LIMIT_PER_MIN)
 
-    history = _RATE_LIMIT_STORE[client_ip]
-    valid_history = [t for t in history if now - t < RATE_LIMIT_WINDOW_SECONDS]
-    _RATE_LIMIT_STORE[client_ip] = valid_history
 
-    if len(valid_history) >= DEFAULT_RATE_LIMIT_PER_MIN:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded: maximum {DEFAULT_RATE_LIMIT_PER_MIN} requests per minute."
-        )
-
-    _RATE_LIMIT_STORE[client_ip].append(now)
+MacroRegimeLiteral = Literal["bull", "pullback", "defense", "panic", "bear", "neutral", "default"]
 
 
 class EvaluateDecisionRequest(BaseModel):
     ticker: Optional[str] = Field(None, description="Stock ticker (e.g. '2330.TW' or 'NVDA')")
     candidate: Optional[Dict[str, Any]] = Field(None, description="Full candidate dictionary with metrics")
     state: Optional[Dict[str, Any]] = Field(None, description="Custom structured state dictionary")
-    macro_regime: Optional[str] = Field("bull", description="Current market macro regime ('bull', 'pullback', 'defense', 'panic')")
+    macro_regime: Optional[MacroRegimeLiteral] = Field("bull", description="Current market macro regime ('bull', 'pullback', 'defense', 'panic')")
     force_refresh: bool = Field(False, description="Whether to bypass DuckDB & memory cache and force remote LLM inference")
 
 
@@ -188,9 +174,22 @@ def evaluate_stock_decision(req: EvaluateDecisionRequest) -> Dict[str, Any]:
 @router.get("/stock/{ticker}", summary="Get Clef System One decision verdict for a single stock ticker", dependencies=[Depends(verify_public_decision_rate_limit)])
 def get_stock_decision(
     ticker: str,
-    macro_regime: Optional[str] = "bull",
-    force_refresh: bool = False
+    macro_regime: Optional[MacroRegimeLiteral] = "bull",
+    force_refresh: bool = False,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None),
 ) -> Dict[str, Any]:
+    if force_refresh:
+        required_key = os.getenv("DECISION_API_KEY") or os.getenv("CLEF_API_KEY")
+        if required_key:
+            token = x_api_key.strip() if x_api_key else (
+                authorization[7:].strip() if authorization and authorization.startswith("Bearer ") else None
+            )
+            if not token or not secrets.compare_digest(token, required_key.strip()):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Unauthorized: force_refresh requires valid API key"
+                )
     resolved = db.resolve_ticker(ticker) if hasattr(db, "resolve_ticker") else None
     target_ticker = resolved.get("ticker") if resolved and isinstance(resolved, dict) else ticker.strip().upper()
 

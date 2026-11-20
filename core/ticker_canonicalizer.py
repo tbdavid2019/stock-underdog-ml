@@ -93,7 +93,8 @@ class TickerUniverseValidator:
         # 1. 嘗試由 DuckDB market_universe 及 predictions 載入
         try:
             import duckdb
-            target_db = self.db_path or "stocks.duckdb"
+            from core.config import config
+            target_db = self.db_path or config.db.DUCKDB_PATH
             if os.path.exists(target_db):
                 con = duckdb.connect(target_db, read_only=True)
                 try:
@@ -125,12 +126,12 @@ class TickerUniverseValidator:
         # 2. 合併系統核心配置中的 TICKER_SECTOR_MAP
         try:
             from core.config import config
-            for t in config.TICKER_SECTOR_MAP.keys():
+            for t in config.sector.TICKER_SECTOR_MAP.keys():
                 c = canonicalize_ticker(t)
                 if c:
                     whitelist.add(c)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("讀取 TICKER_SECTOR_MAP 失敗: %s", e)
 
         # 3. 合併系統 TW50 / 核心監控快取
         try:

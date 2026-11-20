@@ -6,6 +6,9 @@ import os
 import json
 import pickle
 import logging
+import threading
+import fcntl
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import pandas as pd
@@ -25,6 +28,47 @@ os.makedirs(FUNDAMENTALS_CACHE_DIR, exist_ok=True)
 
 class CacheManager:
     """Unified manager for all disk caches in the application"""
+
+    _WRITE_LOCK = threading.Lock()
+
+    @classmethod
+    @contextmanager
+    def _file_flock(cls, target_path: str):
+        """Process-wide lock serialized via threading.Lock + fcntl.flock for shared read-modify-write files."""
+        lock_path = f"{target_path}.lock"
+        parent = os.path.dirname(lock_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with cls._WRITE_LOCK:
+            fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX)
+                yield
+            finally:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(fd)
+
+    @classmethod
+    def _atomic_write_json(cls, path: str, payload: Any, *, indent: Optional[int] = None) -> None:
+        """Atomically persist JSON payload via same-directory temp file + os.replace."""
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        tmp_path = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=indent)
+                f.flush()
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+            raise
 
     # ========== 1. OHLCV Stock Price DataFrame Cache (Pickle) ==========
 
@@ -95,19 +139,19 @@ class CacheManager:
     @classmethod
     def set_index_cache(cls, index_name: str, stocks: List[str], name_map: Optional[Dict[str, str]] = None):
         try:
-            cache = {}
-            if os.path.exists(INDEX_CACHE_FILE):
-                with open(INDEX_CACHE_FILE, "r", encoding="utf-8") as f:
-                    cache = json.load(f)
+            with cls._file_flock(INDEX_CACHE_FILE):
+                cache = {}
+                if os.path.exists(INDEX_CACHE_FILE):
+                    with open(INDEX_CACHE_FILE, "r", encoding="utf-8") as f:
+                        cache = json.load(f)
 
-            cache[index_name] = {
-                "stocks": stocks,
-                "name_map": name_map or {},
-                "updated_at": datetime.now().isoformat()
-            }
+                cache[index_name] = {
+                    "stocks": stocks,
+                    "name_map": name_map or {},
+                    "updated_at": datetime.now().isoformat()
+                }
 
-            with open(INDEX_CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(cache, f, ensure_ascii=False, indent=2)
+                cls._atomic_write_json(INDEX_CACHE_FILE, cache, indent=2)
             logger.info(f"💾 指數快取已更新: {index_name} ({len(stocks)} 支)")
         except Exception as e:
             logger.warning(f"儲存指數快取失敗 {index_name}: {e}")
@@ -126,9 +170,10 @@ class CacheManager:
             return None
 
         try:
-            mtime = datetime.fromtimestamp(os.path.getmtime(path))
-            if datetime.now() - mtime > timedelta(hours=max_age_hours):
-                return None
+            if max_age_hours is not None:
+                mtime = datetime.fromtimestamp(os.path.getmtime(path))
+                if datetime.now() - mtime > timedelta(hours=max_age_hours):
+                    return None
 
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -142,8 +187,8 @@ class CacheManager:
             return
         path = cls._get_fundamentals_path(ticker)
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False)
+            with cls._WRITE_LOCK:
+                cls._atomic_write_json(path, data)
         except Exception as e:
             logger.warning(f"儲存基本面快取失敗 {ticker}: {e}")
 

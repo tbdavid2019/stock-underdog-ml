@@ -95,12 +95,10 @@ log "Python 路徑: $PYTHON_EXEC"
 log "日誌檔案: $LOG_FILE"
 log "=========================================="
 
-# 自動同步最新程式碼 (CI/CD Auto-Sync)
+# 記錄目前程式碼版本（不在運行中容器掛載目錄下執行 git reset --hard，避免污染熱掛載 API 程序）
 if [ -d ".git" ]; then
-    log "📥 檢查並同步 GitHub 最新程式碼..."
-    git fetch origin main --quiet 2>/dev/null && git reset --hard origin/main --quiet 2>/dev/null
     CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-    log "✅ 程式碼已同步至最新提交: $CURRENT_COMMIT"
+    log "📌 當前程式碼版本: $CURRENT_COMMIT"
 fi
 
 # 檢查 Python 是否可用
@@ -165,12 +163,18 @@ if [ "$TARGET_MARKET" = "close" ]; then
     exit 0
 fi
 
-# Step 1: 執行回測（驗證昨日預測）
+# Step 1: 執行回測與版本化開獎驗證（驗證昨日預測）
 log ""
-log "[1/3] 執行回測驗證..."
+log "[1/3] 執行回測與版本化開獎驗證..."
 if [ "$RUNNER" = "docker" ]; then
+    docker compose run --rm stock-ml python scripts/verify_forecasts.py --all-due 2>&1 | tee -a "$LOG_FILE"
+    VERIFY_EXIT=${PIPESTATUS[0]}
+    [ $VERIFY_EXIT -eq 0 ] || log "⚠️ [WARN] ForecastStore 開獎驗證非零退出 ($VERIFY_EXIT)"
     docker compose run --rm stock-ml backtest 2>&1 | tee -a "$LOG_FILE"
 else
+    $PYTHON_EXEC scripts/verify_forecasts.py --all-due 2>&1 | tee -a "$LOG_FILE"
+    VERIFY_EXIT=${PIPESTATUS[0]}
+    [ $VERIFY_EXIT -eq 0 ] || log "⚠️ [WARN] ForecastStore 開獎驗證非零退出 ($VERIFY_EXIT)"
     $PYTHON_EXEC backtest/backtest.py 2>&1 | tee -a "$LOG_FILE"
 fi
 BACKTEST_EXIT=${PIPESTATUS[0]}
@@ -241,9 +245,9 @@ fi
 log ""
 log "[2.8/3] 巡檢量化價位與分位數條件告警..."
 if [ "$RUNNER" = "docker" ]; then
-    docker compose run --rm stock-ml python -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
+    docker compose run --rm stock-ml python -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(profile_id=None); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
 else
-    $PYTHON_EXEC -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
+    $PYTHON_EXEC -c "from data.alert_evaluator import evaluate_and_dispatch_alerts; res = evaluate_and_dispatch_alerts(profile_id=None); print('告警巡檢完成:', res)" 2>&1 | tee -a "$LOG_FILE"
 fi
 
 # Step 3: 清理舊日誌 (保留最近 30 天)

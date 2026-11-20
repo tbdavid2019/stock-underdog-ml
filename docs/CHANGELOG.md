@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-11-20 (v2.6.4 — 台股 MOPS 重大訊息與月營收因子整合 + EGM 深度體檢系統性補強)
+
+### 新增功能 (Taiwan MOPS Integration)
+- **公開資訊觀測站擷取與量化因子引擎 (`data/mops_fetcher.py`, `data/duckdb_manager.py`)**：
+  - 整合 TWSE OpenAPI (`t187ap04_L` 每日重大訊息、`t187ap05_L` 上市月營收)、TPEx OpenAPI (`mopsfin_t187ap04_O`、`mopsfin_t187ap05_O`) 與 MOPS 即時重訊介面 (`mops.twse.com.tw/mops/api/t05st02`，僅收錄上市 `sii` 與上櫃 `otc`)。
+  - 強化 Point-in-Time 防前瞻設計：嚴格解析民國日期／年月並驗證日曆合法性，缺漏時間的重訊強制以當日 `23:59:59` (`Asia/Taipei`) 建置 `available_at`、無效日期不寫入現時時間，並於 `PipelineOrchestrator` 傳入 `as_of` 同時截斷 `available_at` 與 `published_date`；每個資料源獨立使用原子磁碟快取備援，月營收寫入前清洗 `NaN`/`Inf` 為 SQL `NULL` 且 DuckDB 批次寫入採 `BEGIN TRANSACTION` / `COMMIT` 保護。
+  - 新增 DuckDB 資料表 `tw_mops_events` 與 `tw_monthly_revenue`，並將同步納入 `scripts/sync_twse_market.py` 與第 9 條金絲雀探針 `data/loader_canary.py` (`mops`)。
+- **策略評估、訊號對齊、API、MCP 與抽屜介面整合**：
+  - `evaluators/composite_evaluator.py` 與 `pipeline/orchestrator.py` 在宏觀曝險折減與偏空罰則**之前**套用有上限的 `mops_delta` 與 MOPS 標籤；`data/signal_alignment.py` 為台股補充 `mops_context`。
+  - 新增 REST 端點 `GET /api/v1/market/mops/highlights`、`POST /api/v1/market/mops/sync`（具單飛鎖與速率限制）、`GET /api/v1/market/mops/{ticker}` 與 MCP 工具 `get_tw_mops_intel`（同步至第 33 項原生工具）。
+  - 個股展開抽屜（行動版、桌面表格、桌面卡片）新增台股專屬「公開資訊 / 公開資訊與月營收」子分頁 (`api/templates/partials/_stock_drawer_tabs.html`, `tab_dashboard.html`, `api/static/js/app.js`, `api-client.js`)。
+
+### 修正與安全可靠性強化 (EGM 審查修復)
+- **即時故障修復**：
+  - `mcp_server.py` 補上遺漏之 `import json`，修正 `get_canary_loader_health()` 於快取存在時發生 `NameError`。
+  - `data/cache.py` `get_fundamentals()` 補上 `max_age_hours is not None` 檢查，修復 `FundamentalProvider` 過期快取降級觸發 `TypeError` 靜默失敗問題。
+  - `notifier.py` 與 `core/config.py`：為 Telegram / Discord / SMTP 補齊顯式連線超時、支援 `TELEGRAM_CHANNEL_ID` 與 `TELEGRAM_CHAT_ID` 雙變數、在 HTTP 異常或設定缺失時拋出錯誤（不再靜默假報成功），並移除不存在的 `save_to_mongodb` 匯入。
+  - `api/main.py` 實際啟用 `_ASSET_FINGERPRINT_CACHE`（60 秒 TTL + 執行緒鎖），消除首頁與 `/s/{ticker}` 每次請求重複遍歷與雜湊靜態檔案之 I/O 浪費。
+  - `core/ticker_canonicalizer.py` 改讀 `config.db.DUCKDB_PATH` 與 `config.sector.TICKER_SECTOR_MAP`；移除 `data/podcast_service.py` 365 行不可達死碼；`requirements.txt` 補齊 `jinja2`、`pyyaml`、`beautifulsoup4`、`lxml`。
+- **安全與權限控管**：
+  - `core/netlimiter.py` 新增 `sync_limiter` (6 req/min，含滿載驅逐上限) 與可選 `OPS_API_KEY` 驗證保護 `/sync` 端點，並拆分 `enforce_sync_rate_limit` 避免 `POST /podcast/episodes/{id}/evaluate` 及 `/podcast/batch-evaluate`（強制 `verify_watchlist_write_access`）與 `OPS_API_KEY` 雙金鑰衝突。
+  - `api/routes/decision.py` 統一改用執行緒安全之 `SlidingWindowRateLimiter`、`GET/POST` 嚴格限制 `macro_regime` 允許值集合防範快取破壞與計費繞過，並於設定 `DECISION_API_KEY`/`CLEF_API_KEY` 時拒絕未驗證的 `force_refresh=true`。
+  - `api/routes/earnings_call.py` 對非 `YYYY-MM-DD` 或極端溢位 `ref_date` 回傳 HTTP 422；`data/duckdb_manager.py` 為 `get_row_count` / `export_to_parquet` 加入 `_EXPORTABLE_TABLES` 固定白名單與路徑驗證。
+- **資料正確性、鎖保護與排程治理**：
+  - `data/investing_service.py` 移除寫死的 `"Oct 28, 2026"` 假 FOMC 基準值；`data/clef_client.py` 與 `data/duckdb_manager.py` 為 `decision_verdicts` 擴充 `(ticker, as_of_date, macro_regime)` 主鍵隔離不同宏觀情境並拒絕無情境標籤舊快取命中指定情境。
+  - `data/duckdb_manager.py` `get_latest_predictions()` 依指數解析實際市場 (`TW`/`US`/`JP`) 檢查新鮮度；`data/fetcher.py` 強化 429 熔斷器執行緒鎖、批次下載與 DuckDB 備援涵蓋。
+  - `notifier.py` 補上請求例外 URL 遮罩（防止 Telegram Bot Token / Discord Webhook 外洩於例外日誌）並隔離 Email / Telegram / Discord 各通道錯誤傳遞。
+  - `backtest/paper.py` `PaperLedger` 寫入改用 `core.duckdb_lock.duckdb_write_lock`；`backtest/backtest.py` 保護未設定 Supabase 環境變數時之安全匯入；`database.py` 補回 `timestral_results` 雲端同步；`models/plugins.py` 修正 `Moirai2Plugin` 預設 `checkpoint_revision`；`pipeline/orchestrator.py` 紀錄選用策略載入失敗警訊。
+  - `run_daily.sh` 移除危險的 `git reset --hard origin/main`，納入 `scripts/verify_forecasts.py --all-due`（保留 `PIPESTATUS[0]` 檢查），並以 `profile_id=None` + `record_alert_trigger` 每筆規則專屬 `profile_id` 執行跨設定檔到價告警巡檢；`docker/crontab` 改用共享 `/app/data/storage/.cron_*.lock` 非阻塞互斥鎖避免跨任務飢餓。
+- **快取防污染、並發安全與去重精簡**：
+  - `api/main.py` 為 `/mcp` 與 `/.well-known/mcp.json` 加入 FastMCP 動態工具清單自省並補齊第 33 項原生工具 `get_tw_mops_intel`（同步更新 `llms.txt`、`llms-full.txt`、`/.webmcp/bridge.js` 與 `skills/stock-quant/SKILL.md`）。
+  - `data/fundamentals.py` 於 yfinance 回傳全 `None` 指標時跳過寫入 L1/L2/L3 快取，防止空值污染 24 小時快取；`data/cache.py` 改用執行緒鎖 + `fcntl.flock` + 臨時檔 `os.replace` 跨進程原子寫入 `stock_lists.json` 與基本面 JSON。
+  - `data/company_profile.py` 為 L1 `_CACHE` 全程保護 `_CACHE_LOCK` 並設容量上限（500 筆）及 Yahoo 代號正則校驗；`api/static/js/app.js` 修復展開抽屜快速切換標的／MOPS 子分頁與公司簡介回應交錯覆蓋之競態問題。
+
+---
+
 ## 2026-11-18 (v2.6.3 — 清除過時固定模型數共振遺毒文字與 Agent Hub／npm 同步更新)
 
 ### 修正與清理

@@ -227,3 +227,68 @@
         </div>
     </div>
 </div>
+
+<!-- Subtab: Taiwan MOPS Material Events & Monthly Revenue -->
+<div v-if="drawerActiveSubTab === 'mops'" class="space-y-4">
+    <div v-if="mopsIntelLoading" class="py-8 text-center text-amber-500 animate-pulse text-sm flex items-center justify-center space-x-2">
+        <span class="material-symbols-outlined text-[20px] animate-spin">sync</span>
+        <span>載入公開資訊觀測站 (MOPS) 重大訊息與月營收動能中...</span>
+    </div>
+    <div v-else-if="expandedDrawerData && expandedDrawerData.mops_intel" class="space-y-4">
+        <div v-if="expandedDrawerData.mops_intel.latest_revenue"
+             class="p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-4 gap-3"
+             :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] shadow-sm'">
+            <div>
+                <div class="text-xs text-slate-400">最新營收年月</div>
+                <div class="text-base font-black font-mono text-amber-500">{{ expandedDrawerData.mops_intel.latest_revenue.revenue_ym }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-400">單月營收年增 (YoY)</div>
+                <div class="text-base font-black font-mono"
+                     :class="(expandedDrawerData.mops_intel.latest_revenue.yoy_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                    {{ expandedDrawerData.mops_intel.latest_revenue.yoy_pct != null ? (expandedDrawerData.mops_intel.latest_revenue.yoy_pct >= 0 ? '+' : '') + expandedDrawerData.mops_intel.latest_revenue.yoy_pct + '%' : 'N/A' }}
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-400">單月營收月增 (MoM)</div>
+                <div class="text-base font-black font-mono"
+                     :class="(expandedDrawerData.mops_intel.latest_revenue.mom_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                    {{ expandedDrawerData.mops_intel.latest_revenue.mom_pct != null ? (expandedDrawerData.mops_intel.latest_revenue.mom_pct >= 0 ? '+' : '') + expandedDrawerData.mops_intel.latest_revenue.mom_pct + '%' : 'N/A' }}
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-slate-400">累計營收年增</div>
+                <div class="text-base font-black font-mono"
+                     :class="(expandedDrawerData.mops_intel.latest_revenue.ytd_yoy_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                    {{ expandedDrawerData.mops_intel.latest_revenue.ytd_yoy_pct != null ? (expandedDrawerData.mops_intel.latest_revenue.ytd_yoy_pct >= 0 ? '+' : '') + expandedDrawerData.mops_intel.latest_revenue.ytd_yoy_pct + '%' : 'N/A' }}
+                </div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                近期 MOPS 重大訊息 ({{ (expandedDrawerData.mops_intel.events || []).length }})
+            </div>
+            <div v-if="(expandedDrawerData.mops_intel.events || []).length === 0"
+                 class="py-5 text-center text-xs text-slate-400 border rounded-xl"
+                 :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                暫無已同步之近期重大訊息記錄
+            </div>
+            <div v-else class="space-y-2">
+                <div v-for="ev in expandedDrawerData.mops_intel.events" :key="ev.event_id"
+                     class="p-3 rounded-xl border text-xs space-y-1"
+                     :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="font-mono text-slate-400">{{ ev.speech_date }} {{ ev.speech_time }}</span>
+                        <span v-if="ev.sentiment_tag === 'positive'" class="px-2 py-0.5 rounded font-bold bg-emerald-800 text-white">催化正向</span>
+                        <span v-else-if="ev.sentiment_tag === 'risk'" class="px-2 py-0.5 rounded font-bold bg-rose-700 text-white">稀釋/風險警示</span>
+                    </div>
+                    <div class="font-bold" :class="isDark ? 'text-slate-100' : 'text-slate-900'">{{ ev.subject }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-else class="py-6 text-center text-xs text-slate-400 border rounded-xl"
+         :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+        尚無 MOPS 公開資訊資料，請先執行盤後同步或等待下次排程更新。
+    </div>
+</div>

@@ -1048,7 +1048,6 @@ def format_email_html(
 </body>
 </html>"""
     return full_html
-    return full_html
 
 
 def format_dual_strategy_message(

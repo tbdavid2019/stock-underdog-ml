@@ -1088,6 +1088,13 @@
                             <span class="material-symbols-outlined text-[18px]">notifications_active</span>
                             <span>價位告警</span>
                         </button>
+                        <button v-if="isTwStock(item.ticker)"
+                                @click.stop="drawerActiveSubTab = 'mops'; ensureMopsIntelLoaded(item.ticker)"
+                                class="px-3.5 py-2 min-h-[44px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                                :class="drawerActiveSubTab === 'mops' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-700 hover:text-black')">
+                            <span class="material-symbols-outlined text-[18px]">campaign</span>
+                            <span>公開資訊</span>
+                        </button>
                     </div>
                     <!-- Sub-tab 1: Profile -->
                     <div v-if="drawerActiveSubTab === 'profile'">
@@ -1528,6 +1535,13 @@
                                             :class="drawerActiveSubTab === 'alerts' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
                                         <span class="material-symbols-outlined text-[18px]">notifications_active</span>
                                         <span>量化價位告警</span>
+                                    </button>
+                                    <button v-if="isTwStock(item.ticker)"
+                                            @click="drawerActiveSubTab = 'mops'; ensureMopsIntelLoaded(item.ticker)"
+                                            class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors flex items-center space-x-2 cursor-pointer"
+                                            :class="drawerActiveSubTab === 'mops' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A]') : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')">
+                                        <span class="material-symbols-outlined text-[18px]">campaign</span>
+                                        <span>公開資訊與月營收</span>
                                     </button>
                                 </div>
 
@@ -2392,6 +2406,13 @@
                             :class="drawerActiveSubTab === 'alerts' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
                         <span class="material-symbols-outlined text-[18px]">notifications_active</span>
                         <span>價位告警</span>
+                    </button>
+                    <button v-if="isTwStock(item.ticker)"
+                            @click.stop="drawerActiveSubTab = 'mops'; ensureMopsIntelLoaded(item.ticker)"
+                            class="px-3.5 py-2 min-h-[44px] rounded-xl font-bold text-sm whitespace-nowrap transition-colors flex items-center space-x-1.5 cursor-pointer active:scale-95"
+                            :class="drawerActiveSubTab === 'mops' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                        <span class="material-symbols-outlined text-[18px]">campaign</span>
+                        <span>公開資訊</span>
                     </button>
                 </div>
 

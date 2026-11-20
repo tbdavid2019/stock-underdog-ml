@@ -108,13 +108,13 @@ def dispatch_alert_notification(alert_info: Dict[str, Any]) -> bool:
 
 
 def evaluate_and_dispatch_alerts(
-    profile_id: str = "default",
+    profile_id: Optional[str] = "default",
     db: Optional[DuckDBManager] = None,
     force_dispatch: bool = False
 ) -> Dict[str, Any]:
     """
-    Evaluate all enabled price alerts for profile_id and dispatch notifications.
-    Enforces atomic write-before-dispatch and in-process mutual exclusion.
+    Evaluate all enabled price alerts (for profile_id, or across all profiles when profile_id is None/'*')
+    and dispatch notifications. Enforces atomic write-before-dispatch and in-process mutual exclusion.
     """
     if not _EVALUATOR_LOCK.acquire(blocking=False):
         logger.info("Alert evaluation already in progress in current process, skipping.")
@@ -307,8 +307,9 @@ def evaluate_and_dispatch_alerts(
             if is_triggered:
                 # 3. ATOMIC WRITE: Update DuckDB BEFORE sending push notification
                 alert_id = alert["alert_id"]
+                alert_profile = alert.get("profile_id") or "default"
                 try:
-                    write_ok = db.record_alert_trigger(alert_id, curr_price, profile_id=profile_id, cooldown_minutes=cooldown_min)
+                    write_ok = db.record_alert_trigger(alert_id, curr_price, profile_id=alert_profile, cooldown_minutes=cooldown_min)
                 except DuckDBBusyError:
                     logger.warning(f"DuckDB lock busy while recording alert {alert_id}, aborting dispatch to prevent spam")
                     raise

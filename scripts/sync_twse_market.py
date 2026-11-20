@@ -105,6 +105,15 @@ def main():
     except Exception as e:
         logger.warning(f"⚠️ 法說會時程同步發生異常 (非致命): {e}", exc_info=True)
 
+    # 6. 同步 MOPS 公開資訊觀測站重大訊息與月營收 (tw_mops_events, tw_monthly_revenue)
+    try:
+        from data.mops_fetcher import MOPSFetcher
+        logger.info("📢 開始同步台股 MOPS 重大訊息與月營收...")
+        mops_res = MOPSFetcher(db_manager=db_mgr).sync_to_duckdb()
+        logger.info(f"✅ MOPS 公開資訊同步完成！重訊 {mops_res.get('events', 0)} 筆, 月營收 {mops_res.get('revenues', 0)} 筆")
+    except Exception as e:
+        logger.warning(f"⚠️ MOPS 同步發生異常 (非致命): {e}", exc_info=True)
+
     elapsed = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"✅ 全市場同步完成！共處理 {len(df)} 檔標的，成功寫入/更新 {inserted_count} 筆日 K 記錄 (耗時: {elapsed:.2f} 秒)")
 

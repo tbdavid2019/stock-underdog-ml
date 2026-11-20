@@ -145,8 +145,9 @@ class FundamentalProvider:
                     "ev_ebitda": sanitize_metric(info.get("enterpriseToEbitda"))
                 }
 
-            # Save to L1 memory, L2 DuckDB, and L3 disk
-            if use_cache:
+            # Save to L1 memory, L2 DuckDB, and L3 disk (skip poisoning caches with all-None responses)
+            has_any_metric = any(v is not None for v in result.values())
+            if use_cache and has_any_metric:
                 cls._store_mem_cache(ticker, result, now)
                 try:
                     if DuckDBManager is not None:

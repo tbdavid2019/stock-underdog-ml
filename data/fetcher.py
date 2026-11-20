@@ -8,6 +8,7 @@ import re
 import urllib.request
 import logging
 import requests
+import threading
 import time
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
@@ -447,6 +448,7 @@ class StockFetcher:
     # ========== 2. OHLCV Market Data Fetchers ==========
 
     _stock_fetch_circuit_open_until = 0.0
+    _stock_fetch_circuit_lock = threading.Lock()
 
     @classmethod
     def get_stock_data(
@@ -468,10 +470,19 @@ class StockFetcher:
                 return add_base_indicators(cached)
 
         # 1.1 Check circuit breaker
-        if time.time() < cls._stock_fetch_circuit_open_until:
+        with cls._stock_fetch_circuit_lock:
+            circuit_open = time.time() < cls._stock_fetch_circuit_open_until
+        if circuit_open:
             stale = CacheManager.get_stock_data(ticker, period, max_age_hours=None)
             if stale is not None and not stale.empty:
                 return add_base_indicators(stale)
+            try:
+                from data.duckdb_manager import DuckDBManager
+                db_data = DuckDBManager().get_daily_bars_for_ticker(ticker)
+                if not db_data.empty:
+                    return add_base_indicators(db_data)
+            except Exception as db_e:
+                logger.debug(f"DuckDB circuit-breaker fallback error: {db_e}")
             return pd.DataFrame()
 
         # 2. Download from yfinance
@@ -559,12 +570,25 @@ class StockFetcher:
         if not pending_tickers:
             return results
 
+        with cls._stock_fetch_circuit_lock:
+            batch_circuit_open = time.time() < cls._stock_fetch_circuit_open_until
+        if batch_circuit_open:
+            logger.warning("🚨 Yahoo Finance 熔斷保護作用中，批次行情改由本地快取/DuckDB 備援...")
+            for tk in pending_tickers:
+                df = cls.get_stock_data(tk, period=period, use_cache=use_cache)
+                if not df.empty:
+                    results[tk] = df
+            return results
+
         logger.info(f"🌐 正在批次下載 {len(pending_tickers)} 支股票之行情數據 ({period}，分塊大小: {chunk_size})...")
 
         # Split into chunks of chunk_size
         chunks = [pending_tickers[i:i + chunk_size] for i in range(0, len(pending_tickers), chunk_size)]
 
         for chunk_idx, chunk in enumerate(chunks, 1):
+            with cls._stock_fetch_circuit_lock:
+                if time.time() < cls._stock_fetch_circuit_open_until:
+                    break
             if len(chunks) > 1:
                 logger.info(f"   ▶ 下載分塊 [{chunk_idx}/{len(chunks)}]: 共 {len(chunk)} 支標的...")
             try:
@@ -607,6 +631,11 @@ class StockFetcher:
                                 logger.debug(f"處理批次股票 {tk} 時出錯: {e}")
 
             except Exception as e:
+                err_msg = str(e).lower()
+                if "rate limited" in err_msg or "too many requests" in err_msg or "yfratelimiterror" in err_msg or "429" in err_msg:
+                    logger.warning(f"🚨 批次下載觸發 Yahoo Finance 頻率限制 (429)，開啟行情抓取熔斷保護 600 秒")
+                    with cls._stock_fetch_circuit_lock:
+                        cls._stock_fetch_circuit_open_until = time.time() + 600.0
                 logger.warning(f"⚠️ yfinance 批次分塊 [{chunk_idx}/{len(chunks)}] 下載失敗: {e}")
 
         # 2. Fallback for any missing tickers in batch

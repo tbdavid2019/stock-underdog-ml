@@ -10,6 +10,8 @@ from typing import Any, Mapping
 
 import duckdb
 
+from core.duckdb_lock import duckdb_write_lock
+
 _LOCK = threading.RLock()
 
 
@@ -38,7 +40,7 @@ class PaperLedger:
         self.read_only = read_only
         if not read_only:
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-            with _LOCK, self._connect() as con:
+            with _LOCK, self._write_guard(), self._connect() as con:
                 con.execute("""CREATE TABLE IF NOT EXISTS paper_accounts (
                     account_id VARCHAR PRIMARY KEY, market VARCHAR NOT NULL, currency VARCHAR NOT NULL,
                     initial_cash DOUBLE NOT NULL, cash DOUBLE NOT NULL, created_at TIMESTAMPTZ NOT NULL)""")
@@ -69,13 +71,16 @@ class PaperLedger:
     def _connect(self):
         return duckdb.connect(self.db_path, read_only=self.read_only)
 
+    def _write_guard(self):
+        return duckdb_write_lock(self.db_path)
+
     def create_account(self, account_id: str, *, market: str, currency: str, cash: float) -> None:
         initial = _positive(cash, "initial cash", zero=True)
         if not account_id or market not in {"TW", "US", "JP"} or currency not in {"TWD", "USD", "JPY"}:
             raise ValueError("account requires supported market and currency")
         if {"TW": "TWD", "US": "USD", "JP": "JPY"}[market] != currency:
             raise ValueError("account currency must match market")
-        with _LOCK, self._connect() as con:
+        with _LOCK, self._write_guard(), self._connect() as con:
             row = con.execute("SELECT market,currency,initial_cash FROM paper_accounts WHERE account_id=?", [account_id]).fetchone()
             if row:
                 if row != (market, currency, initial):
@@ -131,7 +136,7 @@ class PaperLedger:
             raise ValueError("filled quantity exceeds risk decision")
         order_json, fill_json, risk_json = _json(order), _json(fill), _json(risk)
         status = "cancelled" if filled == 0 else ("filled" if cancelled == 0 else "partially_filled")
-        with _LOCK, self._connect() as con:
+        with _LOCK, self._write_guard(), self._connect() as con:
             con.execute("BEGIN TRANSACTION")
             try:
                 previous = con.execute("""SELECT o.payload_json,f.payload_json,o.risk_json FROM paper_orders o
@@ -181,7 +186,7 @@ class PaperLedger:
         if not event.get("event_id") or not event.get("source") or event.get("type") not in {"split", "dividend"}:
             raise ValueError("corporate action requires id, source and supported type")
         event_json = _json(event)
-        with _LOCK, self._connect() as con:
+        with _LOCK, self._write_guard(), self._connect() as con:
             con.execute("BEGIN TRANSACTION")
             try:
                 previous = con.execute("SELECT payload_json FROM paper_account_events WHERE account_id=? AND event_id=?", [account_id, event["event_id"]]).fetchone()
@@ -237,7 +242,7 @@ class PaperLedger:
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
             raise ValueError("valuation as_of must be timezone-aware")
         timestamp = timestamp.astimezone(timezone.utc)
-        with _LOCK, self._connect() as con:
+        with _LOCK, self._write_guard(), self._connect() as con:
             con.execute("BEGIN TRANSACTION")
             try:
                 account = con.execute("SELECT market,currency,initial_cash,cash FROM paper_accounts WHERE account_id=?", [account_id]).fetchone()

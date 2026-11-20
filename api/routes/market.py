@@ -5,7 +5,7 @@ import logging
 from typing import Optional, List, Dict, Any, Tuple
 from fastapi import APIRouter, Query, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel
-from core.netlimiter import default_limiter
+from core.netlimiter import default_limiter, verify_sync_rate_limit
 from data.duckdb_manager import DuckDBManager
 from core.market_calendar import MarketCalendar
 from api.schemas import TradingDayStatusResponse, MarketHolidayItem
@@ -31,6 +31,48 @@ _LAST_BROKER_SYNC_CHECK: float = 0.0
 _BROKER_SYNC_LOCK = threading.Lock()
 
 
+def _run_market_sync_job(
+    db: DuckDBManager,
+    lock: threading.Lock,
+    sync_label: str,
+    busy_msg: str,
+    start_msg: str,
+    importer_attr: str,
+    done_verb: str,
+    *,
+    incremental: bool = True,
+    clear_broker_cache: bool = False,
+    error_as_warning: bool = False,
+):
+    """Execute a locked market import job (used by both auto-sync and manual /sync endpoints)."""
+    if not lock.acquire(blocking=False):
+        logger.info(busy_msg)
+        return
+    try:
+        from data.historical_importer import HistoricalImporter
+        logger.info(start_msg)
+        cnt = getattr(HistoricalImporter, importer_attr)(db_mgr=db, incremental=incremental)
+        logger.info(f"✅ [{sync_label}] {done_verb}，更新/處理 {cnt} 筆記錄")
+        with _CACHE_LOCK:
+            _STATS_CACHE.pop("stats", None)
+            if clear_broker_cache:
+                _BROKER_CACHE.clear()
+    except Exception as ex:
+        if error_as_warning:
+            logger.warning(f"⚠️ [{sync_label}] {ex}")
+        else:
+            logger.error(f"❌ [{sync_label}] 同步失敗: {ex}", exc_info=True)
+    finally:
+        lock.release()
+
+
+def _schedule_bg_task(background_tasks: Optional[BackgroundTasks], fn) -> None:
+    if background_tasks is not None:
+        background_tasks.add_task(fn)
+    else:
+        threading.Thread(target=fn, daemon=True).start()
+
+
 def _maybe_auto_sync_institutional(db: DuckDBManager, background_tasks: Optional[BackgroundTasks] = None):
     """
     若檢測到三大法人歷史數據過舊（超過 4 天）或為空，自動在背景觸發增量同步更新 (Self-Healing)
@@ -42,25 +84,19 @@ def _maybe_auto_sync_institutional(db: DuckDBManager, background_tasks: Optional
     _LAST_INST_SYNC_CHECK = now
 
     def _bg_sync():
-        if not _INST_SYNC_LOCK.acquire(blocking=False):
-            logger.info("⏳ 法人籌碼同步作業已在進行中，略過重複啟動")
-            return
-        try:
-            from data.historical_importer import HistoricalImporter
-            logger.info("🔄 [Auto-Sync] 偵測到法人籌碼數據過舊或缺失，啟動背景增量同步...")
-            cnt = HistoricalImporter.import_institutional_flows(db_mgr=db, incremental=True)
-            logger.info(f"✅ [Auto-Sync] 法人籌碼增量同步完成，更新 {cnt} 筆記錄")
-            with _CACHE_LOCK:
-                _STATS_CACHE.pop("stats", None)
-        except Exception as ex:
-            logger.warning(f"⚠️ [Auto-Sync] 自動同步法人籌碼失敗: {ex}")
-        finally:
-            _INST_SYNC_LOCK.release()
+        _run_market_sync_job(
+            db,
+            _INST_SYNC_LOCK,
+            sync_label="Auto-Sync",
+            busy_msg="⏳ 法人籌碼同步作業已在進行中，略過重複啟動",
+            start_msg="🔄 [Auto-Sync] 偵測到法人籌碼數據過舊或缺失，啟動背景增量同步...",
+            importer_attr="import_institutional_flows",
+            done_verb="法人籌碼增量同步完成",
+            incremental=True,
+            error_as_warning=True,
+        )
 
-    if background_tasks is not None:
-        background_tasks.add_task(_bg_sync)
-    else:
-        threading.Thread(target=_bg_sync, daemon=True).start()
+    _schedule_bg_task(background_tasks, _bg_sync)
 
 
 def _maybe_auto_sync_broker(db: DuckDBManager, background_tasks: Optional[BackgroundTasks] = None):
@@ -74,26 +110,20 @@ def _maybe_auto_sync_broker(db: DuckDBManager, background_tasks: Optional[Backgr
     _LAST_BROKER_SYNC_CHECK = now
 
     def _bg_sync():
-        if not _BROKER_SYNC_LOCK.acquire(blocking=False):
-            logger.info("⏳ 券商分點同步作業已在進行中，略過重複啟動")
-            return
-        try:
-            from data.historical_importer import HistoricalImporter
-            logger.info("🔄 [Auto-Sync] 偵測到券商分點數據過舊或缺失，啟動背景增量同步...")
-            cnt = HistoricalImporter.import_broker_trades(db_mgr=db, incremental=True)
-            logger.info(f"✅ [Auto-Sync] 券商分點增量同步完成，更新 {cnt} 筆記錄")
-            with _CACHE_LOCK:
-                _STATS_CACHE.pop("stats", None)
-                _BROKER_CACHE.clear()
-        except Exception as ex:
-            logger.warning(f"⚠️ [Auto-Sync] 自動同步券商分點失敗: {ex}")
-        finally:
-            _BROKER_SYNC_LOCK.release()
+        _run_market_sync_job(
+            db,
+            _BROKER_SYNC_LOCK,
+            sync_label="Auto-Sync",
+            busy_msg="⏳ 券商分點同步作業已在進行中，略過重複啟動",
+            start_msg="🔄 [Auto-Sync] 偵測到券商分點數據過舊或缺失，啟動背景增量同步...",
+            importer_attr="import_broker_trades",
+            done_verb="券商分點增量同步完成",
+            incremental=True,
+            clear_broker_cache=True,
+            error_as_warning=True,
+        )
 
-    if background_tasks is not None:
-        background_tasks.add_task(_bg_sync)
-    else:
-        threading.Thread(target=_bg_sync, daemon=True).start()
+    _schedule_bg_task(background_tasks, _bg_sync)
 
 
 
@@ -344,7 +374,7 @@ def get_ticker_institutional_history(
     return df.to_dict(orient="records")
 
 
-@router.post("/institutional/sync", summary="觸發三大法人籌碼歷史數據同步更新")
+@router.post("/institutional/sync", summary="觸發三大法人籌碼歷史數據同步更新", dependencies=[Depends(verify_sync_rate_limit)])
 def trigger_institutional_sync(
     background_tasks: BackgroundTasks,
     force_full: bool = Query(False, description="是否執行全量同步 (預設為 False 增量同步)"),
@@ -354,27 +384,21 @@ def trigger_institutional_sync(
     觸發上市櫃三大法人歷史買賣超時序 (TWSE & TPEX) 增量更新至 DuckDB。
     非同步背景執行，不阻塞 HTTP 請求。
     """
-    def _do_sync():
-        if not _INST_SYNC_LOCK.acquire(blocking=False):
-            logger.info("⏳ 法人籌碼同步作業已在進行中，略過重複啟動")
-            return
-        try:
-            from data.historical_importer import HistoricalImporter
-            logger.info("🔄 [API Sync] 手動觸發三大法人歷史籌碼同步作業...")
-            cnt = HistoricalImporter.import_institutional_flows(db_mgr=db, incremental=not force_full)
-            logger.info(f"✅ [API Sync] 三大法人籌碼同步完成，處理 {cnt} 筆記錄")
-            with _CACHE_LOCK:
-                _STATS_CACHE.pop("stats", None)
-        except Exception as e:
-            logger.error(f"❌ [API Sync] 三大法人籌碼同步失敗: {e}", exc_info=True)
-        finally:
-            _INST_SYNC_LOCK.release()
-
-    background_tasks.add_task(_do_sync)
+    background_tasks.add_task(
+        _run_market_sync_job,
+        db,
+        _INST_SYNC_LOCK,
+        sync_label="API Sync",
+        busy_msg="⏳ 法人籌碼同步作業已在進行中，略過重複啟動",
+        start_msg="🔄 [API Sync] 手動觸發三大法人歷史籌碼同步作業...",
+        importer_attr="import_institutional_flows",
+        done_verb="三大法人籌碼同步完成",
+        incremental=not force_full,
+    )
     return {"success": True, "message": "已在背景啟動三大法人籌碼同步作業"}
 
 
-@router.post("/broker/sync", summary="觸發券商分點主力歷史數據同步更新")
+@router.post("/broker/sync", summary="觸發券商分點主力歷史數據同步更新", dependencies=[Depends(verify_sync_rate_limit)])
 def trigger_broker_sync(
     background_tasks: BackgroundTasks,
     force_full: bool = Query(False, description="是否執行全量同步 (預設為 False 增量同步)"),
@@ -384,24 +408,18 @@ def trigger_broker_sync(
     觸發券商分點主力歷史進出時序 (broker_history.csv) 增量更新至 DuckDB。
     非同步背景執行，不阻塞 HTTP 請求。
     """
-    def _do_sync():
-        if not _BROKER_SYNC_LOCK.acquire(blocking=False):
-            logger.info("⏳ 券商分點同步作業已在進行中，略過重複啟動")
-            return
-        try:
-            from data.historical_importer import HistoricalImporter
-            logger.info("🔄 [API Sync] 手動觸發券商分點主力數據同步作業...")
-            cnt = HistoricalImporter.import_broker_trades(db_mgr=db, incremental=not force_full)
-            logger.info(f"✅ [API Sync] 券商分點主力同步完成，處理 {cnt} 筆記錄")
-            with _CACHE_LOCK:
-                _STATS_CACHE.pop("stats", None)
-                _BROKER_CACHE.clear()
-        except Exception as e:
-            logger.error(f"❌ [API Sync] 券商分點主力同步失敗: {e}", exc_info=True)
-        finally:
-            _BROKER_SYNC_LOCK.release()
-
-    background_tasks.add_task(_do_sync)
+    background_tasks.add_task(
+        _run_market_sync_job,
+        db,
+        _BROKER_SYNC_LOCK,
+        sync_label="API Sync",
+        busy_msg="⏳ 券商分點同步作業已在進行中，略過重複啟動",
+        start_msg="🔄 [API Sync] 手動觸發券商分點主力數據同步作業...",
+        importer_attr="import_broker_trades",
+        done_verb="券商分點主力同步完成",
+        incremental=not force_full,
+        clear_broker_cache=True,
+    )
     return {"success": True, "message": "已在背景啟動券商分點主力同步作業"}
 
 
@@ -758,6 +776,95 @@ def get_market_calendar_sessions(request: Request, db: DuckDBManager = Depends(g
     except Exception as e:
         logger.error(f"❌ 查詢跨市場即時時段失敗: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"查詢跨市場即時時段失敗: {str(e)}")
+
+
+_MOPS_SYNC_LOCK = threading.Lock()
+
+
+@router.get("/mops/highlights", summary="取得台股 MOPS 重點重大訊息催化與月營收年增排行")
+def get_mops_highlights_endpoint(
+    limit: int = Query(20, ge=1, le=100, description="回傳筆數上限"),
+    db: DuckDBManager = Depends(get_duckdb),
+) -> Dict[str, Any]:
+    """查詢最新公開資訊觀測站 (MOPS) 重訊催化（庫藏股、擴產 CapEx、現增警示）與最新月營收成長前 N 名。"""
+    try:
+        highlights = db.get_mops_highlights(limit=limit) if hasattr(db, "get_mops_highlights") else {"catalysts": [], "top_revenue_growth": []}
+        return {"success": True, **highlights}
+    except Exception as e:
+        logger.error(f"❌ 查詢 MOPS 亮點失敗: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="查詢 MOPS 亮點失敗")
+
+
+@router.post("/mops/sync", summary="手動觸發台股 MOPS 重大訊息與月營收同步", dependencies=[Depends(verify_sync_rate_limit)])
+def trigger_mops_sync(
+    background_tasks: BackgroundTasks,
+    db: DuckDBManager = Depends(get_duckdb),
+) -> Dict[str, Any]:
+    """非同步從 TWSE/TPEx OpenAPI 與 MOPS 抓取最新重大訊息與月營收並寫入 DuckDB（具單飛鎖保護）。"""
+    def _do_mops_sync():
+        if not _MOPS_SYNC_LOCK.acquire(blocking=False):
+            logger.info("⏳ MOPS 公開資訊同步已在進行中，略過重複啟動")
+            return
+        try:
+            from data.mops_fetcher import MOPSFetcher
+            MOPSFetcher(db_manager=db).sync_to_duckdb()
+        except Exception as exc:
+            logger.error(f"❌ [API Sync] MOPS 公開資訊同步失敗: {exc}", exc_info=True)
+        finally:
+            _MOPS_SYNC_LOCK.release()
+
+    background_tasks.add_task(_do_mops_sync)
+    return {"success": True, "message": "MOPS 重大訊息與月營收同步任務已於背景排隊執行"}
+
+
+@router.get("/mops/{ticker}", summary="取得單一台股 MOPS 重大訊息與月營收動能摘要")
+def get_ticker_mops_endpoint(
+    ticker: str,
+    limit: int = Query(15, ge=1, le=50, description="最多回傳重訊筆數"),
+    db: DuckDBManager = Depends(get_duckdb),
+) -> Dict[str, Any]:
+    """查詢特定台股之最新月營收（MoM/YoY/累計年增）與近期 MOPS 重大訊息催化標籤。"""
+    from data.mops_fetcher import MOPSFetcher
+    raw_t = str(ticker or "").strip()
+    if raw_t.lower() == "sync":
+        raise HTTPException(status_code=405, detail="Method Not Allowed: use POST /api/v1/market/mops/sync")
+    clean_t = raw_t.upper()
+    if hasattr(db, "resolve_ticker"):
+        try:
+            resolved = db.resolve_ticker(raw_t)
+            if isinstance(resolved, dict) and resolved.get("ticker"):
+                clean_t = str(resolved["ticker"]).strip().upper()
+        except Exception:
+            pass
+    if clean_t.isdigit() and len(clean_t) in (4, 5, 6):
+        clean_t = f"{clean_t}.TW"
+    if not clean_t.endswith((".TW", ".TWO")):
+        return {
+            "success": True,
+            "ticker": clean_t,
+            "applicable": False,
+            "latest_revenue": None,
+            "revenue_history": [],
+            "events": [],
+            "factor_summary": None,
+        }
+    try:
+        revs = db.get_monthly_revenue(clean_t, limit=12) if hasattr(db, "get_monthly_revenue") else []
+        events = db.get_mops_events(clean_t, limit=limit) if hasattr(db, "get_mops_events") else []
+        latest_rev = revs[0] if revs else None
+        factor_summary = MOPSFetcher.build_factor_summary(latest_rev, events)
+        return {
+            "success": True,
+            "ticker": clean_t,
+            "applicable": True,
+            "latest_revenue": latest_rev,
+            "revenue_history": revs,
+            "events": events,
+            "factor_summary": factor_summary,
+        }
+    except Exception as e:
+        logger.error(f"❌ 查詢個股 MOPS 資訊失敗 ({ticker}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="查詢個股 MOPS 資訊失敗")
 
 
 

@@ -297,6 +297,23 @@ def get_xuantie_candidates(
     return response_obj
 
 
+def _cached_model_ranking(
+    cache_prefix: str,
+    index_name: Optional[str],
+    limit: int,
+    fetcher_fn,
+    db: DuckDBManager,
+) -> PredictionResponse:
+    cache_key = f"{cache_prefix}_{_normalize_index_name(index_name)}_{limit}"
+    cached = _get_from_cache(cache_key)
+    if cached is not None:
+        return cached
+    records = fetcher_fn(index_name=index_name, limit=limit)
+    response_obj = _build_prediction_response(records, db)
+    _set_in_cache(cache_key, response_obj)
+    return response_obj
+
+
 @router.get("/timestral/top-bullish", response_model=PredictionResponse, summary="查詢 Mistral Timestral-209M 預測漲幅 TOP N 潛力股")
 def get_timestral_top_bullish(
     index_name: Optional[str] = Query(None, description="指數篩選"),
@@ -306,8 +323,7 @@ def get_timestral_top_bullish(
     """
     依據 Mistral Timestral-209M 時序大模型輸出之潛在漲幅百分比（P50 Potential %）由高到低排序，取得看漲排行。
     """
-    records = db.get_timestral_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    return _cached_model_ranking("timestral_bullish", index_name, limit, db.get_timestral_top_bullish, db)
 
 
 @router.get("/timestral/top-bearish", response_model=PredictionResponse, summary="查詢 Mistral Timestral-209M 預測跌幅 TOP N 避險股")
@@ -319,8 +335,7 @@ def get_timestral_top_bearish(
     """
     依據 Mistral Timestral-209M 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
-    records = db.get_timestral_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    return _cached_model_ranking("timestral_bearish", index_name, limit, db.get_timestral_top_bearish, db)
 
 
 @router.get("/timesfm/top-bullish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測漲幅 TOP N 潛力股")
@@ -332,8 +347,7 @@ def get_timesfm_top_bullish(
     """
     依據 Google TimesFM 時序大模型輸出之潛在漲幅百分比（Potential %）由高到低排序，取得看漲排行。
     """
-    records = db.get_timesfm_top_bullish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    return _cached_model_ranking("timesfm_bullish", index_name, limit, db.get_timesfm_top_bullish, db)
 
 
 @router.get("/timesfm/top-bearish", response_model=PredictionResponse, summary="查詢 Google TimesFM 預測跌幅 TOP N 避險股")
@@ -345,8 +359,7 @@ def get_timesfm_top_bearish(
     """
     依據 Google TimesFM 時序大模型輸出之潛在跌幅由大到小排序，用於避險或潛在破底防禦。
     """
-    records = db.get_timesfm_top_bearish(index_name=index_name, limit=limit)
-    return _build_prediction_response(records, db)
+    return _cached_model_ranking("timesfm_bearish", index_name, limit, db.get_timesfm_top_bearish, db)
 
 
 @router.get("/moirai/top-bullish", response_model=PredictionResponse, summary="查詢 Salesforce MOIRAI-2 預測漲幅 TOP N 潛力股")

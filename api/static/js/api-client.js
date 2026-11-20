@@ -301,6 +301,15 @@ export const ApiClient = {
     },
 
     /**
+     * Taiwan MOPS Material Events & Monthly Revenue Momentum
+     */
+    async getMopsIntel(ticker, signal) {
+        const res = await fetch(`/api/v1/market/mops/${encodeURIComponent(ticker)}`, { signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    },
+
+    /**
      * Batch prefetch company profiles
      */
     async getCompanyProfilesBatch(tickers) {

@@ -35,10 +35,9 @@ def send_email(subject: str, body: str, to_emails: List[str], html_body: Optiona
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    server = smtplib.SMTP_SSL(EmailConfig.SMTP_SERVER, EmailConfig.SMTP_PORT)
-    server.login(EmailConfig.SENDER_EMAIL, EmailConfig.EMAIL_PASSWORD)
-    server.sendmail(EmailConfig.SENDER_EMAIL, to_emails, msg.as_string())
-    server.quit()
+    with smtplib.SMTP_SSL(EmailConfig.SMTP_SERVER, EmailConfig.SMTP_PORT, timeout=15) as server:
+        server.login(EmailConfig.SENDER_EMAIL, EmailConfig.EMAIL_PASSWORD)
+        server.sendmail(EmailConfig.SENDER_EMAIL, to_emails, msg.as_string())
 
 
 def send_to_telegram(message: str):
@@ -48,6 +47,9 @@ def send_to_telegram(message: str):
     Args:
         message: Message content (supports HTML formatting)
     """
+    if not TelegramConfig.BOT_TOKEN or not TelegramConfig.CHANNEL_ID:
+        raise RuntimeError("Telegram BOT_TOKEN 或 CHANNEL_ID/CHAT_ID 未設定")
+
     try:
         from evaluators.formatter import split_telegram_message
         chunks = split_telegram_message(message, max_length=4000)
@@ -61,10 +63,14 @@ def send_to_telegram(message: str):
             "text": chunk,
             "parse_mode": "HTML"
         }
-        response = requests.post(url, json=payload)
+        try:
+            response = requests.post(url, json=payload, timeout=(5, 15))
+        except requests.RequestException as exc:
+            # Never propagate raw RequestException (it contains the bot token URL)
+            raise RuntimeError(f"Telegram 連線發送失敗 ({type(exc).__name__})") from None
 
         if response.status_code != 200:
-            print(f"Telegram 發送失敗: {response.text}")
+            raise RuntimeError(f"Telegram 發送失敗 (HTTP {response.status_code}): {response.text[:300]}")
 
 
 def send_to_discord(message: str):
@@ -74,27 +80,31 @@ def send_to_discord(message: str):
     Args:
         message: Message content
     """
-    try:
-        import io
-        file_data = io.BytesIO(message.encode('utf-8'))
-        files = {
-            'file': ('prediction_results.txt', file_data, 'text/plain')
-        }
-        payload = {"content": "📊 每日潛力股分析結果已生成，詳見附件。"}
+    if not DiscordConfig.WEBHOOK_URL:
+        raise RuntimeError("Discord WEBHOOK_URL 未設定")
 
+    import io
+    file_data = io.BytesIO(message.encode('utf-8'))
+    files = {
+        'file': ('prediction_results.txt', file_data, 'text/plain')
+    }
+    payload = {"content": "📊 每日潛力股分析結果已生成，詳見附件。"}
+
+    try:
         response = requests.post(
             DiscordConfig.WEBHOOK_URL,
             data=payload,
-            files=files
+            files=files,
+            timeout=(5, 15)
         )
+    except requests.RequestException as exc:
+        # Never propagate raw RequestException (it contains the Discord webhook token URL)
+        raise RuntimeError(f"Discord 連線發送失敗 ({type(exc).__name__})") from None
 
-        if response.status_code in [200, 204]:
-            print("訊息及檔案已成功傳送到 Discord 頻道。")
-        else:
-            print(f"傳送檔案到 Discord 時發生錯誤: {response.status_code}, {response.text}")
-
-    except Exception as e:
-        print(f"傳送檔案到 Discord 時發生錯誤: {str(e)}")
+    if response.status_code in [200, 204]:
+        print("訊息及檔案已成功傳送到 Discord 頻道。")
+    else:
+        raise RuntimeError(f"傳送檔案到 Discord 時發生錯誤 (HTTP {response.status_code}): {response.text[:300]}")
 
 
 def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_map: Dict[str, str] = None):
@@ -109,13 +119,8 @@ def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_
                 ...
             }
     """
-    from database import save_to_mongodb
-
     calculation_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(f"發送結果: {index_name}")
-
-    # Save to MongoDB (optional feature)
-    save_to_mongodb(index_name, stock_predictions)
 
     # Helper function to format table
     def format_table(predictions, display_count=5):
@@ -139,7 +144,11 @@ def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_
         email_body += f"\n{category}\n"
         email_body += format_table(predictions)
 
-    send_email(email_subject, email_body, EmailConfig.TO_EMAILS)
+    errors = []
+    try:
+        send_email(email_subject, email_body, EmailConfig.TO_EMAILS)
+    except Exception as exc:
+        errors.append(f"Email: {exc}")
 
     # ===== Telegram =====
     telegram_message = f"<b>每日潛力股分析</b>\n運算日期和時間: <b>{calculation_time}</b>\n\n指數: <b>{index_name}</b>\n"
@@ -150,7 +159,10 @@ def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_
         telegram_message += format_table(predictions)
         telegram_message += "</pre>\n"
 
-    send_to_telegram(telegram_message)
+    try:
+        send_to_telegram(telegram_message)
+    except Exception as exc:
+        errors.append(f"Telegram: {exc}")
 
     # ===== Discord =====
     discord_message = f"**每日潛力股分析**\n運算日期和時間: **{calculation_time}**\n\n指數: **{index_name}**\n"
@@ -161,6 +173,10 @@ def send_results(index_name: str, stock_predictions: Dict[str, List[Any]], name_
         discord_message += format_table(predictions)
         discord_message += "```\n"
 
-    print("[DEBUG] discord_message 組裝內容：")
-    print(discord_message)
-    send_to_discord(discord_message)
+    try:
+        send_to_discord(discord_message)
+    except Exception as exc:
+        errors.append(f"Discord: {exc}")
+
+    if errors:
+        raise RuntimeError("部分推播管道發送失敗: " + "; ".join(errors))

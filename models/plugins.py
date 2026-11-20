@@ -269,7 +269,7 @@ class Moirai2Plugin(BaseModelPlugin):
             from models.moirai_model import get_moirai_model
             model_id = config.get("model_id", self.model_id)
             context_len = config.get("context_len", 128)
-            checkpoint_revision = config.get("checkpoint_revision", "cfd46d4510ed8896f263116f32928eede05b0a75")
+            checkpoint_revision = config.get("checkpoint_revision", "30f43ff08c8494f4943ae1521e9d4e94a0fbb389")
             self.wrapper = get_moirai_model(
                 model_id=model_id,
                 context_len=context_len,

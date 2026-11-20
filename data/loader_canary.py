@@ -232,6 +232,23 @@ def _probe_arxiv(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str]
     return last_code, [], last_err or "arXiv probe failed"
 
 
+def _probe_mops(timeout: float = DEFAULT_PROBE_TIMEOUT) -> Tuple[int, List[str], Optional[str]]:
+    """MOPS / TWSE OpenAPI 重大訊息與月營收金絲雀探針"""
+    url = "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
+    resp = requests.get(url, timeout=timeout)
+    if resp.status_code != 200:
+        return resp.status_code, [], f"HTTP {resp.status_code}"
+    try:
+        data = resp.json()
+        if not isinstance(data, list) or not data:
+            return resp.status_code, ["monthly_revenue_rows"], "empty response"
+        sample = data[0] if isinstance(data[0], dict) else {}
+        missing = [f for f in ("公司代號", "資料年月", "營業收入-去年同月增減(%)") if f not in sample]
+        return resp.status_code, missing, None
+    except Exception as e:
+        return resp.status_code, ["valid_json_payload"], str(e)
+
+
 PROBE_REGISTRY: Dict[str, Callable[[float], Tuple[int, List[str], Optional[str]]]] = {
     "twse": _probe_twse,
     "tpex": _probe_tpex,
@@ -241,6 +258,7 @@ PROBE_REGISTRY: Dict[str, Callable[[float], Tuple[int, List[str], Optional[str]]
     "polymarket": _probe_polymarket,
     "biggo_earnings": _probe_biggo_earnings,
     "arxiv": _probe_arxiv,
+    "mops": _probe_mops,
 }
 
 

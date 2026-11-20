@@ -7,7 +7,7 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-tbdavid2019%2Fstock--underdog--ml-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/tbdavid2019/stock-underdog-ml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 
-現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M**、**Google TimesFM 3.0**、**Salesforce MOIRAI-2**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**自選 6 維度量化篩選器 (方向、時序模型多選、估值、潛力門檻、均線與法人合買)**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡** 與 **30 大 FastMCP / WebMCP 工具服務**。
+現代化、高擴充性、生產級 **AI 深度學習與多維量化交易決策系統**。整合 **美股宏觀門檻**、**玄鐵均線技術分析**、**Mistral Timestral-209M**、**Google TimesFM 3.0**、**Salesforce MOIRAI-2**、**7 大板塊資金輪動**、**台股三大法人籌碼鎖碼**、**自選 6 維度量化篩選器 (方向、時序模型多選、估值、潛力門檻、均線與法人合買)**、**3 級 Fallback LLM 操盤解讀**、**Clef-Flash System One 決策大模型**、**本地 DuckDB 列式時序庫**、**台灣企業集團股權網絡**、**台股 MOPS 重訊與月營收因子** 與 **33 大 FastMCP / WebMCP 工具服務**。
 
 ---
 
@@ -282,13 +282,13 @@ graph TD
 }
 ```
 
-**支援之 20 大標準量化 MCP 函數 (FastMCP & WebMCP 原生工具)：**
+**主要代表性量化 MCP 函數 (全系統共支援 33 大 FastMCP & WebMCP 原生工具，含：)**
 
 1. `get_market_macro_regime`: 總經風控與建議曝險比例 (0~100%)。
 2. `get_triple_resonance_stocks`: 查詢多策略綜合優選與動態時序模型交集個股（相容工具名稱）。
 3. `get_xuantie_pullback_stocks`: 玄鐵重劍 MA60/120 波段回踩買點標的。
-4. `get_timestral_top_predictions`: Mistral Timestral 209M 5 日預測漲跌榜、分位數區間 (P10/P90) 與盈虧比。
-5. `get_timesfm_top_predictions`: Google Research TimesFM 200M 5 日預測漲跌榜與真實盈虧比 (Risk/Reward)。
+4. `get_timestral_top_predictions`: Mistral Timestral 209M 隔日 (T+1) 預測漲跌榜、分位數區間 (P10/P90) 與盈虧比。
+5. `get_timesfm_top_predictions`: Google Research TimesFM 3.0 隔日 (T+1) 預測漲跌榜與真實盈虧比 (Risk/Reward)。
 6. `get_stock_history`: 個股時序預測軌跡與法人籌碼。
 7. `get_latest_market_snapshot`: 最新全市場日報批次數據快照。
 8. `get_top_institutional_flows`: 三大法人（外資、投信、自營商）買賣超焦點股排行榜。
@@ -306,6 +306,7 @@ graph TD
 20. `get_company_network`: 查詢台灣上市櫃公司之集團股權結構與企業關係網絡（母公司/控股、轉投資子公司持股比例與上市櫃標的關聯）。
 21. `open_company_network`: 在瀏覽器中導航開啟特定台股企業之視覺化股權拓撲關係圖譜與官方 SVG 向量架構 (Taiwan Company Network)。
 22. `get_company_tenders`: 查詢台灣上市櫃公司之政府電子採購網得標情報（累計得標總金額、勝率、獨標率、核心採購機關金主、競標對手與大案清單，串接 ToBid MCP）。
+23. `get_tw_mops_intel`: 查詢台股公開資訊觀測站 (MOPS) 重大訊息催化標籤（庫藏股、擴產 CapEx、現增/私募警示）與月營收動能（MoM / YoY / 累計年增）。
 
 ### 3. 📖 Agent Skill 規範檔 (`SKILL.md`) 與 `npx` 一鍵安裝
 本專案已建立標準 Agent 技能規範檔 [`skills/stock-quant/SKILL.md`](skills/stock-quant/SKILL.md)（同時提供線上下載 [`/skill`](https://stockdata.david888.com/skill)），並封裝為零依賴 npm 套件 **`888-stock-quant`**：
@@ -334,7 +335,7 @@ npx -y 888-stock-quant@latest resonance --index TW_TOP50 --limit 10
 | `/` | `GET` | 互動式操盤儀表板與 Agent 整合中心 (HTML) |
 | `/llms.txt` | `GET` | 符合 [llmstxt.org](https://llmstxt.org/) 規範之 AI Agent / LLM 系統摘要與端點導引 |
 | `/llms-full.txt` | `GET` | 完整開發者與大模型參考手冊 (含數學公式、DuckDB Schema、MCP 工具定義) |
-| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (32 大量化工具宣告) |
+| `/.well-known/mcp.json` | `GET` | WebMCP 遠端發現規格清單 (33 大量化工具宣告) |
 | `/mcp/sse` | `GET` | WebMCP SSE (Server-Sent Events) 雙向遠端串流通訊端點 |
 | `/.well-known/ai-plugin.json` | `GET` | WebMCP / OpenAI Plugin 標準宣告檔 |
 | `/skill` | `GET` | 取得 Agent Skill 規範檔 (Markdown) |
@@ -365,6 +366,9 @@ npx -y 888-stock-quant@latest resonance --index TW_TOP50 --limit 10
 | `/api/v1/market/company-profile/{ticker}` | `GET` | 查詢公司中文營運簡介、董監事持股、即時新聞與集團網絡連結（支援 DuckDB 20天快取與跨使用者共享） |
 | `/api/v1/market/company-network/{ticker}` | `GET` | 查詢台股標的之登記統一編號、資本額、母公司控股、轉投資子公司與集團股權網絡（支援 DuckDB 30天快取） |
 | `/api/v1/market/company-tender/{ticker}` | `GET` | 查詢台股標的之政府採購得標金額、勝率、獨標率、採購機關與對手標案情資（串接 ToBid MCP，支援 DuckDB 7天快取） |
+| `/api/v1/market/mops/highlights` | `GET` | 查詢台股公開資訊觀測站 (MOPS) 重點催化重訊（庫藏股、擴產 CapEx、稀釋警示）與最新月營收年增前 N 名 |
+| `/api/v1/market/mops/{ticker}` | `GET` | 查詢單一台股之 MOPS 近期重大訊息催化與最新月營收動能（MoM / YoY / 累計年增） |
+| `/api/v1/market/mops/sync` | `POST` | 觸發台股 MOPS 重大訊息與月營收同步（具頻率限制與可選 `OPS_API_KEY` 防護） |
 | `/api/v1/market/broker/summary/{ticker}` | `GET` | 券商主力分點累計買賣超統計 |
 | `/api/v1/stats/summary` | `GET` | DuckDB 時序庫全盤統計（總記錄數、涵蓋股票數、時間跨度） |
 | `/api/v1/earnings-call/upcoming` | `GET` | 查詢台美日韓跨市場法人說明會、雙時區（CST/EST）、時間維度篩選（ALL/TODAY/UPCOMING/PAST）與天數倒數 |
@@ -414,10 +418,10 @@ LLM_FALLBACK1_BASE_URL=https://api.deepseek.com/v1
 LLM_FALLBACK1_MODEL=deepseek-chat
 LLM_FALLBACK1_API_KEY=your_deepseek_key
 
-# 推播通知 (選填)
+# 推播通知 (選填，支援 TELEGRAM_CHANNEL_ID 或 TELEGRAM_CHAT_ID)
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
+TELEGRAM_CHANNEL_ID=your_channel_or_chat_id
 ```
 
 ---
@@ -462,7 +466,7 @@ python scripts/export_supabase_to_duckdb.py
 本專案提供預先構建完成之 **Docker Hub 官方多架構映像檔**，支援 **`linux/amd64` (Intel/AMD x64)** 與 **`linux/arm64` (Apple Silicon M系列 / ARM 伺服器)** 雙架構。
 
 > 💡 **為什麼強烈推薦使用預建映像檔？**
-> 本專案整合 PyTorch、TensorFlow、DuckDB 等大型科學計算與深度學習依賴庫，若在本地自行從原始碼構建 (`docker build`) 通常需耗時 10~20 分鐘以上，且極易因本機記憶體不足或編譯工具差異中斷。
+> 本專案整合 PyTorch、DuckDB 與多時序基礎模型依賴庫，若在本地自行從原始碼構建 (`docker build`) 通常需耗時 10~20 分鐘以上，且極易因本機記憶體不足或編譯工具差異中斷。
 > 官方 GitHub Actions CI/CD 會在每次更新時自動完成雙架構優化編譯與全量單元測試，發布至 Docker Hub，**直接 `docker pull` 數十秒內即可完成部署！**
 
 #### 🌟 0. 新機器全自動一鍵安裝與環境健檢 (One-Click Setup & Pre-flight Doctor)
@@ -614,7 +618,7 @@ stock-underdog-ml/
 ## 📜 開發規範與文件同步
 
 遵循本專案開發鐵律（`AGENTS.md`）：
-- 每次功能或行為變更均同步記錄於 [`CHANGELOG.md`](CHANGELOG.md)。
+- 每次功能或行為變更均同步記錄於 [`docs/CHANGELOG.md`](docs/CHANGELOG.md)。
 - Docker 詳細指南請參閱 [`docs/DOCKER.md`](docs/DOCKER.md)。
 - 跨市場產業價值鏈架構與維護指南請參閱 [`docs/INDUSTRY_VALUE_CHAIN_GUIDE.md`](docs/INDUSTRY_VALUE_CHAIN_GUIDE.md)。
 - OpenSpec 變更與規格請參閱 [`openspec/specs/`](openspec/specs/)。

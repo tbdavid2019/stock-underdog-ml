@@ -25,15 +25,24 @@ def resolve_client_ip(request: Request) -> str:
     1. CF-Connecting-IP
     2. X-Real-IP
     3. client.host
+    If TRUSTED_PROXY_IPS env var is set (comma-separated), forwarding headers are
+    honored only when the direct socket peer is in TRUSTED_PROXY_IPS.
     """
-    for header in ("CF-Connecting-IP", "X-Real-IP"):
-        val = request.headers.get(header)
-        if val and val.strip():
-            # Return first IP if comma-separated proxy list
-            return val.strip().split(",")[0].strip()
+    trusted_env = os.getenv("TRUSTED_PROXY_IPS", "").strip()
+    peer_ip = request.client.host if (request.client and request.client.host) else ""
+    trust_headers = True
+    if trusted_env:
+        trusted_set = {p.strip() for p in trusted_env.split(",") if p.strip()}
+        trust_headers = bool(peer_ip and peer_ip in trusted_set)
 
-    if request.client and request.client.host:
-        return request.client.host
+    if trust_headers:
+        for header in ("CF-Connecting-IP", "X-Real-IP"):
+            val = request.headers.get(header)
+            if val and val.strip():
+                return val.strip().split(",")[0].strip()
+
+    if peer_ip:
+        return peer_ip
     return "127.0.0.1"
 
 
@@ -49,11 +58,14 @@ class SlidingWindowRateLimiter:
 
     def prune(self, now: float) -> None:
         with self._lock:
-            if len(self._store) > self.max_entries:
-                for ip in list(self._store.keys()):
-                    history = self._store[ip]
-                    if not history or (now - history[-1] >= self.window_seconds):
-                        self._store.pop(ip, None)
+            self._prune_unlocked(now)
+
+    def _prune_unlocked(self, now: float) -> None:
+        if len(self._store) >= self.max_entries:
+            for ip in list(self._store.keys()):
+                history = self._store[ip]
+                if not history or (now - history[-1] >= self.window_seconds):
+                    self._store.pop(ip, None)
 
     def check(self, request: Request, limit: Optional[int] = None) -> None:
         client_ip = resolve_client_ip(request)
@@ -61,11 +73,10 @@ class SlidingWindowRateLimiter:
         effective_limit = limit or self.default_limit
 
         with self._lock:
-            if len(self._store) > self.max_entries:
-                for ip in list(self._store.keys()):
-                    history = self._store[ip]
-                    if not history or (now - history[-1] >= self.window_seconds):
-                        self._store.pop(ip, None)
+            self._prune_unlocked(now)
+            if client_ip not in self._store and len(self._store) >= self.max_entries:
+                oldest_ip = min(self._store.items(), key=lambda kv: kv[1][-1] if kv[1] else 0.0)[0]
+                self._store.pop(oldest_ip, None)
 
             history = self._store[client_ip]
             valid_history = [t for t in history if now - t < self.window_seconds]
@@ -82,6 +93,37 @@ class SlidingWindowRateLimiter:
 
 # Global instance
 default_limiter = SlidingWindowRateLimiter()
+sync_limiter = SlidingWindowRateLimiter(default_limit=6, window_seconds=60, max_entries=2000)
+
+
+def enforce_sync_rate_limit(request: Request) -> bool:
+    """Enforce rate limiting only (without OPS_API_KEY) on endpoints already protected by another auth dependency."""
+    sync_limiter.check(request)
+    return True
+
+
+def verify_sync_rate_limit(
+    request: Request,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    authorization: Optional[str] = Header(None)
+) -> bool:
+    """
+    Rate limit heavy sync endpoints (6 req/min per IP) and enforce OPS_API_KEY if configured.
+    """
+    ops_key = os.getenv("OPS_API_KEY")
+    if ops_key and ops_key.strip():
+        token = None
+        if x_api_key and x_api_key.strip():
+            token = x_api_key.strip()
+        elif authorization and authorization.startswith("Bearer "):
+            token = authorization[7:].strip()
+        if not token or not secrets.compare_digest(token, ops_key.strip()):
+            raise HTTPException(
+                status_code=401,
+                detail="Unauthorized: Missing or invalid OPS_API_KEY for sync operation"
+            )
+    sync_limiter.check(request)
+    return True
 
 
 def verify_watchlist_write_access(

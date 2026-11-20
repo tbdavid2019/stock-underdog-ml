@@ -51,6 +51,18 @@ class CompanyProfileService:
 
     # L1 In-memory cache: ticker -> (timestamp, data_dict)
     _CACHE: Dict[str, tuple] = {}
+    _CACHE_LOCK = threading.Lock()
+    _CACHE_MAX_SIZE = 500
+    _SAFE_YAHOO_TICKER_RE = re.compile(r"^[A-Za-z0-9._=\-^]{1,24}$")
+
+    @classmethod
+    def _set_mem_cache(cls, ticker: str, ts: float, profile_data: Dict[str, Any]) -> None:
+        with cls._CACHE_LOCK:
+            if ticker not in cls._CACHE and len(cls._CACHE) >= cls._CACHE_MAX_SIZE:
+                oldest_key = next(iter(cls._CACHE), None)
+                if oldest_key is not None:
+                    cls._CACHE.pop(oldest_key, None)
+            cls._CACHE[ticker] = (ts, profile_data)
 
     @classmethod
     def _get_cache_filepath(cls, ticker: str) -> str:
@@ -64,8 +76,10 @@ class CompanyProfileService:
         now = time.time()
 
         # 1. 檢查 L1 記憶體快取 (0ms 即時返回)
-        if ticker in cls._CACHE:
-            ts, cached_data = cls._CACHE[ticker]
+        with cls._CACHE_LOCK:
+            entry = cls._CACHE.get(ticker)
+        if entry is not None:
+            ts, cached_data = entry
             if now - ts < cls.CACHE_TTL:
                 return cached_data
 
@@ -79,7 +93,7 @@ class CompanyProfileService:
                 profile = payload.get("profile")
                 if profile and (now - cached_at < cls.CACHE_TTL):
                     # 回填至 L1 記憶體快取，加速後續訪問
-                    cls._CACHE[ticker] = (cached_at, profile)
+                    cls._set_mem_cache(ticker, cached_at, profile)
                     logger.debug(f"📦 磁碟快取命中 (20天): {ticker}")
                     return profile
             except Exception as e:
@@ -93,7 +107,7 @@ class CompanyProfileService:
         now = time.time()
 
         # 1. 寫入 L1 記憶體快取
-        cls._CACHE[ticker] = (now, profile_data)
+        cls._set_mem_cache(ticker, now, profile_data)
 
         # 2. 判斷是否有實質內容（避免將暫時性網路中斷的空內容快取 20 天）
         has_content = bool(
@@ -218,22 +232,26 @@ class CompanyProfileService:
         is_tw = cls._is_taiwan_ticker(ticker)
 
         # 1. 檢查 L1 記憶體快取
-        if not force_refresh and ticker in cls._CACHE:
-            cached_at, mem_profile = cls._CACHE[ticker]
-            if now - cached_at < cls.CACHE_TTL:
-                if not is_tw and cls._is_contaminated_for_foreign(mem_profile):
-                    logger.warning(f"⚠️ 偵測到非台股標的 {ticker} 記憶體快取含有台股/力積電污染，清除並強制重新抓取")
-                    cls._CACHE.pop(ticker, None)
-                    cache_file = cls._get_cache_filepath(ticker)
-                    if os.path.exists(cache_file):
-                        try:
-                            os.remove(cache_file)
-                        except Exception:
-                            pass
-                    force_refresh = True
-                else:
-                    cls._enrich_network_if_needed(ticker, mem_profile, db=db)
-                    return mem_profile
+        if not force_refresh:
+            with cls._CACHE_LOCK:
+                mem_entry = cls._CACHE.get(ticker)
+            if mem_entry is not None:
+                cached_at, mem_profile = mem_entry
+                if now - cached_at < cls.CACHE_TTL:
+                    if not is_tw and cls._is_contaminated_for_foreign(mem_profile):
+                        logger.warning(f"⚠️ 偵測到非台股標的 {ticker} 記憶體快取含有台股/力積電污染，清除並強制重新抓取")
+                        with cls._CACHE_LOCK:
+                            cls._CACHE.pop(ticker, None)
+                        cache_file = cls._get_cache_filepath(ticker)
+                        if os.path.exists(cache_file):
+                            try:
+                                os.remove(cache_file)
+                            except Exception:
+                                pass
+                        force_refresh = True
+                    else:
+                        cls._enrich_network_if_needed(ticker, mem_profile, db=db)
+                        return mem_profile
 
         # 2. 檢查 L2 DuckDB 快取 (跨使用者共享)
         if not force_refresh and db is not None and hasattr(db, "get_company_profile"):
@@ -242,7 +260,8 @@ class CompanyProfileService:
                 if db_profile and db_profile.get("business_summary"):
                     if not is_tw and cls._is_contaminated_for_foreign(db_profile):
                         logger.warning(f"⚠️ 偵測到非台股標的 {ticker} DuckDB 快取含有台股/力積電污染，捨棄並重新抓取")
-                        cls._CACHE.pop(ticker, None)
+                        with cls._CACHE_LOCK:
+                            cls._CACHE.pop(ticker, None)
                         cache_file = cls._get_cache_filepath(ticker)
                         if os.path.exists(cache_file):
                             try:
@@ -442,11 +461,15 @@ class CompanyProfileService:
     @classmethod
     def _fetch_profile_from_2md(cls, profile: Dict[str, Any], is_tw: bool):
         """利用 2md URL Reader 抓取 Yahoo 股市 Profile 頁面 (受信號量保護與放寬超時)"""
-        ticker = profile["ticker"]
+        ticker = str(profile.get("ticker") or "").strip().upper()
+        if not cls._SAFE_YAHOO_TICKER_RE.match(ticker):
+            logger.warning(f"拒絕不安全的 Yahoo Profile 標的代號格式: {ticker!r}")
+            return
+        safe_ticker = urllib.parse.quote(ticker, safe="._-^=")
         if is_tw:
-            target_url = f"https://tw.stock.yahoo.com/quote/{ticker}/profile"
+            target_url = f"https://tw.stock.yahoo.com/quote/{safe_ticker}/profile"
         else:
-            target_url = f"https://finance.yahoo.com/quote/{ticker}/profile"
+            target_url = f"https://finance.yahoo.com/quote/{safe_ticker}/profile"
 
         text = ""
         with cls._CRAWLER_SEMAPHORE:

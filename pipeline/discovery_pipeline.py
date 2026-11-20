@@ -283,8 +283,6 @@ class DiscoveryPipeline:
                     catalyst_summary = f"前沿瓶頸核心美股龍頭：{role}"
                 else:
                     catalyst_summary = f"對齊前沿瓶頸：{role}，美股鏈接 {main_anchor}"
-                    anchor_symbol = main_anchor
-                    catalyst_summary = f"對齊前沿瓶頸：{role}，美股鏈接 {main_anchor}"
 
                 candidate_record = {
                     "ticker": canon_ticker,

@@ -76,7 +76,7 @@
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 32 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 33 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `screen_quant_stocks`: 多維量化自訂篩選器（方向、時序模型多選、PE估值、潛力門檻、核心量化因子）。
 - `get_triple_resonance_stocks`: 查詢多模型共識與多策略交集焦點股。
@@ -108,7 +108,8 @@
 - `get_market_live_sessions`: 查詢台美日即時五態交易時段與東京 11:30–12:30 午休倒數。
 - `get_signal_alignment`: 查詢個股多源訊號一致度卡（聚合時序基礎模型、台股籌碼、近30日情報姿態與前沿雷達）。
 - `get_portfolio_risk_xray`: 查詢多市場標的組合風險 X 光片 (雙口徑波動率、階梯式 95%/99% VaR/CVaR、歐拉 PCV 拆解)。
-- `get_canary_loader_health`: 查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv)。
+- `get_canary_loader_health`: 查詢 9 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv, MOPS)。
+- `get_tw_mops_intel`: 查詢台灣公開資訊觀測站 (MOPS) 即時重大訊息、多空事件催化與月營收動能因子。
 
 ## Agent & Developer Discovery Standards
 

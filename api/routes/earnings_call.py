@@ -5,7 +5,8 @@ api/routes/earnings_call.py - 法人說明會與財報催化劑 REST API 路由
 import datetime
 import re
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks, Depends
+from core.netlimiter import verify_sync_rate_limit
 
 from api.schemas import EarningsCallItem, UpcomingCallsResponse, EarningsCalendarResponse
 from data.duckdb_manager import DuckDBManager
@@ -152,11 +153,15 @@ def get_upcoming_calls(
 
     today = datetime.date.today()
     if ref_date:
+        ref_str = str(ref_date).strip()
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", ref_str):
+            raise HTTPException(status_code=422, detail=f"Invalid ref_date format '{ref_date}'; expected YYYY-MM-DD")
         try:
-            parts = [int(p) for p in str(ref_date).strip().split("-")]
-            today = datetime.date(parts[0], parts[1], parts[2])
+            today = datetime.date.fromisoformat(ref_str)
+            _ = today + datetime.timedelta(days=1)
+            _ = today - datetime.timedelta(days=1)
         except Exception:
-            pass
+            raise HTTPException(status_code=422, detail=f"Invalid ref_date format '{ref_date}'; expected YYYY-MM-DD")
     today_str = today.strftime("%Y-%m-%d")
     tomorrow_str = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     yesterday_str = (today - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -346,7 +351,7 @@ def get_ticker_calls(
     )
 
 
-@router.post("/sync", summary="觸發跨市場法說會資料全量同步")
+@router.post("/sync", summary="觸發跨市場法說會資料全量同步", dependencies=[Depends(verify_sync_rate_limit)])
 def trigger_sync(background_tasks: BackgroundTasks):
     """
     手動或排程觸發法說會資訊同步 (TWSE/TPEx OpenAPI + 美股行事曆)。

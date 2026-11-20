@@ -6,7 +6,8 @@ api/routes/podcast.py - AI Financial & Tech Podcast Intelligence Radar REST API
 import datetime
 import time
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Query, Path, HTTPException, BackgroundTasks, Depends
+from core.netlimiter import verify_sync_rate_limit, verify_watchlist_write_access, enforce_sync_rate_limit
 
 from api.schemas import (
     PodcastEpisodesResponse,
@@ -128,7 +129,7 @@ def get_topics(
     )
 
 
-@router.post("/sync", response_model=PodcastSyncResponse, summary="觸發 Podcast 頻道與單集情報非同步同步")
+@router.post("/sync", response_model=PodcastSyncResponse, summary="觸發 Podcast 頻道與單集情報非同步同步", dependencies=[Depends(verify_sync_rate_limit)])
 def trigger_podcast_sync(background_tasks: BackgroundTasks):
     """
     手動或排程觸發最新 Podcast 即時單集與 AI 萃取 (含 BigGo Live API)。
@@ -141,7 +142,7 @@ def trigger_podcast_sync(background_tasks: BackgroundTasks):
     )
 
 
-@router.post("/episodes/{episode_id}/evaluate", summary="對特定 Podcast 單集執行 5-Tier 決策推論評估")
+@router.post("/episodes/{episode_id}/evaluate", summary="對特定 Podcast 單集執行 5-Tier 決策推論評估", dependencies=[Depends(verify_watchlist_write_access), Depends(enforce_sync_rate_limit)])
 def evaluate_episode(
     episode_id: str = Path(..., description="單集 ID"),
     force: bool = Query(False, description="是否強制重新推論")
@@ -157,7 +158,7 @@ def evaluate_episode(
     return res
 
 
-@router.post("/batch-evaluate", summary="批量執行尚未評估之單集決策推論")
+@router.post("/batch-evaluate", summary="批量執行尚未評估之單集決策推論", dependencies=[Depends(verify_watchlist_write_access), Depends(enforce_sync_rate_limit)])
 def batch_evaluate_episodes(
     limit: int = Query(20, ge=1, le=100, description="批次處理上限")
 ):

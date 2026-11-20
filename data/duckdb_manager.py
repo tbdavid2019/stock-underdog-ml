@@ -459,6 +459,7 @@ class DuckDBManager:
                 CREATE TABLE IF NOT EXISTS decision_verdicts (
                     ticker VARCHAR NOT NULL,
                     as_of_date VARCHAR NOT NULL,
+                    macro_regime VARCHAR NOT NULL DEFAULT '',
                     action_decision VARCHAR NOT NULL,
                     action_confidence DOUBLE,
                     action_probabilities VARCHAR,
@@ -469,7 +470,7 @@ class DuckDBManager:
                     raw_verdict VARCHAR,
                     created_at VARCHAR NOT NULL,
                     expires_at VARCHAR NOT NULL,
-                    PRIMARY KEY (ticker, as_of_date)
+                    PRIMARY KEY (ticker, as_of_date, macro_regime)
                 );
                 CREATE INDEX IF NOT EXISTS idx_decision_verdicts_ticker ON decision_verdicts (ticker);
                 CREATE INDEX IF NOT EXISTS idx_decision_verdicts_expires ON decision_verdicts (expires_at);
@@ -607,6 +608,50 @@ class DuckDBManager:
                     PRIMARY KEY (ticker, date)
                 );
                 CREATE INDEX IF NOT EXISTS idx_global_daily_bars_ticker_date ON global_daily_bars (ticker, date);
+
+                -- ================= Taiwan MOPS Tables =================
+                CREATE TABLE IF NOT EXISTS tw_mops_events (
+                    event_id VARCHAR PRIMARY KEY,
+                    ticker VARCHAR NOT NULL,
+                    raw_code VARCHAR,
+                    company_name VARCHAR,
+                    market VARCHAR,
+                    speech_date VARCHAR,
+                    speech_time VARCHAR,
+                    fact_date VARCHAR,
+                    available_at VARCHAR,
+                    clause VARCHAR,
+                    subject VARCHAR,
+                    summary VARCHAR,
+                    matched_keywords VARCHAR,
+                    sentiment_tag VARCHAR,
+                    source VARCHAR,
+                    updated_at VARCHAR
+                );
+                CREATE INDEX IF NOT EXISTS idx_mops_events_ticker_date ON tw_mops_events (ticker, speech_date DESC);
+
+                CREATE TABLE IF NOT EXISTS tw_monthly_revenue (
+                    ticker VARCHAR NOT NULL,
+                    raw_code VARCHAR,
+                    company_name VARCHAR,
+                    market VARCHAR,
+                    industry VARCHAR,
+                    revenue_ym VARCHAR NOT NULL,
+                    published_date VARCHAR,
+                    current_revenue DOUBLE,
+                    prev_revenue DOUBLE,
+                    last_year_revenue DOUBLE,
+                    mom_pct DOUBLE,
+                    yoy_pct DOUBLE,
+                    ytd_revenue DOUBLE,
+                    ytd_yoy_pct DOUBLE,
+                    revenue_tag VARCHAR,
+                    remark VARCHAR,
+                    source VARCHAR,
+                    updated_at VARCHAR,
+                    PRIMARY KEY (ticker, revenue_ym)
+                );
+                CREATE INDEX IF NOT EXISTS idx_tw_rev_ticker_ym ON tw_monthly_revenue (ticker, revenue_ym DESC);
                 """);
 
                 # Schema migration for existing installations
@@ -938,12 +983,34 @@ class DuckDBManager:
                 return con.execute(sql, params).df()
             return con.execute(sql).df()
 
+    _EXPORTABLE_TABLES = frozenset({
+        "predictions", "daily_bars", "macro_regime", "tw_institutional_daily",
+        "tw_broker_trades", "tw_mops_events", "tw_monthly_revenue", "earnings_calls",
+        "podcast_episodes", "discovery_candidates", "discovery_papers", "discovery_signals",
+        "sector_momentum", "forecast_predictions", "forecast_verifications",
+        "covariate_observations", "company_profiles", "company_fundamentals",
+    })
+
+    def _validate_table_name(self, con: Any, table_name: str) -> str:
+        """Validate SQL table identifier against fixed allowlist and live DuckDB catalog."""
+        t_clean = str(table_name or "").strip()
+        if t_clean not in self._EXPORTABLE_TABLES:
+            raise ValueError(f"Disallowed or invalid table name: {table_name}")
+        existing_tables = {row[0] for row in con.execute("SHOW TABLES").fetchall()}
+        if t_clean not in existing_tables:
+            raise ValueError(f"Unknown table name: {table_name}")
+        return t_clean
+
     def get_row_count(self, table_name: str = "predictions") -> int:
         """取得指定表格的總記錄數 (排除測試假資料)"""
         try:
             with self._get_connection(read_only=True) as con:
-                filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
-                res = con.execute(f"SELECT COUNT(*) FROM {table_name} {filter_sql}").fetchone()
+                safe_table = self._validate_table_name(con, table_name)
+                if safe_table == "predictions":
+                    filter_sql = "WHERE index_name NOT LIKE '%TEST%' AND index_name NOT LIKE '%DEBUG%' AND index_name NOT LIKE '%SERVICE_KEY%' AND model_name NOT LIKE '%DEBUG%'"
+                else:
+                    filter_sql = ""
+                res = con.execute(f'SELECT COUNT(*) FROM "{safe_table}" {filter_sql}').fetchone()
                 return res[0] if res else 0
         except Exception:
             return 0
@@ -968,11 +1035,16 @@ class DuckDBManager:
 
     def export_to_parquet(self, output_path: str, table_name: str = "predictions") -> str:
         """將資料庫表格導出為極度壓縮的 Parquet 檔案"""
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        abs_out = os.path.abspath(output_path)
+        if any(ch in abs_out for ch in ("\x00", ";", "\n", "\r")):
+            raise ValueError(f"Invalid export path: {output_path}")
+        os.makedirs(os.path.dirname(abs_out), exist_ok=True)
+        escaped_path = abs_out.replace("'", "''")
         with self._get_connection(read_only=True) as con:
-            con.execute(f"COPY {table_name} TO '{output_path}' (FORMAT PARQUET, COMPRESSION ZSTD);")
-        logger.info(f"📦 已成功導出 {table_name} 至 Parquet: {output_path}")
-        return output_path
+            safe_table = self._validate_table_name(con, table_name)
+            con.execute(f'COPY "{safe_table}" TO \'{escaped_path}\' (FORMAT PARQUET, COMPRESSION ZSTD);')
+        logger.info(f"📦 已成功導出 {safe_table} 至 Parquet: {abs_out}")
+        return abs_out
 
     @staticmethod
     def _clean_df_records(df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -1114,7 +1186,14 @@ class DuckDBManager:
             age_hours = max(0.0, round((now - batch_dt).total_seconds() / 3600.0, 1))
             batch_date = batch_dt.strftime("%Y-%m-%d")
             from core.market_calendar import MarketCalendar
-            freshness = MarketCalendar.check_market_freshness(market="TW", last_data_date=batch_date, now_dt=now)
+            freshness_market = "TW"
+            if parsed_indices:
+                upper_indices = {str(idx).upper() for idx in parsed_indices}
+                if upper_indices & {"SP500", "NASDAQ100", "DOWJONES", "US"}:
+                    freshness_market = "US"
+                elif upper_indices & {"日經225", "NIKKEI225", "JP"}:
+                    freshness_market = "JP"
+            freshness = MarketCalendar.check_market_freshness(market=freshness_market, last_data_date=batch_date, now_dt=now)
             is_stale = freshness.get("stale", False)
         except Exception:
             age_hours = 0.0
@@ -1591,290 +1670,120 @@ class DuckDBManager:
         df = self.query(sql, params)
         return self._clean_df_records(df)
 
-    def get_timestral_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """取得 Timestral 預測漲幅最大 TOP N 標的 (Mistral AI 209M)"""
+    def _get_model_top_ranked(
+        self,
+        model_name: str,
+        *,
+        order_direction: str = "DESC",
+        index_name: Optional[str] = None,
+        limit: int = 10,
+        use_moirai_effective: bool = False,
+        read_only: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """共用時序模型多空排行查詢，去除重複 SQL 樣板。"""
         parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'Timestral'",
+        if use_moirai_effective:
+            where_clauses = [
+                "(potential IS NOT NULL OR moirai_potential IS NOT NULL)",
+                "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
+            ]
+        else:
+            where_clauses = [
+                "potential IS NOT NULL",
+                f"model_name = '{model_name}'",
+            ]
+        where_clauses.extend([
             "index_name NOT LIKE '%TEST%'",
             "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
+            "index_name NOT LIKE '%SERVICE_KEY%'",
+        ])
+        params: List[Any] = []
         idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
         if idx_clause:
             where_clauses.append(idx_clause)
             params.extend(idx_params)
 
         where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential DESC
-        LIMIT ?;
-        """
+        sort_dir = "ASC" if str(order_direction).upper() == "ASC" else "DESC"
+        if use_moirai_effective:
+            sql = f"""
+            WITH ranked AS (
+                SELECT *,
+                       COALESCE(moirai_potential, potential) as effective_pot,
+                       ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+                FROM predictions
+                {where_sql}
+            )
+            SELECT * EXCLUDE (rn, effective_pot, potential),
+                   effective_pot as potential
+            FROM ranked
+            WHERE rn = 1
+            ORDER BY effective_pot {sort_dir}
+            LIMIT ?;
+            """
+        else:
+            sql = f"""
+            WITH ranked AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
+                FROM predictions
+                {where_sql}
+            )
+            SELECT * EXCLUDE (rn)
+            FROM ranked
+            WHERE rn = 1
+            ORDER BY potential {sort_dir}
+            LIMIT ?;
+            """
         params.append(limit)
-        df = self.query(sql, params)
+        df = self.query(sql, params, read_only=True) if read_only else self.query(sql, params)
         return self._clean_df_records(df)
+
+    def get_timestral_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """取得 Timestral 預測漲幅最大 TOP N 標的 (Mistral AI 209M)"""
+        return self._get_model_top_ranked("Timestral", order_direction="DESC", index_name=index_name, limit=limit)
 
     def get_timestral_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 Timestral 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'Timestral'",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential ASC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params)
-        return self._clean_df_records(df)
+        return self._get_model_top_ranked("Timestral", order_direction="ASC", index_name=index_name, limit=limit)
 
     def get_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得預測漲幅最大 TOP N 標的 (以 Timestral 為主)"""
-        # 優先查詢 Timestral
-        timestral_res = self.get_timestral_top_bullish(index_name=index_name, limit=limit)
-        if timestral_res:
-            return timestral_res
-
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'Timestral'",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential DESC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params)
-        return self._clean_df_records(df)
+        return self.get_timestral_top_bullish(index_name=index_name, limit=limit)
 
     def get_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得預測跌幅最大 / 潛在做空 TOP N 標的 (以 Timestral 為主)"""
-        timestral_res = self.get_timestral_top_bearish(index_name=index_name, limit=limit)
-        if timestral_res:
-            return timestral_res
-
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'Timestral'",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential ASC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params)
-        return self._clean_df_records(df)
+        return self.get_timestral_top_bearish(index_name=index_name, limit=limit)
 
     def get_timesfm_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測漲幅最大 TOP N 標的"""
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'TimesFM'",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential DESC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params)
-        return self._clean_df_records(df)
+        return self._get_model_top_ranked("TimesFM", order_direction="DESC", index_name=index_name, limit=limit)
 
     def get_timesfm_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 TimesFM 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "potential IS NOT NULL", 
-            "model_name = 'TimesFM'",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
-        )
-        SELECT * EXCLUDE (rn)
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY potential ASC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params)
-        return self._clean_df_records(df)
+        return self._get_model_top_ranked("TimesFM", order_direction="ASC", index_name=index_name, limit=limit)
 
     def get_moirai_top_bullish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 MOIRAI-2 預測漲幅最大 TOP N 標的"""
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
-            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   COALESCE(moirai_potential, potential) as effective_pot,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
+        return self._get_model_top_ranked(
+            "MOIRAI-2",
+            order_direction="DESC",
+            index_name=index_name,
+            limit=limit,
+            use_moirai_effective=True,
+            read_only=True,
         )
-        SELECT * EXCLUDE (rn, effective_pot, potential),
-               effective_pot as potential
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY effective_pot DESC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params, read_only=True)
-        return self._clean_df_records(df)
 
     def get_moirai_top_bearish(self, index_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """取得 MOIRAI-2 預測跌幅最大 / 潛在做空 TOP N 標的"""
-        parsed_indices = self._parse_index_names(index_name)
-        where_clauses = [
-            "(potential IS NOT NULL OR moirai_potential IS NOT NULL)", 
-            "(model_name = 'MOIRAI-2' OR LOWER(model_name) LIKE '%moirai%' OR moirai_potential IS NOT NULL)",
-            "index_name NOT LIKE '%TEST%'",
-            "index_name NOT LIKE '%DEBUG%'",
-            "index_name NOT LIKE '%SERVICE_KEY%'"
-        ]
-        params = []
-        idx_clause, idx_params = self._build_index_filter_clause(parsed_indices)
-        if idx_clause:
-            where_clauses.append(idx_clause)
-            params.extend(idx_params)
-
-        where_sql = f"WHERE {' AND '.join(where_clauses)}"
-        sql = f"""
-        WITH ranked AS (
-            SELECT *,
-                   COALESCE(moirai_potential, potential) as effective_pot,
-                   ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY timestamp DESC) as rn
-            FROM predictions
-            {where_sql}
+        return self._get_model_top_ranked(
+            "MOIRAI-2",
+            order_direction="ASC",
+            index_name=index_name,
+            limit=limit,
+            use_moirai_effective=True,
+            read_only=True,
         )
-        SELECT * EXCLUDE (rn, effective_pot, potential),
-               effective_pot as potential
-        FROM ranked
-        WHERE rn = 1
-        ORDER BY effective_pot ASC
-        LIMIT ?;
-        """
-        params.append(limit)
-        df = self.query(sql, params, read_only=True)
-        return self._clean_df_records(df)
 
     def get_ticker_history(self, ticker: str, limit: int = 30) -> List[Dict[str, Any]]:
         """
@@ -4161,9 +4070,10 @@ class DuckDBManager:
         ticker: str,
         verdict: Dict[str, Any],
         as_of_date: Optional[str] = None,
-        ttl_seconds: int = 86400
+        ttl_seconds: int = 86400,
+        macro_regime: Optional[str] = None,
     ) -> bool:
-        """寫入 Clef System One AI 機率化決策推論至 DuckDB，支援多代碼自動正規化與過期時間設置"""
+        """寫入 Clef System One AI 機率化決策推論至 DuckDB，支援多代碼與情境自動正規化與過期時間設置"""
         if not self.enabled or not ticker or not verdict:
             return False
         try:
@@ -4192,17 +4102,57 @@ class DuckDBManager:
             favorable = _s_float(verdict.get("is_favorable_entry"), 0.5)
             tag = str(verdict.get("tag") or "")
             source_slot = str(verdict.get("source_slot") or "clef")
-            raw_verdict_str = json.dumps(verdict, ensure_ascii=False)
+            verdict_payload = dict(verdict)
+            norm_regime = str(macro_regime or "").strip().lower()
+            if norm_regime and "macro_regime" not in verdict_payload:
+                verdict_payload["macro_regime"] = norm_regime
+            raw_verdict_str = json.dumps(verdict_payload, ensure_ascii=False)
 
             with self._write_lock():
                 with self._get_connection(read_only=False) as con:
+                    cols = {r[1] for r in con.execute("PRAGMA table_info('decision_verdicts')").fetchall()}
+                    if "macro_regime" not in cols:
+                        con.execute("BEGIN TRANSACTION;")
+                        try:
+                            con.execute("""
+                                CREATE TABLE decision_verdicts_v2 (
+                                    ticker VARCHAR NOT NULL,
+                                    as_of_date VARCHAR NOT NULL,
+                                    macro_regime VARCHAR NOT NULL DEFAULT '',
+                                    action_decision VARCHAR NOT NULL,
+                                    action_confidence DOUBLE,
+                                    action_probabilities VARCHAR,
+                                    conviction_score DOUBLE,
+                                    is_favorable_entry DOUBLE,
+                                    tag VARCHAR,
+                                    source_slot VARCHAR,
+                                    raw_verdict VARCHAR,
+                                    created_at VARCHAR NOT NULL,
+                                    expires_at VARCHAR NOT NULL,
+                                    PRIMARY KEY (ticker, as_of_date, macro_regime)
+                                );
+                            """)
+                            con.execute("""
+                                INSERT INTO decision_verdicts_v2
+                                SELECT ticker, as_of_date, '', action_decision, action_confidence, action_probabilities,
+                                       conviction_score, is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at
+                                FROM decision_verdicts;
+                            """)
+                            con.execute("DROP TABLE decision_verdicts;")
+                            con.execute("ALTER TABLE decision_verdicts_v2 RENAME TO decision_verdicts;")
+                            con.execute("CREATE INDEX IF NOT EXISTS idx_decision_verdicts_ticker ON decision_verdicts (ticker);")
+                            con.execute("CREATE INDEX IF NOT EXISTS idx_decision_verdicts_expires ON decision_verdicts (expires_at);")
+                            con.execute("COMMIT;")
+                        except Exception:
+                            con.execute("ROLLBACK;")
+                            raise
                     con.execute("""
                     INSERT OR REPLACE INTO decision_verdicts
-                    (ticker, as_of_date, action_decision, action_confidence, action_probabilities,
+                    (ticker, as_of_date, macro_regime, action_decision, action_confidence, action_probabilities,
                      conviction_score, is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                     """, [
-                        t_clean, date_str, action, confidence, probs_str,
+                        t_clean, date_str, norm_regime, action, confidence, probs_str,
                         conviction, favorable, tag, source_slot, raw_verdict_str, created_at, expires_at
                     ])
             return True
@@ -4214,24 +4164,42 @@ class DuckDBManager:
         self,
         ticker: str,
         as_of_date: Optional[str] = None,
-        check_expiry: bool = True
+        check_expiry: bool = True,
+        macro_regime: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """從 DuckDB 讀取特定標的與交易日之 AI 決策推論快取，支援過期時間檢查與對稱代碼檢索"""
+        """從 DuckDB 讀取特定標的與交易日之 AI 決策推論快取，支援過期時間檢查、嚴格情境隔離與對稱代碼檢索"""
         if not self.enabled or not ticker:
             return None
         try:
             t_clean = str(ticker).strip().upper()
             raw_code = re.sub(r"\.(TW|TWO)$", "", t_clean)
             date_str = as_of_date or datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d")
+            req_regime = str(macro_regime or "").strip().lower()
+            is_tw_code = raw_code.isdigit() and len(raw_code) in (4, 5, 6)
 
             with self._get_connection(read_only=True) as con:
-                row = con.execute("""
+                cols = {r[1] for r in con.execute("PRAGMA table_info('decision_verdicts')").fetchall()}
+                has_regime_col = "macro_regime" in cols
+                if is_tw_code:
+                    ticker_clause = "(ticker IN (?, ?) OR ticker LIKE ?)"
+                    ticker_params: List[Any] = [t_clean, raw_code, f"{raw_code}.%"]
+                else:
+                    ticker_clause = "ticker = ?"
+                    ticker_params = [t_clean]
+
+                query_params: List[Any] = list(ticker_params) + [date_str]
+                regime_clause = ""
+                if req_regime and has_regime_col:
+                    regime_clause = " AND macro_regime = ?"
+                    query_params.append(req_regime)
+
+                row = con.execute(f"""
                 SELECT action_decision, action_confidence, action_probabilities, conviction_score,
                        is_favorable_entry, tag, source_slot, raw_verdict, created_at, expires_at
                 FROM decision_verdicts
-                WHERE (ticker IN (?, ?) OR ticker LIKE ?) AND as_of_date = ?
+                WHERE {ticker_clause} AND as_of_date = ?{regime_clause}
                 ORDER BY created_at DESC LIMIT 1;
-                """, [t_clean, raw_code, f"{raw_code}.%", date_str]).fetchone()
+                """, query_params).fetchone()
 
                 if not row:
                     return None
@@ -4241,6 +4209,17 @@ class DuckDBManager:
                 if check_expiry and exp_at:
                     now_str = datetime.datetime.now(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M:%S")
                     if now_str > exp_at:
+                        return None
+
+                if req_regime:
+                    cached_regime = ""
+                    if raw_v:
+                        try:
+                            parsed_raw = json.loads(raw_v) if isinstance(raw_v, str) else raw_v
+                            cached_regime = str((parsed_raw or {}).get("macro_regime") or "").strip().lower()
+                        except Exception:
+                            cached_regime = ""
+                    if cached_regime != req_regime:
                         return None
 
                 try:
@@ -5534,13 +5513,15 @@ class DuckDBManager:
 
     def get_quant_alerts(
         self,
-        profile_id: str = "default",
+        profile_id: Optional[str] = "default",
         enabled_only: bool = False
     ) -> List[Dict[str, Any]]:
-        """查詢量化價位告警清單"""
-        profile_id = str(profile_id or "default").strip()
-        query = "SELECT alert_id, profile_id, canonical_ticker, rule_type, threshold_value, reference_model, enabled, cooldown_minutes, last_triggered_at, last_triggered_price, created_at FROM quant_price_alerts WHERE profile_id = ?"
-        params = [profile_id]
+        """查詢量化價位告警清單；傳入 profile_id=None 或 '*' 可查詢全部設定檔"""
+        query = "SELECT alert_id, profile_id, canonical_ticker, rule_type, threshold_value, reference_model, enabled, cooldown_minutes, last_triggered_at, last_triggered_price, created_at FROM quant_price_alerts WHERE 1=1"
+        params: List[Any] = []
+        if profile_id is not None and str(profile_id).strip() != "*":
+            query += " AND profile_id = ?"
+            params.append(str(profile_id or "default").strip())
         if enabled_only:
             query += " AND enabled = true"
         query += " ORDER BY created_at DESC"
@@ -5620,6 +5601,319 @@ class DuckDBManager:
                 """, [now_dt, float(triggered_price), alert_id, profile_id]).fetchone()
 
             return row is not None
+
+    # ==================== Taiwan MOPS Material Events & Monthly Revenue ====================
+
+    @staticmethod
+    def _finite_float(val: Any) -> Optional[float]:
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            return f if math.isfinite(f) else None
+        except (ValueError, TypeError):
+            return None
+
+    def save_mops_events_batch(self, records: List[Dict[str, Any]]) -> int:
+        """批次寫入台股公開資訊觀測站 (MOPS) 重大訊息（原子交易保護）"""
+        if not self.enabled or not records:
+            return 0
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        rows = []
+        for r in records:
+            kws = r.get("matched_keywords") or []
+            kws_json = json.dumps(kws, ensure_ascii=False) if isinstance(kws, list) else str(kws)
+            rows.append({
+                "event_id": str(r.get("event_id") or ""),
+                "ticker": str(r.get("ticker") or "").upper(),
+                "raw_code": str(r.get("raw_code") or ""),
+                "company_name": str(r.get("company_name") or ""),
+                "market": str(r.get("market") or "TWSE"),
+                "speech_date": str(r.get("speech_date") or ""),
+                "speech_time": str(r.get("speech_time") or ""),
+                "fact_date": str(r.get("fact_date") or ""),
+                "available_at": str(r.get("available_at") or ""),
+                "clause": str(r.get("clause") or ""),
+                "subject": str(r.get("subject") or ""),
+                "summary": str(r.get("summary") or ""),
+                "matched_keywords": kws_json,
+                "sentiment_tag": str(r.get("sentiment_tag") or "neutral"),
+                "source": str(r.get("source") or "MOPS"),
+                "updated_at": now_str,
+            })
+        df = pd.DataFrame(rows).drop_duplicates(subset=["event_id"], keep="last")
+        df = df[df["event_id"] != ""]
+        if df.empty:
+            return 0
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            con.register("temp_mops_events_df", df)
+            con.execute("BEGIN TRANSACTION;")
+            try:
+                con.execute("DELETE FROM tw_mops_events WHERE event_id IN (SELECT event_id FROM temp_mops_events_df);")
+                con.execute("""
+                    INSERT INTO tw_mops_events (
+                        event_id, ticker, raw_code, company_name, market, speech_date, speech_time,
+                        fact_date, available_at, clause, subject, summary, matched_keywords,
+                        sentiment_tag, source, updated_at
+                    )
+                    SELECT event_id, ticker, raw_code, company_name, market, speech_date, speech_time,
+                           fact_date, available_at, clause, subject, summary, matched_keywords,
+                           sentiment_tag, source, updated_at
+                    FROM temp_mops_events_df;
+                """)
+                con.execute("COMMIT;")
+            except Exception:
+                con.execute("ROLLBACK;")
+                raise
+            finally:
+                try:
+                    con.unregister("temp_mops_events_df")
+                except Exception:
+                    pass
+        return len(df)
+
+    def save_monthly_revenue_batch(self, records: List[Dict[str, Any]]) -> int:
+        """批次寫入台股月營收公告（清洗 NaN/Inf 並以原子交易寫入）"""
+        if not self.enabled or not records:
+            return 0
+        now_str = datetime.datetime.now(TZ_TAIPEI).isoformat()
+        rows = []
+        for r in records:
+            rows.append({
+                "ticker": str(r.get("ticker") or "").upper(),
+                "raw_code": str(r.get("raw_code") or ""),
+                "company_name": str(r.get("company_name") or ""),
+                "market": str(r.get("market") or "TWSE"),
+                "industry": str(r.get("industry") or ""),
+                "revenue_ym": str(r.get("revenue_ym") or ""),
+                "published_date": str(r.get("published_date") or ""),
+                "current_revenue": self._finite_float(r.get("current_revenue")),
+                "prev_revenue": self._finite_float(r.get("prev_revenue")),
+                "last_year_revenue": self._finite_float(r.get("last_year_revenue")),
+                "mom_pct": self._finite_float(r.get("mom_pct")),
+                "yoy_pct": self._finite_float(r.get("yoy_pct")),
+                "ytd_revenue": self._finite_float(r.get("ytd_revenue")),
+                "ytd_yoy_pct": self._finite_float(r.get("ytd_yoy_pct")),
+                "revenue_tag": r.get("revenue_tag"),
+                "remark": str(r.get("remark") or ""),
+                "source": str(r.get("source") or "OpenAPI"),
+                "updated_at": now_str,
+            })
+        df = pd.DataFrame(rows).drop_duplicates(subset=["ticker", "revenue_ym"], keep="last")
+        df = df[(df["ticker"] != "") & (df["revenue_ym"] != "")]
+        if df.empty:
+            return 0
+        # Ensure all pandas NaN become Python None before DuckDB registration
+        df = df.astype(object).where(pd.notna(df), None)
+        with self._write_lock(), self._get_connection(read_only=False) as con:
+            con.register("temp_tw_rev_df", df)
+            con.execute("BEGIN TRANSACTION;")
+            try:
+                con.execute("DELETE FROM tw_monthly_revenue WHERE (ticker, revenue_ym) IN (SELECT ticker, revenue_ym FROM temp_tw_rev_df);")
+                con.execute("""
+                    INSERT INTO tw_monthly_revenue (
+                        ticker, raw_code, company_name, market, industry, revenue_ym, published_date,
+                        current_revenue, prev_revenue, last_year_revenue, mom_pct, yoy_pct,
+                        ytd_revenue, ytd_yoy_pct, revenue_tag, remark, source, updated_at
+                    )
+                    SELECT ticker, raw_code, company_name, market, industry, revenue_ym, published_date,
+                           CASE WHEN current_revenue IS NULL OR isnan(TRY_CAST(current_revenue AS DOUBLE)) THEN NULL ELSE TRY_CAST(current_revenue AS DOUBLE) END,
+                           CASE WHEN prev_revenue IS NULL OR isnan(TRY_CAST(prev_revenue AS DOUBLE)) THEN NULL ELSE TRY_CAST(prev_revenue AS DOUBLE) END,
+                           CASE WHEN last_year_revenue IS NULL OR isnan(TRY_CAST(last_year_revenue AS DOUBLE)) THEN NULL ELSE TRY_CAST(last_year_revenue AS DOUBLE) END,
+                           CASE WHEN mom_pct IS NULL OR isnan(TRY_CAST(mom_pct AS DOUBLE)) THEN NULL ELSE TRY_CAST(mom_pct AS DOUBLE) END,
+                           CASE WHEN yoy_pct IS NULL OR isnan(TRY_CAST(yoy_pct AS DOUBLE)) THEN NULL ELSE TRY_CAST(yoy_pct AS DOUBLE) END,
+                           CASE WHEN ytd_revenue IS NULL OR isnan(TRY_CAST(ytd_revenue AS DOUBLE)) THEN NULL ELSE TRY_CAST(ytd_revenue AS DOUBLE) END,
+                           CASE WHEN ytd_yoy_pct IS NULL OR isnan(TRY_CAST(ytd_yoy_pct AS DOUBLE)) THEN NULL ELSE TRY_CAST(ytd_yoy_pct AS DOUBLE) END,
+                           revenue_tag, remark, source, updated_at
+                    FROM temp_tw_rev_df;
+                """)
+                con.execute("COMMIT;")
+            except Exception:
+                con.execute("ROLLBACK;")
+                raise
+            finally:
+                try:
+                    con.unregister("temp_tw_rev_df")
+                except Exception:
+                    pass
+        return len(df)
+
+    def get_mops_events(self, ticker: Optional[str] = None, limit: int = 30, only_catalysts: bool = False) -> List[Dict[str, Any]]:
+        """查詢台股重大訊息（具市場後綴時精確比對 ticker，未帶後綴時以 raw_code 比對）"""
+        if not self.enabled:
+            return []
+        where_clauses = []
+        params: List[Any] = []
+        if ticker:
+            t_clean = str(ticker).strip().upper()
+            if t_clean.endswith((".TW", ".TWO")):
+                where_clauses.append("ticker = ?")
+                params.append(t_clean)
+            else:
+                where_clauses.append("raw_code = ?")
+                params.append(t_clean)
+        if only_catalysts:
+            where_clauses.append("sentiment_tag IN ('positive', 'risk')")
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        params.append(int(limit))
+        with self._get_connection(read_only=True) as con:
+            rows = con.execute(f"""
+                SELECT event_id, ticker, raw_code, company_name, market, speech_date, speech_time,
+                       fact_date, available_at, clause, subject, summary, matched_keywords, sentiment_tag, source
+                FROM tw_mops_events
+                {where_sql}
+                ORDER BY speech_date DESC, speech_time DESC
+                LIMIT ?;
+            """, params).fetchall()
+        out = []
+        for row in rows:
+            try:
+                kws = json.loads(row[12]) if row[12] else []
+            except Exception:
+                kws = []
+            out.append({
+                "event_id": row[0], "ticker": row[1], "raw_code": row[2], "company_name": row[3],
+                "market": row[4], "speech_date": row[5], "speech_time": row[6], "fact_date": row[7],
+                "available_at": row[8], "clause": row[9], "subject": row[10], "summary": row[11],
+                "matched_keywords": kws, "sentiment_tag": row[13], "source": row[14],
+            })
+        return out
+
+    def get_monthly_revenue(self, ticker: str, limit: int = 12) -> List[Dict[str, Any]]:
+        """查詢單一台股最近 N 個月月營收記錄（精確比對市場別）"""
+        if not self.enabled or not ticker:
+            return []
+        t_clean = str(ticker).strip().upper()
+        if t_clean.endswith((".TW", ".TWO")):
+            where_sql = "ticker = ?"
+            param = t_clean
+        else:
+            where_sql = "raw_code = ?"
+            param = t_clean
+        with self._get_connection(read_only=True) as con:
+            rows = con.execute(f"""
+                SELECT ticker, raw_code, company_name, market, industry, revenue_ym, published_date,
+                       current_revenue, prev_revenue, last_year_revenue, mom_pct, yoy_pct,
+                       ytd_revenue, ytd_yoy_pct, revenue_tag, remark, source
+                FROM tw_monthly_revenue
+                WHERE {where_sql}
+                ORDER BY revenue_ym DESC
+                LIMIT ?;
+            """, [param, int(limit)]).fetchall()
+        return [
+            {
+                "ticker": r[0], "raw_code": r[1], "company_name": r[2], "market": r[3], "industry": r[4],
+                "revenue_ym": r[5], "published_date": r[6],
+                "current_revenue": self._finite_float(r[7]),
+                "prev_revenue": self._finite_float(r[8]),
+                "last_year_revenue": self._finite_float(r[9]),
+                "mom_pct": self._finite_float(r[10]),
+                "yoy_pct": self._finite_float(r[11]),
+                "ytd_revenue": self._finite_float(r[12]),
+                "ytd_yoy_pct": self._finite_float(r[13]),
+                "revenue_tag": r[14], "remark": r[15], "source": r[16],
+            }
+            for r in rows
+        ]
+
+    def get_mops_highlights(self, limit: int = 20) -> Dict[str, Any]:
+        """取得最新重點 MOPS 重訊催化與高營收成長股榜單"""
+        if not self.enabled:
+            return {"catalysts": [], "top_revenue_growth": []}
+        catalysts = self.get_mops_events(limit=limit, only_catalysts=True)
+        with self._get_connection(read_only=True) as con:
+            rev_rows = con.execute("""
+                WITH latest_ym AS (SELECT MAX(revenue_ym) AS ym FROM tw_monthly_revenue)
+                SELECT r.ticker, r.company_name, r.industry, r.revenue_ym, r.current_revenue,
+                       r.mom_pct, r.yoy_pct, r.ytd_yoy_pct, r.revenue_tag
+                FROM tw_monthly_revenue r, latest_ym
+                WHERE r.revenue_ym = latest_ym.ym
+                  AND r.yoy_pct IS NOT NULL
+                  AND NOT isnan(r.yoy_pct)
+                  AND NOT isinf(r.yoy_pct)
+                ORDER BY r.yoy_pct DESC
+                LIMIT ?;
+            """, [int(limit)]).fetchall()
+        top_rev = [
+            {
+                "ticker": r[0], "company_name": r[1], "industry": r[2], "revenue_ym": r[3],
+                "current_revenue": self._finite_float(r[4]),
+                "mom_pct": self._finite_float(r[5]),
+                "yoy_pct": self._finite_float(r[6]),
+                "ytd_yoy_pct": self._finite_float(r[7]),
+                "revenue_tag": r[8],
+            }
+            for r in rev_rows
+        ]
+        return {"catalysts": catalysts, "top_revenue_growth": top_rev}
+
+    def get_mops_factor_map(
+        self,
+        tickers: List[str],
+        days: int = 14,
+        as_of: Optional[datetime.datetime] = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """批次取得指定台股的 MOPS 因子摘要（嚴格遵守 as_of Point-in-Time 截斷，避免前瞻洩漏）"""
+        if not self.enabled or not tickers:
+            return {}
+        from data.mops_fetcher import MOPSFetcher
+        tw_tickers = [str(t).strip().upper() for t in tickers if str(t).strip().upper().endswith((".TW", ".TWO"))]
+        if not tw_tickers:
+            return {}
+        if as_of is not None:
+            ref_dt = as_of.astimezone(TZ_TAIPEI) if as_of.tzinfo else as_of.replace(tzinfo=TZ_TAIPEI)
+        else:
+            ref_dt = datetime.datetime.now(TZ_TAIPEI)
+        as_of_iso = ref_dt.isoformat()
+        as_of_date = ref_dt.strftime("%Y-%m-%d")
+        cutoff_iso = (ref_dt - datetime.timedelta(days=days)).isoformat()
+
+        rev_by_ticker: Dict[str, Dict[str, Any]] = {}
+        events_by_ticker: Dict[str, List[Dict[str, Any]]] = {}
+        placeholders = ",".join("?" for _ in tw_tickers)
+        rev_date_filter = "AND published_date != '' AND published_date <= ?" if as_of is not None else "AND (published_date = '' OR published_date <= ?)"
+        with self._get_connection(read_only=True) as con:
+            rev_rows = con.execute(f"""
+                SELECT ticker, revenue_ym, mom_pct, yoy_pct, ytd_yoy_pct, revenue_tag
+                FROM (
+                    SELECT ticker, revenue_ym, mom_pct, yoy_pct, ytd_yoy_pct, revenue_tag,
+                           ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY revenue_ym DESC) AS rn
+                    FROM tw_monthly_revenue
+                    WHERE ticker IN ({placeholders})
+                      {rev_date_filter}
+                ) t WHERE rn = 1;
+            """, tw_tickers + [as_of_date]).fetchall()
+            for r in rev_rows:
+                rev_by_ticker[r[0]] = {
+                    "revenue_ym": r[1],
+                    "mom_pct": self._finite_float(r[2]),
+                    "yoy_pct": self._finite_float(r[3]),
+                    "ytd_yoy_pct": self._finite_float(r[4]),
+                    "revenue_tag": r[5],
+                }
+            ev_rows = con.execute(f"""
+                SELECT ticker, speech_date, subject, matched_keywords, sentiment_tag
+                FROM tw_mops_events
+                WHERE ticker IN ({placeholders})
+                  AND available_at != ''
+                  AND available_at >= ?
+                  AND available_at <= ?
+                  AND sentiment_tag IN ('positive', 'risk')
+                ORDER BY available_at DESC;
+            """, tw_tickers + [cutoff_iso, as_of_iso]).fetchall()
+            for r in ev_rows:
+                events_by_ticker.setdefault(r[0], []).append({
+                    "speech_date": r[1], "subject": r[2],
+                    "matched_keywords": r[3], "sentiment_tag": r[4],
+                })
+
+        out: Dict[str, Dict[str, Any]] = {}
+        for t in tw_tickers:
+            rev = rev_by_ticker.get(t)
+            evs = events_by_ticker.get(t, [])
+            if rev or evs:
+                out[t] = MOPSFetcher.build_factor_summary(rev, evs)
+        return out
 
 
 

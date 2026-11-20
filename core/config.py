@@ -35,7 +35,7 @@ class EmailConfig:
 class TelegramConfig:
     """Telegram bot configuration settings"""
     BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
-    CHANNEL_ID: Optional[str] = os.getenv("TELEGRAM_CHANNEL_ID")
+    CHANNEL_ID: Optional[str] = os.getenv("TELEGRAM_CHANNEL_ID") or os.getenv("TELEGRAM_CHAT_ID")
 
 
 class DiscordConfig:

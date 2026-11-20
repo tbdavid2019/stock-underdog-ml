@@ -67,7 +67,7 @@ graph TD
 
 ---
 
-## 4. MCP Tools 快速對照表 (32 大標準 FastMCP / WebMCP 工具)
+## 4. MCP Tools 快速對照表 (33 大標準 FastMCP / WebMCP 工具)
 
 | MCP Tool 名稱 | 參數 | 回傳說明 |
 | :--- | :--- | :--- |
@@ -102,7 +102,8 @@ graph TD
 | `get_market_live_sessions` | 無 | 查詢台股 (TWSE)、美股 (NYSE/NASDAQ) 與日股 (TSE) 即時交易時段五態狀態（pre_market, regular, lunch_break, after_hours, closed），包含東京 11:30–12:30 午休與美股夏冬令感知倒數 (唯讀安全) |
 | `get_signal_alignment` | `ticker` | 查詢指定個股代號之多源量化訊號一致度卡（Signal Alignment），聚合時序基礎模型、台股法人籌碼、近 30 日 Podcast 情報多空姿態與前沿雷達四維度共識 (唯讀安全) |
 | `get_portfolio_risk_xray` | `tickers`, `weights`, `window` | 查詢多市場持股組合風險 X 光片（雙口徑年化波動率、95%/99% 階梯式 VaR/CVaR、歐拉風險邊際貢獻與多幣別曝險拆解，唯讀安全） |
-| `get_canary_loader_health` | `limit` | 查詢 8 大核心資料源隔離金絲雀健康快照（TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv 延遲與成功率，唯讀安全） |
+| `get_canary_loader_health` | `limit` | 查詢 9 大核心資料源隔離金絲雀健康快照（TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv, MOPS 延遲與成功率，唯讀安全） |
+| `get_tw_mops_intel` | `ticker`, `limit` | 查詢台灣公開資訊觀測站 (MOPS) 重大訊息催化/風險警示與月營收 MoM/YoY 動能（唯讀安全） |
 
 ---
 
@@ -111,7 +112,7 @@ graph TD
 - `GET /skill` - 取得最新本 Skill 規格檔 (Markdown)
 - `GET /llms.txt` & `GET /llms-full.txt` - 標準 LLM Agent 系統探索規格
 - `GET /api/v1/models` - 查詢目前啟用中之可擴充時序基礎模型清單
-- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (32 大原生量化工具)
+- `GET /.well-known/mcp.json` - WebMCP 遠端發現規格清單 (33 大原生量化工具)
 - `GET /mcp/sse` - WebMCP SSE 串流通訊端點
 - `GET /api/v1/watchlist` - 查詢使用者本地 DuckDB 持久化自選股清單與最新預測
 - `POST /api/v1/watchlist` - 新增自選股（需 WATCHLIST_API_KEY 金鑰驗證）
@@ -157,5 +158,6 @@ graph TD
 - `GET /api/v1/market/institutional/top` - 法人買賣超排行
 - `GET /api/v1/market/broker/summary/{ticker}` - 券商主力分點累計進出
 - `GET /api/v1/market/company-profile` - 2MD 公司營運簡介
+- `GET /api/v1/market/mops/highlights` & `GET /api/v1/market/mops/{ticker}` - 台股 MOPS 重大訊息催化與月營收動能
 - `GET /api/v1/predictions/latest` - 最新批次日報
 - `GET /api/v1/stats/summary` - 資料庫時序統計

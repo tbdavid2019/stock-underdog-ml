@@ -298,23 +298,6 @@ class InvestingService:
             except Exception:
                 pass
 
-            # 最終降級基線：保證介面與量化決策 100% 具備最新 FOMC 利率結構（避免 None 造成 UI 崩潰）
-            default_baseline = {
-                "source": "Investing.com (CME Group)",
-                "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "meeting_date": "Oct 28, 2026 02:00PM ET",
-                "future_price": 96.12,
-                "target_rates": [
-                    {"rate_range": "3.75 - 4.00", "current_probability": "72.4%", "probability_value": 72.4, "previous_day": "79.3%", "previous_week": "81.6%"},
-                    {"rate_range": "4.00 - 4.25", "current_probability": "27.6%", "probability_value": 27.6, "previous_day": "20.7%", "previous_week": "18.4%"}
-                ],
-                "highest_prob_rate": "3.75 - 4.00",
-                "highest_probability": "72.4%",
-                "summary": "市場預期下次 FOMC (Oct 28, 2026 02:00PM ET) 目標利率以 3.75 - 4.00 機率最高 (72.4%)"
-            }
-            cls._write_cache(cache_key, default_baseline)
-            return default_baseline
-
         logger.warning("⚠️ FedWatch 上游沒有可驗證資料，略過利率預期顯示")
         return None
 

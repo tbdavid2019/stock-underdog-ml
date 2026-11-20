@@ -46,12 +46,14 @@ class CompositeEvaluator:
         index_name: str,
         strategy_outputs: Dict[str, List[StrategyResult]],
         fundamentals_map: Optional[Dict[str, Dict[str, Optional[float]]]] = None,
-        macro_state: Optional[MacroState] = None
+        macro_state: Optional[MacroState] = None,
+        mops_map: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> EvaluationReport:
         """
         Evaluate all strategy outputs for an index, computing composite scores, dual-FM consensus, and overlap.
         """
         fundamentals_map = fundamentals_map or {}
+        mops_map = mops_map or {}
 
         # 1. Index strategy results by ticker
         ticker_strat_map: Dict[str, Dict[str, StrategyResult]] = {}
@@ -340,6 +342,18 @@ class CompositeEvaluator:
                     weight_total += s_weight
 
             composite_score = round(score_total / weight_total, 2) if weight_total > 0 else 0.0
+
+            # Taiwan MOPS monthly revenue momentum & material catalyst adjustment (applied pre-macro/bearish discount)
+            mops_info = mops_map.get(ticker)
+            if mops_info:
+                mops_tags = mops_info.get("tags") or []
+                for mt in mops_tags:
+                    if mt not in combined_tags:
+                        combined_tags.append(mt)
+                mops_delta = float(mops_info.get("score_delta") or 0.0)
+                if mops_delta != 0.0:
+                    bounded_delta = max(-4.0, min(4.0, mops_delta * 0.4))
+                    composite_score = round(max(0.0, min(100.0, composite_score + bounded_delta)), 2)
 
             # Macro Exposure Multiplier Discount
             if macro_state and macro_state.exposure is not None and macro_state.exposure < 1.0:

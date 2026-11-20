@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 
 from api.schemas import (
     DiscoveryCandidatesResponse,
@@ -245,11 +245,12 @@ def get_status():
     )
 
 
+from core.netlimiter import verify_sync_rate_limit
 import threading
 _discovery_sync_lock = threading.Lock()
 
 
-@router.post("/sync", summary="手動觸發前沿雷達管線掃描與 arXiv 即時同步")
+@router.post("/sync", summary="手動觸發前沿雷達管線掃描與 arXiv 即時同步", dependencies=[Depends(verify_sync_rate_limit)])
 def trigger_sync():
     """
     非同步觸發 DiscoveryPipeline 爬取 arXiv 最新論文、對齊主題供應鏈並刷新 DuckDB 與快照。

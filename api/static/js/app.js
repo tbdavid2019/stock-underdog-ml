@@ -475,6 +475,7 @@ export const app = createApp({
             earningsWeightOnly: false,
             drawerActiveSubTab: 'profile', // 'profile' | 'network' | 'earnings' | 'tender'
             companyTenderLoading: false,
+            mopsIntelLoading: false,
             drawerEarningsMap: {},
             drawerEarningsLoading: false,
             showEarningsModal: false,
@@ -1735,6 +1736,8 @@ export const app = createApp({
                         this.ensureCompanyNetworkLoaded(ticker);
                     } else if (targetTab === 'tender' && (!this.expandedDrawerData || !this.expandedDrawerData.company_tender)) {
                         this.ensureCompanyTenderLoaded(ticker);
+                    } else if (targetTab === 'mops' && (!this.expandedDrawerData || !this.expandedDrawerData.mops_intel)) {
+                        this.ensureMopsIntelLoaded(ticker);
                     }
                     return;
                 }
@@ -1752,6 +1755,9 @@ export const app = createApp({
             if (this.isTwStock(ticker)) {
                 this.ensureCompanyNetworkLoaded(ticker);
                 this.ensureCompanyTenderLoaded(ticker);
+                if (targetTab === 'mops') {
+                    this.ensureMopsIntelLoaded(ticker);
+                }
             }
 
             if (this.companyProfileCache[ticker]) {
@@ -1761,6 +1767,8 @@ export const app = createApp({
                     this.ensureCompanyNetworkLoaded(ticker);
                 } else if (targetTab === 'tender' && !this.expandedDrawerData.company_tender) {
                     this.ensureCompanyTenderLoaded(ticker);
+                } else if (targetTab === 'mops' && !this.expandedDrawerData.mops_intel) {
+                    this.ensureMopsIntelLoaded(ticker);
                 }
                 return;
             }
@@ -1777,9 +1785,19 @@ export const app = createApp({
             try {
                 const data = await ApiClient.getCompanyProfile(ticker);
                 if (data && data.ticker) {
-                    this.companyProfileCache[ticker] = data;
+                    const prevActive = (this.expandedDrawerTicker === ticker && this.expandedDrawerData) ? this.expandedDrawerData : {};
+                    const prevCached = this.companyProfileCache[ticker] || {};
+                    const merged = {
+                        ...prevCached,
+                        ...prevActive,
+                        ...data,
+                        company_network: data.company_network || prevActive.company_network || prevCached.company_network,
+                        company_tender: data.company_tender || prevActive.company_tender || prevCached.company_tender,
+                        mops_intel: data.mops_intel || prevActive.mops_intel || prevCached.mops_intel,
+                    };
+                    this.companyProfileCache[ticker] = merged;
                     if (this.expandedDrawerTicker === ticker) {
-                        this.expandedDrawerData = data;
+                        this.expandedDrawerData = merged;
                     }
                 }
             } catch (e) {
@@ -1826,7 +1844,7 @@ export const app = createApp({
         },
         async ensureCompanyTenderLoaded(ticker) {
             if (!ticker || !this.isTwStock(ticker)) return;
-            if (this.expandedDrawerData && this.expandedDrawerData.company_tender) return;
+            if (this.expandedDrawerData?.ticker === ticker && this.expandedDrawerData?.company_tender) return;
             this.companyTenderLoading = true;
             try {
                 let tender = await ApiClient.getCompanyTender(ticker);
@@ -1850,7 +1868,32 @@ export const app = createApp({
             } catch (e) {
                 console.debug("Failed to lazily load company tender:", e);
             } finally {
-                this.companyTenderLoading = false;
+                if (this.expandedDrawerTicker === ticker) {
+                    this.companyTenderLoading = false;
+                }
+            }
+        },
+        async ensureMopsIntelLoaded(ticker) {
+            if (!ticker || !this.isTwStock(ticker)) return;
+            if (this.expandedDrawerData?.ticker === ticker && this.expandedDrawerData?.mops_intel) return;
+            this.mopsIntelLoading = true;
+            try {
+                const mops = await ApiClient.getMopsIntel(ticker);
+                if (mops && mops.success) {
+                    if (this.companyProfileCache[ticker]) {
+                        this.companyProfileCache[ticker].mops_intel = mops;
+                    }
+                    if (this.expandedDrawerTicker === ticker) {
+                        if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
+                        this.expandedDrawerData.mops_intel = mops;
+                    }
+                }
+            } catch (e) {
+                console.debug("Failed to lazily load MOPS intel:", e);
+            } finally {
+                if (this.expandedDrawerTicker === ticker) {
+                    this.mopsIntelLoading = false;
+                }
             }
         },
         async loadUpcomingEarnings() {

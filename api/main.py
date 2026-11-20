@@ -128,6 +128,8 @@ def _static_asset(filename: str) -> FileResponse:
 
 
 _ASSET_FINGERPRINT_CACHE: Dict[str, Any] = {"val": None, "expiry": 0.0}
+_ASSET_FINGERPRINT_LOCK = threading.Lock()
+_ASSET_FINGERPRINT_TTL = 60.0
 
 try:
     from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -148,6 +150,13 @@ except Exception:
 
 def get_asset_fingerprint(scan_dirs: Optional[Tuple[str, ...]] = None) -> str:
     """依據靜態資源與樣板內容計算確定性 SHA-256 指紋版本號，內容一有異動即刻變更 URL，防止 immutable 長效快取吃到舊檔案。"""
+    use_cache = scan_dirs is None
+    if use_cache:
+        now = time.time()
+        with _ASSET_FINGERPRINT_LOCK:
+            if _ASSET_FINGERPRINT_CACHE["val"] and now < _ASSET_FINGERPRINT_CACHE["expiry"]:
+                return _ASSET_FINGERPRINT_CACHE["val"]
+
     dirs = scan_dirs if scan_dirs is not None else (STATIC_ASSET_DIR, TEMPLATES_DIR)
     try:
         hasher = hashlib.sha256()
@@ -163,18 +172,23 @@ def get_asset_fingerprint(scan_dirs: Optional[Tuple[str, ...]] = None) -> str:
                         rel_path = os.path.relpath(full_path, scan_dir).replace("\\", "/")
                         file_entries.append((f"{os.path.basename(scan_dir)}/{rel_path}", full_path))
         file_entries.sort(key=lambda item: item[0])
-        if not file_entries:
-            return APP_VERSION
-        for rel_key, full_path in file_entries:
-            hasher.update(rel_key.encode("utf-8"))
-            hasher.update(b"\x00")
-            try:
-                with open(full_path, "rb") as fp:
-                    while chunk := fp.read(65536):
-                        hasher.update(chunk)
-            except OSError:
-                pass
-        return f"{APP_VERSION}.{hasher.hexdigest()[:12]}"
+        result = APP_VERSION
+        if file_entries:
+            for rel_key, full_path in file_entries:
+                hasher.update(rel_key.encode("utf-8"))
+                hasher.update(b"\x00")
+                try:
+                    with open(full_path, "rb") as fp:
+                        while chunk := fp.read(65536):
+                            hasher.update(chunk)
+                except OSError:
+                    pass
+            result = f"{APP_VERSION}.{hasher.hexdigest()[:12]}"
+        if use_cache:
+            with _ASSET_FINGERPRINT_LOCK:
+                _ASSET_FINGERPRINT_CACHE["val"] = result
+                _ASSET_FINGERPRINT_CACHE["expiry"] = time.time() + _ASSET_FINGERPRINT_TTL
+        return result
     except Exception:
         return APP_VERSION
 
@@ -290,6 +304,58 @@ except Exception as e:
     logging.getLogger("stock_app.api").warning(f"⚠️ WebMCP SSE 掛載略過: {e}")
 
 
+_DEFAULT_MCP_TOOLS: Tuple[str, ...] = (
+    "get_market_macro_regime",
+    "screen_quant_stocks",
+    "get_triple_resonance_stocks",
+    "get_xuantie_pullback_stocks",
+    "get_timestral_top_predictions",
+    "get_timesfm_top_predictions",
+    "get_moirai_top_predictions",
+    "get_stock_history",
+    "get_latest_market_snapshot",
+    "get_top_institutional_flows",
+    "get_broker_trades_for_stock",
+    "get_company_profile",
+    "get_fed_rate_monitor",
+    "get_us_earnings_calendar",
+    "get_economic_calendar",
+    "get_commodities_summary",
+    "resolve_stock_ticker",
+    "get_polymarket_macro_sentiment",
+    "get_clef_stock_verdict",
+    "get_upcoming_earnings_calls",
+    "get_ticker_earnings_calls",
+    "get_company_network",
+    "open_company_network",
+    "get_company_tenders",
+    "get_industry_chain",
+    "get_discovery_signals",
+    "get_model_performance_scorecard",
+    "get_watchlist",
+    "get_market_live_sessions",
+    "get_signal_alignment",
+    "get_portfolio_risk_xray",
+    "get_canary_loader_health",
+    "get_tw_mops_intel",
+)
+
+
+def _get_mcp_tool_names() -> List[str]:
+    """動態從 FastMCP 實例自省已註冊工具清單；若尚未掛載則退回單一預設列表。"""
+    mcp_obj = globals().get("mcp_instance")
+    if mcp_obj is not None:
+        try:
+            tm = getattr(mcp_obj, "_tool_manager", None)
+            if tm is not None and hasattr(tm, "list_tools"):
+                names = [str(getattr(t, "name", "")).strip() for t in tm.list_tools() if getattr(t, "name", None)]
+                if names:
+                    return names
+        except Exception:
+            pass
+    return list(_DEFAULT_MCP_TOOLS)
+
+
 @app.api_route("/mcp", methods=["GET", "POST", "HEAD"], include_in_schema=False)
 @app.api_route("/mcp/", methods=["GET", "POST", "HEAD"], include_in_schema=False)
 def mcp_root_endpoint():
@@ -302,40 +368,7 @@ def mcp_root_endpoint():
             "sse": "/mcp/sse",
             "manifest": "/.well-known/mcp.json"
         },
-        "tools": [
-            "get_market_macro_regime",
-            "screen_quant_stocks",
-            "get_triple_resonance_stocks",
-            "get_xuantie_pullback_stocks",
-            "get_timestral_top_predictions",
-            "get_timesfm_top_predictions",
-            "get_moirai_top_predictions",
-            "get_stock_history",
-            "get_latest_market_snapshot",
-            "get_top_institutional_flows",
-            "get_broker_trades_for_stock",
-            "get_company_profile",
-            "get_fed_rate_monitor",
-            "get_us_earnings_calendar",
-            "get_economic_calendar",
-            "get_commodities_summary",
-            "resolve_stock_ticker",
-            "get_polymarket_macro_sentiment",
-            "get_clef_stock_verdict",
-            "get_upcoming_earnings_calls",
-            "get_ticker_earnings_calls",
-            "get_company_network",
-            "open_company_network",
-            "get_company_tenders",
-            "get_industry_chain",
-            "get_discovery_signals",
-            "get_model_performance_scorecard",
-            "get_watchlist",
-            "get_market_live_sessions",
-            "get_signal_alignment",
-            "get_portfolio_risk_xray",
-            "get_canary_loader_health"
-        ]
+        "tools": _get_mcp_tool_names()
     })
 
 
@@ -361,47 +394,14 @@ def get_webmcp_manifest():
     """
     return JSONResponse(content={
         "name": "stock-quant-engine",
-        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、多維量化篩選、產業鏈圖譜、Polymarket 預測市場、Clef System One 決策大模型)",
+        "description": "888 Stock Quant - 專業級深度學習與多維量化決策平台 (宏觀風控、玄鐵均線、Mistral Timestral-209M、Google TimesFM、Salesforce MOIRAI-2 時序大模型、三大法人籌碼、多維量化篩選、產業鏈圖譜、Polymarket 預測市場、Clef System One 決策大模型、台股 MOPS 重大訊息與月營收因子)",
         "version": APP_VERSION,
         "transport": "sse",
         "endpoints": {
             "sse": "/mcp/sse",
             "messages": "/mcp/messages/"
         },
-        "tools": [
-            "get_market_macro_regime",
-            "screen_quant_stocks",
-            "get_triple_resonance_stocks",
-            "get_xuantie_pullback_stocks",
-            "get_timestral_top_predictions",
-            "get_timesfm_top_predictions",
-            "get_moirai_top_predictions",
-            "get_stock_history",
-            "get_latest_market_snapshot",
-            "get_top_institutional_flows",
-            "get_broker_trades_for_stock",
-            "get_company_profile",
-            "get_fed_rate_monitor",
-            "get_us_earnings_calendar",
-            "get_economic_calendar",
-            "get_commodities_summary",
-            "resolve_stock_ticker",
-            "get_polymarket_macro_sentiment",
-            "get_clef_stock_verdict",
-            "get_upcoming_earnings_calls",
-            "get_ticker_earnings_calls",
-            "get_company_network",
-            "open_company_network",
-            "get_company_tenders",
-            "get_industry_chain",
-            "get_discovery_signals",
-            "get_model_performance_scorecard",
-            "get_watchlist",
-            "get_market_live_sessions",
-            "get_signal_alignment",
-            "get_portfolio_risk_xray",
-            "get_canary_loader_health"
-        ]
+        "tools": _get_mcp_tool_names()
     })
 
 
@@ -495,7 +495,7 @@ def get_llms_txt():
 
 ## Model Context Protocol (MCP) Tools
 
-本平台提供 32 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
+本平台提供 33 大標準 FastMCP 工具函數（支援 stdio 與 SSE 雙向通訊）：
 - `get_market_macro_regime`: 評估大盤宏觀風控情境與建議投資曝險比例。
 - `screen_quant_stocks`: 多維量化自訂篩選器（方向、時序模型多選、PE估值、潛力門檻、核心量化因子）。
 - `get_triple_resonance_stocks`: 查詢多模型共識與多策略交集焦點股。
@@ -527,7 +527,8 @@ def get_llms_txt():
 - `get_market_live_sessions`: 查詢台美日即時五態交易時段與東京 11:30–12:30 午休倒數。
 - `get_signal_alignment`: 查詢個股多源訊號一致度卡（聚合時序基礎模型、台股籌碼、近30日情報姿態與前沿雷達）。
 - `get_portfolio_risk_xray`: 查詢多市場標的組合風險 X 光片 (雙口徑波動率、階梯式 95%/99% VaR/CVaR、歐拉 PCV 拆解)。
-- `get_canary_loader_health`: 查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv)。
+- `get_canary_loader_health`: 查詢 9 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv, MOPS)。
+- `get_tw_mops_intel`: 查詢台灣公開資訊觀測站 (MOPS) 即時重大訊息、多空事件催化與月營收動能因子。
 
 ## Agent & Developer Discovery Standards
 
@@ -684,7 +685,7 @@ $$\\text{Score}_{final} = \\text{Score}_{raw} \\times \\text{Exposure}$$
 - FastMCP Server: `mcp_server.py`
 - WebMCP Endpoint: `/mcp/sse`
 - WebMCP Manifest: `/.well-known/mcp.json`
-- Tools (32 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`, `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`, `get_portfolio_risk_xray`, `get_canary_loader_health`.
+- Tools (33 Native Tools): `get_market_macro_regime`, `screen_quant_stocks`, `get_triple_resonance_stocks`, `get_timestral_top_predictions`, `get_timesfm_top_predictions`, `get_moirai_top_predictions`, `get_xuantie_pullback_stocks`, `get_stock_history`, `get_latest_market_snapshot`, `get_top_institutional_flows`, `get_broker_trades_for_stock`, `get_company_profile`, `get_company_network`, `get_fed_rate_monitor`, `get_us_earnings_calendar`, `get_economic_calendar`, `get_commodities_summary`, `resolve_stock_ticker`, `get_polymarket_macro_sentiment`, `get_clef_stock_verdict`, `get_upcoming_earnings_calls`, `get_ticker_earnings_calls`, `open_company_network`, `get_company_tenders`, `get_industry_chain`, `get_discovery_signals`, `get_model_performance_scorecard`, `get_watchlist`, `get_market_live_sessions`, `get_signal_alignment`, `get_portfolio_risk_xray`, `get_canary_loader_health`, `get_tw_mops_intel`.
 
 ## 6. Recommended 4-Step Agent Trading Workflow
 1. **檢查宏觀風控**: 呼叫 `get_market_macro_regime()` 決定整體建議曝險 (0%~100%)。
@@ -1094,9 +1095,20 @@ def get_webmcp_bridge():
         },
         {
             name: 'get_canary_loader_health',
-            description: '查詢 8 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv)',
+            description: '查詢 9 大資料源隔離金絲雀健康巡檢快照 (TWSE, TPEx, yfinance, answerbook, Investing, Polymarket, BigGo, arXiv, MOPS)',
             inputSchema: { type: 'object', properties: {} },
             execute: async () => JSON.stringify(await (await fetch('/api/v1/stats/canary-health')).json())
+        },
+        {
+            name: 'get_tw_mops_intel',
+            description: '查詢台灣公開資訊觀測站 (MOPS) 即時重大訊息、多空事件催化與月營收動能因子',
+            inputSchema: { type: 'object', properties: { ticker: { type: 'string' }, limit: { type: 'integer' } } },
+            execute: async (args) => {
+                const tk = encodeURIComponent((args?.ticker || '').trim());
+                const lim = encodeURIComponent(args?.limit || 10);
+                const url = tk ? `/api/v1/market/mops/${tk}?limit=${lim}` : `/api/v1/market/mops/highlights?limit=${lim}`;
+                return JSON.stringify(await (await fetch(url)).json());
+            }
         }
     ];
 
@@ -1122,7 +1134,7 @@ def get_ai_plugin_manifest():
         "schema_version": "v1",
         "name_for_model": "stock_quant_engine",
         "name_for_human": "888 Stock Quant",
-        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統（宏觀風控、玄鐵均線、可擴充時序基礎模型動態池 TimesFM / Timestral / MOIRAI-2、三大法人籌碼、多維量化綜合優選、Polymarket 預測市場）。提供每日台美日股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 32 大原生 MCP 量化工具、WebMCP 協議與 npx -y 888-stock-quant@latest。",
+        "description_for_model": "888 Stock Quant 專業級深度學習與多維量化決策系統（宏觀風控、玄鐵均線、可擴充時序基礎模型動態池 TimesFM / Timestral / MOIRAI-2、三大法人籌碼、多維量化綜合優選、Polymarket 預測市場）。提供每日台美日股選股清單、目標價預測、法人籌碼鎖碼、均線波段買點與個股歷史走勢查詢。支援 33 大原生 MCP 量化工具、WebMCP 協議與 npx -y 888-stock-quant@latest。",
         "description_for_human": "888 Stock Quant Multi-Strategy Stock Trading Engine and Live Screener.",
         "auth": {
             "type": "none"

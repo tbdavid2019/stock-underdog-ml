@@ -1,6 +1,6 @@
 {
   "name": "888-stock-quant",
-  "version": "2.6.3",
+  "version": "2.6.4",
   "description": "Multi-agent AI Skill installer & zero-dependency quant brain CLI for 888 Stock Quant (AGY, Codex, OpenCode, Hermes, OpenClaw, Claude Code, OMP).",
   "type": "module",
   "bin": {

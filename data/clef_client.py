@@ -523,7 +523,10 @@ class ClefDecisionClient:
 
             # 2. Check L2 DuckDB Cache (only when self.db is configured)
             if self.db and hasattr(self.db, "get_decision_verdict"):
-                db_cached = self.db.get_decision_verdict(ticker)
+                try:
+                    db_cached = self.db.get_decision_verdict(ticker, macro_regime=macro_regime)
+                except TypeError:
+                    db_cached = self.db.get_decision_verdict(ticker)
                 if db_cached:
                     verdict = ClefDecisionVerdict(
                         ticker=db_cached["ticker"],
@@ -557,7 +560,12 @@ class ClefDecisionClient:
                     self._MEM_CACHE[cache_key] = cached_entry
 
                 if not is_transient_failure and self.db and hasattr(self.db, "save_decision_verdict"):
-                    self.db.save_decision_verdict(ticker, verdict_obj.to_dict())
+                    verdict_dict = verdict_obj.to_dict()
+                    verdict_dict["macro_regime"] = macro_regime or "default"
+                    try:
+                        self.db.save_decision_verdict(ticker, verdict_dict, macro_regime=macro_regime)
+                    except TypeError:
+                        self.db.save_decision_verdict(ticker, verdict_dict)
             return verdict_obj
 
         # Singleflight per-key lock to prevent thundering herd

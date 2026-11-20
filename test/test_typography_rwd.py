@@ -78,12 +78,17 @@ class TestTypographyAndRWD(unittest.TestCase):
 
     def test_heading_hierarchy_no_skipped_levels(self):
         """
-        Verify heading levels do not skip directly from h1 to h3 without an h2.
+        Verify rendered document heading levels do not skip directly from h1 to h3 without an h2.
         (Caught by Impeccable detect).
         """
-        h1_pos = self.html.find("<h1")
-        h2_pos = self.html.find("<h2")
-        h3_pos = self.html.find("<h3")
+        try:
+            from api.main import _render_jinja_template
+            rendered = _render_jinja_template("index.html") or self.html
+        except Exception:
+            rendered = self.html
+        h1_pos = rendered.find("<h1")
+        h2_pos = rendered.find("<h2")
+        h3_pos = rendered.find("<h3")
         self.assertTrue(h1_pos != -1, "Missing h1")
         self.assertTrue(h2_pos != -1, "Missing h2 - heading level skipped from h1 to h3")
         self.assertTrue(h1_pos < h2_pos, "h1 must appear before h2")

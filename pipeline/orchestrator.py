@@ -16,22 +16,25 @@ from data.fundamentals import FundamentalProvider
 from data.macro import MacroRegimeAnalyzer, MacroState
 from strategies.base import StockContext, StrategyResult
 from strategies.registry import StrategyRegistry
-# Import strategy modules to trigger registration
+logger = logging.getLogger("stock_app.pipeline")
+
+
+# Import optional foundation-model strategy modules to trigger registration
 import strategies.xuantie
 import strategies.sector_rotation
 import strategies.institutional
 try:
     import strategies.timestral
-except Exception:
-    pass
+except Exception as exc:
+    logger.warning("Optional strategy strategies.timestral unavailable: %s", exc)
 try:
     import strategies.timesfm
-except Exception:
-    pass
+except Exception as exc:
+    logger.warning("Optional strategy strategies.timesfm unavailable: %s", exc)
 try:
     import strategies.moirai
-except Exception:
-    pass
+except Exception as exc:
+    logger.warning("Optional strategy strategies.moirai unavailable: %s", exc)
 
 from evaluators.composite_evaluator import CompositeEvaluator, EvaluationReport
 from evaluators.ai_narrative import AINarrativeEngine
@@ -44,8 +47,6 @@ from data.covariates import build_market_features
 from pipeline.forecast_integration import attach_market_features, persist_forecast_results, retain_complete_bars
 from data.clef_client import ClefDecisionClient
 from notifier_dual import send_dual_strategy_results
-
-logger = logging.getLogger("stock_app.pipeline")
 
 
 class PipelineOrchestrator:
@@ -204,11 +205,19 @@ class PipelineOrchestrator:
 
         # ============= Stage 3: Composite Evaluation & AI Narrative =============
         logger.info("⭐ [Stage 3/4] 進行多策略綜合評分與交集分析...")
+        mops_map: Dict[str, Dict[str, Any]] = {}
+        if self.duckdb_manager and hasattr(self.duckdb_manager, "get_mops_factor_map"):
+            try:
+                mops_map = self.duckdb_manager.get_mops_factor_map(list(contexts.keys()), as_of=decision_time)
+            except Exception as exc:
+                logger.debug(f"MOPS 因子讀取略過: {exc}")
+
         report = self.evaluator.evaluate(
             index_name, 
             strategy_outputs, 
             fundamentals_map, 
-            macro_state=macro_state
+            macro_state=macro_state,
+            mops_map=mops_map,
         )
 
         # 3.0 Clef-Flash System One 決策模型批次推論 (若啟用且有共振候選標的)
