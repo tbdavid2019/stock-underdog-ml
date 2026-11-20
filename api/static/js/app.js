@@ -1578,11 +1578,12 @@ export const app = createApp({
 
             try {
                 const isTw = this.isTwStock(ticker);
-                const [profRes, netRes, earnRes, tenderRes] = await Promise.allSettled([
+                const [profRes, netRes, earnRes, tenderRes, mopsRes] = await Promise.allSettled([
                     ApiClient.getCompanyProfile(ticker),
                     isTw ? ApiClient.getCompanyNetwork(ticker) : Promise.resolve(null),
                     ApiClient.getTickerEarningsCalls(ticker),
-                    isTw ? ApiClient.getCompanyTender(ticker) : Promise.resolve(null)
+                    isTw ? ApiClient.getCompanyTender(ticker) : Promise.resolve(null),
+                    isTw ? ApiClient.getMopsIntel(ticker) : Promise.resolve(null)
                 ]);
 
                 if (requestId !== this.historyRequestId) return;
@@ -1594,6 +1595,7 @@ export const app = createApp({
                 const earnList = earnVal ? (earnVal.data || earnVal.items || (Array.isArray(earnVal) ? earnVal : [])) : [];
                 let tender = (tenderRes.status === 'fulfilled') ? tenderRes.value : (prof.company_tender || null);
                 if (tender && tender.data) tender = tender.data;
+                const mopsVal = (mopsRes.status === 'fulfilled' && mopsRes.value && mopsRes.value.success) ? mopsRes.value : (prof.mops_intel || null);
 
                 this.historyEarningsList = Array.isArray(earnList) ? earnList : [];
                 this.drawerEarningsMap[ticker] = this.historyEarningsList;
@@ -1603,7 +1605,8 @@ export const app = createApp({
                     ticker: ticker,
                     name: prof.name || this.resolvedName || ticker,
                     company_network: net,
-                    company_tender: tender
+                    company_tender: tender,
+                    mops_intel: mopsVal
                 };
 
                 if (net) {
@@ -1633,6 +1636,8 @@ export const app = createApp({
                 this.ensureCompanyTenderLoaded(ticker);
             } else if (tab === 'network' && (!this.historyCompanyData || !this.historyCompanyData.company_network)) {
                 this.ensureCompanyNetworkLoaded(ticker);
+            } else if (tab === 'mops' && (!this.historyCompanyData || !this.historyCompanyData.mops_intel)) {
+                this.ensureMopsIntelLoaded(ticker);
             }
         },
         togglePriceChartSeries(seriesKey) {
@@ -1875,7 +1880,9 @@ export const app = createApp({
         },
         async ensureMopsIntelLoaded(ticker) {
             if (!ticker || !this.isTwStock(ticker)) return;
-            if (this.expandedDrawerData?.ticker === ticker && this.expandedDrawerData?.mops_intel) return;
+            const hasDrawer = this.expandedDrawerData?.ticker === ticker && this.expandedDrawerData?.mops_intel;
+            const hasHistory = this.historyCompanyData?.ticker === ticker && this.historyCompanyData?.mops_intel;
+            if (hasDrawer && hasHistory) return;
             this.mopsIntelLoading = true;
             try {
                 const mops = await ApiClient.getMopsIntel(ticker);
@@ -1887,11 +1894,14 @@ export const app = createApp({
                         if (!this.expandedDrawerData) this.expandedDrawerData = { ticker };
                         this.expandedDrawerData.mops_intel = mops;
                     }
+                    if (this.historyCompanyData && (this.historyCompanyData.ticker === ticker || this.resolvedTicker === ticker || this.searchTicker === ticker)) {
+                        this.historyCompanyData.mops_intel = mops;
+                    }
                 }
             } catch (e) {
                 console.debug("Failed to lazily load MOPS intel:", e);
             } finally {
-                if (this.expandedDrawerTicker === ticker) {
+                if (this.expandedDrawerTicker === ticker || this.resolvedTicker === ticker || this.searchTicker === ticker) {
                     this.mopsIntelLoading = false;
                 }
             }

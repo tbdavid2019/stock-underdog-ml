@@ -16,7 +16,7 @@
 - **策略評估、訊號對齊、API、MCP 與抽屜介面整合**：
   - `evaluators/composite_evaluator.py` 與 `pipeline/orchestrator.py` 在宏觀曝險折減與偏空罰則**之前**套用有上限的 `mops_delta` 與 MOPS 標籤；`data/signal_alignment.py` 為台股補充 `mops_context`。
   - 新增 REST 端點 `GET /api/v1/market/mops/highlights`、`POST /api/v1/market/mops/sync`（具單飛鎖與速率限制）、`GET /api/v1/market/mops/{ticker}` 與 MCP 工具 `get_tw_mops_intel`（同步至第 33 項原生工具）。
-  - 個股展開抽屜（行動版、桌面表格、桌面卡片）新增台股專屬「公開資訊 / 公開資訊與月營收」子分頁 (`api/templates/partials/_stock_drawer_tabs.html`, `tab_dashboard.html`, `api/static/js/app.js`, `api-client.js`)。
+  - 個股展開抽屜（行動版、桌面表格、桌面卡片）與「個股歷史查詢 (`tab_history.html`)」同步新增台股專屬「公開資訊 (MOPS) / 公開資訊與月營收」子分頁 (`api/templates/partials/_stock_drawer_tabs.html`, `tab_dashboard.html`, `tab_history.html`, `api/static/js/app.js`, `api-client.js`)。
 
 ### 修正與安全可靠性強化 (EGM 審查修復)
 - **即時故障修復**：

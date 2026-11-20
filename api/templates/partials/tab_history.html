@@ -157,6 +157,19 @@
                         {{ historyCompanyData.company_tender.wins }} 案
                     </span>
                 </button>
+
+                <!-- Tab 5: Taiwan MOPS (公開資訊與月營收) -->
+                <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.mops_intel"
+                        @click="setHistoryDetailSubTab('mops')"
+                        class="px-4 py-2 rounded-xl font-bold text-sm sm:text-base transition-colors flex items-center space-x-2"
+                        :class="historyDetailSubTab === 'mops' ? (isDark ? 'bg-amber-500 text-black' : 'bg-amber-500 text-[#2B251A] font-bold') : (isDark ? 'bg-[#16181D] text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:text-black')">
+                    <span class="material-symbols-outlined text-[18px] leading-none">campaign</span>
+                    <span>公開資訊 (MOPS)</span>
+                    <span v-if="(historyCompanyData?.mops_intel?.events || []).length" class="ml-1 px-2 py-0.5 rounded-full text-xs font-black"
+                          :class="historyDetailSubTab === 'mops' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400'">
+                        {{ historyCompanyData.mops_intel.events.length }}
+                    </span>
+                </button>
             </div>
 
             <!-- Loading State for Company Details -->
@@ -254,6 +267,13 @@
                             :class="isDark ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'">
                         <span class="material-symbols-outlined text-[15px] leading-none">account_balance</span>
                         <span>政府標案情報</span>
+                    </button>
+                    <button v-if="isTwStock(resolvedTicker) || historyCompanyData?.mops_intel"
+                            @click.stop="setHistoryDetailSubTab('mops')"
+                            class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
+                            :class="isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100'">
+                        <span class="material-symbols-outlined text-[15px] leading-none">campaign</span>
+                        <span>MOPS 重訊與月營收</span>
                     </button>
                     <a v-if="historyCompanyData?.links?.yahoo" :href="historyCompanyData.links.yahoo" target="_blank" rel="noopener"
                        class="px-3 py-1.5 rounded-lg border transition-colors flex items-center space-x-1 shadow-sm"
@@ -685,6 +705,78 @@
                             <span>前往 ToBid 查看完整標案歷程 ↗</span>
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab 5: Taiwan MOPS (公開資訊與月營收) -->
+            <div v-else-if="historyDetailSubTab === 'mops'" class="space-y-4">
+                <div v-if="mopsIntelLoading && !historyCompanyData?.mops_intel" class="py-10 text-center text-amber-500 animate-pulse text-sm font-bold flex items-center justify-center space-x-2">
+                    <span class="material-symbols-outlined text-[20px] animate-spin">sync</span>
+                    <span>載入公開資訊觀測站 (MOPS) 重大訊息與月營收動能中...</span>
+                </div>
+                <div v-else-if="historyCompanyData?.mops_intel" class="space-y-4">
+                    <div v-if="(historyCompanyData.mops_intel.factor_summary?.tags || []).length" class="flex flex-wrap gap-2">
+                        <span v-for="(tag, tidx) in historyCompanyData.mops_intel.factor_summary.tags" :key="'hmops-tag-'+tidx"
+                              class="px-3 py-1 rounded-lg text-xs font-black border"
+                              :class="tag.includes('警示') || tag.includes('衰退') ? (isDark ? 'bg-rose-950 text-rose-200 border-rose-700' : 'bg-rose-100 text-rose-900 border-rose-300') : (isDark ? 'bg-emerald-950 text-emerald-200 border-emerald-700' : 'bg-emerald-100 text-emerald-900 border-emerald-300')">
+                            {{ tag }}
+                        </span>
+                    </div>
+                    <div v-if="historyCompanyData.mops_intel.latest_revenue"
+                         class="p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-4 gap-3"
+                         :class="isDark ? 'bg-[#16181D] border-[#262626]' : 'bg-[#FFFDF7] border-[#6B5B38] shadow-sm'">
+                        <div>
+                            <div class="text-xs text-slate-400">最新營收年月</div>
+                            <div class="text-base font-black font-mono text-amber-500">{{ historyCompanyData.mops_intel.latest_revenue.revenue_ym }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400">單月營收年增 (YoY)</div>
+                            <div class="text-base font-black font-mono"
+                                 :class="(historyCompanyData.mops_intel.latest_revenue.yoy_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                {{ historyCompanyData.mops_intel.latest_revenue.yoy_pct != null ? (historyCompanyData.mops_intel.latest_revenue.yoy_pct >= 0 ? '+' : '') + historyCompanyData.mops_intel.latest_revenue.yoy_pct + '%' : 'N/A' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400">單月營收月增 (MoM)</div>
+                            <div class="text-base font-black font-mono"
+                                 :class="(historyCompanyData.mops_intel.latest_revenue.mom_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                {{ historyCompanyData.mops_intel.latest_revenue.mom_pct != null ? (historyCompanyData.mops_intel.latest_revenue.mom_pct >= 0 ? '+' : '') + historyCompanyData.mops_intel.latest_revenue.mom_pct + '%' : 'N/A' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400">累計營收年增</div>
+                            <div class="text-base font-black font-mono"
+                                 :class="(historyCompanyData.mops_intel.latest_revenue.ytd_yoy_pct || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                {{ historyCompanyData.mops_intel.latest_revenue.ytd_yoy_pct != null ? (historyCompanyData.mops_intel.latest_revenue.ytd_yoy_pct >= 0 ? '+' : '') + historyCompanyData.mops_intel.latest_revenue.ytd_yoy_pct + '%' : 'N/A' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            近期 MOPS 重大訊息 ({{ (historyCompanyData.mops_intel.events || []).length }})
+                        </div>
+                        <div v-if="(historyCompanyData.mops_intel.events || []).length === 0"
+                             class="py-5 text-center text-xs text-slate-400 border rounded-xl"
+                             :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                            暫無已同步之近期重大訊息記錄
+                        </div>
+                        <div v-else class="space-y-2">
+                            <div v-for="ev in historyCompanyData.mops_intel.events" :key="'hmops-'+ev.event_id"
+                                 class="p-3 rounded-xl border text-xs space-y-1"
+                                 :class="isDark ? 'bg-[#0D0E11] border-[#262626]' : 'bg-white border-[#E5E7EB] shadow-sm'">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="font-mono text-slate-400">{{ ev.speech_date }} {{ ev.speech_time }}</span>
+                                    <span v-if="ev.sentiment_tag === 'positive'" class="px-2 py-0.5 rounded font-bold bg-emerald-800 text-white">催化正向</span>
+                                    <span v-else-if="ev.sentiment_tag === 'risk'" class="px-2 py-0.5 rounded font-bold bg-rose-700 text-white">稀釋/風險警示</span>
+                                </div>
+                                <div class="font-bold text-sm" :class="isDark ? 'text-slate-100' : 'text-slate-900'">{{ ev.subject }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="py-6 text-center text-xs text-slate-400 border rounded-xl"
+                     :class="isDark ? 'border-[#262626]' : 'border-slate-200'">
+                    尚無 MOPS 公開資訊資料，請先執行盤後同步或等待下次排程更新。
                 </div>
             </div>
         </div>

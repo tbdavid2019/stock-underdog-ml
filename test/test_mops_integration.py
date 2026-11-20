@@ -180,6 +180,7 @@ class TestMOPSIntegration(unittest.TestCase):
                 r_ui = client.get("/")
                 self.assertEqual(r_ui.status_code, 200)
                 self.assertIn("drawerActiveSubTab === 'mops'", r_ui.text)
+                self.assertIn("historyDetailSubTab === 'mops'", r_ui.text)
                 self.assertIn("ensureMopsIntelLoaded", r_ui.text)
 
                 r_get_sync = client.get("/api/v1/market/mops/sync")
