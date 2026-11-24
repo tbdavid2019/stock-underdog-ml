@@ -330,6 +330,134 @@ class TestTenderService(unittest.TestCase):
         self.assertEqual(data.get("wins"), 150)
         mock_db.get_company_tender.assert_called_once()
 
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_bearer_token_and_api_key_sent_to_mcp(self, mock_post, mock_resolve):
+        mock_resolve.return_value = {
+            "name": "漢翔航空工業股份有限公司",
+            "code": "2634",
+            "market": "TWSE",
+        }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "result": {
+                "content": [{"type": "text", "text": '{"known_award_total": 1000000, "participations": 2, "wins": 1, "win_rate_pct": 50.0, "sole_bid_rate_pct": 0.0}'}]
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        with patch.dict(os.environ, {"TOBID_MCP_TOKEN": "test_bearer_xyz", "TOBID_API_KEY": "test_key_123"}):
+            TenderService.clear_in_memory_cache()
+            data = TenderService.get_company_tender("2634.TW")
+
+        self.assertTrue(data.get("has_data"))
+        self.assertGreaterEqual(mock_post.call_count, 1)
+        called_url = mock_post.call_args_list[0].args[0]
+        called_headers = mock_post.call_args_list[0].kwargs.get("headers", {})
+        self.assertIn("key=test_key_123", called_url)
+        self.assertEqual(called_headers.get("Authorization"), "Bearer test_bearer_xyz")
+
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_auth_required_error_not_cached(self, mock_post, mock_resolve):
+        mock_resolve.return_value = {
+            "name": "天虹科技股份有限公司",
+            "code": "6937",
+            "market": "TWSE",
+        }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "result": {
+                "isError": True,
+                "content": [{"type": "text", "text": "【需要登入】ToBid MCP 自 2026-10-29 起需要登入 ToBid 帳號才能使用"}],
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        with patch.dict(os.environ, {}, clear=False):
+            for k in ("TOBID_MCP_TOKEN", "TOBID_API_TOKEN", "TOBID_ACCESS_TOKEN", "TOBID_REFRESH_TOKEN", "TOBID_CLIENT_ID"):
+                os.environ.pop(k, None)
+            TenderService.clear_in_memory_cache()
+            data = TenderService.get_company_tender("6937.TW")
+
+        self.assertIsNotNone(data)
+        self.assertFalse(data.get("has_data"))
+        self.assertTrue(data.get("auth_required"))
+        self.assertIn("TOBID_MCP_TOKEN", data.get("message", ""))
+        self.assertNotIn("6937", TenderService._MEM_CACHE)
+
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_oauth_refresh_token_rotates_and_retries(self, mock_post, mock_resolve):
+        import json as _json
+        import tempfile
+
+        mock_resolve.return_value = {
+            "name": "漢翔航空工業股份有限公司",
+            "code": "2634",
+            "market": "TWSE",
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            token_path = os.path.join(tmpdir, "oauth_token.json")
+            with open(token_path, "w", encoding="utf-8") as f:
+                _json.dump({
+                    "access_token": "expired_tok",
+                    "refresh_token": "rt_initial",
+                    "client_id": "cid_123",
+                    "expires_at": 1000.0,
+                }, f)
+
+            def mock_post_side_effect(url, **kwargs):
+                resp = MagicMock()
+                if "/oauth/token" in url:
+                    resp.status_code = 200
+                    resp.json.return_value = {
+                        "access_token": "fresh_tok_456",
+                        "refresh_token": "rt_rotated_789",
+                        "expires_in": 3600,
+                    }
+                    return resp
+                headers = kwargs.get("headers") or {}
+                self.assertEqual(headers.get("Authorization"), "Bearer fresh_tok_456")
+                resp.status_code = 200
+                resp.json.return_value = {
+                    "result": {
+                        "content": [{"type": "text", "text": '{"known_award_total": 5000000, "participations": 3, "wins": 2, "win_rate_pct": 66.7, "sole_bid_rate_pct": 0.0}'}]
+                    }
+                }
+                return resp
+
+            mock_post.side_effect = mock_post_side_effect
+            with patch.dict(os.environ, {"TOBID_TOKEN_FILE": token_path}):
+                TenderService.clear_in_memory_cache()
+                data = TenderService.get_company_tender("2634.TW")
+
+            self.assertTrue(data.get("has_data"))
+            with open(token_path, "r", encoding="utf-8") as f:
+                persisted = _json.load(f)
+            self.assertEqual(persisted["access_token"], "fresh_tok_456")
+            self.assertEqual(persisted["refresh_token"], "rt_rotated_789")
+
+    def test_sse_stream_response_parsing(self):
+        class FakeSSEResp:
+            text = 'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{}"}]}}\n\n'
+            def json(self):
+                raise ValueError("Not raw JSON")
+
+        parsed = TenderService._parse_mcp_json(FakeSSEResp())
+        self.assertEqual(parsed["id"], 1)
+        self.assertIn("result", parsed)
+
+    def test_pkce_helper_generation(self):
+        from scripts.tobid_oauth_login import generate_pkce_pair
+        verifier, challenge = generate_pkce_pair()
+        self.assertGreaterEqual(len(verifier), 43)
+        self.assertNotIn("=", verifier)
+        self.assertNotIn("=", challenge)
+        self.assertNotEqual(verifier, challenge)
+
 
 class TestTenderAPI(unittest.TestCase):
     @classmethod

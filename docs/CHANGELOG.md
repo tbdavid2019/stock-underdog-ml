@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-11-24 (v2.6.5 — ToBid 標案 MCP OAuth / Bearer Token 認證與 PKCE 登入支援)
+
+### 修正與功能補強
+- **ToBid MCP 認證支援 (`data/tender_fetcher.py`, `.env.example`)**：
+  - 因應上游 `https://api.tobid.tw/mcp` 自 2026-10-29 起要求 OAuth 登入，新增多來源憑證解析：`TOBID_MCP_TOKEN` / `TOBID_API_TOKEN` / `TOBID_ACCESS_TOKEN` Bearer Token、`TOBID_API_KEY` URL 金鑰，以及 `cache/tender/oauth_token.json` (`TOBID_TOKEN_FILE`) / `TOBID_REFRESH_TOKEN` + `TOBID_CLIENT_ID` 的 OAuth 2.0 `refresh_token` 自動續期（含單飛鎖定避免並行查詢重複換發與 `0600` 原子寫檔，且支援磁碟憑證檔變更熱重載）。
+  - 支援 MCP Streamable HTTP (`text/event-stream`) 回應解析，並正確區分「需要登入授權 (`AUTH_REQUIRED`)」與「網路連線逾時 (`TIMEOUT`)」，未授權錯誤不會寫入 L1/L2/L3 快取。
+- **本機 OAuth PKCE 登入輔助工具 (`scripts/tobid_oauth_login.py`)**：
+  - 實作標準 OAuth 2.0 Dynamic Client Registration + PKCE (`S256`) 本機回調登入流程，取得授權後直接以 `0600` 權限儲存憑證（不於終端輸出 Token 原文），並提供 `--upload-remote` 同步至線上伺服器。
+
+---
+
 ## 2026-11-20 (v2.6.4 — 台股 MOPS 重大訊息與月營收因子整合 + EGM 深度體檢系統性補強)
 
 ### 新增功能 (Taiwan MOPS Integration)
