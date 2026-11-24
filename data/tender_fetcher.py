@@ -12,7 +12,6 @@ import logging
 import datetime
 import threading
 import urllib.parse
-import concurrent.futures
 from typing import Dict, List, Optional, Any, Tuple, Union
 import requests
 
@@ -47,7 +46,7 @@ class TenderService:
     AUTH_REQUIRED = "AUTH_REQUIRED"
     CACHE_DIR = os.path.join(BASE_DIR, "cache", "tender")
     CACHE_TTL = 86400 * 7       # 7 天快取（標案資料每週至每日更新）
-    TIMEOUT_SECONDS = 8.0       # 單次 MCP 呼叫超時 8 秒
+    TIMEOUT_SECONDS = 15.0      # 單次 MCP 呼叫超時 15 秒（冷查詢約 5~8 秒）
 
     # 記憶體 L1 快取: ticker -> (timestamp, data)
     _MEM_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
@@ -55,6 +54,8 @@ class TenderService:
     _OAUTH_STATE: Optional[Dict[str, Any]] = None
     _TOKEN_FILE_MTIME: Optional[float] = None
     _TOKEN_LOCK = threading.Lock()
+    # 上游 ToBid MCP 嚴格限制同一來源一次僅能處理一個查詢，用程序內鎖強制循序呼叫
+    _MCP_CALL_LOCK = threading.Lock()
 
     @classmethod
     def clear_in_memory_cache(cls):
@@ -329,7 +330,8 @@ class TenderService:
         url, headers = cls._build_request_url_and_headers(token)
 
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            with cls._MCP_CALL_LOCK:
+                resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
             if resp.status_code in (401, 403):
                 if _retry_on_auth and cls._refresh_oauth_token(failed_token=token):
                     return cls._call_mcp_tool(tool_name, arguments, timeout=timeout, _retry_on_auth=False)
@@ -484,31 +486,18 @@ class TenderService:
             except Exception as e:
                 logger.debug(f"讀取磁碟標案快取失敗 ({raw_code}): {e}")
 
-        # 5. 並行呼叫 ToBid MCP: vendor_report, vendor_awards, vendor_compliance
+        # 5. 循序呼叫 ToBid MCP（上游明確限制同一來源一次僅處理一個查詢）
+        # 先查 vendor_report；若查無廠商 / 需登入 / 連線異常則立即短路返回，省下後續 2 次額度與佇列阻塞
         report_data = None
         awards_data = None
         compliance_data = None
         is_not_found = False
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            fut_report = executor.submit(cls._call_mcp_tool, "vendor_report", {"name": company_name})
-            fut_awards = executor.submit(cls._call_mcp_tool, "vendor_awards", {"name": company_name, "limit": 6})
-            fut_comp = executor.submit(cls._call_mcp_tool, "vendor_compliance", {"name": company_name})
-
-            ok_rep, res_rep = fut_report.result()
-            ok_awa, res_awa = fut_awards.result()
-            ok_comp, res_comp = fut_comp.result()
-
-            if ok_rep and isinstance(res_rep, dict):
-                report_data = res_rep
-            elif res_rep == "NOT_FOUND":
-                is_not_found = True
-
-            if ok_awa and isinstance(res_awa, dict):
-                awards_data = res_awa
-
-            if ok_comp and isinstance(res_comp, dict):
-                compliance_data = res_comp
+        ok_rep, res_rep = cls._call_mcp_tool("vendor_report", {"name": company_name})
+        if ok_rep and isinstance(res_rep, dict):
+            report_data = res_rep
+        elif res_rep == "NOT_FOUND":
+            is_not_found = True
 
         # 若查無此廠商（ToBid 明確回傳 NOT_FOUND），回傳明確標記並寫入 7 天快取，避免重複請求
         if is_not_found:
@@ -552,6 +541,14 @@ class TenderService:
                 "web_url": f"https://tobid.tw/?q={urllib.parse.quote(company_name)}",
                 "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
+
+        ok_awa, res_awa = cls._call_mcp_tool("vendor_awards", {"name": company_name, "limit": 6})
+        if ok_awa and isinstance(res_awa, dict):
+            awards_data = res_awa
+
+        ok_comp, res_comp = cls._call_mcp_tool("vendor_compliance", {"name": company_name})
+        if ok_comp and isinstance(res_comp, dict):
+            compliance_data = res_comp
 
         # 6. 組裝豐富化標案情報資料結構
         award_total = report_data.get("known_award_total") or 0

@@ -458,6 +458,29 @@ class TestTenderService(unittest.TestCase):
         self.assertNotIn("=", challenge)
         self.assertNotEqual(verifier, challenge)
 
+    @patch("data.company_network.CompanyNetworkService.resolve_company_info")
+    @patch("requests.post")
+    def test_sequential_short_circuit_on_not_found(self, mock_post, mock_resolve):
+        mock_resolve.return_value = {
+            "name": "天虹科技股份有限公司",
+            "code": "6937",
+            "market": "TWSE",
+        }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "result": {
+                "isError": True,
+                "content": [{"type": "text", "text": "Error executing tool vendor_report: 查無此廠商：'天虹科技股份有限公司'"}],
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        data = TenderService.get_company_tender("6937.TW")
+        self.assertFalse(data.get("has_data"))
+        # 查無廠商時只打 vendor_report 並立即短路返回，不再多送 vendor_awards / vendor_compliance
+        self.assertEqual(mock_post.call_count, 1)
+
 
 class TestTenderAPI(unittest.TestCase):
     @classmethod

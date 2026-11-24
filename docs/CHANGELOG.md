@@ -11,7 +11,7 @@
 ### 修正與功能補強
 - **ToBid MCP 認證支援 (`data/tender_fetcher.py`, `.env.example`)**：
   - 因應上游 `https://api.tobid.tw/mcp` 自 2026-10-29 起要求 OAuth 登入，新增多來源憑證解析：`TOBID_MCP_TOKEN` / `TOBID_API_TOKEN` / `TOBID_ACCESS_TOKEN` Bearer Token、`TOBID_API_KEY` URL 金鑰，以及 `cache/tender/oauth_token.json` (`TOBID_TOKEN_FILE`) / `TOBID_REFRESH_TOKEN` + `TOBID_CLIENT_ID` 的 OAuth 2.0 `refresh_token` 自動續期（含單飛鎖定避免並行查詢重複換發與 `0600` 原子寫檔，且支援磁碟憑證檔變更熱重載）。
-  - 支援 MCP Streamable HTTP (`text/event-stream`) 回應解析，並正確區分「需要登入授權 (`AUTH_REQUIRED`)」與「網路連線逾時 (`TIMEOUT`)」，未授權錯誤不會寫入 L1/L2/L3 快取。
+  - 配合 ToBid MCP 上游單來源併發佇列限制，改為單飛鎖定循序呼叫（先查 `vendor_report`，遇 `NOT_FOUND`、`AUTH_REQUIRED` 或異常立即短路返回不浪費額度）並將單次請求超時調整為 15 秒；支援 MCP Streamable HTTP (`text/event-stream`) 回應解析，並正確區分「需要登入授權 (`AUTH_REQUIRED`)」與「網路連線逾時 (`TIMEOUT`)」，未授權錯誤不會寫入 L1/L2/L3 快取。
 - **本機 OAuth PKCE 登入輔助工具 (`scripts/tobid_oauth_login.py`)**：
   - 實作標準 OAuth 2.0 Dynamic Client Registration + PKCE (`S256`) 本機回調登入流程，取得授權後直接以 `0600` 權限儲存憑證（不於終端輸出 Token 原文），並提供 `--upload-remote` 同步至線上伺服器。
 
